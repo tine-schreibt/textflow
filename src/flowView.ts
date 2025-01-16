@@ -28,10 +28,12 @@ export class FlowView extends ItemView {
 	app: App; // Provides access to Obsidian's core functionality.
 	plugin: Plugin; // Gives access to your plugin instance.
 	editorView: EditorView; // A CodeMirror instance for text rendering and editing.
+	flowFolder: string;
 
-	constructor(leaf: WorkspaceLeaf, plugin: Plugin) {
+	constructor(leaf: WorkspaceLeaf, plugin: Plugin, flowFolder: string) {
 		super(leaf); // Represents a workspace "pane" in Obsidian. Your view gets attached to this leaf.
 		this.plugin = plugin;
+		this.flowFolder = flowFolder;
 
 		// Initialize the CodeMirror view
 		this.initView();
@@ -58,10 +60,10 @@ export class FlowView extends ItemView {
 		});
 	}
 
-	async loadContent(folderPath: string): Promise<void> {
+	async loadContent(): Promise<void> {
 		let combinedText = ""; // Combine all folder and file contents into one string.
 
-		const folder = this.app.vault.getAbstractFileByPath(folderPath);
+		const folder = this.app.vault.getAbstractFileByPath(this.flowFolder);
 		if (folder instanceof TFolder) {
 			combinedText += `${folder.name}\n***\n`;
 

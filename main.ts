@@ -14,10 +14,10 @@ import {
 	WorkspaceLeaf,
 } from "obsidian";
 import { EditorState } from "@codemirror/state";
-import defaultHighlightStyle from "@codemirror/language";
-import EditorView from "@codemirror/view";
-import basicSetup from "codemirror";
-import { FlowView } from "src/flowView";
+import { defaultHighlightStyle } from "@codemirror/language";
+import { EditorView } from "@codemirror/view";
+import { basicSetup } from "codemirror";
+import { FlowView, FLOW_VIEW_TYPE } from "src/flowView";
 import { DEFAULT_SETTINGS, TextFlowSettings } from "src/types";
 import { TextFlowSettingTab } from "src/settingsTab";
 
@@ -35,13 +35,20 @@ export default class TextFlow extends Plugin {
 		await this.loadSettings();
 
 		// Initialize FlowView
-		this.flowView = new FlowView(this.app.workspace.getLeaf(true), this);
+		this.flowView = new FlowView(
+			this.app.workspace.getLeaf(true),
+			this,
+			this.settings.flowFolder
+		);
 
 		// Add a settings tab
 		this.addSettingTab(new TextFlowSettingTab(this.app, this));
 	}
 
 	onunload() {
+		// Clean up any resources when the plugin is unloaded
+		this.app.workspace.detachLeavesOfType(FLOW_VIEW_TYPE);
+		console.log("TextFlow plugin unloaded.");
 		// Call FlowView's destroy method
 		if (this.flowView) {
 			this.flowView.destroy();
