@@ -12,6 +12,7 @@ import {
 	TFolder,
 	Vault,
 	WorkspaceLeaf,
+	TAbstractFile,
 } from "obsidian";
 import { EditorState } from "@codemirror/state";
 import {
@@ -26,89 +27,77 @@ export const FLOW_VIEW_TYPE = "flow-view"; // The name of the view
 
 export class FlowView extends ItemView {
 	// Properties
-	app: App; // Provides access to Obsidian's core functionality.
-	plugin: Plugin; // Gives access to your plugin instance.
-	editorView: EditorView; // A CodeMirror instance for text rendering and editing.
-	flowFolder: string;
+	private editorView: EditorView;
+	private flowFolder: string;
 
-	constructor(leaf: WorkspaceLeaf, plugin: Plugin, flowFolder: string) {
+	constructor(leaf: WorkspaceLeaf, private plugin: Plugin, flowFolder: string) {
 		super(leaf);
-		console.log("=== FlowView Constructor ===");
-		console.log("Leaf state:", leaf.getViewState());
-		console.log("FlowView created for leaf:", leaf);
-		this.plugin = plugin;
+		this.app = plugin.app; // Initialize this.app properly
 		this.flowFolder = flowFolder;
-		this.initView();
 	}
 
-	getViewType(): string {
-		return FLOW_VIEW_TYPE; // Unique identifier for the view.
-	}
+	async onload() {
+		super.onload();
+		await this.initView();
 
-	getDisplayText(): string {
-		return "Flow View"; // What shows in the UI (tab title, listings, etc.).
-	}
-
-	initView(): void {
-		console.log("Initializing FlowView...");
-		this.leaf.getViewState().state;
-		console.log(
-			"this.leaf.getViewState().state is: ",
-			this.leaf.getViewState().state
+		// Register file change events
+		this.registerEvent(
+			this.app.vault.on("modify", (file) => {
+				if (this.isFileInFlowFolder(file)) {
+					this.loadContent();
+				}
+			})
 		);
-		const container = this.containerEl;
-		// Create the CodeMirror editor
+
+		this.registerEvent(
+			this.app.vault.on("create", (file) => {
+				if (this.isFileInFlowFolder(file)) {
+					this.loadContent();
+				}
+			})
+		);
+
+		this.registerEvent(
+			this.app.vault.on("delete", (file) => {
+				if (this.isFileInFlowFolder(file)) {
+					this.loadContent();
+				}
+			})
+		);
+	}
+
+	private isFileInFlowFolder(file: TAbstractFile): boolean {
+		return file.path.startsWith(this.flowFolder);
+	}
+
+	async initView(): Promise<void> {
+		const container = this.containerEl.createDiv("flow-view-container");
+
 		this.editorView = new EditorView({
 			state: EditorState.create({
-				doc: "",
-				extensions: [basicSetup, syntaxHighlighting(defaultHighlightStyle)],
+				doc: "Loading content...",
+				extensions: [
+					basicSetup,
+					syntaxHighlighting(defaultHighlightStyle),
+					EditorView.editable.of(false), // Make read-only for now
+				],
 			}),
 			parent: container,
 		});
-		this.loadContent();
-		console.log("FlowView initialized.");
+
+		await this.loadContent();
 	}
 
 	async loadContent(): Promise<void> {
-		const plugin = this.plugin as TextFlow;
-
-		if (!(plugin as any).isPluginActive) {
-			console.log("Plugin is not active, skipping content load");
-			return;
-		}
 		try {
-			let combinedText = "";
-
 			const folder = this.app.vault.getAbstractFileByPath(this.flowFolder);
-			//	console.log("Looking for folder: ", folder); // Debug log
 
 			if (!folder || !(folder instanceof TFolder)) {
-				console.error("Invalid flow folder: ", this.flowFolder);
+				new Notice(`Flow folder not found: ${this.flowFolder}`);
 				return;
 			}
-			//	console.log("Found folder :", folder); // Debug log
 
-			combinedText += `${folder.name}\n***\n`;
-
-			for (const note of folder.children) {
-				try {
-					//	console.log("Checking: ", note); // Debug log
-					if (note instanceof TFile) {
-						const noteName = note.name;
-						//console.log("We got: ", note.name); // Debug log
-						const noteContent = await this.app.vault.read(note);
-						combinedText += `${noteName}\n*\n${noteContent}\n---\n`;
-						//console.log("Added contents of: ", note.name); // Debug log
-					} else if (note instanceof TFolder) {
-						//	console.log("We a subfolder:", note.name); // Debug log
-						combinedText += await this.getSubfolderContent(note);
-					}
-				} catch (error) {
-					console.error("Error processing note:", error);
-				}
-			}
-
-			//console.log("Combined text:", combinedText); // Debug log
+			const combinedText = await this.processFolder(folder);
 
 			this.editorView.dispatch({
 				changes: {
@@ -117,40 +106,45 @@ export class FlowView extends ItemView {
 					insert: combinedText,
 				},
 			});
-			console.log("Editor updated"); // Debug log
 		} catch (error) {
+			new Notice(`Error loading flow content: ${error.message}`);
 			console.error("Error loading content:", error);
 		}
 	}
-	private async getSubfolderContent(folder: TFolder): Promise<string> {
-		let subfolderContent = `${folder.name}\n***\n`;
+
+	private async processFolder(folder: TFolder, depth = 0): Promise<string> {
+		let content = `${"#".repeat(depth + 1)} ${folder.name}\n\n`;
+
+		// Process files first
 		for (const child of folder.children) {
 			if (child instanceof TFile) {
-				const noteName = child.name;
 				const noteContent = await this.app.vault.read(child);
-
-				subfolderContent += `${noteName}\n*\n${noteContent}\n---\n`;
-			} else if (child instanceof TFolder) {
-				subfolderContent += await this.getSubfolderContent(child); // Recursive call.
+				content += `### ${child.name}\n${noteContent}\n---\n\n`;
 			}
 		}
-		return subfolderContent;
-	}
 
-	async saveChanges(): Promise<void> {
-		const content = this.editorView.state.doc.toString();
-		// TODO: Add logic to save content back to respective notes.
-		console.log("Saving changes:", content);
-	}
-
-	destroy(): void {
-		// Cleanup the editorView only if it's not null or undefined
-		if (this.editorView) {
-			console.log("Destroying editorView.");
-			this.editorView.destroy();
-		} else {
-			console.log("No editorView to destroy.");
+		// Then process subfolders
+		for (const child of folder.children) {
+			if (child instanceof TFolder) {
+				content += await this.processFolder(child, depth + 1);
+			}
 		}
-		super.onunload();
+
+		return content;
+	}
+
+	async destroy() {
+		// Clean up the editor view
+		this.editorView?.destroy();
+		// Call the parent's onunload
+		await super.onunload();
+	}
+
+	getViewType(): string {
+		return FLOW_VIEW_TYPE;
+	}
+
+	getDisplayText(): string {
+		return "Flow View";
 	}
 }
