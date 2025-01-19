@@ -28,30 +28,17 @@ export const FLOW_VIEW_TYPE = "flow-view"; // The name of the view
 export class FlowView extends MarkdownView {
 	// Properties
 	private flowFolder: string;
+	private tempFilePath: string;
 
-	constructor(leaf: WorkspaceLeaf, flowFolder: string) {
+	constructor(leaf: WorkspaceLeaf, flowFolder: string, tempFile: TFile) {
 		super(leaf);
 		this.flowFolder = flowFolder;
-
-		// Create a virtual file context
-		this.file = {
-			path: `${flowFolder}/_flow_view.md`,
-			basename: "_flow_view",
-			extension: "md",
-			name: "_flow_view.md",
-			parent: this.app.vault.getAbstractFileByPath(flowFolder),
-			vault: this.app.vault,
-			stat: {
-				ctime: Date.now(),
-				mtime: Date.now(),
-				size: 0,
-			},
-		} as TFile;
+		this.file = tempFile;
 	}
 
 	async onload() {
 		console.log("FlowView onload started");
-		super.onload();
+		await super.onload();
 
 		// Register file change events
 		this.registerEvent(
@@ -99,31 +86,41 @@ export class FlowView extends MarkdownView {
 			console.log("Flow folder:", folder);
 
 			if (!folder || !(folder instanceof TFolder)) {
+				console.log("Invalid folder:", this.flowFolder);
 				new Notice(`Flow folder not found: ${this.flowFolder}`);
 				return;
 			}
 
+			console.log("Processing folder...");
 			const combinedText = await this.processFolder(folder);
+			console.log("Combined text length:", combinedText.length);
 
-			// Use the editor directly
-			if (this.editor) {
-				console.log("Editor found, setting content");
-				this.editor.setValue(combinedText);
+			if (this.file) {
+				console.log("Writing to temp file...");
+				await this.app.vault.modify(this.file, combinedText);
+				console.log("Content written to temp file");
+
+				if (this.editor) {
+					console.log("Refreshing editor");
+					this.editor.refresh();
+				}
 			} else {
-				console.log("Editor not found!");
+				console.error("No temp file available!");
 			}
 		} catch (error) {
+			console.error("Error in loadContent:", error);
 			new Notice(`Error loading flow content: ${error.message}`);
-			console.error("Error loading content:", error);
 		}
 	}
 
 	private async processFolder(folder: TFolder, depth = 0): Promise<string> {
+		console.log(`Processing folder: ${folder.path} at depth ${depth}`);
 		let content = `${"#".repeat(depth + 1)} ${folder.name}\n\n`;
 
 		// Process files first
 		for (const child of folder.children) {
 			if (child instanceof TFile) {
+				console.log(`Reading file: ${child.path}`);
 				const noteContent = await this.app.vault.read(child);
 				content += `### ${child.name}\n${noteContent}\n---\n\n`;
 			}
