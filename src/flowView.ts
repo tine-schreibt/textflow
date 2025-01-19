@@ -25,20 +25,33 @@ import { TextFlow } from "./types";
 
 export const FLOW_VIEW_TYPE = "flow-view"; // The name of the view
 
-export class FlowView extends ItemView {
+export class FlowView extends MarkdownView {
 	// Properties
-	private editorView: EditorView;
 	private flowFolder: string;
 
-	constructor(leaf: WorkspaceLeaf, private plugin: Plugin, flowFolder: string) {
+	constructor(leaf: WorkspaceLeaf, flowFolder: string) {
 		super(leaf);
-		this.app = plugin.app; // Initialize this.app properly
 		this.flowFolder = flowFolder;
+
+		// Create a virtual file context
+		this.file = {
+			path: `${flowFolder}/_flow_view.md`,
+			basename: "_flow_view",
+			extension: "md",
+			name: "_flow_view.md",
+			parent: this.app.vault.getAbstractFileByPath(flowFolder),
+			vault: this.app.vault,
+			stat: {
+				ctime: Date.now(),
+				mtime: Date.now(),
+				size: 0,
+			},
+		} as TFile;
 	}
 
 	async onload() {
+		console.log("FlowView onload started");
 		super.onload();
-		await this.initView();
 
 		// Register file change events
 		this.registerEvent(
@@ -64,6 +77,9 @@ export class FlowView extends ItemView {
 				}
 			})
 		);
+
+		await this.loadContent();
+		console.log("FlowView onload completed");
 	}
 
 	private isFileInFlowFolder(file: TAbstractFile): boolean {
@@ -71,26 +87,16 @@ export class FlowView extends ItemView {
 	}
 
 	async initView(): Promise<void> {
-		const container = this.containerEl.createDiv("flow-view-container");
-
-		this.editorView = new EditorView({
-			state: EditorState.create({
-				doc: "Loading content...",
-				extensions: [
-					basicSetup,
-					syntaxHighlighting(defaultHighlightStyle),
-					EditorView.editable.of(false), // Make read-only for now
-				],
-			}),
-			parent: container,
-		});
-
+		// Add CSS class for styling
+		this.containerEl.addClass("flow-view-container");
 		await this.loadContent();
 	}
 
 	async loadContent(): Promise<void> {
+		console.log("loadContent started");
 		try {
 			const folder = this.app.vault.getAbstractFileByPath(this.flowFolder);
+			console.log("Flow folder:", folder);
 
 			if (!folder || !(folder instanceof TFolder)) {
 				new Notice(`Flow folder not found: ${this.flowFolder}`);
@@ -99,13 +105,13 @@ export class FlowView extends ItemView {
 
 			const combinedText = await this.processFolder(folder);
 
-			this.editorView.dispatch({
-				changes: {
-					from: 0,
-					to: this.editorView.state.doc.length,
-					insert: combinedText,
-				},
-			});
+			// Use the editor directly
+			if (this.editor) {
+				console.log("Editor found, setting content");
+				this.editor.setValue(combinedText);
+			} else {
+				console.log("Editor not found!");
+			}
 		} catch (error) {
 			new Notice(`Error loading flow content: ${error.message}`);
 			console.error("Error loading content:", error);
@@ -134,9 +140,6 @@ export class FlowView extends ItemView {
 	}
 
 	async destroy() {
-		// Clean up the editor view
-		this.editorView?.destroy();
-		// Call the parent's onunload
 		await super.onunload();
 	}
 
@@ -146,5 +149,24 @@ export class FlowView extends ItemView {
 
 	getDisplayText(): string {
 		return "Flow View";
+	}
+
+	getIcon(): string {
+		return "documents";
+	}
+
+	getState(): any {
+		return {
+			type: FLOW_VIEW_TYPE,
+			folder: this.flowFolder,
+		};
+	}
+
+	async setState(state: any, result: any): Promise<void> {
+		await super.setState(state, result);
+		if (state.folder) {
+			this.flowFolder = state.folder;
+			await this.loadContent();
+		}
 	}
 }

@@ -37,7 +37,7 @@ export default class TextFlow extends Plugin {
 
 		// Register view
 		this.registerView(FLOW_VIEW_TYPE, (leaf) => {
-			const view = new FlowView(leaf, this, this.settings.flowFolder);
+			const view = new FlowView(leaf, this.settings.flowFolder);
 			this.flowViews.set(leaf, view);
 			return view;
 		});
@@ -85,7 +85,6 @@ export default class TextFlow extends Plugin {
 	async onunload() {
 		// Clean up views
 		for (const [leaf, view] of this.flowViews) {
-			await view.destroy(); // Make sure destroy is async-aware if needed
 			await leaf.detach();
 		}
 		this.flowViews.clear();
