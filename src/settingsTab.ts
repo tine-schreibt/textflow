@@ -7,7 +7,7 @@
 import { Setting, App, PluginSettingTab } from "obsidian";
 import TextFlow from "main";
 
-export class TextFlowSettingTab extends PluginSettingTab {
+export class TextFlowSettingsTab extends PluginSettingTab {
 	plugin: TextFlow;
 
 	constructor(app: App, plugin: TextFlow) {
@@ -21,14 +21,14 @@ export class TextFlowSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName("Folder to flow")
-			.setDesc("Full path")
+			.setName("Setting #1")
+			.setDesc("It's a secret")
 			.addText((text) =>
 				text
-					.setPlaceholder("Enter the path")
-					.setValue(this.plugin.settings.flowFolder)
+					.setPlaceholder("Enter your secret")
+					.setValue(this.plugin.settings.mySetting)
 					.onChange(async (value) => {
-						this.plugin.settings.flowFolder = value;
+						this.plugin.settings.mySetting = value;
 						await this.plugin.saveSettings();
 					})
 			);
