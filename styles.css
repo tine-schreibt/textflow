@@ -1,0 +1,12 @@
+.scroll-together-container {
+	display: flex;
+	flex-direction: column;
+}
+.scroll-together-container .workspace-leaf {
+	flex: none;
+	height: auto !important;
+}
+.scroll-together-container .workspace-leaf-content {
+	position: relative !important;
+	height: auto !important;
+}
