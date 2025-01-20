@@ -9,43 +9,72 @@ import {
 	Setting,
 } from "obsidian";
 import { TextFlowSettingsTab } from "./src/settingsTab";
+import { TextFlowSettings, DEFAULT_SETTINGS } from "./src/types";
+// import { TextFlow } from "./src/flowMaker";
 
-interface textFlowSettings {
-	mySetting: string;
-}
-
-const DEFAULT_SETTINGS: textFlowSettings = {
-	mySetting: "default",
-};
-
-export default class textFlow extends Plugin {
-	settings: textFlowSettings;
+export default class TextFlowPlugin extends Plugin {
+	settings: TextFlowSettings;
+	tempFilePath: string;
 
 	async onload() {
-		await this.loadSettings();
+		console.log("TextFlow Plugin loaded.");
 
+		// Load settings
+		this.settings = await this.loadSettings();
+
+		// Initialize the temp file
+		this.tempFilePath = await this.createTempFile();
+
+		// Add DOM event listeners
+		this.addListeners();
+
+		// Register settings tab
 		this.addSettingTab(new TextFlowSettingsTab(this.app, this));
+	}
 
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, "click", (evt: MouseEvent) => {
-			console.log("click", evt);
-		});
+	onunload() {
+		console.log("TextFlow Plugin unloaded.");
 
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(
-			window.setInterval(() => console.log("setInterval"), 5 * 60 * 1000)
+		// Remove listeners or clean up if needed
+		this.removeListeners();
+	}
+
+	async loadSettings(): Promise<TextFlowSettings> {
+		const loadedSettings = await this.loadData();
+		return Object.assign({}, DEFAULT_SETTINGS, loadedSettings);
+	}
+
+	async saveSettings(): Promise<void> {
+		await this.saveData(this.settings);
+	}
+
+	async createTempFile(): Promise<string> {
+		const tempFolderPath = this.settings.tempFolder || "Temp";
+		const tempFileName = "textFlow-temp.md";
+
+		// Ensure the folder exists
+		await this.createFileInFolder(tempFolderPath, tempFileName);
+		return `${tempFolderPath}/${tempFileName}`;
+	}
+
+	addListeners() {
+		// Example: Add DOM or file system event listeners here
+		this.registerEvent(
+			this.app.vault.on("modify", (file) => {
+				console.log(`File modified: ${file.path}`);
+			})
 		);
 	}
 
-	onunload() {}
-
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+	removeListeners() {
+		// Clean up any registered listeners (if needed)
 	}
 
-	async saveSettings() {
-		await this.saveData(this.settings);
+	async createFileInFolder(
+		folderPath: string,
+		fileName: string,
+		content: string = ""
+	) {
+		// Your file creation logic goes here
 	}
 }
-
