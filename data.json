@@ -1,3 +1,24 @@
 {
-  "flowFolder": "xx TEST FOLDER xx"
+	"tempFolderPlace": "",
+	"flowObjects": {
+		"flow": {
+			"flowFile": "default",
+			"scrollPosition": "default",
+			"activeFile": "default",
+			"flowMap": {
+				"folder": {
+					"starts": "default",
+					"ends": "default",
+					"subfolder": {
+						"starts": "default",
+						"ends": "default",
+						"file": {
+							"starts": "default",
+							"ends": "default"
+						}
+					}
+				}
+			}
+		}
+	}
 }
