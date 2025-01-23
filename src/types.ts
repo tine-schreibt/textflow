@@ -5,10 +5,10 @@
 //#######################################################################
 
 export interface TextFlowSettings {
-	tempFolder: string;
+	tempFolderPlace: string;
 	flowObjects: {
 		flow: {
-			flowFolder: string;
+			flowFile: string;
 			scrollPosition: string;
 			activeFile: string;
 			flowMap: {
@@ -30,12 +30,12 @@ export interface TextFlowSettings {
 }
 
 export const DEFAULT_SETTINGS: TextFlowSettings = {
-	tempFolder: "default", //
+	tempFolderPlace: "not set yet", //
 	flowObjects: {
 		// holds all the flows
 		flow: {
 			// holds the flow info
-			flowFolder: "default", // folder
+			flowFile: "default", // folder
 			scrollPosition: "default",
 			activeFile: "default",
 			flowMap: {

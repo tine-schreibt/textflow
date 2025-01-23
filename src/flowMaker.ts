@@ -23,4 +23,5 @@ import { EditorView } from "@codemirror/view";
 import { basicSetup } from "codemirror";
 // import { TextFlow } from "./types";
 
-export class FlowMaker {}
+// Shorthands
+

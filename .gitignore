@@ -1,4 +1,5 @@
 /node_modules
 yarn.lock
 main.js
-flow-view.md 
+flow-view.md
+*.xml

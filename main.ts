@@ -7,6 +7,7 @@ import {
 	Plugin,
 	PluginSettingTab,
 	Setting,
+	TFolder,
 } from "obsidian";
 import { TextFlowSettingsTab } from "./src/settingsTab";
 import { TextFlowSettings, DEFAULT_SETTINGS } from "./src/types";
@@ -22,8 +23,12 @@ export default class TextFlowPlugin extends Plugin {
 		// Load settings
 		this.settings = await this.loadSettings();
 
-		// Initialize the temp file
-		this.tempFilePath = await this.createTempFile();
+		if (this.settings.tempFolderPlace !== "not set yet") {
+			this.ensureTempFolder();
+		}
+
+		// Initialize the TEMP FILE
+		// this.tempFilePath = await this.createTempFile();
 
 		// Add DOM event listeners
 		this.addListeners();
@@ -48,8 +53,25 @@ export default class TextFlowPlugin extends Plugin {
 		await this.saveData(this.settings);
 	}
 
+	ensureTempFolder = async () => {
+		console.log(`tempFolderPlace: ${this.settings.tempFolderPlace}`);
+		const tempFolderPath: string = `${this.settings.tempFolderPlace}/x_textFlowTemp`;
+		try {
+			// Ensure the folder exists, create it if necessary
+			let folder = this.app.vault.getAbstractFileByPath(tempFolderPath);
+			if (!folder) {
+				await this.app.vault.createFolder(tempFolderPath);
+				console.log(`Temp folder created at ${tempFolderPath}`);
+			} else if (!(folder instanceof TFolder)) {
+				throw new Error(`"${tempFolderPath}" exists but is not a folder.`);
+			}
+		} catch {
+			console.log(`Folder already exists at ${tempFolderPath}.`);
+		}
+	};
+
 	async createTempFile(): Promise<string> {
-		const tempFolderPath = this.settings.tempFolder || "Temp";
+		const tempFolderPath = this.settings.tempFolderPlace || "Temp";
 		const tempFileName = "textFlow-temp.md";
 
 		// Ensure the folder exists
