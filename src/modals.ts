@@ -13,21 +13,27 @@ import {
 export class DeleteOldTempFolderModal extends Modal {
 	private plugin: TextFlowPlugin;
 	private newTempFolderCreation: (path: string) => Promise<void>; // Changed this line
+	private discernAndSetTempFolderState: () => void;
 	private oldTempFolderPath: string;
 	private newTempFolderPath: string;
+	private newTempFolderPlace: string;
 
 	constructor(
 		app: App,
 		plugin: TextFlowPlugin,
 		newTempFolderCreation: (path: string) => Promise<void>,
+		discernAndSetTempFolderState: () => void,
 		oldTempFolderPath: string,
-		newTempFolderPath: string
+		newTempFolderPath: string,
+		newTempFolderPlace: string
 	) {
 		super(app);
 		this.plugin = plugin;
 		this.newTempFolderCreation = newTempFolderCreation;
+		this.discernAndSetTempFolderState = discernAndSetTempFolderState;
 		this.oldTempFolderPath = oldTempFolderPath;
 		this.newTempFolderPath = newTempFolderPath;
+		this.newTempFolderPlace = newTempFolderPlace;
 	}
 	onOpen() {
 		const { contentEl } = this;
@@ -38,22 +44,6 @@ export class DeleteOldTempFolderModal extends Modal {
 		const modalText = contentEl.createEl("span", {
 			text: `Do you want to delete the old temp folder or keep it and unhide it? The new temp folder will be created at the location specified in the settings.`,
 		});
-		//
-		//
-		//
-		//
-		///////////////  SAVe TEMPFOLDERPLACE!!!!!!!!!!!!!
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-
 		new Setting(modalText)
 			.addButton((deleteButton) =>
 				deleteButton
@@ -84,7 +74,14 @@ export class DeleteOldTempFolderModal extends Modal {
 						} catch (error) {
 							console.error(`Failed to delete or create folder:`, error);
 						}
-						await this.plugin.saveSettings();
+						try {
+							this.plugin.settings.tempFolderPlace = this.newTempFolderPlace;
+							this.discernAndSetTempFolderState();
+							await this.plugin.saveSettings();
+						} catch (error) {
+							console.error("Failed to save settings:", error);
+							new Notice("Failed to save settings");
+						}
 						this.close();
 					})
 			)
@@ -116,7 +113,14 @@ export class DeleteOldTempFolderModal extends Modal {
 						} catch (error) {
 							console.error(`Failed to rename folder:`, error);
 						}
-						await this.plugin.saveSettings();
+						try {
+							this.plugin.settings.tempFolderPlace = this.newTempFolderPlace;
+							this.discernAndSetTempFolderState();
+							await this.plugin.saveSettings();
+						} catch (error) {
+							console.error("Failed to save settings:", error);
+							new Notice("Failed to save settings");
+						}
 						this.close();
 					})
 			);

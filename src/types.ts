@@ -8,13 +8,17 @@ export interface TextFlowSettings {
 	tempFolderPlace: string;
 	tempFolderHidden: boolean;
 	activeFlow?: string;
-	flowArray: string[];
 	flowObjects: { [key: string]: FlowDef };
 }
 
 export interface FlowDef {
 	sourcePath: string;
 	flowFileName: string;
+	divider: string;
+	activeArea?: string;
+	activeAreaType?: string;
+	activeAreaStartEnd?: { start: number; end: number };
+	flowArray: string[];
 	excludedFolders?: string[];
 	includedMetaData?: { [key: string]: [value: string] };
 	excludedMetaData?: { [key: string]: [value: string] };
@@ -24,16 +28,21 @@ export interface FlowDef {
 export interface FlowMap {
 	type: "file" | "folder";
 	path: string;
+	itemName: string;
 	sourceLastModified?: number;
 	lastModifiedInFlow: number;
-	minLength: string;
-	lengthPlusDividers: string;
-	startEndInFlow: string;
+	minLength: number;
+	lengthPlusDividers: number;
+	startEndInFlow: { start: number; end: number };
 }
 
 export const DEFAULT_SETTINGS: TextFlowSettings = {
 	tempFolderPlace: "not set yet", //
 	tempFolderHidden: true,
-	flowArray: [],
 	flowObjects: {},
 };
+
+export interface UpdateState {
+	endOfCurrentArea: number;
+	tempFileContents: string;
+}

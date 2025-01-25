@@ -4,6 +4,7 @@ import {
 	Setting,
 	TFolder,
 	TFile,
+	TAbstractFile,
 	Notice,
 	ButtonComponent,
 } from "obsidian";
@@ -24,10 +25,13 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 		containerEl.empty();
 
 		//#######################################################################
-		//###########################   Shorthands   ############################
+		//###########################   Shorthands/Globals   ####################
 		//#######################################################################
-		const shFlowObjects = this.plugin.settings.flowObjects;
-		const shSettings = this.plugin.settings;
+		const shFlowObjects: { [key: string]: Types.FlowDef } =
+			this.plugin.settings.flowObjects;
+		const shSettings: Types.TextFlowSettings = this.plugin.settings;
+		let createOrEditFlowName: string = "";
+		let createOrEditsourcePath: string = "";
 
 		//#######################################################################
 		//###########################    Functions   ############################
@@ -63,6 +67,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
 		// inject CSS to hide the temp folder when appropriate
 		const discernAndSetTempFolderState = () => {
+			if (shSettings.tempFolderHidden === undefined) {
+				shSettings.tempFolderHidden = true;
+			}
 			if (shSettings.tempFolderHidden) {
 				let tempFolderPath = `${shSettings.tempFolderPlace}/x_textFlowTemp`; // Ensure correct relative path
 				hiddenStyle.textContent = `
@@ -81,88 +88,118 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 			}
 		};
 
-		const flowFileMaker = async () => {};
-		Object.keys(shFlowObjects).forEach((flow) => {});
-		// create temp file with name
-		// read content
-		// read and save start and end
-		// read and save last modified
-		// concatenate content
-		// ... existing code ...
-
-		const handleSubFolder = async (
-			flowName: string,
-			folderPath: string
-		): Promise<Types.FlowMap> => {
-			return await scanFolder(flowName, folderPath);
-		};
-
-		const scanFolder = async (
-			flowName: string,
-			folderPath: string
-		): Promise<Types.FlowMap> => {
-			// Initialize or get the FlowDef
+		const calculateExcludedItemsThenMakeMap = async (
+			folderPath: string,
+			flowName: string
+		): Promise<void> => {
 			const flow: Types.FlowDef = shFlowObjects[flowName] || {
 				sourcePath: folderPath,
 				flowFileName: flowName,
-				flowMap: {},
+				divider: "~*~*~",
+				flowArray: [],
+				excludedFolders: [],
+				includedMetaData: {},
+				excludedMetaData: {},
+				flowMap: {}, // Flat map
+			};
+		};
+
+		const buildFlatFlowMap = async (
+			folderPath: string,
+			flowName: string
+		): Promise<void> => {
+			const flow: Types.FlowDef = shFlowObjects[flowName] || {
+				sourcePath: folderPath,
+				flowFileName: flowName,
+				divider: "~*~*~",
+				flowArray: [],
+				flowMap: {}, // Flat map
+			};
+			let state: Types.UpdateState = {
+				endOfCurrentArea: -1,
+				tempFileContents: "string",
 			};
 
-			// Initialize or get the FlowMap for this folder
-			const shFlowMap: Types.FlowMap = flow.flowMap[folderPath] || {
-				type: "folder",
-				path: folderPath,
-				lastModifiedInFlow: Date.now(),
-				minLength: "",
-				lengthPlusDividers: "",
-				startEndInFlow: "",
-				children: {},
-			};
-
-			const folder = this.app.vault.getAbstractFileByPath(folderPath);
-
-			if (!(folder instanceof TFolder) || folder === null) {
+			const rootFolder = this.app.vault.getAbstractFileByPath(folderPath);
+			if (!(rootFolder instanceof TFolder)) {
 				console.error(`${folderPath} is not a folder`);
-				return shFlowMap;
+				return;
 			}
 
-			const contents = folder.children;
-			if (!shFlowMap.children) shFlowMap.children = {};
-
-			for (const item of contents) {
-				if (item instanceof TFolder) {
-					shFlowMap.children[item.name] = {
-						type: "folder",
-						path: item.path,
-						lastModifiedInFlow: Date.now(),
-						minLength: "",
-						lengthPlusDividers: "",
-						startEndInFlow: "",
-						children: await handleSubFolder(flowName, item.path).then(
-							(result) => result.children
-						),
-					};
-				} else if (item instanceof TFile) {
-					const file = this.app.vault.getAbstractFileByPath(item.path);
-					if (file instanceof TFile) {
-						shFlowMap.children[item.name] = {
-							type: "file",
-							path: item.path,
-							sourceLastModified: file.stat.mtime,
-							lastModifiedInFlow: Date.now(),
-							minLength: "",
-							lengthPlusDividers: "",
-							startEndInFlow: "",
-						};
-					}
-				}
-			}
-
-			// Update the settings
-			flow.flowMap[folderPath] = shFlowMap;
+			// Start processing from the root folder
+			await updateFlatMap(rootFolder, flow, flow.divider, state);
+			// Save back the updated FlowDef
 			shFlowObjects[flowName] = flow;
+			state.tempFileContents;
 
-			return shFlowMap;
+			// Check if temp folder exists before writing
+			const tempFolder = this.app.vault.getAbstractFileByPath(
+				`${shSettings.tempFolderPlace}/x_textFlowTemp`
+			);
+			if (tempFolder && tempFolder instanceof TFolder) {
+				const tempFilePath = `${shSettings.tempFolderPlace}/x_textFlowTemp/${flowName}.md`;
+				this.app.vault.adapter.write(tempFilePath, state.tempFileContents);
+			} else {
+				new Notice("Please create a temp folder first.");
+			}
+			// save temp file
+		};
+		// wider scope variables that can't be reset during iteration
+
+		const updateFlatMap = async (
+			item: TAbstractFile,
+			flow: Types.FlowDef,
+			flowDivider: string,
+			state: Types.UpdateState
+		): Promise<void> => {
+			const fullPath = item.path;
+			const itemName = item.name;
+			flow.flowArray.push(fullPath);
+
+			// Calculate new positions once
+			const newStart = state.endOfCurrentArea + 1;
+			const newEnd =
+				state.endOfCurrentArea + itemName.length + flow.divider.length;
+
+			// Common properties for both files and folders
+			const baseMapEntry: Partial<Types.FlowMap> = {
+				path: fullPath,
+				itemName: item.name,
+				lastModifiedInFlow: Date.now(),
+				startEndInFlow: { start: newStart, end: newEnd },
+			};
+
+			if (
+				item instanceof TFolder &&
+				item.path !== shSettings.tempFolderPlace + "/x_textFlowTemp"
+			) {
+				flow.flowMap[fullPath] = {
+					...baseMapEntry,
+					type: "folder",
+					minLength: itemName.length,
+					lengthPlusDividers: itemName.length + flow.divider.length,
+				} as Types.FlowMap;
+				state.tempFileContents = itemName + flow.divider;
+
+				// Process folder contents
+				for (const subItem of item.children) {
+					await updateFlatMap(subItem, flow, flow.divider, state);
+				}
+			} else if (item instanceof TFile) {
+				const fileContent = await this.app.vault.read(item);
+				flow.flowMap[fullPath] = {
+					...baseMapEntry,
+					type: "file",
+					sourceLastModified: item.stat.mtime,
+					minLength: fileContent.length,
+					lengthPlusDividers: fileContent.length + flow.divider.length,
+				} as Types.FlowMap;
+				state.tempFileContents = fileContent + flow.divider;
+			} else {
+				console.error("The given path does not point to a valid file.");
+			}
+
+			state.endOfCurrentArea = newEnd;
 		};
 
 		//#######################################################################
@@ -197,8 +234,10 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 			this.plugin.settings.tempFolderPlace === undefined
 		) {
 			this.plugin.settings.tempFolderPlace = "not set yet";
+			this.plugin.saveSettings();
 		}
 		let newTempFolderPlace: string = "not set yet";
+		let oldTempFolderPlace: string = this.plugin.settings.tempFolderPlace;
 		setTempFolder
 			.addText((text) =>
 				text
@@ -210,6 +249,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 					)
 					.onChange(async (value) => {
 						newTempFolderPlace = value.trim();
+						this.plugin.settings.tempFolderPlace = newTempFolderPlace;
 						console.log(`newTempFolderPlace = ${value};`);
 					})
 			)
@@ -285,11 +325,16 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 								this.app,
 								this.plugin,
 								newTempFolderCreation,
+								discernAndSetTempFolderState,
 								oldTempFolderPath,
-								newTempFolderPath
+								newTempFolderPath,
+								newTempFolderPlace
 							);
 							deleteOldTempFolder.open();
+							this.plugin.saveSettings();
 						} else {
+							this.plugin.saveSettings();
+
 							return;
 						}
 					}
@@ -357,12 +402,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 			.addText((text) =>
 				text.setPlaceholder("Enter a unique name").onChange(async (value) => {
 					// state check creating vs editing
-					const newFlowName = value.trim();
-					shFlowObjects[newFlowName] = {
-						sourcePath: "", // Will be set later when user selects a folder
-						flowFileName: value, // Using the entered name
-						flowMap: {}, // Empty flowMap to start with
-					};
+					createOrEditFlowName = value.trim();
 				})
 			);
 
@@ -383,12 +423,13 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 				chooseFlowFolder
 					.setPlaceholder("Enter the folder path.")
 					.onChange(async (value) => {
-						shFlowObjects.flow.sourcePath = value.trim();
+						createOrEditsourcePath = value.trim();
 					})
 			);
-		// #############   excluded folders   ###########
+		// #############   excluded folders     #########
 		// #############   excluded meta data   #########
 		// #############   included meta data   #########
+		// #############   choose a divider	    ######### (dropdown)
 
 		const saveButton = new ButtonComponent(containerEl);
 		saveButton.buttonEl.setAttribute("state", "creating");
@@ -401,7 +442,18 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 			.setIcon("save")
 			.setTooltip("Save")
 			.onClick(async (buttonEl: MouseEvent) => {
+				shFlowObjects[createOrEditFlowName] = {
+					sourcePath: createOrEditsourcePath, // Will be set later when user selects a folder
+					flowFileName: createOrEditFlowName, // Using the entered name
+					flowArray: [], // empty array to start with
+					divider: "~*~*~",
+					flowMap: {}, // Empty flowMap to start with
+				};
 				await this.plugin.saveSettings();
+				buildFlatFlowMap(
+					shFlowObjects[createOrEditFlowName].sourcePath,
+					createOrEditFlowName
+				);
 			});
 
 		// name the flow  - > this.plugin.settings.flowObjects.flow (save on input)
