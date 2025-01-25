@@ -6,6 +6,9 @@
 
 export interface TextFlowSettings {
 	tempFolderPlace: string;
+	tempFolderHidden: boolean;
+	activeFlow?: string;
+	flowArray: string[];
 	flowObjects: { [key: string]: FlowDef };
 }
 
@@ -26,10 +29,11 @@ export interface FlowMap {
 	minLength: string;
 	lengthPlusDividers: string;
 	startEndInFlow: string;
-	children?: { [key: string]: FlowMap };
 }
 
 export const DEFAULT_SETTINGS: TextFlowSettings = {
 	tempFolderPlace: "not set yet", //
+	tempFolderHidden: true,
+	flowArray: [],
 	flowObjects: {},
 };
