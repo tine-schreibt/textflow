@@ -29,9 +29,21 @@ export default class TextFlowPlugin extends Plugin {
 
 		// Initialize the TEMP FILE
 		// this.tempFilePath = await this.createTempFile();
+		this.settings.tempFolderHidden = false;
+		discernAndSetTempFolderState(
+			this.settings.tempFolderHidden,
+			this.settings.tempFolderPlace
+		);
+		this.saveSettings();
 
 		// Add DOM event listeners
 		this.addListeners();
+
+		/* 
+			activeArea: fullPath
+			if (activeAReaType === "folder") {activeAreaStartEnd.start -= divider.length}
+
+*/
 
 		// Register settings tab
 		this.addSettingTab(new TextFlowSettingsTab(this.app, this));
@@ -79,6 +91,8 @@ export default class TextFlowPlugin extends Plugin {
 		return `${tempFolderPath}/${tempFileName}`;
 	}
 
+	// inject CSS to hide the temp folder when appropriate
+
 	addListeners() {
 		// Example: Add DOM or file system event listeners here
 		this.registerEvent(
@@ -100,3 +114,35 @@ export default class TextFlowPlugin extends Plugin {
 		// Your file creation logic goes here
 	}
 }
+
+export const discernAndSetTempFolderState = (
+	tempFolderState?: boolean,
+	tempFolderPlace?: string
+): void => {
+	console.log(`Checking hidden state. It is ${tempFolderState}`);
+	// Remove any existing style first
+	const existingStyle = document.head.querySelector(
+		"style[data-textflow-temp]"
+	);
+	if (existingStyle) {
+		existingStyle.remove();
+	}
+
+	let hiddenStyle = document.createElement("style");
+	hiddenStyle.setAttribute("data-textflow-temp", "true");
+
+	if (tempFolderState === undefined) {
+		tempFolderState = false;
+	}
+	if (tempFolderState && tempFolderPlace !== undefined) {
+		let tempFolderPath = `${tempFolderPlace}/x_textFlowTemp`; // Ensure correct relative path
+		hiddenStyle.textContent = `
+            div[data-path='${tempFolderPath}'], 
+            div[data-path='${tempFolderPath}'] + div.nav-folder-children {
+                display: none;
+            }
+        `;
+		document.head.appendChild(hiddenStyle);
+		console.log(`Set style to hidden`);
+	}
+};

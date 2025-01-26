@@ -42,7 +42,9 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
 	flowObjects: {},
 };
 
-export interface UpdateState {
-	endOfCurrentArea: number;
+export interface mapValueBasket {
 	tempFileContents: string;
+	currentStart: number;
+	currentEnd: number;
+	initialIteration: boolean;
 }

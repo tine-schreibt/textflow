@@ -11,6 +11,7 @@ import {
 import TextFlow from "main";
 import * as Modals from "./modals";
 import * as Types from "./types";
+import { discernAndSetTempFolderState } from "main";
 
 export class TextFlowSettingsTab extends PluginSettingTab {
 	plugin: TextFlow;
@@ -63,31 +64,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 			return `${basePath}/x_textFlowTemp`;
 		};
 
-		let hiddenStyle = document.createElement("style");
-
-		// inject CSS to hide the temp folder when appropriate
-		const discernAndSetTempFolderState = () => {
-			if (shSettings.tempFolderHidden === undefined) {
-				shSettings.tempFolderHidden = true;
-			}
-			if (shSettings.tempFolderHidden) {
-				let tempFolderPath = `${shSettings.tempFolderPlace}/x_textFlowTemp`; // Ensure correct relative path
-				hiddenStyle.textContent = `
-            div[data-path='${tempFolderPath}'], 
-            div[data-path='${tempFolderPath}'] + div.nav-folder-children {
-                display: none;
-            }
-        `;
-				if (!document.head.contains(hiddenStyle)) {
-					document.head.appendChild(hiddenStyle);
-				}
-			} else {
-				if (document.head.contains(hiddenStyle)) {
-					document.head.removeChild(hiddenStyle);
-				}
-			}
-		};
-
 		const calculateExcludedItemsThenMakeMap = async (
 			folderPath: string,
 			flowName: string
@@ -115,22 +91,25 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 				flowArray: [],
 				flowMap: {}, // Flat map
 			};
-			let state: Types.UpdateState = {
-				endOfCurrentArea: -1,
-				tempFileContents: "string",
+			let mapValueBasket: Types.mapValueBasket = {
+				tempFileContents: "",
+				currentStart: -1,
+				currentEnd: 0,
+				initialIteration: true,
 			};
+			this.plugin.saveSettings();
 
 			const rootFolder = this.app.vault.getAbstractFileByPath(folderPath);
-			if (!(rootFolder instanceof TFolder)) {
-				console.error(`${folderPath} is not a folder`);
+			if (!(rootFolder instanceof TFolder) || !rootFolder) {
+				console.error(`There's a problem with ${folderPath}`);
+				new Notice(`Please check if ${folderPath} exists and is a folder`);
 				return;
 			}
 
 			// Start processing from the root folder
-			await updateFlatMap(rootFolder, flow, flow.divider, state);
+			await updateFlatMap(rootFolder, flow, flow.divider, mapValueBasket);
 			// Save back the updated FlowDef
 			shFlowObjects[flowName] = flow;
-			state.tempFileContents;
 
 			// Check if temp folder exists before writing
 			const tempFolder = this.app.vault.getAbstractFileByPath(
@@ -138,9 +117,13 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 			);
 			if (tempFolder && tempFolder instanceof TFolder) {
 				const tempFilePath = `${shSettings.tempFolderPlace}/x_textFlowTemp/${flowName}.md`;
-				this.app.vault.adapter.write(tempFilePath, state.tempFileContents);
+				this.app.vault.adapter.write(
+					tempFilePath,
+					mapValueBasket.tempFileContents
+				);
 			} else {
 				new Notice("Please create a temp folder first.");
+				return;
 			}
 			// save temp file
 		};
@@ -150,56 +133,86 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 			item: TAbstractFile,
 			flow: Types.FlowDef,
 			flowDivider: string,
-			state: Types.UpdateState
+			mapValueBasket: Types.mapValueBasket
 		): Promise<void> => {
 			const fullPath = item.path;
 			const itemName = item.name;
 			flow.flowArray.push(fullPath);
-
 			// Calculate new positions once
-			const newStart = state.endOfCurrentArea + 1;
-			const newEnd =
-				state.endOfCurrentArea + itemName.length + flow.divider.length;
-
-			// Common properties for both files and folders
-			const baseMapEntry: Partial<Types.FlowMap> = {
-				path: fullPath,
-				itemName: item.name,
-				lastModifiedInFlow: Date.now(),
-				startEndInFlow: { start: newStart, end: newEnd },
-			};
-
 			if (
 				item instanceof TFolder &&
 				item.path !== shSettings.tempFolderPlace + "/x_textFlowTemp"
 			) {
 				flow.flowMap[fullPath] = {
-					...baseMapEntry,
+					path: fullPath,
+					itemName: item.name,
+					lastModifiedInFlow: Date.now(),
+					startEndInFlow: {
+						start: mapValueBasket.tempFileContents.length + 1,
+						end: 0,
+					},
 					type: "folder",
 					minLength: itemName.length,
 					lengthPlusDividers: itemName.length + flow.divider.length,
 				} as Types.FlowMap;
-				state.tempFileContents = itemName + flow.divider;
+				if (mapValueBasket.initialIteration) {
+					flow.flowMap[fullPath].startEndInFlow.start = 0;
+				}
+				mapValueBasket.initialIteration = false;
+				mapValueBasket.tempFileContents += itemName + flow.divider;
+				mapValueBasket.currentEnd = mapValueBasket.tempFileContents.length;
+				flow.flowMap[fullPath].startEndInFlow.end = mapValueBasket.currentEnd;
+				console.log(
+					`start: ${
+						flow.flowMap[fullPath].startEndInFlow.start
+					} start plus total lenght: ${
+						flow.flowMap[fullPath].startEndInFlow.start +
+						flow.flowMap[fullPath].lengthPlusDividers
+					} = content lenghth: ${
+						mapValueBasket.tempFileContents.length
+					} = current end ${mapValueBasket.currentEnd}`
+				);
 
 				// Process folder contents
 				for (const subItem of item.children) {
-					await updateFlatMap(subItem, flow, flow.divider, state);
+					await updateFlatMap(subItem, flow, flow.divider, mapValueBasket);
 				}
 			} else if (item instanceof TFile) {
 				const fileContent = await this.app.vault.read(item);
 				flow.flowMap[fullPath] = {
-					...baseMapEntry,
+					path: fullPath,
+					itemName: item.name,
+					lastModifiedInFlow: Date.now(),
+					startEndInFlow: {
+						start: mapValueBasket.tempFileContents.length + 1,
+						end: 0,
+					},
 					type: "file",
 					sourceLastModified: item.stat.mtime,
 					minLength: fileContent.length,
 					lengthPlusDividers: fileContent.length + flow.divider.length,
 				} as Types.FlowMap;
-				state.tempFileContents = fileContent + flow.divider;
+				if (mapValueBasket.initialIteration) {
+					flow.flowMap[fullPath].startEndInFlow.start = 0;
+				}
+				mapValueBasket.initialIteration = false;
+				mapValueBasket.tempFileContents += fileContent + flow.divider;
+				mapValueBasket.currentEnd = mapValueBasket.tempFileContents.length;
+				flow.flowMap[fullPath].startEndInFlow.end = mapValueBasket.currentEnd;
+				console.log(
+					`start: ${
+						flow.flowMap[fullPath].startEndInFlow.start
+					} start plus total lenght: ${
+						flow.flowMap[fullPath].startEndInFlow.start +
+						flow.flowMap[fullPath].lengthPlusDividers
+					} = content lenghth: ${
+						mapValueBasket.tempFileContents.length
+					} = current end ${mapValueBasket.currentEnd}`
+				);
 			} else {
 				console.error("The given path does not point to a valid file.");
 			}
-
-			state.endOfCurrentArea = newEnd;
+			this.plugin.saveSettings();
 		};
 
 		//#######################################################################
@@ -424,6 +437,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 					.setPlaceholder("Enter the folder path.")
 					.onChange(async (value) => {
 						createOrEditsourcePath = value.trim();
+						console.log(`folder is: ${createOrEditsourcePath}`);
 					})
 			);
 		// #############   excluded folders     #########

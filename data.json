@@ -1,5 +1,124 @@
 {
   "tempFolderPlace": "00",
-  "tempFolderHidden": true,
-  "flowObjects": {}
+  "tempFolderHidden": false,
+  "flowObjects": {
+    "testFlow": {
+      "sourcePath": "00",
+      "flowFileName": "testFlow",
+      "flowArray": [
+        "00",
+        "00/subTestfolder01",
+        "00/subTestfolder01/Untitled0101.md",
+        "00/subTestfolder01/Untitled0102.md",
+        "00/subTestfolder02",
+        "00/subTestfolder02/Untitled0201.md",
+        "00/subTestfolder02/subsubTestfolder0201",
+        "00/subTestfolder02/subsubTestfolder0201/Untitled020101.md",
+        "00/x_textFlowTemp"
+      ],
+      "divider": "~*~*~",
+      "flowMap": {
+        "00": {
+          "path": "00",
+          "itemName": "00",
+          "lastModifiedInFlow": 1737912998293,
+          "startEndInFlow": {
+            "start": 0,
+            "end": 7
+          },
+          "type": "folder",
+          "minLength": 2,
+          "lengthPlusDividers": 7
+        },
+        "00/subTestfolder01": {
+          "path": "00/subTestfolder01",
+          "itemName": "subTestfolder01",
+          "lastModifiedInFlow": 1737912998294,
+          "startEndInFlow": {
+            "start": 8,
+            "end": 27
+          },
+          "type": "folder",
+          "minLength": 15,
+          "lengthPlusDividers": 20
+        },
+        "00/subTestfolder01/Untitled0101.md": {
+          "path": "00/subTestfolder01/Untitled0101.md",
+          "itemName": "Untitled0101.md",
+          "lastModifiedInFlow": 1737912998300,
+          "startEndInFlow": {
+            "start": 28,
+            "end": 126
+          },
+          "type": "file",
+          "sourceLastModified": 1737061160000,
+          "minLength": 94,
+          "lengthPlusDividers": 99
+        },
+        "00/subTestfolder01/Untitled0102.md": {
+          "path": "00/subTestfolder01/Untitled0102.md",
+          "itemName": "Untitled0102.md",
+          "lastModifiedInFlow": 1737912998306,
+          "startEndInFlow": {
+            "start": 127,
+            "end": 264
+          },
+          "type": "file",
+          "sourceLastModified": 1737060540000,
+          "minLength": 133,
+          "lengthPlusDividers": 138
+        },
+        "00/subTestfolder02": {
+          "path": "00/subTestfolder02",
+          "itemName": "subTestfolder02",
+          "lastModifiedInFlow": 1737912998306,
+          "startEndInFlow": {
+            "start": 265,
+            "end": 284
+          },
+          "type": "folder",
+          "minLength": 15,
+          "lengthPlusDividers": 20
+        },
+        "00/subTestfolder02/Untitled0201.md": {
+          "path": "00/subTestfolder02/Untitled0201.md",
+          "itemName": "Untitled0201.md",
+          "lastModifiedInFlow": 1737912998315,
+          "startEndInFlow": {
+            "start": 285,
+            "end": 422
+          },
+          "type": "file",
+          "sourceLastModified": 1737060590000,
+          "minLength": 133,
+          "lengthPlusDividers": 138
+        },
+        "00/subTestfolder02/subsubTestfolder0201": {
+          "path": "00/subTestfolder02/subsubTestfolder0201",
+          "itemName": "subsubTestfolder0201",
+          "lastModifiedInFlow": 1737912998316,
+          "startEndInFlow": {
+            "start": 423,
+            "end": 447
+          },
+          "type": "folder",
+          "minLength": 20,
+          "lengthPlusDividers": 25
+        },
+        "00/subTestfolder02/subsubTestfolder0201/Untitled020101.md": {
+          "path": "00/subTestfolder02/subsubTestfolder0201/Untitled020101.md",
+          "itemName": "Untitled020101.md",
+          "lastModifiedInFlow": 1737912998322,
+          "startEndInFlow": {
+            "start": 448,
+            "end": 620
+          },
+          "type": "file",
+          "sourceLastModified": 1737060552000,
+          "minLength": 168,
+          "lengthPlusDividers": 173
+        }
+      }
+    }
+  }
 }

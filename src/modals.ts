@@ -22,7 +22,10 @@ export class DeleteOldTempFolderModal extends Modal {
 		app: App,
 		plugin: TextFlowPlugin,
 		newTempFolderCreation: (path: string) => Promise<void>,
-		discernAndSetTempFolderState: () => void,
+		discernAndSetTempFolderState: (
+			tempFolderState?: boolean,
+			tempFolderPlace?: string
+		) => void,
 		oldTempFolderPath: string,
 		newTempFolderPath: string,
 		newTempFolderPlace: string
@@ -30,7 +33,11 @@ export class DeleteOldTempFolderModal extends Modal {
 		super(app);
 		this.plugin = plugin;
 		this.newTempFolderCreation = newTempFolderCreation;
-		this.discernAndSetTempFolderState = discernAndSetTempFolderState;
+		this.discernAndSetTempFolderState = () =>
+			discernAndSetTempFolderState(
+				this.plugin.settings.tempFolderHidden,
+				this.plugin.settings.tempFolderPlace
+			);
 		this.oldTempFolderPath = oldTempFolderPath;
 		this.newTempFolderPath = newTempFolderPath;
 		this.newTempFolderPlace = newTempFolderPlace;
