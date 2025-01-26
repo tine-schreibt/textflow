@@ -159,7 +159,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 					flow.flowMap[fullPath].startEndInFlow.start = 0;
 				}
 				mapValueBasket.initialIteration = false;
-				mapValueBasket.tempFileContents += itemName + flow.divider;
+				mapValueBasket.tempFileContents += `#${itemName}\r\r ${flow.divider}\r\r`;
 				mapValueBasket.currentEnd = mapValueBasket.tempFileContents.length;
 				flow.flowMap[fullPath].startEndInFlow.end = mapValueBasket.currentEnd;
 				console.log(
@@ -178,7 +178,20 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 					await updateFlatMap(subItem, flow, flow.divider, mapValueBasket);
 				}
 			} else if (item instanceof TFile) {
-				const fileContent = await this.app.vault.read(item);
+				let fileContent: string = await this.app.vault.read(item);
+				// find and remove the title line; normalize everything
+				console.log(fileContent);
+				const titleLine = `## ${item.name.replace(/\.md$/, "")}`;
+				const normalize = (fileContent: string) =>
+					fileContent.replace(/\uFEFF|\s+$/g, "").trim();
+				const normalizedTitleLine = normalize(titleLine);
+				const normalizedFileContent = normalize(fileContent);
+
+				if (normalizedFileContent.startsWith(normalizedTitleLine)) {
+					fileContent = fileContent
+						.substring(normalizedTitleLine.length + 1)
+						.trimStart();
+				}
 				flow.flowMap[fullPath] = {
 					path: fullPath,
 					itemName: item.name,
@@ -196,7 +209,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 					flow.flowMap[fullPath].startEndInFlow.start = 0;
 				}
 				mapValueBasket.initialIteration = false;
-				mapValueBasket.tempFileContents += fileContent + flow.divider;
+				mapValueBasket.tempFileContents += `${fileContent}\n\n ${flow.divider}\n\n`;
 				mapValueBasket.currentEnd = mapValueBasket.tempFileContents.length;
 				flow.flowMap[fullPath].startEndInFlow.end = mapValueBasket.currentEnd;
 				console.log(
