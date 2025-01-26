@@ -71,7 +71,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 			const flow: Types.FlowDef = shFlowObjects[flowName] || {
 				sourcePath: folderPath,
 				flowFileName: flowName,
-				divider: "~*~*~",
+				divider: `---`,
 				flowArray: [],
 				excludedFolders: [],
 				includedMetaData: {},
@@ -153,13 +153,13 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 					},
 					type: "folder",
 					minLength: itemName.length,
-					lengthPlusDividers: itemName.length + flow.divider.length,
+					lengthPlusDividers: itemName.length + flow.divider.length + 28,
 				} as Types.FlowMap;
 				if (mapValueBasket.initialIteration) {
 					flow.flowMap[fullPath].startEndInFlow.start = 0;
 				}
 				mapValueBasket.initialIteration = false;
-				mapValueBasket.tempFileContents += `#${itemName}\r\r ${flow.divider}\r\r`;
+				mapValueBasket.tempFileContents += `<center><b>${itemName}</b></center>\r\r${flow.divider}\r\r`;
 				mapValueBasket.currentEnd = mapValueBasket.tempFileContents.length;
 				flow.flowMap[fullPath].startEndInFlow.end = mapValueBasket.currentEnd;
 				console.log(
@@ -179,7 +179,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 				}
 			} else if (item instanceof TFile) {
 				let fileContent: string = await this.app.vault.read(item);
-				// find and remove the title line; normalize everything
+				// find and remove the title line; normalize
 				console.log(fileContent);
 				const titleLine = `## ${item.name.replace(/\.md$/, "")}`;
 				const normalize = (fileContent: string) =>
@@ -203,13 +203,13 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 					type: "file",
 					sourceLastModified: item.stat.mtime,
 					minLength: fileContent.length,
-					lengthPlusDividers: fileContent.length + flow.divider.length,
+					lengthPlusDividers: fileContent.length + flow.divider.length + 4,
 				} as Types.FlowMap;
 				if (mapValueBasket.initialIteration) {
 					flow.flowMap[fullPath].startEndInFlow.start = 0;
 				}
 				mapValueBasket.initialIteration = false;
-				mapValueBasket.tempFileContents += `${fileContent}\n\n ${flow.divider}\n\n`;
+				mapValueBasket.tempFileContents += `${fileContent}\r\r${flow.divider}\r\r`;
 				mapValueBasket.currentEnd = mapValueBasket.tempFileContents.length;
 				flow.flowMap[fullPath].startEndInFlow.end = mapValueBasket.currentEnd;
 				console.log(
@@ -473,7 +473,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 					sourcePath: createOrEditsourcePath, // Will be set later when user selects a folder
 					flowFileName: createOrEditFlowName, // Using the entered name
 					flowArray: [], // empty array to start with
-					divider: "~*~*~",
+					divider: `---`,
 					flowMap: {}, // Empty flowMap to start with
 				};
 				await this.plugin.saveSettings();
