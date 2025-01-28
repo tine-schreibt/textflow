@@ -7,21 +7,22 @@
 export interface TextFlowSettings {
 	tempFolderPlace: string;
 	tempFolderHidden: boolean;
-	activeFlow?: string;
-	flowObjects: { [key: string]: FlowDef };
+	flowLeafInFocus?: boolean;
+	activeFlows?: string[];
+	divider: string;
+	flows: { [key: string]: FlowDef };
 }
 
 export interface FlowDef {
 	sourcePath: string;
 	flowFileName: string;
-	divider: string;
-	activeArea?: string;
-	activeAreaType?: string;
-	activeAreaStartEnd?: { start: number; end: number };
-	flowArray: string[];
+	activeRegion?: string;
+	activeRegionType?: string;
+	activeRegionStartEnd: { start: number; end: number };
 	excludedFolders?: string[];
 	includedMetaData?: { [key: string]: [value: string] };
 	excludedMetaData?: { [key: string]: [value: string] };
+	flowPathsArray: string[];
 	flowMap: { [key: string]: FlowMap };
 }
 
@@ -39,7 +40,8 @@ export interface FlowMap {
 export const DEFAULT_SETTINGS: TextFlowSettings = {
 	tempFolderPlace: "not set yet", //
 	tempFolderHidden: true,
-	flowObjects: {},
+	divider: "***",
+	flows: {},
 };
 
 export interface mapValueBasket {

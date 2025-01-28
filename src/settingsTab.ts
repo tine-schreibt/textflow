@@ -11,7 +11,6 @@ import {
 import TextFlow from "main";
 import * as Modals from "./modals";
 import * as Types from "./types";
-import { discernAndSetTempFolderState } from "main";
 
 export class TextFlowSettingsTab extends PluginSettingTab {
 	plugin: TextFlow;
@@ -29,7 +28,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 		//###########################   Shorthands/Globals   ####################
 		//#######################################################################
 		const shFlowObjects: { [key: string]: Types.FlowDef } =
-			this.plugin.settings.flowObjects;
+			this.plugin.settings.flows;
 		const shSettings: Types.TextFlowSettings = this.plugin.settings;
 		let createOrEditFlowName: string = "";
 		let createOrEditsourcePath: string = "";
@@ -72,10 +71,10 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 				sourcePath: folderPath,
 				flowFileName: flowName,
 				divider: `---`,
-				flowArray: [],
 				excludedFolders: [],
 				includedMetaData: {},
 				excludedMetaData: {},
+				flowPathsArray: [],
 				flowMap: {}, // Flat map
 			};
 		};
@@ -88,7 +87,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 				sourcePath: folderPath,
 				flowFileName: flowName,
 				divider: "~*~*~",
-				flowArray: [],
+				flowPathsArray: [],
 				flowMap: {}, // Flat map
 			};
 			let mapValueBasket: Types.mapValueBasket = {
@@ -107,7 +106,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 			}
 
 			// Start processing from the root folder
-			await updateFlatMap(rootFolder, flow, flow.divider, mapValueBasket);
+			await updateFlatMap(rootFolder, flow, shSettings.divider, mapValueBasket);
 			// Save back the updated FlowDef
 			shFlowObjects[flowName] = flow;
 
@@ -137,7 +136,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 		): Promise<void> => {
 			const fullPath = item.path;
 			const itemName = item.name;
-			flow.flowArray.push(fullPath);
+			flow.flowPathsArray.push(fullPath);
 			// Calculate new positions once
 			if (
 				item instanceof TFolder &&
@@ -153,13 +152,13 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 					},
 					type: "folder",
 					minLength: itemName.length,
-					lengthPlusDividers: itemName.length + flow.divider.length + 28,
+					lengthPlusDividers: itemName.length + shSettings.divider.length + 28,
 				} as Types.FlowMap;
 				if (mapValueBasket.initialIteration) {
 					flow.flowMap[fullPath].startEndInFlow.start = 0;
 				}
 				mapValueBasket.initialIteration = false;
-				mapValueBasket.tempFileContents += `<center><b>${itemName}</b></center>\r\r${flow.divider}\r\r`;
+				mapValueBasket.tempFileContents += `<center><b>${itemName}</b></center>\r\r${shSettings.divider}\r\r`;
 				mapValueBasket.currentEnd = mapValueBasket.tempFileContents.length;
 				flow.flowMap[fullPath].startEndInFlow.end = mapValueBasket.currentEnd;
 				console.log(
@@ -175,7 +174,12 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
 				// Process folder contents
 				for (const subItem of item.children) {
-					await updateFlatMap(subItem, flow, flow.divider, mapValueBasket);
+					await updateFlatMap(
+						subItem,
+						flow,
+						shSettings.divider,
+						mapValueBasket
+					);
 				}
 			} else if (item instanceof TFile) {
 				let fileContent: string = await this.app.vault.read(item);
@@ -203,13 +207,14 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 					type: "file",
 					sourceLastModified: item.stat.mtime,
 					minLength: fileContent.length,
-					lengthPlusDividers: fileContent.length + flow.divider.length + 4,
+					lengthPlusDividers:
+						fileContent.length + shSettings.divider.length + 4,
 				} as Types.FlowMap;
 				if (mapValueBasket.initialIteration) {
 					flow.flowMap[fullPath].startEndInFlow.start = 0;
 				}
 				mapValueBasket.initialIteration = false;
-				mapValueBasket.tempFileContents += `${fileContent}\r\r${flow.divider}\r\r`;
+				mapValueBasket.tempFileContents += `${fileContent}\r\r${shSettings.divider}\r\r`;
 				mapValueBasket.currentEnd = mapValueBasket.tempFileContents.length;
 				flow.flowMap[fullPath].startEndInFlow.end = mapValueBasket.currentEnd;
 				console.log(
@@ -351,7 +356,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 								this.app,
 								this.plugin,
 								newTempFolderCreation,
-								discernAndSetTempFolderState,
+								this.plugin.discernAndSetTempFolderState,
 								oldTempFolderPath,
 								newTempFolderPath,
 								newTempFolderPlace
@@ -385,7 +390,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 					"aria-label",
 					shSettings.tempFolderHidden ? `Show temp folder` : `Hide temp Folder`
 				);
-				discernAndSetTempFolderState();
+				this.plugin.discernAndSetTempFolderState();
 				hideTempFolderToggle.toggleEl.addClass("hideTempFolderToggle");
 				hideTempFolderToggle
 					.setValue(shSettings.tempFolderHidden)
@@ -393,7 +398,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 						shSettings.tempFolderHidden = value;
 
 						await this.plugin.saveSettings();
-						discernAndSetTempFolderState();
+						this.plugin.discernAndSetTempFolderState();
 
 						hideTempFolderToggle.toggleEl.setAttribute(
 							"aria-label",
@@ -401,6 +406,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 						);
 					});
 			});
+
+		// #############   choose a divider	    ######### (dropdown)
+		// ---  /  ***  //  ___
 
 		// ###############   Create a new flowObject   #############################
 
@@ -456,7 +464,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 		// #############   excluded folders     #########
 		// #############   excluded meta data   #########
 		// #############   included meta data   #########
-		// #############   choose a divider	    ######### (dropdown)
 
 		const saveButton = new ButtonComponent(containerEl);
 		saveButton.buttonEl.setAttribute("state", "creating");
@@ -472,8 +479,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 				shFlowObjects[createOrEditFlowName] = {
 					sourcePath: createOrEditsourcePath, // Will be set later when user selects a folder
 					flowFileName: createOrEditFlowName, // Using the entered name
-					flowArray: [], // empty array to start with
-					divider: `---`,
+					activeRegionStartEnd: { start: 0, end: 0 },
+					flowPathsArray: [], // empty array to start with
 					flowMap: {}, // Empty flowMap to start with
 				};
 				await this.plugin.saveSettings();
