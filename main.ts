@@ -11,6 +11,7 @@ import {
 	Setting,
 	TFolder,
 	WorkspaceLeaf,
+	TFile,
 } from "obsidian";
 import { TextFlowSettingsTab } from "./src/settingsTab";
 import { TextFlowSettings, DEFAULT_SETTINGS } from "./src/types";
@@ -72,7 +73,8 @@ export default class TextFlowPlugin extends Plugin {
 		tempFolderPlace?: string
 	): void => {
 		console.log(`Checking hidden state. It is ${tempFolderState}`);
-		// Remove any existing style first
+
+		// Remove any existing style
 		const existingStyle = document.head.querySelector(
 			"style[data-textflow-temp]"
 		);
@@ -80,23 +82,29 @@ export default class TextFlowPlugin extends Plugin {
 			existingStyle.remove();
 		}
 
+		// If we're not hiding or don't have a place defined, just return after removing style
+		if (!tempFolderState || tempFolderPlace === undefined) {
+			return;
+		}
+
 		let hiddenStyle = document.createElement("style");
 		hiddenStyle.setAttribute("data-textflow-temp", "true");
 
-		if (tempFolderState === undefined) {
-			tempFolderState = false;
-		}
-		if (tempFolderState && tempFolderPlace !== undefined) {
-			let tempFolderPath = `${tempFolderPlace}/x_textFlowTemp`; // Ensure correct relative path
-			hiddenStyle.textContent = `
-            div[data-path='${tempFolderPath}'], 
-            div[data-path='${tempFolderPath}'] + div.nav-folder-children {
-                display: none;
-            }
-        `;
-			document.head.appendChild(hiddenStyle);
-			console.log(`Set style to hidden`);
-		}
+		// Construct the full path
+		let tempFolderPath = tempFolderPlace
+			? `${tempFolderPlace}/x_textFlowTemp`
+			: "x_textFlowTemp";
+
+		// More specific CSS selector that only targets the temp folder and its direct children
+		hiddenStyle.textContent = `
+			div[data-path='${tempFolderPath}'],
+			div[data-path^='${tempFolderPath}/'] {
+				display: none !important;
+			}
+		`;
+
+		document.head.appendChild(hiddenStyle);
+		console.log(`Set style to hidden for path: ${tempFolderPath}`);
 	};
 
 	// ---------------- Functions: Listeners -------------------------
@@ -241,68 +249,76 @@ export default class TextFlowPlugin extends Plugin {
 	fileExplorerClickListener() {
 		this.boundFileExplorerClick = (event: MouseEvent) => {
 			const target = event.target as HTMLElement;
-			if (target) {
-				const filePath = target
-					.closest(".file-item")
-					?.getAttribute("data-path");
-				if (filePath) {
-					const file = this.app.vault.getAbstractFileByPath(filePath);
-					if (file instanceof MarkdownView) {
-						// Check if the file is part of an active flow
-						if (this.settings.activeFlows.length) {
-							if (this.isFlowFile(filePath) !== null) {
-								this.addCursorListener(file);
-							} else {
-								event.preventDefault();
-								this.settings.activeFlows.forEach((activeFlow) => {
-									// Check if the filePath exists in the flowMap of this active flow
-									if (this.settings.flows[activeFlow].flowMap[filePath]) {
-										console.log(
-											`${filePath} belongs to the flow: ${activeFlow}`
-										);
-										// get flowFilePath and where the region of the clicked file starts
-										const activeFlowPath =
-											this.settings.flows[activeFlow].flowFilePath;
-										console.log(`flow file path is: ${activeFlow}`);
-										const startPosition =
-											this.settings.flows[activeFlow].flowMap[filePath]
-												.startEndInFlow.start;
+			const fileItem = target.closest(".nav-file-title");
 
-										// Look for the leaf with this path
-										const leaves =
-											this.app.workspace.getLeavesOfType("markdown");
-										const flowLeaf = leaves.find(
-											(leaf) =>
-												leaf.view instanceof MarkdownView &&
-												leaf.view.file?.path === activeFlowPath
-										);
-										// Make it tha active leaf and put the cursor at that position
-										if (flowLeaf) {
-											this.app.workspace.setActiveLeaf(flowLeaf);
-											const editor = (flowLeaf.view as MarkdownView).editor;
-											this.settings.activeFlows.push(activeFlow);
+			if (!fileItem) return;
 
-											// If the flow was already open, move the cursor:
-											editor.setCursor(editor.offsetToPos(startPosition));
-										} else {
-											console.warn(
-												`Flow ${activeFlow} is not open. Consider opening it programmatically.`
-											);
-										}
-									}
-								});
+			const filePath = fileItem.getAttribute("data-path");
+			console.log("File explorer click detected on:", filePath);
+
+			if (!filePath) return;
+
+			const file = this.app.vault.getAbstractFileByPath(filePath);
+			console.log("File object:", file);
+
+			if (!(file instanceof TFile)) return;
+
+			// Now check if we have any active flows
+			if (!this.settings.activeFlows.length) {
+				new Notice("No flow file currently open");
+				return;
+			}
+
+			// Get the corresponding view if it exists
+			const leaves = this.app.workspace.getLeavesOfType("markdown");
+			const fileLeaf = leaves.find(
+				(leaf) =>
+					leaf.view instanceof MarkdownView &&
+					(leaf.view as MarkdownView).file?.path === filePath
+			);
+
+			if (fileLeaf?.view instanceof MarkdownView) {
+				if (this.isFlowFile(filePath)) {
+					this.addCursorListener(fileLeaf.view);
+				} else {
+					event.preventDefault();
+					this.settings.activeFlows.forEach((activeFlow) => {
+						if (this.settings.flows[activeFlow].flowMap[filePath]) {
+							console.log(`${filePath} belongs to the flow: ${activeFlow}`);
+
+							const activeFlowPath =
+								this.settings.flows[activeFlow].flowFilePath;
+							console.log(`flow file path is: ${activeFlowPath}`);
+
+							const startPosition =
+								this.settings.flows[activeFlow].flowMap[filePath].startEndInFlow
+									.start;
+
+							// Find and activate the flow leaf
+							const flowLeaf = leaves.find(
+								(leaf) =>
+									leaf.view instanceof MarkdownView &&
+									(leaf.view as MarkdownView).file?.path === activeFlowPath
+							);
+
+							if (flowLeaf) {
+								this.app.workspace.setActiveLeaf(flowLeaf);
+								const editor = (flowLeaf.view as MarkdownView).editor;
+								editor.setCursor(editor.offsetToPos(startPosition));
 							}
-						} else {
-							new Notice("No flow file currently open");
 						}
-					}
+					});
 				}
 			}
 		};
 
-		const fileExplorer = document.querySelector(".file-explorer");
+		// Use more specific selector for file explorer
+		const fileExplorer = document.querySelector(".nav-files-container");
 		if (fileExplorer) {
+			console.log("File explorer found, adding click listener");
 			fileExplorer.addEventListener("click", this.boundFileExplorerClick);
+		} else {
+			console.log("File explorer not found");
 		}
 	}
 	// ---------------- Functions: Flow management -------------------------
@@ -393,7 +409,7 @@ export default class TextFlowPlugin extends Plugin {
 
 		// ----- ONLOAD: set up UI -------------------------
 		// -------------------------------------------------------------------
-		this.settings.tempFolderHidden = false; // REMOVE BEFORE SHIPPING
+		//this.settings.tempFolderHidden = false; // REMOVE BEFORE SHIPPING
 		// -------------------------------------------------------------------
 		this.discernAndSetTempFolderState(
 			this.settings.tempFolderHidden,
@@ -423,7 +439,11 @@ export default class TextFlowPlugin extends Plugin {
 			}
 		}
 		// ------------------- ONLOAD: add listener for clicks
-		this.fileExplorerClickListener();
+		// Wait for the file explorer to be available in the DOM
+		this.app.workspace.onLayoutReady(() => {
+			this.fileExplorerClickListener();
+			console.log("Attempting to add file explorer click listener");
+		});
 
 		// ----------- ONLOAD: add global listeners ------------------------------------
 
@@ -457,9 +477,9 @@ export default class TextFlowPlugin extends Plugin {
 		}
 
 		//------------ ONUNLOAD: REMOVE explorer click listener -----------
-		const fileExplorer = document.querySelector(".file-explorer");
-		if (fileExplorer && this.fileExplorerClickListener) {
-			fileExplorer.removeEventListener("click", this.fileExplorerClickListener);
+		const fileExplorer = document.querySelector(".nav-files-container");
+		if (fileExplorer && this.boundFileExplorerClick) {
+			fileExplorer.removeEventListener("click", this.boundFileExplorerClick);
 		}
 	}
 	// ------------------ ONUNLOAD: remove global listeners -------------------

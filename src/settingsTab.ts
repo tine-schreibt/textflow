@@ -265,8 +265,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 			this.plugin.saveSettings();
 		} else {
 		}
-		let newTempFolderPlace: string = "not set yet";
+		let newTempFolderPlace: string = this.plugin.settings.tempFolderPlace;
 		let oldTempFolderPlace: string = this.plugin.settings.tempFolderPlace;
+
 		setTempFolder
 			.addText((text) =>
 				text
@@ -277,39 +278,38 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 							: this.plugin.settings.tempFolderPlace
 					)
 					.onChange(async (value) => {
-						newTempFolderPlace = value.trim();
+						// Normalize the input value
+						newTempFolderPlace = value.trim() === "root" ? "" : value.trim();
 						this.plugin.settings.tempFolderPlace = newTempFolderPlace;
-						console.log(`newTempFolderPlace = ${value};`);
 					})
 			)
 			.addButton((createButton) => {
 				createButton.setButtonText("Create");
 				createButton.onClick(async () => {
 					console.log("createButton clicked.");
-					// make sure newTempFolderPlace is at least ""
-					if (
-						newTempFolderPlace === "not set yet" ||
-						newTempFolderPlace === "root" ||
-						newTempFolderPlace === "/" ||
-						newTempFolderPlace === undefined ||
-						newTempFolderPlace === null
-					) {
+
+					// Normalize the input value
+					if (newTempFolderPlace === "root" || newTempFolderPlace === "/") {
 						newTempFolderPlace = "";
-						console.log(`newTempFolderPlace changed to = ""`);
 					}
 
+					console.log(
+						`Current tempFolderPlace: ${this.plugin.settings.tempFolderPlace}`
+					);
+					console.log(`New tempFolderPlace: ${newTempFolderPlace}`);
+
 					if (this.plugin.settings.tempFolderPlace === "not set yet") {
-						// if this is the first init of the plugin
-						this.plugin.settings.tempFolderPlace = "";
-						console.log(`It's the first init of the plugin`);
-						let initTempFolderPath: string = constructTempFolderPath(
-							this.plugin.settings.tempFolderPlace
+						// First time setup
+						this.plugin.settings.tempFolderPlace = newTempFolderPlace;
+						let initTempFolderPath =
+							constructTempFolderPath(newTempFolderPlace);
+						console.log(
+							`Creating initial temp folder at: ${initTempFolderPath}`
 						);
-						console.log(`initTempFolderPath: ${initTempFolderPath}`);
+
 						try {
 							let initTempFolder =
 								this.app.vault.getAbstractFileByPath(initTempFolderPath);
-							console.log(`make ${initTempFolder} at ${initTempFolderPath}`);
 							if (!initTempFolder) {
 								await this.app.vault.createFolder(initTempFolderPath);
 								console.log(
@@ -329,27 +329,23 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 								`Something went wrong when trying to create ${initTempFolderPath}: ${e}`
 							);
 						}
-					} else if (this.plugin.settings.tempFolderPlace !== "not set yet") {
-						console.log(`Plugin has been set up before.`);
-						// if the plugin has been setup before
-						let oldTempFolderPlace: string =
-							this.plugin.settings.tempFolderPlace;
+					} else {
+						// Plugin has been set up before
+						let oldTempFolderPlace = this.plugin.settings.tempFolderPlace;
 						console.log(`oldTempFolderPlace: ${oldTempFolderPlace}`);
 						console.log(`newTempFolderPlace: ${newTempFolderPlace}`);
-						// get get path of old temp folder
-						let oldTempFolderPath: string =
-							constructTempFolderPath(oldTempFolderPlace);
-						// make get path for new temp folder
-						let newTempFolderPath: string =
-							constructTempFolderPath(newTempFolderPlace);
-						if (
-							// check if new and old name are different
-							newTempFolderPlace !== oldTempFolderPlace
-						) {
+
+						if (newTempFolderPlace !== oldTempFolderPlace) {
+							// Paths are different - handle folder move/recreation
+							let oldTempFolderPath =
+								constructTempFolderPath(oldTempFolderPlace);
+							let newTempFolderPath =
+								constructTempFolderPath(newTempFolderPlace);
+
 							console.log(
-								`New place ${newTempFolderPlace} is different from old place ${oldTempFolderPlace}`
+								`Moving from ${oldTempFolderPath} to ${newTempFolderPath}`
 							);
-							// if they are different, ask user if they want to delete or rename the old temp folder
+
 							const deleteOldTempFolder = new Modals.DeleteOldTempFolderModal(
 								this.app,
 								this.plugin,
@@ -360,12 +356,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 								newTempFolderPlace
 							);
 							deleteOldTempFolder.open();
-							this.plugin.saveSettings();
-						} else {
-							this.plugin.saveSettings();
-
-							return;
 						}
+						await this.plugin.saveSettings();
 					}
 				});
 			});
@@ -384,24 +376,15 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 				})
 			)
 			.addToggle((hideTempFolderToggle) => {
-				hideTempFolderToggle.toggleEl.setAttribute(
-					"aria-label",
-					shSettings.tempFolderHidden ? `Show temp folder` : `Hide temp Folder`
-				);
-				this.plugin.discernAndSetTempFolderState();
-				hideTempFolderToggle.toggleEl.addClass("hideTempFolderToggle");
 				hideTempFolderToggle
 					.setValue(shSettings.tempFolderHidden)
 					.onChange(async (value) => {
 						shSettings.tempFolderHidden = value;
-
-						await this.plugin.saveSettings();
-						this.plugin.discernAndSetTempFolderState();
-
-						hideTempFolderToggle.toggleEl.setAttribute(
-							"aria-label",
-							value ? `Show temp folder` : `Hide temp folder`
+						this.plugin.discernAndSetTempFolderState(
+							value,
+							this.plugin.settings.tempFolderPlace
 						);
+						await this.plugin.saveSettings();
 					});
 			});
 
