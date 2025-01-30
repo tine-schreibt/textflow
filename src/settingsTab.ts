@@ -225,7 +225,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 					} = current end ${mapValueBasket.currentEnd}`
 				);*/
 			} else {
-				console.error("The given path does not point to a valid file.");
+				console.error("End of folder OR invalid file.");
 			}
 			this.plugin.saveSettings();
 		};
