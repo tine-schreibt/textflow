@@ -272,6 +272,12 @@ export default class TextFlowPlugin extends Plugin {
       if (!(file instanceof TFile)) return;
 
       const leaves = this.app.workspace.getLeavesOfType("markdown");
+      console.log(
+        leaves.map((leaf) =>
+          leaf.view instanceof MarkdownView ? leaf.view.file?.path : "Unknown"
+        )
+      );
+
       let fileLeaf = leaves.find(
         (leaf) =>
           leaf.view instanceof MarkdownView &&
@@ -291,7 +297,7 @@ export default class TextFlowPlugin extends Plugin {
         } else {
           // Flow needs to be opened
           console.log(`${currentFlow} opened in new leaf`);
-          fileLeaf = this.app.workspace.getLeaf(false); // Changed to false to use existing tab
+          fileLeaf = this.app.workspace.getLeaf(true);
           await fileLeaf.openFile(file);
 
           if (!this.settings.activeFlows.includes(currentFlow)) {
@@ -308,31 +314,33 @@ export default class TextFlowPlugin extends Plugin {
       }
 
       // Check if the file is part of any flow
-      console.log(`${clickedFilePath} is not a flow`);
       for (const [flowName, flow] of Object.entries(
         this.settings.flows as Record<string, Types.FlowDef>
       )) {
         if (flow.flowMap[clickedFilePath]) {
           console.log(`${clickedFilePath} is part of flow ${flowName}`);
-          event.preventDefault();
 
-          const startPos = flow.flowMap[clickedFilePath].startEndInFlow.start;
-
-          // Find if the flow is already open
-          let flowLeaf = leaves.find(
-            (leaf) =>
-              leaf.view instanceof MarkdownView &&
-              (leaf.view as MarkdownView).file?.path === flowName
-          );
+          // Check if the flow is already open
+          let flowLeaf = this.app.workspace
+            .getLeavesOfType("markdown")
+            .find(
+              (leaf) =>
+                leaf.view instanceof MarkdownView &&
+                (leaf.view as MarkdownView).file?.path === flow.flowFilePath
+            );
 
           if (flowLeaf) {
             console.log(`${flowName} is open; making it active`);
-            this.app.workspace.setActiveLeaf(flowLeaf);
+            event.preventDefault();
+            await this.app.workspace.setActiveLeaf(flowLeaf);
           } else {
-            console.log(`${flowName} opened in new leaf`);
-            flowLeaf = this.app.workspace.getLeaf(false); // Changed to false
+            console.log(
+              `${flow.flowFilePath} is not open; opening it in a new leaf`
+            );
+            event.preventDefault();
+            flowLeaf = this.app.workspace.getLeaf(false);
             await flowLeaf.openFile(
-              this.app.vault.getAbstractFileByPath(flowName) as TFile
+              this.app.vault.getAbstractFileByPath(flow.flowFilePath) as TFile
             );
 
             if (!this.settings.activeFlows.includes(flowName)) {
@@ -341,7 +349,9 @@ export default class TextFlowPlugin extends Plugin {
             }
           }
 
+          // Add cursor listener to the flow leaf if it's a MarkdownView
           if (flowLeaf?.view instanceof MarkdownView) {
+            const startPos = flow.flowMap[clickedFilePath].startEndInFlow.start;
             const editor = flowLeaf.view.editor;
             if (editor) {
               const cursorPos = editor.offsetToPos(startPos);

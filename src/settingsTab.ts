@@ -460,7 +460,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 				shFlowObjects[createOrEditFlowName] = {
 					sourcePath: createOrEditsourcePath, // Will be set later when user selects a folder
 					flowFileName: createOrEditFlowName, // Using the entered name
-					flowFilePath: `${shSettings.tempFolderPlace}./x_textFlowTemp/+${createOrEditFlowName}+.md`,
+					flowFilePath: `${shSettings.tempFolderPlace}/x_textFlowTemp/${createOrEditFlowName}.md`,
 					activeRegionStartEnd: { start: 0, end: 0 },
 					flowMap: {}, // Empty flowMap to start with
 				};
