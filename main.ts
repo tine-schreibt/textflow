@@ -189,50 +189,49 @@ export default class TextFlowPlugin extends Plugin {
     const editor = leaf.editor as ObsidianEditor;
     const cmEditor = editor.cm;
     const activeLeafPath = leaf.file?.path;
+    let isItFlow = null;
 
-    if (
-      cmEditor &&
-      activeLeafPath !== undefined &&
-      this.isFlowFile(activeLeafPath)
-    ) {
-      // Define the callback function separately so we can remove it later
-      const cursorCallback = () => {
-        const state = cmEditor.state;
-        const selection = state.selection.main;
+    if (activeLeafPath !== undefined) {
+      isItFlow = this.isFlowFile(activeLeafPath);
 
-        // Convert selection.from (which is a flat offset) to line/column
-        const pos = state.doc.lineAt(selection.from);
-        const cursorOffset = selection.from;
-        console.log("Cursor offset:", cursorOffset);
-        this.updateActiveRegion(this.settings, activeLeafPath, cursorOffset);
-      };
+      if (cmEditor && isItFlow) {
+        // Define the callback function separately so we can remove it later
+        const cursorCallback = () => {
+          const state = cmEditor.state;
+          const selection = state.selection.main;
 
-      // Instead of .on(), use EditorView.updateListener
-      const updateListener = EditorView.updateListener.of((update) => {
-        if (update.selectionSet) {
-          cursorCallback();
+          // Convert selection.from (which is a flat offset) to line/column
+          const pos = state.doc.lineAt(selection.from);
+          const cursorOffset = selection.from;
+          console.log("Cursor offset:", cursorOffset);
+          this.updateActiveRegion(this.settings, activeLeafPath, cursorOffset);
+        };
+
+        // Instead of .on(), use EditorView.updateListener
+        const updateListener = EditorView.updateListener.of((update) => {
+          if (update.selectionSet) {
+            cursorCallback();
+          }
+        });
+
+        // Add the listener
+        cmEditor.dispatch({
+          effects: StateEffect.appendConfig.of([updateListener]),
+        });
+        console.log(`Flow at ${activeLeafPath} is now being listened to`);
+        //add flow to the activeFlow array if it's not in there yet
+        const currentFlow = isItFlow;
+        if (
+          currentFlow !== null &&
+          activeLeafPath &&
+          !this.settings.activeFlows.includes(currentFlow)
+        ) {
+          this.settings.activeFlows.unshift(currentFlow);
+          this.saveSettings();
         }
-      });
-
-      // Add the listener
-      cmEditor.dispatch({
-        effects: StateEffect.appendConfig.of([updateListener]),
-      });
-      console.log(
-        `Flow ${this.isFlowFile(activeLeafPath)} is now being listened to`
-      );
-      //add flow to the activeFlow array if it's not in there yet
-      const currentFlow = this.isFlowFile(activeLeafPath);
-      if (
-        currentFlow !== null &&
-        activeLeafPath &&
-        !this.settings.activeFlows.includes(currentFlow)
-      ) {
-        this.settings.activeFlows.unshift(currentFlow);
-        this.saveSettings();
+        // Store the listener for removal later
+        this.listenerBasket[activeLeafPath] = updateListener;
       }
-      // Store the listener for removal later
-      this.listenerBasket[activeLeafPath] = updateListener;
     }
   };
   // ---------------------------------------------------------
@@ -285,6 +284,8 @@ export default class TextFlowPlugin extends Plugin {
       );
 
       const currentFlow = this.isFlowFile(clickedFilePath);
+      console.log(`Flow check result for ${clickedFilePath}: ${currentFlow}`);
+
       if (currentFlow) {
         // Case: File is a flow (either already open or not)
         event.preventDefault();
@@ -424,10 +425,10 @@ export default class TextFlowPlugin extends Plugin {
               shActiveRegionStartEnd.end < cursorOffset
             ) {
               shSettings.flows[flowName].activeRegion = flowMapItem.path;
-              console.log(`Active region is: ${flowMapItem.path}`);
               shActiveRegionStartEnd.start = shStartEndInFlow.start;
               shActiveRegionStartEnd.end =
                 shStartEndInFlow.end - shSettings.divider.length;
+              console.log(`Active region is: ${flowMapItem.path}`);
             }
             // check and set region type
             if (
@@ -487,9 +488,12 @@ export default class TextFlowPlugin extends Plugin {
         const activeLeafPath = leaf.view.file?.path;
         // Now you can check if the leaf's path should be in the listener basket or not
         // If it's part of the active flow, attach the listener
-        if (activeLeafPath !== undefined && this.isFlowFile(activeLeafPath)) {
+        let flowName = null;
+        if (activeLeafPath !== undefined) {
+          flowName = this.isFlowFile(activeLeafPath);
+        }
+        if (flowName) {
           this.addCursorListener(leaf.view);
-          const flowName = this.isFlowFile(activeLeafPath);
           if (flowName && !this.settings.activeFlows.includes(flowName)) {
             this.settings.activeFlows.push(flowName);
             this.saveSettings();
@@ -498,9 +502,15 @@ export default class TextFlowPlugin extends Plugin {
         }
       }
     }
-    // ------------------- ONLOAD: add listener for clicks
+
+    // ------------------- ONLOAD: add listeners for cursor and clicks
     // Wait for the file explorer to be available in the DOM
     this.app.workspace.onLayoutReady(() => {
+      // -------------------------------
+      this.addCursorListener(
+        this.app.workspace.getActiveViewOfType(MarkdownView) as MarkdownView
+      );
+      // -------------------------------
       this.fileExplorerClickListener(); // This only creates the function
 
       // Add this to actually attach the listener:
