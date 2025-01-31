@@ -16,7 +16,12 @@ import {
 import { TextFlowSettingsTab } from "./src/settingsTab";
 import { TextFlowSettings, DEFAULT_SETTINGS } from "./src/types";
 import { EditorView, ViewUpdate } from "@codemirror/view";
-import { EditorState, StateEffect } from "@codemirror/state";
+import {
+  EditorState,
+  StateEffect,
+  StateField,
+  Transaction,
+} from "@codemirror/state";
 import * as Types from "src/types";
 // import { TextFlow } from "./src/flowMaker";
 
@@ -35,6 +40,7 @@ export default class TextFlowPlugin extends Plugin {
   tempFilePath: string;
 
   // ---------------- Global objects and variables -------------------------
+  // ---------------- tracking regions in general -------------------------
   private sortedRegionsCache: Array<{
     path: string;
     start: number;
@@ -44,6 +50,26 @@ export default class TextFlowPlugin extends Plugin {
   private lastFlowUpdate: string | null = null;
   private lastCursorCheck: number = 0;
   private lastCursorOffset: number = 0;
+  // ----------------- tracking read-only ranges --------------------------
+  private readOnlyRanges = StateField.define<
+    Array<{ from: number; to: number }>
+  >({
+    create: () => [],
+    update: (
+      ranges: Array<{ from: number; to: number }>,
+      tr: Transaction
+    ): Array<{ from: number; to: number }> => {
+      for (let e of tr.effects) {
+        if (e.is(this.updateRangesEffect)) {
+          return e.value;
+        }
+      }
+      return ranges;
+    },
+  });
+
+  private updateRangesEffect =
+    StateEffect.define<Array<{ from: number; to: number }>>();
 
   // ---------------- Functions ------------------------------------
   // ---------------- Functions: Utilities -------------------------
@@ -153,6 +179,31 @@ export default class TextFlowPlugin extends Plugin {
         }
       })
     );
+    // ---------------- Editor change (change of content) -------------------------------
+    this.registerEvent(
+      this.app.workspace.on("file-open", (file) => {
+        if (!file) return;
+
+        const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!activeView) return;
+
+        const editor = activeView.editor as any;
+        if (editor && this.hasReadOnlyExtension(editor)) {
+          this.removeReadOnlyExtension(editor);
+        }
+
+        const flowName = this.isFlowFile(file.path);
+
+        if (flowName) {
+          // File is a flow, set up read-only regions
+          console.log(`Flow file opened: ${flowName}`);
+          this.setupFlowEditor(activeView, flowName);
+        } else {
+          // File is not a flow, remove read-only regions if they exist
+          console.log(`Non-flow file opened: ${file.path}`);
+        }
+      })
+    );
   }
 
   // ---------------- Functions: Listeners: Individual ----------
@@ -240,7 +291,7 @@ export default class TextFlowPlugin extends Plugin {
 
       if (!fileItem) return;
       const clickedFilePath = fileItem.getAttribute("data-path");
-      console.log("File explorer click detected on:", clickedFilePath);
+      //console.log("File explorer click detected on:", clickedFilePath);
 
       if (!clickedFilePath) return;
       const file = this.app.vault.getAbstractFileByPath(clickedFilePath);
@@ -273,9 +324,12 @@ export default class TextFlowPlugin extends Plugin {
           // Flow is already open, just focus it
           //console.log(`${currentFlow} is open; making it active`);
           this.app.workspace.setActiveLeaf(fileLeaf);
+          if (fileLeaf.view instanceof MarkdownView) {
+            this.addCursorListener(fileLeaf.view);
+            this.setupFlowEditor(fileLeaf.view, currentFlow);
+          }
         } else {
           // Flow needs to be opened
-          //console.log(`${currentFlow} opened in new leaf`);
           fileLeaf = this.app.workspace.getLeaf(true);
           await fileLeaf.openFile(file);
 
@@ -288,6 +342,7 @@ export default class TextFlowPlugin extends Plugin {
         // Add cursor listener if it's a MarkdownView
         if (fileLeaf.view instanceof MarkdownView) {
           this.addCursorListener(fileLeaf.view);
+          this.setupFlowEditor(fileLeaf.view, currentFlow);
         }
         return;
       }
@@ -324,6 +379,9 @@ export default class TextFlowPlugin extends Plugin {
 
             if (!this.settings.activeFlows.includes(flowName)) {
               this.settings.activeFlows.unshift(flowName);
+              if (flowLeaf.view instanceof MarkdownView) {
+                this.setupFlowEditor(flowLeaf.view, flowName);
+              }
               this.saveSettings();
             }
           }
@@ -356,6 +414,7 @@ export default class TextFlowPlugin extends Plugin {
               }, 150);
 
               this.addCursorListener(flowLeaf.view);
+              this.setupFlowEditor(flowLeaf.view, flowName);
             }
           }
           return;
@@ -383,22 +442,22 @@ export default class TextFlowPlugin extends Plugin {
 
   initialSetup = async () => {
     const allLeaves = this.app.workspace.getLeavesOfType("markdown");
-    console.log("Leafs:", allLeaves);
+    //console.log("Leafs:", allLeaves);
     // Iterate over all the leaves
     for (const leaf of allLeaves) {
       if (leaf.view instanceof MarkdownView) {
         const activeLeafPath = leaf.view.file?.path;
-        console.log("Leaf path:", activeLeafPath);
+        //console.log("Leaf path:", activeLeafPath);
 
         // Now you can check if the leaf's path should be in the listener basket or not
         // If it's part of the active flow, attach the listener
         let flowName = null;
         if (activeLeafPath !== undefined) {
-          console.log("Found flow:", flowName);
+          //console.log("Found flow:", flowName);
           flowName = this.isFlowFile(activeLeafPath);
           if (flowName) {
             this.addCursorListener(leaf.view);
-
+            this.setupFlowEditor(leaf.view, flowName);
             if (!this.settings.activeFlows.includes(flowName)) {
               this.settings.activeFlows.push(flowName);
             }
@@ -448,17 +507,7 @@ export default class TextFlowPlugin extends Plugin {
       }
     }
   };
-  // --------------------------------------------------------------------
-  private getFlowLeaf = (flowName: string): WorkspaceLeaf | null => {
-    const flowPath = `00/x_textFlowTemp/${flowName}.md`;
-    const leaves = this.app.workspace.getLeavesOfType("markdown");
-    return (
-      leaves.find(
-        (leaf) =>
-          leaf.view instanceof MarkdownView && leaf.view.file?.path === flowPath
-      ) || null
-    );
-  };
+
   // --------------------------------------------------------------------
 
   isFlowFile = (activeLeafPath: string) => {
@@ -479,7 +528,109 @@ export default class TextFlowPlugin extends Plugin {
     }
   };
 
-  // ---------------------- Functions: Flow management: activeRegion ----------------------------
+  // ---------------------- Functions: Flow management: Region tracking ----------------------------
+  private updateReadOnlyRanges = (flow: Types.FlowDef) => {
+    // Create array to hold all read-only ranges
+    const readOnlyRanges: Array<{ from: number; to: number }> = [];
+
+    // Process each region in the flow map
+    Object.values(flow.flowMap).forEach((region) => {
+      if (region.type === "folder") {
+        // Entire folder regions are read-only
+        readOnlyRanges.push({
+          from: region.startEndInFlow.start,
+          to: region.startEndInFlow.end,
+        });
+      } else if (region.type === "file") {
+        // Add divider area at the end of file regions
+        const dividerLength = this.settings.divider.length + 2; // +2 for \r\r
+        readOnlyRanges.push({
+          from: region.startEndInFlow.end - dividerLength,
+          to: region.startEndInFlow.end,
+        });
+      }
+    });
+
+    return readOnlyRanges;
+  };
+  // -----------------------------------------------------------
+  private removeReadOnlyExtension = (editor: any) => {
+    if (!editor.cm) return;
+
+    if (this.hasReadOnlyExtension(editor)) {
+      editor.cm.dispatch({
+        effects: StateEffect.reconfigure.of([]),
+      });
+    }
+  };
+
+  // ----------------------------------------------------------
+  private hasReadOnlyExtension = (editor: any) => {
+    if (!editor.cm) return false;
+
+    // Check if our state field exists in the editor state
+    return editor.cm.state.field(this.readOnlyRanges, false) !== undefined;
+  };
+
+  // -------------------------------------
+  private setupFlowEditor = (leaf: MarkdownView, flowName: string) => {
+    console.log(`Setting up flow editor for ${flowName}`);
+    const flow = this.settings.flows[flowName];
+    if (!flow) return;
+
+    const editor = leaf.editor as any;
+    if (!editor.cm) return;
+
+    // Check if extension already exists
+    if (this.hasReadOnlyExtension(editor)) {
+      console.log("Existing extension found, updating ranges");
+      this.updateReadOnlyRangesForEditor(editor, flow);
+      return;
+    }
+
+    // Create and apply the extension for the first time
+    const readOnlyRanges = this.updateReadOnlyRanges(flow);
+    console.log("Created read-only ranges:", readOnlyRanges);
+
+    const preventEdit = EditorState.transactionFilter.of((tr) => {
+      if (!tr.changes.empty) {
+        const ranges = tr.startState.field(this.readOnlyRanges);
+        console.log("Checking edit against ranges:", ranges);
+        let shouldPrevent = false;
+        tr.changes.iterChanges((fromA, toA) => {
+          for (let range of ranges) {
+            if (fromA < range.to && toA > range.from) {
+              console.log(`Edit prevented at position ${fromA}-${toA}`);
+              shouldPrevent = true;
+            }
+          }
+        });
+        if (shouldPrevent) return [];
+      }
+      return tr;
+    });
+
+    // First set up the extension with initial ranges
+    editor.cm.dispatch({
+      effects: [
+        StateEffect.appendConfig.of([this.readOnlyRanges, preventEdit]),
+        this.updateRangesEffect.of(readOnlyRanges),
+      ],
+    });
+  };
+
+  // ----------------------------------------------------------
+  private updateReadOnlyRangesForEditor = (
+    editor: any,
+    flow: Types.FlowDef
+  ) => {
+    const ranges = this.updateReadOnlyRanges(flow);
+    console.log("Updating editor with ranges:", ranges);
+    editor.cm.dispatch({
+      effects: this.updateRangesEffect.of(ranges),
+    });
+  };
+  // ----------------------------------------------------------
   private updateActiveRegion = (
     shSettings: TextFlowSettings,
     activeLeafPath: string,
