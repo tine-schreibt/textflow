@@ -184,9 +184,10 @@ export default class TextFlowPlugin extends Plugin {
 
   // leaf.view as MarkdownView
   listenerBasket: { [key: string]: EventRef } = {};
-  addCursorListener = (leaf: MarkdownView) => {
-    // called onload
-    const editor = leaf.editor as ObsidianEditor;
+  addCursorListener = (leaf: MarkdownView | null) => {
+    if (!leaf) return;
+    const editor = leaf?.editor as ObsidianEditor | null;
+    if (!editor) return;
     const cmEditor = editor.cm;
     const activeLeafPath = leaf.file?.path;
     let isItFlow = null;
@@ -218,7 +219,7 @@ export default class TextFlowPlugin extends Plugin {
         cmEditor.dispatch({
           effects: StateEffect.appendConfig.of([updateListener]),
         });
-        console.log(`Flow at ${activeLeafPath} is now being listened to`);
+        //console.log(`Flow at ${activeLeafPath} is now being listened to`);
         //add flow to the activeFlow array if it's not in there yet
         const currentFlow = isItFlow;
         if (
@@ -266,7 +267,7 @@ export default class TextFlowPlugin extends Plugin {
 
       if (!clickedFilePath) return;
       const file = this.app.vault.getAbstractFileByPath(clickedFilePath);
-      console.log("File object:", file);
+      //console.log("File object:", file);
 
       if (!(file instanceof TFile)) return;
 
@@ -284,20 +285,20 @@ export default class TextFlowPlugin extends Plugin {
       );
 
       const currentFlow = this.isFlowFile(clickedFilePath);
-      console.log(`Flow check result for ${clickedFilePath}: ${currentFlow}`);
+      //console.log(`Flow check result for ${clickedFilePath}: ${currentFlow}`);
 
       if (currentFlow) {
         // Case: File is a flow (either already open or not)
         event.preventDefault();
-        console.log(`File is flow: ${currentFlow}`);
+        //console.log(`File is flow: ${currentFlow}`);
 
         if (fileLeaf) {
           // Flow is already open, just focus it
-          console.log(`${currentFlow} is open; making it active`);
+          //console.log(`${currentFlow} is open; making it active`);
           this.app.workspace.setActiveLeaf(fileLeaf);
         } else {
           // Flow needs to be opened
-          console.log(`${currentFlow} opened in new leaf`);
+          //console.log(`${currentFlow} opened in new leaf`);
           fileLeaf = this.app.workspace.getLeaf(true);
           await fileLeaf.openFile(file);
 
@@ -357,7 +358,35 @@ export default class TextFlowPlugin extends Plugin {
             if (editor) {
               const cursorPos = editor.offsetToPos(startPos);
               editor.setCursor(cursorPos);
-              editor.scrollIntoView({ from: cursorPos, to: cursorPos });
+              console.log("Cursor position:", cursorPos);
+              console.log("Current scroll position:", editor.getScrollInfo());
+
+              // Single scroll attempt with a slightly longer delay
+              setTimeout(() => {
+                const cmEditor = (editor as any).cm;
+                if (cmEditor) {
+                  // Adjust for the consistent -1 offset
+                  const adjustedStartPos = startPos - 1;
+                  const line = cmEditor.state.doc.lineAt(adjustedStartPos);
+                  const targetPos = line.from;
+
+                  cmEditor.dispatch({
+                    selection: { anchor: targetPos },
+                    effects: EditorView.scrollIntoView(targetPos, {
+                      y: "start",
+                      yMargin: 0, // No margin to prevent adjustments
+                    }),
+                  });
+
+                  console.log("Original target offset:", startPos);
+                  console.log("Adjusted target offset:", adjustedStartPos);
+                  console.log("Target position in CM6:", targetPos);
+                  console.log("Line start:", line.from, "Line end:", line.to);
+                }
+
+                console.log("After scroll - position:", editor.getScrollInfo());
+              }, 150);
+
               this.addCursorListener(flowLeaf.view);
             }
           }
@@ -385,19 +414,19 @@ export default class TextFlowPlugin extends Plugin {
   // ---------------- Functions: Flow management -------------------------
 
   isFlowFile = (activeLeafPath: string) => {
-    console.log(`checking if ${activeLeafPath} is a flow`);
+    //console.log(`checking if ${activeLeafPath} is a flow`);
     const flowName = activeLeafPath.match(/([^/]+)(?=\.md$)/)?.[0]; // gets the flow name out of the path
-    console.log(`Clicked file is: ${flowName}`);
+    //console.log(`Clicked file is: ${flowName}`);
     if (flowName && this.settings.flows[flowName]) {
-      console.log(`Yup, it's a flow!`);
+      //console.log(`Yup, it's a flow!`);
       if (!this.settings.activeFlows.includes(flowName)) {
         this.settings.activeFlows.unshift(flowName);
         this.saveSettings();
-        console.log(`Set ${flowName} to active.`);
+        //console.log(`Set ${flowName} to active.`);
       }
       return flowName;
     } else {
-      console.log(`Nope, ${activeLeafPath} is not a flow file`);
+      //console.log(`Nope, ${activeLeafPath} is not a flow file`);
       return null;
     }
   };
@@ -428,7 +457,9 @@ export default class TextFlowPlugin extends Plugin {
               shActiveRegionStartEnd.start = shStartEndInFlow.start;
               shActiveRegionStartEnd.end =
                 shStartEndInFlow.end - shSettings.divider.length;
-              console.log(`Active region is: ${flowMapItem.path}`);
+              console.log(
+                `Start of active region ${flowMapItem.path} is ${shActiveRegionStartEnd.start}`
+              );
             }
             // check and set region type
             if (
