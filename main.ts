@@ -550,28 +550,28 @@ export default class TextFlowPlugin extends Plugin {
 
   // ---------------------------
   private updateReadOnlyRanges = (flow: Types.FlowDef) => {
-    // Create array to hold all read-only ranges
     const readOnlyRanges: Array<{ from: number; to: number }> = [];
+    const cache = flow.activeRegionCache;
 
-    // Process each region in the flow map
-    Object.values(flow.flowMap).forEach((region) => {
+    if (!cache) return readOnlyRanges;
+
+    // Process all cached regions
+    Object.values(cache.regions).forEach((region) => {
       if (region.type === "folder") {
-        // Entire folder regions are read-only
         readOnlyRanges.push({
-          from: region.startEndInFlow.start,
-          to: region.startEndInFlow.end,
+          from: region.start,
+          to: region.end,
         });
       } else if (region.type === "file") {
-        // Add divider area at the end of file regions
-        const dividerLength = this.settings.divider.length + 2; // +2 for \r\r
+        const dividerLength = this.settings.divider.length + 2;
         readOnlyRanges.push({
-          from: region.startEndInFlow.end - dividerLength,
-          to: region.startEndInFlow.end,
+          from: region.end - dividerLength,
+          to: region.end,
         });
       }
     });
 
-    return readOnlyRanges;
+    return readOnlyRanges.sort((a, b) => a.from - b.from);
   };
   // -----------------------------------------------------------
   private removeReadOnlyExtension = (editor: any) => {
@@ -604,73 +604,68 @@ export default class TextFlowPlugin extends Plugin {
     });
   };
   // ----------------------------------------------------------
+
   private updateActiveRegion = (
     shSettings: TextFlowSettings,
     activeLeafPath: string,
     cursorOffset: number
   ) => {
-    if (!shSettings.activeFlows) return;
-
-    const flowName = activeLeafPath.match(/([^/]+)(?=\.md$)/)?.[0];
-    if (!flowName || !shSettings.activeFlows.includes(flowName)) {
-      shSettings.flowLeafInFocus = false;
-      return;
-    }
+    const flowName = this.isFlowFile(activeLeafPath);
+    if (!flowName) return;
 
     const flow = shSettings.flows[flowName];
-    if (!flow.activeRegionCache) {
-      console.log(`Initial cache setup for flow ${flowName}`);
-      this.updateActiveRegionCache(flow, cursorOffset);
-      return;
-    }
+    if (!flow) return;
 
     const cached = flow.activeRegionCache;
-
-    // Debounce rapid cursor checks
-    if (
-      this.lastCursorCheck &&
-      Date.now() - this.lastCursorCheck < 50 && // 50ms debounce
-      cursorOffset === this.lastCursorOffset
-    ) {
+    if (!cached) {
+      // First-time initialization of cache
+      this.updateActiveRegionCache(flow, cursorOffset);
       return;
     }
 
-    this.lastCursorCheck = Date.now();
-    this.lastCursorOffset = cursorOffset;
-
-    console.log(
-      `Checking cursor position: ${cursorOffset} against region: ${cached.activeRegion.path} (${cached.activeRegion.start}-${cached.activeRegion.end})`
-    );
-
-    // Quick check if we're still in current region
+    // Check if cursor is still within the active region (region 0)
+    const activeRegion = cached.regions[0];
     if (
-      cursorOffset >= cached.activeRegion.start &&
-      cursorOffset <= cached.activeRegion.end
+      cursorOffset >= activeRegion.start &&
+      cursorOffset <= activeRegion.end
     ) {
-      return; // No change needed
+      // Still in active region, just update cursor position
+      cached.lastCursorPosition = cursorOffset;
+      return;
     }
 
-    // Check if we moved to next or previous region
-    if (
-      cached.nextRegion &&
-      cursorOffset >= cached.nextRegion.start &&
-      cursorOffset <= cached.nextRegion.end
-    ) {
-      console.log(`Moving to next region: ${cached.nextRegion.path}`);
-      this.shiftActiveRegionCache(flow, "forward");
-    } else if (
-      cached.previousRegion &&
-      cursorOffset >= cached.previousRegion.start &&
-      cursorOffset <= cached.previousRegion.end
-    ) {
-      console.log(`Moving to previous region: ${cached.previousRegion.path}`);
-      this.shiftActiveRegionCache(flow, "backward");
-    } else {
-      console.log(`Cursor jumped far - recalculating cache`);
-      this.updateActiveRegionCache(flow, cursorOffset);
+    // Check if cursor moved to an adjacent cached region
+    for (let i = -5; i <= 5; i++) {
+      const region = cached.regions[i];
+      if (!region) continue;
+
+      if (cursorOffset >= region.start && cursorOffset <= region.end) {
+        console.log(`Moving to region ${i}`);
+        // Shift the cache window by i positions
+        const direction = i > 0 ? "forward" : "backward";
+        const shifts = Math.abs(i);
+        for (let j = 0; j < shifts; j++) {
+          this.shiftCacheWindow(flow, direction);
+        }
+
+        // Update read-only ranges after shifting
+        const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (activeView) {
+          this.updateReadOnlyRangesForEditor(activeView.editor, flow);
+        }
+        return;
+      }
     }
-    shSettings.flowLeafInFocus = true;
-    this.saveSettings();
+
+    // If we get here, cursor has moved outside our cached window
+    console.log("Cursor moved outside cache window - recalculating cache");
+    this.updateActiveRegionCache(flow, cursorOffset);
+
+    // Update read-only ranges after recalculation
+    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (activeView) {
+      this.updateReadOnlyRangesForEditor(activeView.editor, flow);
+    }
   };
 
   // --------------------------- Functions: Flow management: update cache -----------------------------------------
@@ -678,158 +673,68 @@ export default class TextFlowPlugin extends Plugin {
     flow: Types.FlowDef,
     cursorOffset: number
   ) => {
-    // Performance optimization: Cache sorted regions
-    if (!this.sortedRegionsCache || this.lastFlowUpdate !== flow.flowFilePath) {
-      this.sortedRegionsCache = Object.entries(flow.flowMap)
-        .map(([path, item]) => ({
-          path,
-          start: item.startEndInFlow.start,
-          end: item.startEndInFlow.end,
-          type: item.type,
-        }))
-        .sort((a, b) => a.start - b.start);
-      this.lastFlowUpdate = flow.flowFilePath;
-    }
-
-    // Binary search for the region containing cursorOffset
-    let left = 0;
-    let right = this.sortedRegionsCache.length - 1;
-    let currentIndex = -1;
-
-    while (left <= right) {
-      const mid = Math.floor((left + right) / 2);
-      const region = this.sortedRegionsCache[mid];
-
-      if (cursorOffset >= region.start && cursorOffset <= region.end) {
-        currentIndex = mid;
-        break;
-      }
-
-      if (cursorOffset < region.start) {
-        right = mid - 1;
-      } else {
-        left = mid + 1;
-      }
-    }
-
-    if (currentIndex === -1) {
-      console.log(`Warning: Cursor (${cursorOffset}) not found in any region`);
-      return;
-    }
-
-    console.log(
-      `Found cursor in region: ${this.sortedRegionsCache[currentIndex].path}`
-    );
-    console.log(
-      `Region bounds: ${this.sortedRegionsCache[currentIndex].start}-${this.sortedRegionsCache[currentIndex].end}`
+    const regions = flow.flowMap;
+    const regionArray = Object.values(regions).sort(
+      (a, b) => a.startEndInFlow.start - b.startEndInFlow.start
     );
 
-    // Update cache
+    // Find the active region index
+    const activeIndex = regionArray.findIndex(
+      (region) =>
+        cursorOffset >= region.startEndInFlow.start &&
+        cursorOffset <= region.startEndInFlow.end
+    );
+
+    if (activeIndex === -1) return;
+
+    // Initialize or reset cache
     flow.activeRegionCache = {
       lastCursorPosition: cursorOffset,
-      activeRegion: this.sortedRegionsCache[currentIndex],
-      previousRegion:
-        currentIndex > 0
-          ? this.sortedRegionsCache[currentIndex - 1]
-          : undefined,
-      nextRegion:
-        currentIndex < this.sortedRegionsCache.length - 1
-          ? this.sortedRegionsCache[currentIndex + 1]
-          : undefined,
+      regions: {},
     };
-    this.saveSettings();
-    console.log(`Cache updated with:
-        Active: ${flow.activeRegionCache.activeRegion.path}
-        Previous: ${flow.activeRegionCache.previousRegion?.path || "none"}
-        Next: ${flow.activeRegionCache.nextRegion?.path || "none"}`);
+
+    // Populate cache with surrounding regions (-5 to +5)
+    for (let i = -5; i <= 5; i++) {
+      const regionIndex = activeIndex + i;
+      if (regionIndex >= 0 && regionIndex < regionArray.length) {
+        const region = regionArray[regionIndex];
+        flow.activeRegionCache.regions[i] = {
+          path: region.path,
+          start: region.startEndInFlow.start,
+          end: region.startEndInFlow.end,
+          type: region.type,
+        };
+      }
+    }
   };
 
   // --------------------------- Functions: Flow management: shift cache -----------------------------------------
-  private shiftActiveRegionCache = (
+  private shiftCacheWindow = (
     flow: Types.FlowDef,
     direction: "forward" | "backward"
   ) => {
-    if (!flow.activeRegionCache) {
-      console.log("Warning: Cannot shift undefined cache");
-      return;
-    }
+    if (!flow.activeRegionCache) return;
 
-    console.log(`Shifting cache ${direction}`);
+    const regions = Object.values(flow.flowMap).sort(
+      (a, b) => a.startEndInFlow.start - b.startEndInFlow.start
+    );
 
-    if (direction === "forward" && flow.activeRegionCache.nextRegion) {
-      const nextNext = this.findNextRegion(
-        flow,
-        flow.activeRegionCache.nextRegion.path
-      );
-      flow.activeRegionCache = {
-        lastCursorPosition: flow.activeRegionCache.lastCursorPosition,
-        activeRegion: flow.activeRegionCache.nextRegion,
-        previousRegion: flow.activeRegionCache.activeRegion,
-        nextRegion: nextNext,
-      };
-      console.log(
-        `Shifted forward to: ${flow.activeRegionCache.activeRegion.path}`
-      );
-    } else if (
-      direction === "backward" &&
-      flow.activeRegionCache.previousRegion
-    ) {
-      const prevPrev = this.findPreviousRegion(
-        flow,
-        flow.activeRegionCache.previousRegion.path
-      );
-      flow.activeRegionCache = {
-        lastCursorPosition: flow.activeRegionCache.lastCursorPosition,
-        activeRegion: flow.activeRegionCache.previousRegion,
-        previousRegion: prevPrev,
-        nextRegion: flow.activeRegionCache.activeRegion,
-      };
-      console.log(
-        `Shifted backward to: ${flow.activeRegionCache.activeRegion.path}`
-      );
-    }
-    this.saveSettings();
-  };
+    const currentActiveRegion = flow.activeRegionCache.regions[0];
+    const currentIndex = regions.findIndex(
+      (r) => r.path === currentActiveRegion.path
+    );
 
-  // --------------------------- Functions: Flow management: find next/previous region -----------------------------------------
-  private findNextRegion = (flow: Types.FlowDef, currentPath: string) => {
-    const regions = Object.entries(flow.flowMap)
-      .map(([path, item]) => ({
-        path,
-        start: item.startEndInFlow.start,
-        end: item.startEndInFlow.end,
-        type: item.type,
-      }))
-      .sort((a, b) => a.start - b.start);
+    if (currentIndex === -1) return;
 
-    const currentIndex = regions.findIndex((r) => r.path === currentPath);
-    const nextRegion =
-      currentIndex < regions.length - 1 ? regions[currentIndex + 1] : undefined;
+    const newActiveIndex =
+      direction === "forward" ? currentIndex + 1 : currentIndex - 1;
+    if (newActiveIndex < 0 || newActiveIndex >= regions.length) return;
 
-    if (nextRegion) {
-      console.log(`Found next region: ${nextRegion.path}`);
-    }
-    return nextRegion;
-  };
-
-  // --------------------------------------------------------------------
-  private findPreviousRegion = (flow: Types.FlowDef, currentPath: string) => {
-    const regions = Object.entries(flow.flowMap)
-      .map(([path, item]) => ({
-        path,
-        start: item.startEndInFlow.start,
-        end: item.startEndInFlow.end,
-        type: item.type,
-      }))
-      .sort((a, b) => a.start - b.start);
-
-    const currentIndex = regions.findIndex((r) => r.path === currentPath);
-    const prevRegion = currentIndex > 0 ? regions[currentIndex - 1] : undefined;
-
-    if (prevRegion) {
-      console.log(`Found previous region: ${prevRegion.path}`);
-    }
-    return prevRegion;
+    // Rebuild cache around new active region
+    this.updateActiveRegionCache(
+      flow,
+      regions[newActiveIndex].startEndInFlow.start + 1
+    );
   };
 
   // -------------------------------------------------------

@@ -26,24 +26,16 @@ export interface FlowDef {
 
 export interface ActiveRegionCache {
   lastCursorPosition: number;
-  activeRegion: {
-    path: string;
-    start: number;
-    end: number;
-    type: string;
+  regions: {
+    [key: number]: RegionInfo; // -5 to +5, with 0 being active region
   };
-  nextRegion?: {
-    path: string;
-    start: number;
-    end: number;
-    type: string;
-  };
-  previousRegion?: {
-    path: string;
-    start: number;
-    end: number;
-    type: string;
-  };
+}
+
+export interface RegionInfo {
+  path: string;
+  start: number;
+  end: number;
+  type: string;
 }
 
 export interface FlowMap {

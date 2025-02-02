@@ -1,12 +1,5 @@
-.scroll-together-container {
-	display: flex;
-	flex-direction: column;
-}
-.scroll-together-container .workspace-leaf {
-	flex: none;
-	height: auto !important;
-}
-.scroll-together-container .workspace-leaf-content {
-	position: relative !important;
-	height: auto !important;
+.cm-read-only-region {
+  background-color: rgba(255, 0, 0, 0.1); /* Light red background */
+  /* or for debugging: */
+  /* background-color: rgba(255, 255, 0, 0.2); /* Yellow might be more visible */
 }
