@@ -5,7 +5,7 @@
 //#######################################################################
 
 export interface TextFlowSettings {
-  tempFolderPlace: string;
+  tempFolderPlace?: string;
   tempFolderHidden: boolean;
   flowLeafInFocus?: boolean;
   activeFlows: string[];
@@ -58,7 +58,7 @@ export interface FlowMap {
 }
 
 export const DEFAULT_SETTINGS: TextFlowSettings = {
-  tempFolderPlace: "not set yet", //
+  tempFolderPlace: "",
   tempFolderHidden: true,
   activeFlows: [],
   divider: "***",

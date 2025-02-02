@@ -89,23 +89,26 @@ export default class TextFlowPlugin extends Plugin {
   }
   // ---------------------------------------------------------------
   async ensureTempFolder() {
-    console.log(`tempFolderPlace: ${this.settings.tempFolderPlace}`);
-    const tempFolderPath: string = `${this.settings.tempFolderPlace}/x_textFlowTemp`;
-    try {
-      let folder = this.app.vault.getAbstractFileByPath(tempFolderPath);
-      if (!folder) {
-        await this.app.vault.createFolder(tempFolderPath);
-        console.log(`Temp folder created at ${tempFolderPath}`);
-      } else if (!(folder instanceof TFolder)) {
-        throw new Error(`"${tempFolderPath}" exists but is not a folder.`);
+    if (this.settings.tempFolderPlace !== undefined) {
+      console.log(`tempFolderPlace: ${this.settings.tempFolderPlace}`);
+      const tempFolderPath: string = `${this.settings.tempFolderPlace}/x_textFlowTemp`;
+      try {
+        let folder = this.app.vault.getAbstractFileByPath(tempFolderPath);
+        if (!folder) {
+          await this.app.vault.createFolder(tempFolderPath);
+          console.log(`Temp folder created at ${tempFolderPath}`);
+        } else if (!(folder instanceof TFolder)) {
+          throw new Error(`"${tempFolderPath}" exists but is not a folder.`);
+        }
+      } catch (error) {
+        console.error(`Error handling temp folder: ${error.message}`);
+        // new Notice("Failed to create or verify temp folder");
       }
-    } catch (error) {
-      console.error(`Error handling temp folder: ${error.message}`);
-      new Notice("Failed to create or verify temp folder");
     }
   }
 
   // ---------------- Functions: Utilities: UI -------------------------
+  // ----- is called onload
   discernAndSetTempFolderState = (
     tempFolderState?: boolean,
     tempFolderPlace?: string
@@ -167,40 +170,15 @@ export default class TextFlowPlugin extends Plugin {
           )
           .filter((path): path is string => path !== undefined);
 
-        // Check if any flow files were closed
-
+        // Check if any flows were closed
         let closure = this.settings.activeFlows.filter(
           (f) => !currentPaths.includes(f)
         );
         if (closure.length > 0) {
+          closure.forEach((flow) => {});
           this.settings.activeFlows.filter((f) => !closure.includes(f));
 
           this.saveSettings();
-        }
-      })
-    );
-    // ---------------- Editor change (change of content) -------------------------------
-    this.registerEvent(
-      this.app.workspace.on("file-open", (file) => {
-        if (!file) return;
-
-        const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (!activeView) return;
-
-        const editor = activeView.editor as any;
-        if (editor && this.hasReadOnlyExtension(editor)) {
-          this.removeReadOnlyExtension(editor);
-        }
-
-        const flowName = this.isFlowFile(file.path);
-
-        if (flowName) {
-          // File is a flow, set up read-only regions
-          console.log(`Flow file opened: ${flowName}`);
-          this.setupFlowEditor(activeView, flowName);
-        } else {
-          // File is not a flow, remove read-only regions if they exist
-          console.log(`Non-flow file opened: ${file.path}`);
         }
       })
     );
@@ -210,14 +188,18 @@ export default class TextFlowPlugin extends Plugin {
 
   // leaf.view as MarkdownView
   listenerBasket: { [key: string]: EventRef } = {};
-  addCursorListener = (leaf: MarkdownView | null) => {
+  private addCursorListener = (leaf: MarkdownView | null) => {
     if (!leaf) return;
     const editor = leaf?.editor as ObsidianEditor | null;
     if (!editor) return;
     const cmEditor = editor.cm;
     const activeLeafPath = leaf.file?.path;
-    let isItFlow = null;
 
+    if (activeLeafPath && this.listenerBasket[activeLeafPath]) {
+      console.log(`Cursor listener already exists for: ${activeLeafPath}`);
+      return;
+    }
+    let isItFlow = null;
     if (activeLeafPath !== undefined) {
       isItFlow = this.isFlowFile(activeLeafPath);
 
@@ -239,30 +221,25 @@ export default class TextFlowPlugin extends Plugin {
         };
 
         // Instead of .on(), use EditorView.updateListener
-        const updateListener = EditorView.updateListener.of((update) => {
-          if (update.selectionSet) {
-            cursorCallback();
+        const updateActiveRegionListener = EditorView.updateListener.of(
+          (update) => {
+            if (update.selectionSet) {
+              cursorCallback();
+            }
           }
-        });
+        );
 
         cmEditor.dispatch({
-          effects: StateEffect.appendConfig.of([updateListener]),
+          effects: StateEffect.appendConfig.of([updateActiveRegionListener]),
         });
 
-        const currentFlow = isItFlow;
-        if (
-          currentFlow !== null &&
-          activeLeafPath &&
-          !this.settings.activeFlows.includes(currentFlow)
-        ) {
-          this.settings.activeFlows.unshift(currentFlow);
-          this.saveSettings();
-        }
-
-        this.listenerBasket[activeLeafPath] = updateListener;
+        this.listenerBasket[activeLeafPath] = updateActiveRegionListener;
+      } else {
+        this.removeCursorListener(leaf);
       }
     }
   };
+
   // ---------------------------------------------------------
   removeCursorListener = (leaf: MarkdownView) => {
     const activeLeafPath = leaf.file?.path;
@@ -321,28 +298,28 @@ export default class TextFlowPlugin extends Plugin {
         //console.log(`File is flow: ${currentFlow}`);
 
         if (fileLeaf) {
-          // Flow is already open, just focus it
-          //console.log(`${currentFlow} is open; making it active`);
+          // Flow is already open, just focus it and adjust readonly
           this.app.workspace.setActiveLeaf(fileLeaf);
           if (fileLeaf.view instanceof MarkdownView) {
-            this.addCursorListener(fileLeaf.view);
-            this.setupFlowEditor(fileLeaf.view, currentFlow);
+            this.setupReadonlyEditor(fileLeaf.view, currentFlow);
           }
         } else {
-          // Flow needs to be opened
+          // Flow needs to be opened, listener and readonly attached
           fileLeaf = this.app.workspace.getLeaf(true);
           await fileLeaf.openFile(file);
+          const activeView =
+            this.app.workspace.getActiveViewOfType(MarkdownView);
+          if (activeView) {
+            if (fileLeaf.view instanceof MarkdownView) {
+              this.addCursorListener(fileLeaf.view);
+              this.setupReadonlyEditor(activeView, currentFlow);
+            }
+          }
 
           if (!this.settings.activeFlows.includes(currentFlow)) {
             this.settings.activeFlows.unshift(currentFlow);
             this.saveSettings();
           }
-        }
-
-        // Add cursor listener if it's a MarkdownView
-        if (fileLeaf.view instanceof MarkdownView) {
-          this.addCursorListener(fileLeaf.view);
-          this.setupFlowEditor(fileLeaf.view, currentFlow);
         }
         return;
       }
@@ -363,16 +340,15 @@ export default class TextFlowPlugin extends Plugin {
                 (leaf.view as MarkdownView).file?.path === flow.flowFilePath
             );
 
+          // if it's open just make it active
           if (flowLeaf) {
             console.log(`${flowName} is open; making it active`);
             event.preventDefault();
             await this.app.workspace.setActiveLeaf(flowLeaf);
           } else {
-            console.log(
-              `${flow.flowFilePath} is not open; opening it in a new leaf`
-            );
+            // if it's not open, open it and attach stuff
             event.preventDefault();
-            flowLeaf = this.app.workspace.getLeaf(false);
+            flowLeaf = this.app.workspace.getLeaf(true);
             await flowLeaf.openFile(
               this.app.vault.getAbstractFileByPath(flow.flowFilePath) as TFile
             );
@@ -380,13 +356,12 @@ export default class TextFlowPlugin extends Plugin {
             if (!this.settings.activeFlows.includes(flowName)) {
               this.settings.activeFlows.unshift(flowName);
               if (flowLeaf.view instanceof MarkdownView) {
-                this.setupFlowEditor(flowLeaf.view, flowName);
+                this.setupReadonlyEditor(flowLeaf.view, flowName);
+                this.addCursorListener(flowLeaf.view);
               }
               this.saveSettings();
             }
           }
-
-          // Add cursor listener to the flow leaf if it's a MarkdownView
           if (flowLeaf?.view instanceof MarkdownView) {
             const startPos = flow.flowMap[clickedFilePath].startEndInFlow.start;
             const editor = flowLeaf.view.editor;
@@ -412,9 +387,6 @@ export default class TextFlowPlugin extends Plugin {
                   });
                 }
               }, 150);
-
-              this.addCursorListener(flowLeaf.view);
-              this.setupFlowEditor(flowLeaf.view, flowName);
             }
           }
           return;
@@ -457,7 +429,7 @@ export default class TextFlowPlugin extends Plugin {
           flowName = this.isFlowFile(activeLeafPath);
           if (flowName) {
             this.addCursorListener(leaf.view);
-            this.setupFlowEditor(leaf.view, flowName);
+            this.setupReadonlyEditor(leaf.view, flowName);
             if (!this.settings.activeFlows.includes(flowName)) {
               this.settings.activeFlows.push(flowName);
             }
@@ -529,51 +501,8 @@ export default class TextFlowPlugin extends Plugin {
   };
 
   // ---------------------- Functions: Flow management: Region tracking ----------------------------
-  private updateReadOnlyRanges = (flow: Types.FlowDef) => {
-    // Create array to hold all read-only ranges
-    const readOnlyRanges: Array<{ from: number; to: number }> = [];
 
-    // Process each region in the flow map
-    Object.values(flow.flowMap).forEach((region) => {
-      if (region.type === "folder") {
-        // Entire folder regions are read-only
-        readOnlyRanges.push({
-          from: region.startEndInFlow.start,
-          to: region.startEndInFlow.end,
-        });
-      } else if (region.type === "file") {
-        // Add divider area at the end of file regions
-        const dividerLength = this.settings.divider.length + 2; // +2 for \r\r
-        readOnlyRanges.push({
-          from: region.startEndInFlow.end - dividerLength,
-          to: region.startEndInFlow.end,
-        });
-      }
-    });
-
-    return readOnlyRanges;
-  };
-  // -----------------------------------------------------------
-  private removeReadOnlyExtension = (editor: any) => {
-    if (!editor.cm) return;
-
-    if (this.hasReadOnlyExtension(editor)) {
-      editor.cm.dispatch({
-        effects: StateEffect.reconfigure.of([]),
-      });
-    }
-  };
-
-  // ----------------------------------------------------------
-  private hasReadOnlyExtension = (editor: any) => {
-    if (!editor.cm) return false;
-
-    // Check if our state field exists in the editor state
-    return editor.cm.state.field(this.readOnlyRanges, false) !== undefined;
-  };
-
-  // -------------------------------------
-  private setupFlowEditor = (leaf: MarkdownView, flowName: string) => {
+  private setupReadonlyEditor = (leaf: MarkdownView, flowName: string) => {
     console.log(`Setting up flow editor for ${flowName}`);
     const flow = this.settings.flows[flowName];
     if (!flow) return;
@@ -617,6 +546,50 @@ export default class TextFlowPlugin extends Plugin {
         this.updateRangesEffect.of(readOnlyRanges),
       ],
     });
+  };
+
+  // ---------------------------
+  private updateReadOnlyRanges = (flow: Types.FlowDef) => {
+    // Create array to hold all read-only ranges
+    const readOnlyRanges: Array<{ from: number; to: number }> = [];
+
+    // Process each region in the flow map
+    Object.values(flow.flowMap).forEach((region) => {
+      if (region.type === "folder") {
+        // Entire folder regions are read-only
+        readOnlyRanges.push({
+          from: region.startEndInFlow.start,
+          to: region.startEndInFlow.end,
+        });
+      } else if (region.type === "file") {
+        // Add divider area at the end of file regions
+        const dividerLength = this.settings.divider.length + 2; // +2 for \r\r
+        readOnlyRanges.push({
+          from: region.startEndInFlow.end - dividerLength,
+          to: region.startEndInFlow.end,
+        });
+      }
+    });
+
+    return readOnlyRanges;
+  };
+  // -----------------------------------------------------------
+  private removeReadOnlyExtension = (editor: any) => {
+    if (!editor.cm) return;
+
+    if (this.hasReadOnlyExtension(editor)) {
+      editor.cm.dispatch({
+        effects: StateEffect.reconfigure.of([]),
+      });
+    }
+  };
+
+  // ----------------------------------------------------------
+  private hasReadOnlyExtension = (editor: any) => {
+    if (!editor.cm) return false;
+
+    // Check if our state field exists in the editor state
+    return editor.cm.state.field(this.readOnlyRanges, false) !== undefined;
   };
 
   // ----------------------------------------------------------
@@ -876,20 +849,18 @@ export default class TextFlowPlugin extends Plugin {
       this.ensureTempFolder();
     }
 
-    // ----- ONLOAD: set up UI -------------------------
     // -------------------------------------------------------------------
-
-    this.discernAndSetTempFolderState(
-      this.settings.tempFolderHidden,
-      this.settings.tempFolderPlace
-    );
-
-    this.saveSettings();
-
     // ------------------- ONLOAD: add listeners for cursor and clicks
     // Wait for the file explorer to be available in the DOM
     this.app.workspace.onLayoutReady(() => {
+      // ----- ONLOAD: set up UI -------------------------
       this.initialSetup();
+      if (this.settings.tempFolderHidden) {
+        console.log(
+          `[TextFlow] Layout ready, current hidden state: ${this.settings.tempFolderHidden}`
+        );
+        this.discernAndSetTempFolderState(true, this.settings.tempFolderPlace);
+      }
       // -------------------------------
       this.addCursorListener(
         this.app.workspace.getActiveViewOfType(MarkdownView) as MarkdownView
@@ -907,6 +878,7 @@ export default class TextFlowPlugin extends Plugin {
           "Could not find file explorer or click listener not defined"
         );
       }
+      this.saveSettings();
     });
 
     // ----------- ONLOAD: add global listeners ------------------------------------
@@ -924,6 +896,20 @@ export default class TextFlowPlugin extends Plugin {
     console.log("TextFlow Plugin unloaded.");
     // ---------------- Store data for all active flows ----
     this.saveSettings();
+
+    // Remove read-only extensions from all markdown views
+    const markdownLeaves = this.app.workspace.getLeavesOfType("markdown");
+    for (const leaf of markdownLeaves) {
+      if (leaf.view instanceof MarkdownView) {
+        const editor = leaf.view.editor as any;
+        this.removeReadOnlyExtension(editor);
+      }
+    }
+    // Clear our caches
+    this.sortedRegionsCache = null;
+    this.lastFlowUpdate = "";
+    this.lastCursorCheck = 0;
+    this.lastCursorOffset = 0;
 
     // ------------ ONUNLOAD: REMOVE cursor listeners -----------
     for (const path in this.listenerBasket) {
@@ -948,6 +934,4 @@ export default class TextFlowPlugin extends Plugin {
       fileExplorer.removeEventListener("click", this.boundFileExplorerClick);
     }
   }
-  // ------------------ ONUNLOAD: remove global listeners -------------------
-  removeListeners() {}
 }

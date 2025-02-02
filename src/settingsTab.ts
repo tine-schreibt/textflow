@@ -258,21 +258,19 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       );
     if (
       // if this is the first initialisation of the plugin
-      this.plugin.settings.tempFolderPlace === null ||
       this.plugin.settings.tempFolderPlace === undefined
     ) {
-      this.plugin.settings.tempFolderPlace = "not set yet";
+      this.plugin.settings.tempFolderPlace = "";
       this.plugin.saveSettings();
-    } else {
     }
+    // need this to be in wider scope for .addText and .addButton
     let newTempFolderPlace: string = this.plugin.settings.tempFolderPlace;
-    let oldTempFolderPlace: string = this.plugin.settings.tempFolderPlace;
 
     setTempFolder
       .addText((text) =>
         text
           .setValue(
-            this.plugin.settings.tempFolderPlace === "not set yet" ||
+            this.plugin.settings.tempFolderPlace === undefined ||
               this.plugin.settings.tempFolderPlace === ""
               ? "root"
               : this.plugin.settings.tempFolderPlace
@@ -293,71 +291,64 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             newTempFolderPlace = "";
           }
 
-          console.log(
-            `Current tempFolderPlace: ${this.plugin.settings.tempFolderPlace}`
-          );
+          let oldTempFolderPlace = this.plugin.settings.tempFolderPlace
+            ? this.plugin.settings.tempFolderPlace
+            : (this.plugin.settings.tempFolderPlace = "");
+          let oldTempFolderPath = constructTempFolderPath(oldTempFolderPlace);
+          console.log(`Creating temp folder at: ${oldTempFolderPath}`);
+          console.log(`Current tempFolderPlace: ${oldTempFolderPlace}`);
+
+          this.plugin.settings.tempFolderPlace = newTempFolderPlace;
           console.log(`New tempFolderPlace: ${newTempFolderPlace}`);
 
-          if (this.plugin.settings.tempFolderPlace === "not set yet") {
-            // First time setup
-            this.plugin.settings.tempFolderPlace = newTempFolderPlace;
-            let initTempFolderPath =
-              constructTempFolderPath(newTempFolderPlace);
+          let newTempFolderPath = constructTempFolderPath(newTempFolderPlace);
+          console.log(`Creating temp folder at: ${newTempFolderPath}`);
+
+          let oldTempFolderCheck =
+            this.app.vault.getAbstractFileByPath(oldTempFolderPath);
+          if (
+            newTempFolderPlace !== oldTempFolderPlace &&
+            oldTempFolderPlace !== undefined &&
+            oldTempFolderCheck instanceof TFolder
+          ) {
+            // Paths are different - handle folder move/recreation
             console.log(
-              `Creating initial temp folder at: ${initTempFolderPath}`
+              `Moving from ${oldTempFolderPath} to ${newTempFolderPath}`
             );
 
+            const deleteOldTempFolder = new Modals.DeleteOldTempFolderModal(
+              this.app,
+              this.plugin,
+              newTempFolderCreation,
+              this.plugin.discernAndSetTempFolderState,
+              oldTempFolderPath,
+              newTempFolderPath,
+              newTempFolderPlace
+            );
+            deleteOldTempFolder.open();
+          } else {
             try {
-              let initTempFolder =
-                this.app.vault.getAbstractFileByPath(initTempFolderPath);
-              if (!initTempFolder) {
-                await this.app.vault.createFolder(initTempFolderPath);
-                console.log(
-                  `Initial temp folder created at ${initTempFolderPath}`
-                );
-                await this.plugin.saveSettings();
-                new Notice(
-                  `Successfully created a new hidden temp folder: ${initTempFolderPath}`
-                );
-              } else if (!(initTempFolder instanceof TFolder)) {
+              let folder =
+                this.app.vault.getAbstractFileByPath(newTempFolderPath);
+              if (!folder) {
+                await this.app.vault.createFolder(newTempFolderPath);
+                new Notice(`Temp folder created at ${newTempFolderPath}`);
+              } else if (!(folder instanceof TFolder)) {
+                new Notice(`${newTempFolderPath}" exists but is not a folder.`);
                 throw new Error(
-                  `"${initTempFolderPath}" exists but is not a folder.`
+                  `${newTempFolderPath}" exists but is not a folder.`
                 );
               }
-            } catch (e) {
-              console.log(
-                `Something went wrong when trying to create ${initTempFolderPath}: ${e}`
-              );
-            }
-          } else {
-            // Plugin has been set up before
-            let oldTempFolderPlace = this.plugin.settings.tempFolderPlace;
-            console.log(`oldTempFolderPlace: ${oldTempFolderPlace}`);
-            console.log(`newTempFolderPlace: ${newTempFolderPlace}`);
-
-            if (newTempFolderPlace !== oldTempFolderPlace) {
-              // Paths are different - handle folder move/recreation
-              let oldTempFolderPath =
-                constructTempFolderPath(oldTempFolderPlace);
-              let newTempFolderPath =
-                constructTempFolderPath(newTempFolderPlace);
-
-              console.log(
-                `Moving from ${oldTempFolderPath} to ${newTempFolderPath}`
-              );
-
-              const deleteOldTempFolder = new Modals.DeleteOldTempFolderModal(
-                this.app,
-                this.plugin,
-                newTempFolderCreation,
-                this.plugin.discernAndSetTempFolderState,
-                oldTempFolderPath,
-                newTempFolderPath,
-                newTempFolderPlace
-              );
-              deleteOldTempFolder.open();
+            } catch (error) {
+              console.error(`Error handling temp folder: ${error.message}`);
             }
             await this.plugin.saveSettings();
+            if (this.plugin.settings.tempFolderHidden) {
+              this.plugin.discernAndSetTempFolderState(
+                true,
+                this.plugin.settings.tempFolderPlace
+              );
+            }
           }
         });
       });
