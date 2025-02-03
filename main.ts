@@ -15,7 +15,12 @@ import {
 } from "obsidian";
 import { TextFlowSettingsTab } from "./src/settingsTab";
 import { TextFlowSettings, DEFAULT_SETTINGS } from "./src/types";
-import { EditorView, ViewUpdate } from "@codemirror/view";
+import {
+  EditorView,
+  Decoration,
+  DecorationSet,
+  ViewUpdate,
+} from "@codemirror/view";
 import {
   EditorState,
   StateEffect,
@@ -51,21 +56,45 @@ export default class TextFlowPlugin extends Plugin {
   private lastCursorCheck: number = 0;
   private lastCursorOffset: number = 0;
   // ----------------- tracking read-only ranges --------------------------
-  private readOnlyRanges = StateField.define<
-    Array<{ from: number; to: number }>
-  >({
-    create: () => [],
-    update: (
-      ranges: Array<{ from: number; to: number }>,
-      tr: Transaction
-    ): Array<{ from: number; to: number }> => {
+  private readOnlyHighlight = Decoration.mark({
+    class: "cm-read-only-region",
+  });
+
+  private readOnlyRanges = StateField.define<{
+    ranges: Array<{ from: number; to: number }>;
+    decorations: DecorationSet;
+  }>({
+    create: () => ({
+      ranges: [],
+      decorations: Decoration.none,
+    }),
+    update: (state, tr) => {
+      let ranges = state.ranges;
+
+      // Handle range updates
       for (let e of tr.effects) {
         if (e.is(this.updateRangesEffect)) {
-          return e.value;
+          ranges = e.value;
         }
       }
-      return ranges;
+
+      // Create decorations from ranges, but normalize position 0
+      const decorations = Decoration.set(
+        ranges.map((range) =>
+          this.readOnlyHighlight.range(
+            Math.max(0, range.from), // Ensure decoration starts at 0 minimum
+            range.to
+          )
+        )
+      );
+
+      return {
+        ranges,
+        decorations,
+      };
     },
+    provide: (state) =>
+      EditorView.decorations.from(state, (value) => value.decorations),
   });
 
   private updateRangesEffect =
@@ -512,24 +541,24 @@ export default class TextFlowPlugin extends Plugin {
 
     // Check if extension already exists
     if (this.hasReadOnlyExtension(editor)) {
-      console.log("Existing extension found, updating ranges");
+      //   console.log("Existing extension found, updating ranges");
       this.updateReadOnlyRangesForEditor(editor, flow);
       return;
     }
 
     // Create and apply the extension for the first time
     const readOnlyRanges = this.updateReadOnlyRanges(flow);
-    console.log("Created read-only ranges:", readOnlyRanges);
+    // console.log("Created read-only ranges:", readOnlyRanges);
 
     const preventEdit = EditorState.transactionFilter.of((tr) => {
       if (!tr.changes.empty) {
-        const ranges = tr.startState.field(this.readOnlyRanges);
-        console.log("Checking edit against ranges:", ranges);
+        const rangeState = tr.startState.field(this.readOnlyRanges);
+        //  console.log("Checking edit against ranges:", rangeState.ranges);
         let shouldPrevent = false;
         tr.changes.iterChanges((fromA, toA) => {
-          for (let range of ranges) {
+          for (let range of rangeState.ranges) {
             if (fromA < range.to && toA > range.from) {
-              console.log(`Edit prevented at position ${fromA}-${toA}`);
+              //  console.log(`Edit prevented at position ${fromA}-${toA}`);
               shouldPrevent = true;
             }
           }
@@ -555,15 +584,14 @@ export default class TextFlowPlugin extends Plugin {
 
     if (!cache) return readOnlyRanges;
 
-    // Process all cached regions
     Object.values(cache.regions).forEach((region) => {
       if (region.type === "folder") {
         readOnlyRanges.push({
-          from: region.start,
+          from: region.start - 1,
           to: region.end,
         });
       } else if (region.type === "file") {
-        const dividerLength = this.settings.divider.length + 2;
+        const dividerLength = this.settings.divider.length;
         readOnlyRanges.push({
           from: region.end - dividerLength,
           to: region.end,
@@ -573,6 +601,7 @@ export default class TextFlowPlugin extends Plugin {
 
     return readOnlyRanges.sort((a, b) => a.from - b.from);
   };
+
   // -----------------------------------------------------------
   private removeReadOnlyExtension = (editor: any) => {
     if (!editor.cm) return;
@@ -618,6 +647,7 @@ export default class TextFlowPlugin extends Plugin {
 
     const cached = flow.activeRegionCache;
     if (!cached) {
+      console.log("No cache exists, initializing..."); // Debug log
       // First-time initialization of cache
       this.updateActiveRegionCache(flow, cursorOffset);
       return;
@@ -625,17 +655,22 @@ export default class TextFlowPlugin extends Plugin {
 
     // Check if cursor is still within the active region (region 0)
     const activeRegion = cached.regions[0];
+    console.log("Current active region:", activeRegion); // Debug log
+    // console.log("Cursor position:", cursorOffset); // Debug log
+
     if (
       cursorOffset >= activeRegion.start &&
       cursorOffset <= activeRegion.end
     ) {
       // Still in active region, just update cursor position
       cached.lastCursorPosition = cursorOffset;
+      //console.log("Still in active region"); // Debug log
+
       return;
     }
 
     // Check if cursor moved to an adjacent cached region
-    for (let i = -5; i <= 5; i++) {
+    for (let i = -2; i <= 2; i++) {
       const region = cached.regions[i];
       if (!region) continue;
 
@@ -647,6 +682,9 @@ export default class TextFlowPlugin extends Plugin {
         for (let j = 0; j < shifts; j++) {
           this.shiftCacheWindow(flow, direction);
         }
+        // If we get here, cursor has moved outside our cached window
+        console.log("Cursor moved outside cache window - recalculating cache"); // Debug log
+        this.updateActiveRegionCache(flow, cursorOffset);
 
         // Update read-only ranges after shifting
         const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
@@ -693,8 +731,8 @@ export default class TextFlowPlugin extends Plugin {
       regions: {},
     };
 
-    // Populate cache with surrounding regions (-5 to +5)
-    for (let i = -5; i <= 5; i++) {
+    // Populate cache with surrounding regions (-2 to +2)
+    for (let i = -2; i <= 2; i++) {
       const regionIndex = activeIndex + i;
       if (regionIndex >= 0 && regionIndex < regionArray.length) {
         const region = regionArray[regionIndex];
