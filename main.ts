@@ -548,6 +548,28 @@ export default class TextFlowPlugin extends Plugin {
     const editor = leaf.editor as any;
     if (!editor.cm) return;
 
+    // Add a unique class to the editor container
+    const container = leaf.containerEl;
+    container.classList.add("flow-view"); // Ensures only your plugin’s files are affected
+    console.log("Attaching flow view class");
+
+    // Remove class when the file is closed
+    this.registerEvent(
+      this.app.workspace.on("active-leaf-change", (newLeaf) => {
+        // Ensure newLeaf is valid before proceeding
+        if (newLeaf instanceof WorkspaceLeaf) {
+          // Compare leaves instead of views
+          if (newLeaf !== leaf.leaf) {
+            container.classList.remove("flow-view");
+            console.log("removing flow view class");
+          }
+        } else {
+          // If there's no valid leaf, remove the class for safety
+          container.classList.remove("flow-view");
+        }
+      })
+    );
+
     if (this.hasReadOnlyExtension(editor)) {
       console.log("Removing existing read-only extension");
       this.removeReadOnlyExtension(editor);
@@ -556,23 +578,33 @@ export default class TextFlowPlugin extends Plugin {
     const preventEdit = EditorState.transactionFilter.of((tr) => {
       if (!tr.changes.empty) {
         let shouldReject = false;
-        tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
-          // Get a window around the edit point
-          const windowStart = Math.max(0, fromA - 5);
-          const windowText = tr.startState.sliceDoc(windowStart, toA + 5);
 
-          const dividerIndex = windowText.indexOf("***");
-          if (dividerIndex !== -1) {
-            // Convert window-relative position to document position
-            const absoluteDividerStart = windowStart + dividerIndex - 1;
-            const absoluteDividerEnd = absoluteDividerStart + 5; // *** plus 2 chars on each side
+        tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
+          // Get a larger window around the edit point
+          const windowStart = Math.max(0, fromA - 10);
+          const windowEnd = Math.min(tr.startState.doc.length, toA + 10);
+          const windowText = tr.startState.sliceDoc(windowStart, windowEnd);
+
+          console.log("Window text:", JSON.stringify(windowText));
+
+          let match;
+          const regex = /\*\*\*/g;
+          while ((match = regex.exec(windowText)) !== null) {
+            // Get absolute positions of the protected `***`
+            const absoluteDividerStart = windowStart + match.index;
+            const absoluteDividerEnd = absoluteDividerStart + 3;
 
             console.log(
               `Found divider at ${absoluteDividerStart}-${absoluteDividerEnd}, edit at ${fromA}-${toA}`
             );
 
-            // Check if edit overlaps with protected range
-            if (fromA <= absoluteDividerEnd && toA >= absoluteDividerStart) {
+            // Check if edit overlaps with `***`
+            if (
+              // Direct modification within ***
+              (fromA < absoluteDividerEnd && toA > absoluteDividerStart) ||
+              // Deletion that extends into ***
+              (fromA <= absoluteDividerStart && toA >= absoluteDividerEnd)
+            ) {
               console.log("Edit would affect protected range");
               shouldReject = true;
             }
@@ -580,10 +612,10 @@ export default class TextFlowPlugin extends Plugin {
         });
 
         if (shouldReject) {
-          return [];
+          return []; // Reject the transaction
         }
       }
-      return tr;
+      return tr; // Allow normal edits
     });
 
     console.log("Applying preventEdit filter to editor");

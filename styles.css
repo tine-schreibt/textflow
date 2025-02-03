@@ -1,5 +1,7 @@
-.cm-read-only-region {
-  background-color: rgba(255, 0, 0, 0.1); /* Light red background */
-  /* or for debugging: */
-  /* background-color: rgba(255, 255, 0, 0.2); /* Yellow might be more visible */
+/* Only apply this CSS when inside a flowView file */
+.flow-view .cm-line .cm-formatting-hr {
+  opacity: 1 !important; /* Ensure it always looks like a grey line */
+  color: var(--text-muted) !important; /* Match Obsidian's normal HR color */
+  pointer-events: none !important; /* Prevent any interactions */
+  user-select: none !important; /* Make sure users can't select or delete it */
 }
