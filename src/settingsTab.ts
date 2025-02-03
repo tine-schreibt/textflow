@@ -32,6 +32,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     const shSettings: Types.TextFlowSettings = this.plugin.settings;
     let createOrEditFlowName: string = "";
     let createOrEditsourcePath: string = "";
+    // divider song and dance routine
     this.plugin.settings.divider = `\r\r***\r\r`;
     const divider = this.plugin.settings.divider.replace(/\\r/g, "\r");
 
