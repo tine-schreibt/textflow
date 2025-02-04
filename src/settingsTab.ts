@@ -142,19 +142,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         item instanceof TFolder &&
         item.path !== shSettings.tempFolderPlace + "/x_textFlowTemp"
       ) {
-        console.log(`Processing ${fullPath}:`, {
-          contentLengthBefore: mapValueBasket.tempFileContents.length,
-          addedContent:
-            item instanceof TFolder
-              ? `<center><b>${itemName}</b></center>${shSettings.divider}`
-              : `${shSettings.divider}`,
-          contentLengthAfter:
-            mapValueBasket.tempFileContents.length +
-            (item instanceof TFolder
-              ? `<center><b>${itemName}</b></center>${shSettings.divider}`
-                  .length
-              : `${shSettings.divider}`.length),
-        });
         flow.flowMap[fullPath] = {
           path: fullPath,
           itemName: item.name,
@@ -174,16 +161,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         mapValueBasket.tempFileContents += `<center><b>${itemName}</b></center>${shSettings.divider}`;
         mapValueBasket.currentEnd = mapValueBasket.tempFileContents.length;
         flow.flowMap[fullPath].startEndInFlow.end = mapValueBasket.currentEnd;
-        /*console.log(
-					`start: ${
-						flow.flowMap[fullPath].startEndInFlow.start
-					} start plus total lenght: ${
-						flow.flowMap[fullPath].startEndInFlow.start +
-						flow.flowMap[fullPath].lengthPlusDividers
-					} = content lenghth: ${
-						mapValueBasket.tempFileContents.length
-					} = current end ${mapValueBasket.currentEnd}`
-				);*/
 
         // Process folder contents
         for (const subItem of item.children) {
@@ -196,21 +173,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         }
       } else if (item instanceof TFile) {
         let fileContent: string = await this.app.vault.read(item);
-        console.log(`Processing ${fullPath}:`, {
-          contentLengthBefore: mapValueBasket.tempFileContents.length,
-          addedContent:
-            item instanceof TFolder
-              ? `<center><b>${itemName}</b></center>${shSettings.divider}`
-              : `${fileContent}${shSettings.divider}`,
-          contentLengthAfter:
-            mapValueBasket.tempFileContents.length +
-            (item instanceof TFolder
-              ? `<center><b>${itemName}</b></center>${shSettings.divider}`
-                  .length
-              : `${fileContent}${shSettings.divider}`.length),
-        });
         // find and remove the title line; normalize
-        //console.log(fileContent);
         const titleLine = `## ${item.name.replace(/\.md$/, "")}`;
         const normalize = (fileContent: string) =>
           fileContent.replace(/\uFEFF|\s+$/g, "").trim();
@@ -243,16 +206,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         mapValueBasket.tempFileContents += `${fileContent}${shSettings.divider}`;
         mapValueBasket.currentEnd = mapValueBasket.tempFileContents.length;
         flow.flowMap[fullPath].startEndInFlow.end = mapValueBasket.currentEnd;
-        /*console.log(
-					`start: ${
-						flow.flowMap[fullPath].startEndInFlow.start
-					} start plus total lenght: ${
-						flow.flowMap[fullPath].startEndInFlow.start +
-						flow.flowMap[fullPath].lengthPlusDividers
-					} = content lenghth: ${
-						mapValueBasket.tempFileContents.length
-					} = current end ${mapValueBasket.currentEnd}`
-				);*/
       } else {
         console.error("End of folder OR invalid file.");
       }
