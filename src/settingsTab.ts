@@ -33,8 +33,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     let createOrEditFlowName: string = "";
     let createOrEditsourcePath: string = "";
     // divider song and dance routine
-    this.plugin.settings.divider = `\r***\r`;
-    const divider = this.plugin.settings.divider.replace(/\\r/g, "\r");
 
     //#######################################################################
     //###########################    Functions   ############################
@@ -129,6 +127,69 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     };
     // wider scope variables that can't be reset during iteration
 
+    const createMarker = () => {
+      // Define our invisible characters
+      const INVISIBLE_CHARS = [
+        "\u200B", // Zero-width space (0)
+        "\u200C", // Zero-width non-joiner (1)
+        "\u200D", // Zero-width joiner (2)
+      ];
+
+      // Get timestamp modulo 30000 to get last 30 seconds worth of milliseconds
+      const shortTime = Date.now() % 30000;
+
+      // Convert to base-3 string and ensure exactly 10 digits
+      const base3 = shortTime.toString(3).padStart(10, "0");
+
+      // Convert each base-3 digit to the corresponding invisible character
+      const encoded = [...base3]
+        .map((digit) => INVISIBLE_CHARS[parseInt(digit)])
+        .join("");
+
+      const divider = `\r${encoded}<hr>\r`;
+      const idDivider = divider.replace(/\\r/g, "\r");
+
+      // Wrap in non-breaking spaces
+      return idDivider;
+    };
+
+    // For debugging/verification purposes
+    const decodeMarker = (marker: string) => {
+      const INVISIBLE_CHARS = ["\u200B", "\u200C", "\u200D"];
+
+      // Remove non-breaking spaces
+      const encoded = marker.slice(1, -1);
+
+      // Convert invisible characters back to base-3 digits
+      let value = 0;
+      for (const char of encoded) {
+        value = value * 3 + INVISIBLE_CHARS.indexOf(char);
+      }
+
+      return value;
+    };
+
+    const debugMarker = (marker: string) => {
+      console.log({
+        fullMarker: marker,
+        length: marker.length,
+        chars: Array.from(marker).map((char) => ({
+          char: char,
+          code: char.charCodeAt(0).toString(16), // hex code
+          name:
+            char === "\u00A0"
+              ? "NBSP"
+              : char === "\u200B"
+              ? "ZWSP"
+              : char === "\u200C"
+              ? "ZWNJ"
+              : char === "\u200D"
+              ? "ZWJ"
+              : "unknown",
+        })),
+      });
+    };
+
     const updateFlatMap = async (
       item: TAbstractFile,
       flow: Types.FlowDef,
@@ -137,32 +198,38 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     ): Promise<void> => {
       const fullPath = item.path;
       const itemName = item.name;
+
       // Calculate new positions once
       if (
         item instanceof TFolder &&
         item.path !== shSettings.tempFolderPlace + "/x_textFlowTemp"
       ) {
+        const timestamp = Date.now();
+        const idDivider = createMarker();
+
         flow.flowMap[fullPath] = {
           path: fullPath,
           itemName: item.name,
-          lastModifiedInFlow: Date.now(),
+          lastModifiedInFlow: timestamp,
           startEndInFlow: {
             start: mapValueBasket.tempFileContents.length,
             end: 0,
           },
           type: "folder",
           minLength: itemName.length,
-          lengthPlusDividers: itemName.length + shSettings.divider.length + 28,
+          lengthPlusDividers: itemName.length + idDivider.length,
         } as Types.FlowMap;
+
         if (mapValueBasket.initialIteration) {
           flow.flowMap[fullPath].startEndInFlow.start = 0;
         }
         mapValueBasket.initialIteration = false;
-        mapValueBasket.tempFileContents += `<center><b>${itemName}</b></center>${shSettings.divider}`;
+
+        // Add content with marker before divider
+        mapValueBasket.tempFileContents += `<center><b>${itemName}</b></center>${idDivider}`;
         mapValueBasket.currentEnd = mapValueBasket.tempFileContents.length;
         flow.flowMap[fullPath].startEndInFlow.end = mapValueBasket.currentEnd;
 
-        // Process folder contents
         for (const subItem of item.children) {
           await updateFlatMap(
             subItem,
@@ -185,10 +252,13 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             .substring(normalizedTitleLine.length + 1)
             .trimStart();
         }
+        const timestamp = Date.now();
+        const idDivider = createMarker();
+
         flow.flowMap[fullPath] = {
           path: fullPath,
           itemName: item.name,
-          lastModifiedInFlow: Date.now(),
+          lastModifiedInFlow: timestamp,
           startEndInFlow: {
             start: mapValueBasket.tempFileContents.length,
             end: 0,
@@ -196,14 +266,17 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           type: "file",
           sourceLastModified: item.stat.mtime,
           minLength: fileContent.length,
-          lengthPlusDividers:
-            fileContent.length + shSettings.divider.length + 4,
+          idDivider: idDivider,
+          lengthPlusDividers: fileContent.length + idDivider.length,
         } as Types.FlowMap;
+
         if (mapValueBasket.initialIteration) {
           flow.flowMap[fullPath].startEndInFlow.start = 0;
         }
         mapValueBasket.initialIteration = false;
-        mapValueBasket.tempFileContents += `${fileContent}${shSettings.divider}`;
+
+        // Add content with marker before divider
+        mapValueBasket.tempFileContents += `${fileContent}${idDivider}`;
         mapValueBasket.currentEnd = mapValueBasket.tempFileContents.length;
         flow.flowMap[fullPath].startEndInFlow.end = mapValueBasket.currentEnd;
       } else {

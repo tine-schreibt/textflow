@@ -45,6 +45,7 @@ export interface FlowMap {
   sourceLastModified?: number;
   lastModifiedInFlow: number;
   minLength: number;
+  idDivider: string;
   lengthPlusDividers: number;
   startEndInFlow: { start: number; end: number };
 }

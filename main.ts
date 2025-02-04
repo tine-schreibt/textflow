@@ -590,12 +590,14 @@ export default class TextFlowPlugin extends Plugin {
 
         tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
           // Get a larger window around the edit point
-          const windowStart = Math.max(0, fromA - 10);
-          const windowEnd = Math.min(tr.startState.doc.length, toA + 10);
+          const windowStart = Math.max(0, fromA - 20);
+          const windowEnd = Math.min(tr.startState.doc.length, toA + 20);
           const windowText = tr.startState.sliceDoc(windowStart, windowEnd);
 
           let match;
-          const regex = /(?:^|\n)(\*\*\*|___|<hr>)(?:\n|$)/g;
+          const regex = /(?:^|\n)[\u200B\u200C\u200D]{10}(<hr>)(?:\n|$)/g;
+
+          //  /(?:^|\n)(\*\*\*|___|<hr>)(?:\n|$)/g;
           while ((match = regex.exec(windowText)) !== null) {
             // Get absolute positions of the protected `***`, including required newlines
             const absoluteDividerStart = windowStart + match.index;
