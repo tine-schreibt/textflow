@@ -94,6 +94,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         currentStart: -1,
         currentEnd: 0,
         initialIteration: true,
+        UIDCounter: 0,
+        UID: "",
       };
       this.plugin.saveSettings();
 
@@ -127,26 +129,29 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     };
     // wider scope variables that can't be reset during iteration
 
-    const createMarker = () => {
+    const createMarker = (mapValueBasket: Types.mapValueBasket) => {
       // Define our invisible characters
       const INVISIBLE_CHARS = [
         "\u200B", // Zero-width space (0)
         "\u200C", // Zero-width non-joiner (1)
         "\u200D", // Zero-width joiner (2)
       ];
+      //console.log(mapValueBasket.UIDCounter);
 
-      // Get timestamp modulo 30000 to get last 30 seconds worth of milliseconds
-      const shortTime = Date.now() % 30000;
-
+      // count up by one
+      const countUp = mapValueBasket.UIDCounter++;
       // Convert to base-3 string and ensure exactly 10 digits
-      const base3 = shortTime.toString(3).padStart(10, "0");
+      const base3 = countUp.toString(3).padStart(10, "0");
 
       // Convert each base-3 digit to the corresponding invisible character
       const encoded = [...base3]
         .map((digit) => INVISIBLE_CHARS[parseInt(digit)])
         .join("");
+      mapValueBasket.UID = encoded;
+      //console.log(mapValueBasket.UID);
 
-      const divider = `\r${encoded}<hr>\r`;
+      // make the divider
+      const divider = `\r${encoded}<hr>\r\r`;
       const idDivider = divider.replace(/\\r/g, "\r");
 
       // Wrap in non-breaking spaces
@@ -205,19 +210,21 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         item.path !== shSettings.tempFolderPlace + "/x_textFlowTemp"
       ) {
         const timestamp = Date.now();
-        const idDivider = createMarker();
+        const idDivider = await createMarker(mapValueBasket);
 
         flow.flowMap[fullPath] = {
+          type: "folder",
           path: fullPath,
           itemName: item.name,
+          UID: mapValueBasket.UID,
+          UIDPlain: mapValueBasket.UIDCounter,
           lastModifiedInFlow: timestamp,
+          minLength: itemName.length,
+          lengthPlusDividers: itemName.length + idDivider.length,
           startEndInFlow: {
             start: mapValueBasket.tempFileContents.length,
             end: 0,
           },
-          type: "folder",
-          minLength: itemName.length,
-          lengthPlusDividers: itemName.length + idDivider.length,
         } as Types.FlowMap;
 
         if (mapValueBasket.initialIteration) {
@@ -253,21 +260,22 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             .trimStart();
         }
         const timestamp = Date.now();
-        const idDivider = createMarker();
+        const idDivider = await createMarker(mapValueBasket);
 
         flow.flowMap[fullPath] = {
+          type: "file",
           path: fullPath,
           itemName: item.name,
+          UID: mapValueBasket.UID,
+          UIDPlain: mapValueBasket.UIDCounter,
           lastModifiedInFlow: timestamp,
+          sourceLastModified: item.stat.mtime,
+          minLength: fileContent.length,
+          lengthPlusDividers: fileContent.length + idDivider.length,
           startEndInFlow: {
             start: mapValueBasket.tempFileContents.length,
             end: 0,
           },
-          type: "file",
-          sourceLastModified: item.stat.mtime,
-          minLength: fileContent.length,
-          idDivider: idDivider,
-          lengthPlusDividers: fileContent.length + idDivider.length,
         } as Types.FlowMap;
 
         if (mapValueBasket.initialIteration) {

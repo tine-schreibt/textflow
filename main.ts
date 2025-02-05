@@ -45,16 +45,6 @@ export default class TextFlowPlugin extends Plugin {
   tempFilePath: string;
 
   // ---------------- Global objects and variables -------------------------
-  // ---------------- tracking regions in general -------------------------
-  private sortedRegionsCache: Array<{
-    path: string;
-    start: number;
-    end: number;
-    type: string;
-  }> | null = null;
-  private lastFlowUpdate: string | null = null;
-  private lastCursorCheck: number = 0;
-  private lastCursorOffset: number = 0;
   // ----------------- tracking read-only ranges --------------------------
   private readOnlyHighlight = Decoration.mark({
     class: "cm-read-only-region",
@@ -236,32 +226,37 @@ export default class TextFlowPlugin extends Plugin {
     if (activeLeafPath && this.listenerBasket[activeLeafPath]) {
       return;
     }
-    let isItFlow = null;
     if (activeLeafPath !== undefined) {
-      isItFlow = this.isFlowFile(activeLeafPath);
+      let isItFlow = this.isFlowFile(activeLeafPath);
 
       if (cmEditor && isItFlow) {
         // Define the callback function separately so we can remove it later
         const cursorCallback = () => {
           const state = cmEditor.state;
           const selection = state.selection.main;
-
-          // Only update if this is a cursor movement, not a selection
-          if (selection.from === selection.to) {
-            const cursorOffset = selection.from;
-            this.updateActiveRegion(
-              this.settings,
-              activeLeafPath,
-              cursorOffset
-            );
-          }
+          const cursorOffset = selection.from;
+          this.checkActiveRegionCache(
+            this.settings.flows[isItFlow],
+            cursorOffset
+          );
+          console.log("Navigation event detected");
         };
 
-        // Instead of .on(), use EditorView.updateListener
+        // Look for navigation events
         const updateActiveRegionListener = EditorView.updateListener.of(
           (update) => {
             if (update.selectionSet) {
-              cursorCallback();
+              // Any cursor/selection change
+              const isNavigationEvent = update.transactions.some(
+                (tr: Transaction) =>
+                  tr.changes.empty && // No text changes
+                  tr.isUserEvent("select") // User-initiated selection change
+              );
+
+              if (isNavigationEvent) {
+                // call for a check
+                cursorCallback();
+              }
             }
           }
         );
@@ -327,7 +322,7 @@ export default class TextFlowPlugin extends Plugin {
         if (fileLeaf) {
           // Flow is already open, just focus it and adjust readonly
           if (fileLeaf.view instanceof MarkdownView) {
-            this.setupReadOnlyEditor(fileLeaf.view, currentFlow);
+            this.addReadOnlyExtension(fileLeaf.view, currentFlow);
             this.addCursorListener(fileLeaf.view);
             console.log(
               "Checking if flow is already active:",
@@ -356,7 +351,7 @@ export default class TextFlowPlugin extends Plugin {
             this.app.workspace.getActiveViewOfType(MarkdownView);
           if (activeView) {
             if (fileLeaf.view instanceof MarkdownView) {
-              this.setupReadOnlyEditor(fileLeaf.view, currentFlow);
+              this.addReadOnlyExtension(fileLeaf.view, currentFlow);
               this.addCursorListener(fileLeaf.view);
               console.log(
                 "Checking if flow is already active:",
@@ -396,7 +391,7 @@ export default class TextFlowPlugin extends Plugin {
             await this.app.workspace.setActiveLeaf(flowLeaf);
             if (flowLeaf.view instanceof MarkdownView) {
               console.log(`Setting up flow: ${flowLeaf.view.file?.path}`);
-              this.setupReadOnlyEditor(flowLeaf.view, flowName);
+              this.addReadOnlyExtension(flowLeaf.view, flowName);
               this.addCursorListener(flowLeaf.view);
               console.log(
                 "Checking if flow is already active:",
@@ -426,7 +421,7 @@ export default class TextFlowPlugin extends Plugin {
             );
             await this.app.workspace.setActiveLeaf(flowLeaf);
             if (flowLeaf.view instanceof MarkdownView) {
-              this.setupReadOnlyEditor(flowLeaf.view, flowName);
+              this.addReadOnlyExtension(flowLeaf.view, flowName);
               this.addCursorListener(flowLeaf.view);
               console.log(
                 "Checking if flow is already active:",
@@ -510,7 +505,7 @@ export default class TextFlowPlugin extends Plugin {
           flowName = this.isFlowFile(activeLeafPath);
           if (flowName) {
             this.addCursorListener(leaf.view);
-            this.setupReadOnlyEditor(leaf.view, flowName);
+            this.addReadOnlyExtension(leaf.view, flowName);
             if (!this.settings.activeFlows.includes(flowName)) {
               this.settings.activeFlows = [
                 ...this.settings.activeFlows,
@@ -548,9 +543,8 @@ export default class TextFlowPlugin extends Plugin {
             const cursorOffset = leaf.view.editor.posToOffset(
               leaf.view.editor.getCursor()
             );
-            this.updateActiveRegion(
-              this.settings,
-              activeLeafPath,
+            this.checkActiveRegionCache(
+              this.settings.flows[flowName],
               cursorOffset
             );
           }
@@ -573,7 +567,7 @@ export default class TextFlowPlugin extends Plugin {
 
   // ---------------------- Functions: Flow management: Region tracking ----------------------------
 
-  private setupReadOnlyEditor = (leaf: MarkdownView, flowName: string) => {
+  private addReadOnlyExtension = (leaf: MarkdownView, flowName: string) => {
     const flow = this.settings.flows[flowName];
     if (!flow) return;
 
@@ -595,7 +589,7 @@ export default class TextFlowPlugin extends Plugin {
           const windowText = tr.startState.sliceDoc(windowStart, windowEnd);
 
           let match;
-          const regex = /(?:^|\n)[\u200B\u200C\u200D]{10}(<hr>)(?:\n|$)/g;
+          const regex = /(?:^|\n)[\u200B\u200C\u200D]{10}(<hr>)(?:\n\n|$)/g;
 
           //  /(?:^|\n)(\*\*\*|___|<hr>)(?:\n|$)/g;
           while ((match = regex.exec(windowText)) !== null) {
@@ -643,117 +637,170 @@ export default class TextFlowPlugin extends Plugin {
     return hasField;
   };
 
-  // ----------------------------------------------------------
-
-  private updateActiveRegion = (
-    shSettings: TextFlowSettings,
-    activeLeafPath: string,
-    cursorOffset: number
-  ) => {
-    const flowName = this.isFlowFile(activeLeafPath);
-    if (!flowName) return;
-
-    const flow = shSettings.flows[flowName];
-    if (!flow) return;
-
-    // Ensure this flow stays in activeFlows
-    if (!this.settings.activeFlows.includes(flowName)) {
-      console.log(`Restoring ${flowName} to activeFlows in updateActiveRegion`);
-      this.settings.activeFlows = [...this.settings.activeFlows, flowName];
-      this.saveSettings();
-    }
-
-    const cached = flow.activeRegionCache;
-    if (!cached) {
-      // First-time initialization of cache
-      this.updateActiveRegionCache(flow, cursorOffset);
-      return;
-    }
-
-    // Check if cursor is still within the active region (region 0)
-    const activeRegion = cached.regions[0];
-
-    if (
-      cursorOffset >= activeRegion.start &&
-      cursorOffset <= activeRegion.end
-    ) {
-      // Still in active region, just update cursor position
-      cached.lastCursorPosition = cursorOffset;
-
-      return;
-    }
-
-    // Check if cursor moved to an adjacent cached region
-    for (let i = -2; i <= 2; i++) {
-      const region = cached.regions[i];
-      if (!region) continue;
-
-      if (cursorOffset >= region.start && cursorOffset <= region.end) {
-        // Shift the cache window by i positions
-        const direction = i > 0 ? "forward" : "backward";
-        const shifts = Math.abs(i);
-        for (let j = 0; j < shifts; j++) {
-          this.shiftCacheWindow(flow, direction);
-        }
-        // If we get here, cursor has moved outside our cached window
-        this.updateActiveRegionCache(flow, cursorOffset);
-        return;
-      }
-    }
-
-    // If we get here, cursor has moved outside our cached window
-    this.updateActiveRegionCache(flow, cursorOffset);
-
-    // Update read-only ranges after recalculation
-  };
-
   // --------------------------- Functions: Flow management: update cache -----------------------------------------
-  private updateActiveRegionCache = (
+  private checkActiveRegionCache = (
     flow: Types.FlowDef,
     cursorOffset: number
   ) => {
-    const regions = flow.flowMap;
-    const regionArray = Object.values(regions).sort(
-      (a, b) => a.startEndInFlow.start - b.startEndInFlow.start
-    );
+    if (
+      flow.activeRegionCache !== undefined &&
+      (cursorOffset < flow.activeRegionCache.regions[0].startInFlow ||
+        cursorOffset > flow.activeRegionCache.regions[0].endInFlow) &&
+      cursorOffset >= flow.activeRegionCache.regions[-1].startInFlow &&
+      cursorOffset <= flow.activeRegionCache.regions[1].endInFlow
+    ) {
+      this.shiftCacheWindow(flow, cursorOffset, flow.activeRegionCache);
+    } else {
+      flow.activeRegionCache = {
+        lastCursorPosition: cursorOffset,
+        regions: {
+          [-1]: {
+            // relative to active region
+            path: "",
+            UID: "", // for boundary verification
+            UIDPlain: 0, // for easy navigation
+            startInFlow: 0,
+            endInFlow: 0,
+          },
+          [0]: {
+            path: "",
+            UID: "",
+            UIDPlain: 0,
+            startInFlow: 0,
+            endInFlow: 0,
+          },
+          [1]: {
+            path: "",
+            UID: "",
+            UIDPlain: 0,
+            startInFlow: 0,
+            endInFlow: 0,
+          },
+        },
+      };
+      // --------- shorthands -----------------
+      const shPreviousRegion = flow.activeRegionCache.regions[-1];
+      const shActiveRegion = flow.activeRegionCache.regions[0];
+      const shNextRegion = flow.activeRegionCache.regions[1];
+      // --------------------------------------
 
-    // Find the active region index
-    const activeIndex = regionArray.findIndex(
-      (region) =>
-        cursorOffset >= region.startEndInFlow.start &&
-        cursorOffset <= region.startEndInFlow.end
-    );
+      const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+      if (!activeView) return;
 
-    if (activeIndex === -1) return;
+      const editor = activeView.editor as ObsidianEditor;
+      const cmEditor = editor.cm;
+      if (!cmEditor) return;
 
-    // Initialize or reset cache
-    flow.activeRegionCache = {
-      lastCursorPosition: cursorOffset,
-      regions: {},
-    };
+      // Get full document text from CodeMirror state
+      const text = cmEditor.state.doc.toString();
 
-    // Populate cache with surrounding regions (-2 to +2)
-    for (let i = -2; i <= 2; i++) {
-      const regionIndex = activeIndex + i;
-      if (regionIndex >= 0 && regionIndex < regionArray.length) {
-        const region = regionArray[regionIndex];
-        flow.activeRegionCache.regions[i] = {
-          path: region.path,
-          start: region.startEndInFlow.start,
-          end: region.startEndInFlow.end,
-          type: region.type,
-        };
+      // Set up regex search from cursor position
+      const markerRegex = /[\u200B\u200C\u200D]{10}<hr>/g;
+      markerRegex.lastIndex = cursorOffset;
+
+      // Find downstream marker
+      let activeRegionEnd = markerRegex.exec(text);
+      if (activeRegionEnd) {
+        const uid = activeRegionEnd[0].slice(0, 10); // Just get the UID part, without <hr>
+
+        // Find matching flowMap entry and fill in the rest of the cache
+        const activeRegionInFlowMap = Object.entries(flow.flowMap).find(
+          ([activeRegionPath, activeRegionMap]) => activeRegionMap.UID === uid
+        );
+        if (activeRegionInFlowMap) {
+          const [activeRegionPath, activeRegionMap] = activeRegionInFlowMap;
+          shActiveRegion.path = activeRegionPath;
+          shActiveRegion.UID = uid;
+          shActiveRegion.UIDPlain = activeRegionMap.UIDPlain;
+          // See: shActiveRegion.startInFlow = previousRegionEnd + (shPreviousRegion.UID + "<hr>" + 1).length;
+          shActiveRegion.endInFlow =
+            activeRegionEnd.index + (shActiveRegion.UID + "<hr>" + 1).length;
+        }
+        // use UIDPlain to find previous region
+        if (shActiveRegion.UIDPlain - 1 === 0) {
+          // First region
+          shPreviousRegion.path = "";
+          shPreviousRegion.UID = "";
+          shPreviousRegion.UIDPlain = -1; // Or some sentinel value
+          shPreviousRegion.startInFlow = 0;
+          shPreviousRegion.endInFlow = 0;
+
+          shActiveRegion.startInFlow = 0; // Active region starts at beginning
+        } else {
+          const previousRegionInFlowMap = Object.entries(flow.flowMap).find(
+            ([previousRegionPath, previousRegionFlowMapEntry]) =>
+              previousRegionFlowMapEntry.UIDPlain ===
+              shActiveRegion.UIDPlain - 1
+          );
+
+          // use UIDPlain to find the region before that to get start of previous region
+          let previousRegionStart = 0;
+          if (shPreviousRegion.UIDPlain - 1 !== 0) {
+            const prePreviousRegionInFlowMap = Object.entries(
+              flow.flowMap
+            ).find(
+              ([prePreviousRegionPath, prePreviousRegionFlowMapEntry]) =>
+                prePreviousRegionFlowMapEntry.UIDPlain ===
+                shPreviousRegion.UIDPlain - 1
+            );
+            if (prePreviousRegionInFlowMap) {
+              const [prePreviousRegionPath, prePreviousRegionMap] =
+                prePreviousRegionInFlowMap;
+              previousRegionStart =
+                text.indexOf(prePreviousRegionMap.UID) +
+                (shPreviousRegion.UID + "<hr>" + 1).length;
+            }
+          }
+          // populate cache for previousRegion
+          if (previousRegionInFlowMap) {
+            const [previousRegionPath, previousRegionMap] =
+              previousRegionInFlowMap;
+            const previousRegionEnd =
+              text.indexOf(previousRegionMap.UID) +
+              (shPreviousRegion.UID + "<hr>" + 1).length;
+            shPreviousRegion.path = previousRegionPath;
+            shPreviousRegion.UID = previousRegionMap.UID;
+            shPreviousRegion.UIDPlain = previousRegionMap.UIDPlain;
+            shPreviousRegion.startInFlow = previousRegionStart;
+            shPreviousRegion.endInFlow = previousRegionEnd;
+            // Complete active region info
+            shActiveRegion.startInFlow =
+              previousRegionEnd + (shPreviousRegion.UID + "<hr>" + 1).length;
+          }
+          // find next region
+          const nextRegionInFlowMap = Object.entries(flow.flowMap).find(
+            ([nextRegionPath, nextRegionFlowMapEntry]) =>
+              nextRegionFlowMapEntry.UIDPlain === shActiveRegion.UIDPlain + 1
+          );
+          if (nextRegionInFlowMap) {
+            // populate cache
+            const [nextRegionPath, nextRegionMap] = nextRegionInFlowMap;
+            const nextRegionEnd = text.indexOf(nextRegionMap.UID);
+            shNextRegion.path = nextRegionPath;
+            shNextRegion.UID = nextRegionMap.UID;
+            shNextRegion.UIDPlain = nextRegionMap.UIDPlain;
+            shNextRegion.startInFlow = shActiveRegion.endInFlow + 1;
+            shNextRegion.endInFlow = nextRegionEnd;
+          } else {
+            shNextRegion.path = "";
+            shNextRegion.UID = "";
+            shNextRegion.UIDPlain = shActiveRegion.UIDPlain + 1; // Or some sentinel value
+            shNextRegion.startInFlow = shActiveRegion.endInFlow;
+            shNextRegion.endInFlow = text.length;
+          }
+        }
       }
+      console.log(`active region is ${shActiveRegion.path}`);
+      this.saveSettings();
     }
   };
 
   // --------------------------- Functions: Flow management: shift cache -----------------------------------------
   private shiftCacheWindow = (
     flow: Types.FlowDef,
-    direction: "forward" | "backward"
+    cursorOffset: number,
+    activeRegionCache: Types.ActiveRegionCache
   ) => {
-    if (!flow.activeRegionCache) return;
-
     const regions = Object.values(flow.flowMap).sort(
       (a, b) => a.startEndInFlow.start - b.startEndInFlow.start
     );
@@ -770,7 +817,7 @@ export default class TextFlowPlugin extends Plugin {
     if (newActiveIndex < 0 || newActiveIndex >= regions.length) return;
 
     // Rebuild cache around new active region
-    this.updateActiveRegionCache(
+    this.checkActiveRegionCache(
       flow,
       regions[newActiveIndex].startEndInFlow.start + 1
     );
@@ -804,6 +851,18 @@ export default class TextFlowPlugin extends Plugin {
       this.addCursorListener(
         this.app.workspace.getActiveViewOfType(MarkdownView) as MarkdownView
       );
+      // --addReadOnlyExtension---------------
+      const leaf = this.app.workspace.getActiveViewOfType(
+        MarkdownView
+      ) as MarkdownView;
+      const activeLeafPath = leaf.file?.path;
+      if (activeLeafPath) {
+        const flowName = this.isFlowFile(activeLeafPath);
+        if (flowName !== null) {
+          this.addReadOnlyExtension(leaf, flowName);
+        }
+      }
+
       // -------------------------------
       this.fileExplorerClickListener(); // This only creates the function
 
@@ -839,11 +898,6 @@ export default class TextFlowPlugin extends Plugin {
         this.removeReadOnlyExtension(editor);
       }
     }
-    // Clear our caches
-    this.sortedRegionsCache = null;
-    this.lastFlowUpdate = "";
-    this.lastCursorCheck = 0;
-    this.lastCursorOffset = 0;
 
     // ------------ ONUNLOAD: REMOVE cursor listeners -----------
     for (const path in this.listenerBasket) {

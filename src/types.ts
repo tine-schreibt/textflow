@@ -27,25 +27,37 @@ export interface FlowDef {
 export interface ActiveRegionCache {
   lastCursorPosition: number;
   regions: {
-    [key: number]: RegionInfo; // -5 to +5, with 0 being active region
+    [offset: number]: {
+      // relative to active region
+      path: string;
+      UID: string; // for boundary verification
+      UIDPlain: number; // for easy navigation
+      startInFlow: number;
+      endInFlow: number;
+    };
   };
 }
 
+/*
 export interface RegionInfo {
-  path: string;
-  start: number;
-  end: number;
   type: string;
+  path: string;
+  UID: string;
+  UIDPlain: number;
+  startInFlow: number;
+  endInFlow: number;
 }
+  */
 
 export interface FlowMap {
   type: "file" | "folder";
   path: string;
   itemName: string;
-  sourceLastModified?: number;
+  UID: string;
+  UIDPlain: number;
   lastModifiedInFlow: number;
+  sourceLastModified?: number;
   minLength: number;
-  idDivider: string;
   lengthPlusDividers: number;
   startEndInFlow: { start: number; end: number };
 }
@@ -63,4 +75,6 @@ export interface mapValueBasket {
   currentStart: number;
   currentEnd: number;
   initialIteration: boolean;
+  UIDCounter: number;
+  UID: string;
 }
