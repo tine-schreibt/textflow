@@ -24,6 +24,7 @@ import {
   ViewPlugin,
 } from "@codemirror/view";
 import {
+  combineConfig,
   EditorState,
   StateEffect,
   StateField,
@@ -511,11 +512,15 @@ export default class TextFlowPlugin extends Plugin {
           // if it's open just make it active
           if (flowLeaf) {
             event.preventDefault();
-            this.activateFlow(flowName);
+            await this.app.workspace.setActiveLeaf(flowLeaf);
+            if (flowLeaf.view instanceof MarkdownView) {
+              this.addReadOnlyExtension(flowLeaf.view, flowName);
+              this.addCursorListener(flowLeaf.view);
+            }
           } else {
             // if it's not open, open it and attach stuff
-            // event.preventDefault();
-            // this.activateFlow(flowName);
+            event.preventDefault();
+            this.activateFlow(flowName);
           }
           if (flowLeaf?.view instanceof MarkdownView) {
             await this.app.workspace.setActiveLeaf(flowLeaf);

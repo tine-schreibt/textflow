@@ -247,8 +247,10 @@ export class FlowSwitcherModal extends Modal {
 
   private getFlowStatus(flowName: string): Types.FlowStatus {
     // Check if flow is currently active
-    if (this.plugin.settings.activeFlows.includes(flowName)) {
-      return "on";
+    if (this.plugin.settings.activeFlows) {
+      if (this.plugin.settings.activeFlows.includes(flowName)) {
+        return "on";
+      }
     }
 
     // Check if flow exists and is valid
