@@ -1,51 +1,38 @@
-.metadata-container.textflow-marker {
-  display: none !important;
-  --metadata-display-editing: none !important;
+.textflow-switcher-option.flow-status-on {
+  color: var(--text-accent);
 }
 
-/* Additional safety to ensure it's hidden in all views */
-.markdown-source-view .metadata-container.textflow-marker,
-.markdown-preview-view .metadata-container.textflow-marker {
-  display: none !important;
-  --metadata-display-editing: none !important;
+.textflow-switcher-option.flow-status-incompatible {
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
-/* Only apply this CSS when inside a flowView file */
-.flow-view .cm-line .cm-formatting-hr {
-  opacity: 1 !important; /* Ensure it always looks like a grey line */
-  color: var(--text-muted) !important; /* Match Obsidian's normal HR color */
-  pointer-events: none !important; /* Prevent any interactions */
-  user-select: none !important; /* Make sure users can't select or delete it */
+.textflow-switcher-option.flow-status-off {
+  color: var(--text-normal);
 }
 
-.textflow-marker.is-hidden {
-  display: inline-block !important;
-  height: 0 !important;
-  width: 0 !important;
-  opacity: 0 !important;
-  overflow: hidden !important;
-  position: absolute !important;
-  white-space: nowrap !important;
-  z-index: -1 !important;
+.textflow-switcher {
+  max-width: 300px;
 }
 
-.textflow-marker {
-  display: inline;
-  font-size: 0;
-  width: 0;
-  height: 0;
-  opacity: 0;
-  pointer-events: none;
-  position: absolute;
-  user-select: none;
-  -webkit-user-select: none;
-  cursor: default;
-  display: none !important;
-  pointer-events: none !important;
+.textflow-switcher-container {
+  padding: 6px;
 }
 
-/* Additional rules for preview mode */
-.markdown-preview-view .textflow-marker {
-  display: none !important;
-  pointer-events: none !important;
+.textflow-switcher-option {
+  display: flex;
+  align-items: center;
+  padding: 6px;
+  gap: 6px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.textflow-switcher-option:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.textflow-switcher-option.is-active {
+  color: var(--text-accent);
 }
