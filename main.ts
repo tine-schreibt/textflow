@@ -482,16 +482,12 @@ export default class TextFlowPlugin extends Plugin {
       if (currentFlow) {
         // Case: File is a flow (either already open or not)
         event.preventDefault();
-
         if (fileLeaf) {
           // Flow is already open, just focus it and adjust readonly
-          if (fileLeaf.view instanceof MarkdownView) {
-            this.addReadOnlyExtension(fileLeaf.view, currentFlow);
-            this.addCursorListener(fileLeaf.view);
-          }
+          await this.activateFlow(currentFlow);
         } else {
           // Flow needs to be opened
-          this.activateFlow(currentFlow);
+          await this.activateFlow(currentFlow);
         }
         return;
       }
