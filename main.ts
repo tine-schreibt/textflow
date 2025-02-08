@@ -54,6 +54,7 @@ export default class TextFlowPlugin extends Plugin {
   tempFilePath: string;
 
   // ---------------- Global objects and variables -------------------------
+  private wakingUp = true;
   // ----------------- tracking read-only ranges --------------------------
   private hadTrackingError: boolean = false; // Add this line
   private readOnlyHighlight = Decoration.mark({
@@ -103,18 +104,13 @@ export default class TextFlowPlugin extends Plugin {
   // ---------------- Functions ------------------------------------
   // ---------------- Functions: Utilities -------------------------
   async loadSettings(): Promise<TextFlowSettings> {
-    console.log("Loading settings...");
     const loaded = await this.loadData();
-    console.log("Loaded settings:", loaded);
     const mergedSettings = Object.assign({}, DEFAULT_SETTINGS, loaded);
-    console.log("Merged settings:", mergedSettings);
     return mergedSettings;
   }
   // ---------------------------------------------------------------
   async saveSettings() {
-    console.log("Saving settings...", this.settings);
     await this.saveData(this.settings);
-    console.log("Settings saved");
   }
   // ---------------------------------------------------------------
   async ensureTempFolder() {
@@ -186,41 +182,48 @@ export default class TextFlowPlugin extends Plugin {
     // ---------------- Layout change (tab closure) -------------------------------
     this.registerEvent(
       this.app.workspace.on("layout-change", () => {
-        this.app.workspace.onLayoutReady(() => {
-          console.log("Layout change detected");
-          const currentLeaves = this.app.workspace.getLeavesOfType("markdown");
-          const currentPaths = currentLeaves
-            .map((leaf) =>
-              leaf.view instanceof MarkdownView
-                ? leaf.view.file?.path
-                : undefined
-            )
-            .filter((path): path is string => path !== undefined);
+        if (!this.wakingUp) {
+          console.log(`layout-change awake and managing flow array`);
+          this.app.workspace.onLayoutReady(() => {
+            console.log("Layout change detected");
+            const currentLeaves =
+              this.app.workspace.getLeavesOfType("markdown");
+            const currentPaths = currentLeaves
+              .map((leaf) =>
+                leaf.view instanceof MarkdownView
+                  ? leaf.view.file?.path
+                  : undefined
+              )
+              .filter((path): path is string => path !== undefined);
 
-          console.log("Current paths:", currentPaths);
-          console.log("Current activeFlows:", this.settings.activeFlows);
+            console.log("Current paths:", currentPaths);
+            console.log("Current activeFlows:", this.settings.activeFlows);
 
-          // Check which active flows are no longer open
-          let closure = this.settings.activeFlows.filter((flowName) => {
-            // A flow is closed if none of the current paths match its flow file
-            return !currentPaths.some(
-              (path) => this.isFlowFile(path) === flowName
-            );
+            // Check which active flows are no longer open
+            let closure = this.settings.activeFlows.filter((flowName) => {
+              // A flow is closed if none of the current paths match its flow file
+              return !currentPaths.some(
+                (path) => this.isFlowFile(path) === flowName
+              );
+            });
+
+            if (closure.length > 0) {
+              console.log("Removing flows:", closure);
+              this.settings.activeFlows = this.settings.activeFlows.filter(
+                (f) => !closure.includes(f)
+              );
+              this.saveSettings();
+              console.log(`layout-change saving: ${this.settings.activeFlows}`);
+            }
           });
-
-          if (closure.length > 0) {
-            console.log("Removing flows:", closure);
-            this.settings.activeFlows = this.settings.activeFlows.filter(
-              (f) => !closure.includes(f)
-            );
-            this.saveSettings();
-          }
-        });
+        }
+        console.log(`layout-change... Just waking up...`);
+        this.wakingUp = false;
       })
     );
 
     this.registerEvent(
-      this.app.workspace.on("active-leaf-change", (leaf) => {
+      this.app.workspace.on("active-leaf-change", async (leaf) => {
         if (leaf?.view instanceof MarkdownView) {
           const activeLeafPath = leaf.view.file?.path;
           console.log("Leaf change detected:", activeLeafPath);
@@ -231,9 +234,10 @@ export default class TextFlowPlugin extends Plugin {
             console.log("Current activeFlows:", this.settings.activeFlows);
 
             if (flowName) {
-              // Existing flow file handling
-              this.addReadOnlyExtension(leaf.view, flowName);
-              this.addCursorListener(leaf.view);
+              this.setupFlowView(flowName, leaf.view);
+              console.log(
+                `active-leaf-change called setupFlowView: ${this.settings.activeFlows}`
+              );
             } else {
               // Check if this is a constituent file of any active flow
               console.log(`Checking if ${activeLeafPath} is part of a flow`);
@@ -566,27 +570,22 @@ export default class TextFlowPlugin extends Plugin {
 
   // ---------------- Functions: Flow management -------------------------
   private async setupFlowView(flowName: string, view: MarkdownView) {
-    console.log("Setting up flow view for:", flowName);
-    console.log("Current activeFlows before setup:", this.settings.activeFlows);
-
     this.addReadOnlyExtension(view, flowName);
     this.addCursorListener(view);
 
     if (!this.settings.activeFlows.includes(flowName)) {
-      console.log("Adding flow to activeFlows");
       this.settings.activeFlows = [...this.settings.activeFlows, flowName];
       await this.saveSettings();
+      console.log(
+        `setupFlowView saving after adding: ${this.settings.activeFlows}`
+      );
     }
-    console.log("ActiveFlows after setup:", this.settings.activeFlows);
+    console.log("setupFlowView, no changes:", this.settings.activeFlows);
   }
 
   async activateFlow(flowName: string, existingView?: MarkdownView) {
-    console.log("Activating flow:", flowName);
-    console.log("Existing view?", !!existingView);
-
     const flow = this.settings.flows[flowName];
     if (!flow) {
-      console.log("Flow not found in settings!");
       return;
     }
 
@@ -660,6 +659,7 @@ export default class TextFlowPlugin extends Plugin {
           }
         }
         this.saveSettings();
+        console.log(`initialSetup saving: ${this.settings.activeFlows}`);
       }
     }
   };
@@ -832,6 +832,7 @@ export default class TextFlowPlugin extends Plugin {
       console.log(`active region is ${shActiveRegion.path}`);
     }
     this.saveSettings();
+    console.log(`checkActiveRegionCache saving: ${this.settings.activeFlows}`);
   };
 
   // -----------------------------------------------------
