@@ -119,7 +119,6 @@ export default class TextFlowPlugin extends Plugin {
         let folder = this.app.vault.getAbstractFileByPath(tempFolderPath);
         if (!folder) {
           await this.app.vault.createFolder(tempFolderPath);
-          console.log(`Temp folder created at ${tempFolderPath}`);
         } else if (!(folder instanceof TFolder)) {
           throw new Error(`"${tempFolderPath}" exists but is not a folder.`);
         }
@@ -184,21 +183,13 @@ export default class TextFlowPlugin extends Plugin {
       this.app.workspace.on("active-leaf-change", async (leaf) => {
         if (leaf?.view instanceof MarkdownView) {
           const activeLeafPath = leaf.view.file?.path;
-          console.log("Leaf change detected:", activeLeafPath);
 
           if (activeLeafPath) {
             const flowName = this.isFlowFile(activeLeafPath);
-            console.log("Is it a flow?", flowName);
-            console.log("Current activeFlows:", this.settings.activeFlows);
-
             if (flowName) {
               this.setupFlowView(flowName, leaf.view);
-              console.log(
-                `active-leaf-change called setupFlowView: ${this.settings.activeFlows}`
-              );
             } else {
               // Check if this is a constituent file of any active flow
-              console.log(`Checking if ${activeLeafPath} is part of a flow`);
               for (const [flowName, flow] of Object.entries(
                 this.settings.flows
               )) {
@@ -206,7 +197,6 @@ export default class TextFlowPlugin extends Plugin {
                   flow.flowMap[activeLeafPath] &&
                   this.settings.activeFlows.includes(flowName)
                 ) {
-                  console.log("opening modal");
                   // Found an orphaned constituent file
                   const handleOrphanedFileClick =
                     new Modals.HandleOrphanedFiles(
@@ -534,11 +524,7 @@ export default class TextFlowPlugin extends Plugin {
     if (!this.settings.activeFlows.includes(flowName)) {
       this.settings.activeFlows = [...this.settings.activeFlows, flowName];
       await this.saveSettings();
-      console.log(
-        `setupFlowView saving after adding: ${this.settings.activeFlows}`
-      );
     }
-    console.log("setupFlowView, no changes:", this.settings.activeFlows);
   }
 
   async activateFlow(flowName: string, existingView?: MarkdownView) {
@@ -617,7 +603,6 @@ export default class TextFlowPlugin extends Plugin {
           }
         }
         this.saveSettings();
-        console.log(`initialSetup saving: ${this.settings.activeFlows}`);
       }
     }
   };
@@ -791,7 +776,6 @@ export default class TextFlowPlugin extends Plugin {
       console.log(`active region is ${shActiveRegion.path}`);
     }
     this.saveSettings();
-    console.log(`checkActiveRegionCache saving: ${this.settings.activeFlows}`);
   };
 
   // -----------------------------------------------------
@@ -806,13 +790,7 @@ export default class TextFlowPlugin extends Plugin {
     let shActiveRegion = activeRegionCache.regions[0];
     let shNextRegion = activeRegionCache.regions[1];
     // --------------------------------------
-    console.log(
-      `Shifting cache window ${
-        cursorOffset < activeRegionCache.regions[0].startInFlow
-          ? "backward"
-          : "forward"
-      }`
-    );
+
     if (activeRegionCache !== undefined) {
       if (cursorOffset < activeRegionCache.regions[0].startInFlow) {
         const prevRegion = this.findOtherRegion(
@@ -947,9 +925,7 @@ export default class TextFlowPlugin extends Plugin {
   //------------------------- ONLOAD -----------------------
   // -------------------------------------------------------
   async onload() {
-    console.log("Plugin loading...");
     this.settings = await this.loadSettings();
-    console.log("Settings after initial load:", this.settings);
 
     // ------ ONLOAD: if plugin has been set up before, make sure the temp folder exists ------------
     if (
@@ -977,12 +953,6 @@ export default class TextFlowPlugin extends Plugin {
       // Add ribbon icon (optional)
       this.addRibbonIcon("sheets-in-box", "Open Flow", (evt: MouseEvent) => {
         new Modals.FlowSwitcherModal(this.app, this).open();
-      });
-
-      // Add a check before layout ready
-      this.app.workspace.onLayoutReady(() => {
-        console.log("Layout ready, settings are:", this.settings);
-        // ... rest of your layout ready code
       });
 
       await this.initialSetup();
