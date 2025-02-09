@@ -25,6 +25,7 @@ export interface FlowDef {
 }
 
 export interface ActiveRegionCache {
+  persistentCursorPos: number;
   lastCursorPosition: number;
   regions: {
     [offset: number]: RegionObject;

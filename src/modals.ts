@@ -199,40 +199,52 @@ export class HandleOrphanedFiles extends Modal {
           .setButtonText("View in Flow")
           .setCta()
           .onClick(async () => {
-            // Find and focus the flow file
-            const flowFile = this.app.vault.getAbstractFileByPath(
-              this.flow.flowFilePath
-            );
-            if (flowFile instanceof TFile) {
-              const leaf = this.app.workspace.getMostRecentLeaf();
-              await leaf?.openFile(flowFile);
-              // Scroll to the relevant section
-              const startPos =
-                this.flow.flowMap[this.orphanPath].startEndInFlow.start;
-              if (leaf?.view instanceof MarkdownView) {
-                const editor = leaf.view.editor;
-                editor.setCursor(editor.offsetToPos(startPos));
+            console.log("View in Flow button clicked");
+
+            try {
+              // Find and focus the flow file
+              const flowFile = this.app.vault.getAbstractFileByPath(
+                this.flow.flowFilePath
+              );
+              if (flowFile instanceof TFile) {
+                console.log("Opening flow file");
+                const leaf = this.app.workspace.getMostRecentLeaf();
+                await leaf?.openFile(flowFile);
+                const startPos =
+                  this.flow.flowMap[this.orphanPath].startEndInFlow.start;
+                if (leaf?.view instanceof MarkdownView) {
+                  const editor = leaf.view.editor;
+                  editor.setCursor(editor.offsetToPos(startPos));
+                }
               }
+
+              // Try different close approaches
+              console.log("Attempting to close modal");
+              super.close();
+              this.contentEl.empty();
+              this.modalEl.remove();
+            } catch (error) {
+              console.error("Error in modal close:", error);
             }
-            this.close();
           })
       )
       .addButton((closeFlow) =>
         closeFlow.setButtonText("Close Flow").onClick(async () => {
           // Close flow and open this file
           this.closeFlow(this.flow.flowFilePath);
-          this.close();
+          super.close();
         })
       )
       .addButton((closeFile) =>
         closeFile.setButtonText("Close orphan file").onClick(() => {
           this.closeOrphanFile(); // Close the constituent file
-          this.close();
+          super.close();
         })
       );
   }
 
   onClose() {
+    const { contentEl } = this;
     this.contentEl.empty();
   }
 }

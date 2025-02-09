@@ -54,7 +54,6 @@ export default class TextFlowPlugin extends Plugin {
   tempFilePath: string;
 
   // ---------------- Global objects and variables -------------------------
-  private wakingUp = true;
   // ----------------- tracking read-only ranges --------------------------
   private hadTrackingError: boolean = false; // Add this line
   private readOnlyHighlight = Decoration.mark({
@@ -180,47 +179,6 @@ export default class TextFlowPlugin extends Plugin {
       })
     );
     // ---------------- Layout change (tab closure) -------------------------------
-    this.registerEvent(
-      this.app.workspace.on("layout-change", () => {
-        if (!this.wakingUp) {
-          console.log(`layout-change awake and managing flow array`);
-          this.app.workspace.onLayoutReady(() => {
-            console.log("Layout change detected");
-            const currentLeaves =
-              this.app.workspace.getLeavesOfType("markdown");
-            const currentPaths = currentLeaves
-              .map((leaf) =>
-                leaf.view instanceof MarkdownView
-                  ? leaf.view.file?.path
-                  : undefined
-              )
-              .filter((path): path is string => path !== undefined);
-
-            console.log("Current paths:", currentPaths);
-            console.log("Current activeFlows:", this.settings.activeFlows);
-
-            // Check which active flows are no longer open
-            let closure = this.settings.activeFlows.filter((flowName) => {
-              // A flow is closed if none of the current paths match its flow file
-              return !currentPaths.some(
-                (path) => this.isFlowFile(path) === flowName
-              );
-            });
-
-            if (closure.length > 0) {
-              console.log("Removing flows:", closure);
-              this.settings.activeFlows = this.settings.activeFlows.filter(
-                (f) => !closure.includes(f)
-              );
-              this.saveSettings();
-              console.log(`layout-change saving: ${this.settings.activeFlows}`);
-            }
-          });
-        }
-        console.log(`layout-change... Just waking up...`);
-        this.wakingUp = false;
-      })
-    );
 
     this.registerEvent(
       this.app.workspace.on("active-leaf-change", async (leaf) => {
@@ -776,6 +734,7 @@ export default class TextFlowPlugin extends Plugin {
       this.shiftCacheWindow(flow, cursorOffset, flow.activeRegionCache, text);
     } else {
       flow.activeRegionCache = {
+        persistentCursorPos: cursorOffset,
         lastCursorPosition: cursorOffset,
         regions: {
           [-1]: {
