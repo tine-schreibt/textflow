@@ -58,6 +58,7 @@ export default class TextFlowPlugin extends Plugin {
   private scrollToConstituent: boolean;
   private lastShiftTime: number = 0;
   private shiftDebounceTime: number = 300;
+  private wakingUp: boolean = true;
   // ----------------- tracking read-only ranges --------------------------
   private hadTrackingError: boolean = false; // Add this line
   private readOnlyHighlight = Decoration.mark({
@@ -171,6 +172,23 @@ export default class TextFlowPlugin extends Plugin {
     document.head.appendChild(hiddenStyle);
   };
 
+  // ------------- persist cursor position --------
+  private persistCursorPosition = () => {
+    Object.entries(this.settings.flows).map(([name, flow]) => ({
+      name,
+      hasActiveRegion: !!flow.activeRegion,
+      persistentCursorPos: flow.persistentCursorPos,
+    }));
+
+    for (const [flowName, flow] of Object.entries(
+      this.settings.flows as Record<string, Types.FlowDef>
+    )) {
+      if (flow.activeRegion?.lastCursorPosition !== undefined) {
+        flow.persistentCursorPos = flow.activeRegion.lastCursorPosition;
+      }
+    }
+  };
+
   // ---------------- Functions: Listeners -------------------------
   // ---------------- Functions: Listeners: Global -----------------
 
@@ -229,8 +247,7 @@ export default class TextFlowPlugin extends Plugin {
             !this.scrollToConstituent &&
             !this.cursorResetTracker.includes(flowName)
           ) {
-            const startPos =
-              this.settings.flows[flowName].activeRegion?.persistentCursorPos;
+            const startPos = this.settings.flows[flowName].persistentCursorPos;
 
             // Add safety checks
             const editor = activeView.editor;
@@ -640,6 +657,8 @@ export default class TextFlowPlugin extends Plugin {
 
   // --------------------- Set up open flows with listeners -----------
   initialSetup = async () => {
+    await this.persistCursorPosition();
+    console.log("persisting cursor on inititalSetup");
     const allLeaves = this.app.workspace.getLeavesOfType("markdown");
     // Iterate over all the leavesfileExplorerClickListener
     for (const leaf of allLeaves) {
@@ -659,18 +678,18 @@ export default class TextFlowPlugin extends Plugin {
             );
 
             // If we have stored cursor position, restore it
-            const cache = this.settings.flows[flowName].activeRegion;
-            if (cache && cache.lastCursorPosition !== undefined) {
-              const storedPosition = cache.lastCursorPosition;
+            const cache = this.settings.flows[flowName];
+            if (
+              cache &&
+              this.settings.flows[flowName].persistentCursorPos !== undefined
+            ) {
               const editor = leaf.view.editor;
               this.app.workspace.onLayoutReady(() => {
                 // this is to make sure the editor is ready
                 const cmEditor = (editor as any).cm;
                 if (cmEditor) {
-                  const startPos = storedPosition;
-                  // Adjust to correct for a consistent -1 offset error
-                  const adjustedStartPos = startPos;
-                  const line = cmEditor.state.doc.lineAt(adjustedStartPos);
+                  const startPos = cache.persistentCursorPos;
+                  const line = cmEditor.state.doc.lineAt(startPos);
                   const targetPos = line.from;
                   console.log(
                     `initialSetup set cursor pos, scrolled to ${targetPos}`
@@ -686,12 +705,9 @@ export default class TextFlowPlugin extends Plugin {
               });
             }
             // Initialize region tracking with current cursor position
-            const cursorOffset = leaf.view.editor.posToOffset(
-              leaf.view.editor.getCursor()
-            );
             this.checkActiveRegionCache(
               this.settings.flows[flowName],
-              cursorOffset
+              cache.persistentCursorPos
             );
             console.log(`initialSetup calling checkActiveRegionCache`);
           }
@@ -804,18 +820,16 @@ export default class TextFlowPlugin extends Plugin {
 
     // Get full document text from CodeMirror state
     const text = cmEditor.state.doc.toString();
-    if (flow.activeRegion) {
-      console.log("active region object exists");
-      flow.activeRegion.persistentCursorPos = cursorOffset;
-      flow.activeRegion.lastCursorPosition = cursorOffset;
-    }
     if (
       cursorOffset > flow.activeRegion.startInFlow &&
       cursorOffset < flow.activeRegion.endInFlow
     ) {
+      flow.activeRegion.lastCursorPosition = cursorOffset;
       console.log("still in active region");
+      this.saveSettings();
       return;
     } else {
+      flow.activeRegion.lastCursorPosition = cursorOffset;
       let activeRegion = await this.findActiveRegion(flow, cursorOffset, text);
       console.log(`checkActiveRegion looking for active region`);
       if (activeRegion) {
@@ -850,7 +864,6 @@ export default class TextFlowPlugin extends Plugin {
         if (startInFlow) {
           const markerLength = (activeRegionMap.UID + "<hr>").length + 1; // +1 for \r
           const activeRegionObject: Types.ActiveRegion = {
-            persistentCursorPos: cursorOffset,
             lastCursorPosition: cursorOffset,
             path: activeRegionPath,
             UID: uid,
@@ -960,8 +973,10 @@ export default class TextFlowPlugin extends Plugin {
   // ------------------ ONUNLOAD---------------------------
   // -------------------------------------------------------
   onunload() {
-    // ---------------- Store data for all active flows ----
+    this.persistCursorPosition();
     this.saveSettings();
+    // ---------------- Store data for all active flows ----
+    this.cursorResetTracker = [];
 
     // Remove read-only extensions from all markdown views
     const markdownLeaves = this.app.workspace.getLeavesOfType("markdown");
@@ -971,7 +986,6 @@ export default class TextFlowPlugin extends Plugin {
         this.removeReadOnlyExtension(editor);
       }
     }
-    this.cursorResetTracker = [];
 
     // ------------ ONUNLOAD: REMOVE cursor listeners -----------
     for (const path in this.listenerBasket) {

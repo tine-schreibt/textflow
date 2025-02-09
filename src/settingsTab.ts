@@ -129,6 +129,25 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     };
     // wider scope variables that can't be reset during iteration
 
+    const extractYAML = (
+      content: string
+    ): { yaml: string | null; content: string } => {
+      const yamlRegex = /^---\n([\s\S]*?)\n---\n*/;
+      const match = content.match(yamlRegex);
+
+      if (match) {
+        return {
+          yaml: match[1],
+          content: content.slice(match[0].length).trim(),
+        };
+      }
+
+      return {
+        yaml: null,
+        content: content.trim(),
+      };
+    };
+
     const createMarker = (mapValueBasket: Types.mapValueBasket) => {
       // Define our invisible characters
       const INVISIBLE_CHARS = [
@@ -247,6 +266,10 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         }
       } else if (item instanceof TFile) {
         let fileContent: string = await this.app.vault.read(item);
+        // Extract YAML and clean content
+        const { yaml, content } = extractYAML(fileContent);
+        fileContent = content;
+
         // find and remove the title line; normalize
         const titleLine = `## ${item.name.replace(/\.md$/, "")}`;
         const normalize = (fileContent: string) =>
@@ -276,6 +299,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             start: mapValueBasket.tempFileContents.length,
             end: 0,
           },
+          YAML: yaml || "", // Store the extracted YAML
         } as Types.FlowMap;
 
         if (mapValueBasket.initialIteration) {
@@ -517,7 +541,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           flowFilePath: `${shSettings.tempFolderPlace}/x_textFlowTemp/${createOrEditFlowName}.md`,
           flowActive: false,
           activeRegion: {
-            persistentCursorPos: 0,
             lastCursorPosition: 0,
             path: "",
             UID: "",
@@ -525,6 +548,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             startInFlow: 0,
             endInFlow: 1,
           },
+          persistentCursorPos: 0,
           flowMap: {}, // Empty flowMap to start with
         };
         await this.plugin.saveSettings();

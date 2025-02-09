@@ -19,6 +19,7 @@ export interface FlowDef {
   flowFilePath: string;
   flowActive: boolean;
   activeRegion: ActiveRegion;
+  persistentCursorPos: number;
   modifiedRegionArray?: { [key: string]: ModifiedRegion };
   excludedFolders?: string[];
   includedMetaData?: { [key: string]: [value: string] };
@@ -27,7 +28,6 @@ export interface FlowDef {
 }
 
 export interface ActiveRegion {
-  persistentCursorPos: number;
   lastCursorPosition: number;
   path: string;
   UID: string;
@@ -52,6 +52,7 @@ export interface FlowMap {
   minLength: number;
   lengthPlusDividers: number;
   startEndInFlow: { start: number; end: number };
+  YAML: string;
 }
 
 export const DEFAULT_SETTINGS: TextFlowSettings = {
