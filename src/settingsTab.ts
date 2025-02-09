@@ -549,6 +549,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             endInFlow: 1,
           },
           persistentCursorPos: 0,
+          modifiedRegionsArray: [],
           flowMap: {}, // Empty flowMap to start with
         };
         await this.plugin.saveSettings();

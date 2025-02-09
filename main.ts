@@ -507,6 +507,172 @@ export default class TextFlowPlugin extends Plugin {
     }
   };
 
+  // -----------------
+  private addTextChangeListener = (leaf: MarkdownView | null) => {
+    if (!leaf) return;
+
+    const editor = leaf?.editor as ObsidianEditor | null;
+    if (!editor) return;
+
+    const cmEditor = editor.cm;
+    if (!cmEditor) return;
+
+    const activeLeafPath = leaf.file?.path;
+
+    // Don't add duplicate listeners
+    if (activeLeafPath && this.listenerBasket[`${activeLeafPath}-changes`]) {
+      return;
+    }
+
+    if (activeLeafPath !== undefined) {
+      let isItFlow = this.isFlowFile(activeLeafPath);
+
+      if (cmEditor && isItFlow) {
+        const plugin = this;
+        let debounceTimeout: NodeJS.Timeout | null = null;
+        const shSettings = this.settings;
+
+        const changeListener = ViewPlugin.fromClass(
+          class {
+            constructor(view: EditorView) {
+              try {
+                // Any initialization if needed
+              } catch (error) {
+                console.error("Error initializing change listener:", error);
+                new Notice(
+                  "TextFlow Plugin: Error tracking text changes.\n" +
+                    "Please report this issue on github.",
+                  10000
+                );
+                throw error;
+              }
+            }
+
+            update(update: ViewUpdate) {
+              try {
+                if (update.docChanged) {
+                  const changes = update.changes;
+
+                  if (debounceTimeout) {
+                    clearTimeout(debounceTimeout);
+                  }
+
+                  debounceTimeout = setTimeout(() => {
+                    try {
+                      for (const [flowName, flow] of Object.entries(
+                        shSettings.flows as Record<string, Types.FlowDef>
+                      )) {
+                        if (flow.flowMap[activeLeafPath]) {
+                          if (
+                            !flow.modifiedRegionsArray.contains(activeLeafPath)
+                          )
+                            flow.modifiedRegionsArray.push(activeLeafPath);
+                            console.log(flow.modifiedRegionsArray)
+                        }
+                      } // Here you can handle the changes
+                      changes.iterChanges(
+                        (fromA, toA, fromB, toB, inserted) => {
+                          console.log("Text change detected:", {
+                            fromA,
+                            toA,
+                            fromB,
+                            toB,
+                            insertedText: inserted.toString(),
+                          });
+                          // You can add your change handling logic here
+                          // For example, tracking what changed in the active region
+                        }
+                      );
+                    } catch (error) {
+                      console.error("Error processing text change:", error);
+                      new Notice(
+                        "TextFlow Plugin warning: Error processing text change",
+                        5000
+                      );
+                    }
+                  }, 250);
+                }
+              } catch (error) {
+                console.error("Error in change update:", error);
+                new Notice(
+                  "TextFlow Plugin: Error tracking changes.\n" +
+                    "Please report this issue on github.",
+                  10000
+                );
+              }
+            }
+
+            destroy() {
+              try {
+                if (debounceTimeout) {
+                  clearTimeout(debounceTimeout);
+                }
+                if (activeLeafPath) {
+                  delete plugin.listenerBasket[`${activeLeafPath}-changes`];
+                }
+              } catch (error) {
+                console.error("Error cleaning up change listener:", error);
+                new Notice(
+                  "TextFlow Plugin: Error during cleanup of change listener.\n" +
+                    "Please reload the plugin to ensure proper operation.",
+                  10000
+                );
+              }
+            }
+          }
+        );
+
+        try {
+          const extension = StateEffect.appendConfig.of([changeListener]);
+
+          if (!activeLeafPath) {
+            throw new Error("TextFlow plugin: No active leaf path available.");
+          }
+
+          this.listenerBasket[`${activeLeafPath}-changes`] = {
+            plugin: changeListener,
+            extension: extension,
+          };
+
+          cmEditor.dispatch({
+            effects: extension,
+          });
+        } catch (error) {
+          console.error("Error attaching change listener:", error);
+          if (activeLeafPath) {
+            delete this.listenerBasket[`${activeLeafPath}-changes`];
+          }
+          new Notice(
+            "TextFlow Plugin: Error setting up change tracking.\n" +
+              "Please report this issue on github.",
+            10000
+          );
+        }
+      } else {
+        this.removeTextChangeListener(leaf);
+      }
+    }
+  };
+
+  //---------------
+  removeTextChangeListener = (leaf: MarkdownView) => {
+    const activeLeafPath = leaf.file?.path;
+    if (
+      activeLeafPath !== undefined &&
+      this.listenerBasket[`${activeLeafPath}-changes`]
+    ) {
+      const editor = leaf.editor as ObsidianEditor;
+      const cmEditor = editor.cm;
+      if (cmEditor) {
+        // Remove the listener
+        cmEditor.dispatch({
+          effects: StateEffect.reconfigure.of([]),
+        });
+        // The destroy callback will handle removing from the basket
+      }
+    }
+  };
+
   // ---------------------------------------------------------
   private boundFileExplorerClick: (event: MouseEvent) => void;
   // ---------- This listener is removed in ONUNLOAD ---------------------
@@ -566,6 +732,7 @@ export default class TextFlowPlugin extends Plugin {
             if (flowLeaf.view instanceof MarkdownView) {
               this.addReadOnlyExtension(flowLeaf.view, flowName);
               this.addCursorListener(flowLeaf.view);
+              this.addTextChangeListener(flowLeaf.view);
             }
           } else {
             // if it's not open, open it and attach stuff
@@ -624,6 +791,7 @@ export default class TextFlowPlugin extends Plugin {
   private async setupFlowView(flowName: string, view: MarkdownView) {
     this.addReadOnlyExtension(view, flowName);
     this.addCursorListener(view);
+    this.addTextChangeListener(view);
 
     if (!this.settings.activeFlows.includes(flowName)) {
       this.settings.activeFlows = [...this.settings.activeFlows, flowName];
@@ -1000,6 +1168,7 @@ export default class TextFlowPlugin extends Plugin {
         ) {
           let markdownView = leaf.view as MarkdownView; // Cast the view to MarkdownView
           this.removeCursorListener(markdownView);
+          this.removeTextChangeListener(markdownView);
         }
       }
     }

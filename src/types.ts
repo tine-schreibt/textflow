@@ -20,7 +20,7 @@ export interface FlowDef {
   flowActive: boolean;
   activeRegion: ActiveRegion;
   persistentCursorPos: number;
-  modifiedRegionArray?: { [key: string]: ModifiedRegion };
+  modifiedRegionsArray: string[];
   excludedFolders?: string[];
   includedMetaData?: { [key: string]: [value: string] };
   excludedMetaData?: { [key: string]: [value: string] };
