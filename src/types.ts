@@ -8,8 +8,8 @@ export interface TextFlowSettings {
   tempFolderPlace?: string;
   tempFolderHidden: boolean;
   flowLeafInFocus?: boolean;
-  activeFlows: string[];
   divider: string;
+  activeFlows: string[];
   flows: { [key: string]: FlowDef };
 }
 
@@ -17,28 +17,30 @@ export interface FlowDef {
   sourcePath: string;
   flowFileName: string;
   flowFilePath: string;
-  activeRegionCache?: ActiveRegionCache;
+  flowActive: boolean;
+  activeRegion: ActiveRegion;
+  modifiedRegionArray?: { [key: string]: ModifiedRegion };
   excludedFolders?: string[];
   includedMetaData?: { [key: string]: [value: string] };
   excludedMetaData?: { [key: string]: [value: string] };
   flowMap: { [key: string]: FlowMap };
 }
 
-export interface ActiveRegionCache {
+export interface ActiveRegion {
   persistentCursorPos: number;
   lastCursorPosition: number;
-  regions: {
-    [offset: number]: RegionObject;
-  };
-}
-
-export interface RegionObject {
   path: string;
   UID: string;
   UIDPlain: number;
   startInFlow: number;
   endInFlow: number;
 }
+
+export interface ModifiedRegion {
+  UID: string;
+  modTime: number;
+}
+
 export interface FlowMap {
   type: "file" | "folder";
   path: string;
@@ -55,8 +57,8 @@ export interface FlowMap {
 export const DEFAULT_SETTINGS: TextFlowSettings = {
   tempFolderPlace: "",
   tempFolderHidden: true,
-  activeFlows: [],
   divider: "***",
+  activeFlows: [],
   flows: {},
 };
 
@@ -69,4 +71,4 @@ export interface mapValueBasket {
   UID: string;
 }
 
-export type FlowStatus = "on" | "off" | "incompatible";
+export type ModalFlowStatus = "on" | "off" | "incompatible";

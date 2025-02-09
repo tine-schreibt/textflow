@@ -54,6 +54,10 @@ export default class TextFlowPlugin extends Plugin {
   tempFilePath: string;
 
   // ---------------- Global objects and variables -------------------------
+  private cursorResetTracker: string[] = [];
+  private scrollToConstituent: boolean;
+  private lastShiftTime: number = 0;
+  private shiftDebounceTime: number = 300;
   // ----------------- tracking read-only ranges --------------------------
   private hadTrackingError: boolean = false; // Add this line
   private readOnlyHighlight = Decoration.mark({
@@ -214,6 +218,84 @@ export default class TextFlowPlugin extends Plugin {
         }
       })
     );
+
+    this.registerEvent(
+      this.app.workspace.on("active-leaf-change", async (leaf) => {
+        const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (activeView?.file) {
+          const flowName = this.isFlowFile(activeView.file.path);
+          if (
+            flowName &&
+            !this.scrollToConstituent &&
+            !this.cursorResetTracker.includes(flowName)
+          ) {
+            const startPos =
+              this.settings.flows[flowName].activeRegion?.persistentCursorPos;
+
+            // Add safety checks
+            const editor = activeView.editor;
+            const cmEditor = (editor as any).cm;
+            if (editor && cmEditor && startPos !== undefined) {
+              // Check if document is loaded and has content
+              if (cmEditor.state.doc.length > 0) {
+                // Make sure position is within bounds
+                const safePos = Math.min(
+                  startPos,
+                  cmEditor.state.doc.length - 1
+                );
+
+                const cursorPos = editor.offsetToPos(safePos);
+                editor.setCursor(cursorPos);
+
+                const line = cmEditor.state.doc.lineAt(safePos);
+                const targetPos = line.from;
+
+                cmEditor.dispatch({
+                  selection: { anchor: targetPos },
+                  effects: EditorView.scrollIntoView(targetPos, {
+                    y: "start",
+                    yMargin: 0,
+                  }),
+                });
+                console.log(
+                  `active-leaf-change set cursor pos, scrolled to ${targetPos}`
+                );
+              } else {
+                // Document not ready, try again in a moment
+                setTimeout(() => {
+                  // Retry the cursor setting
+                  if (cmEditor.state.doc.length > 0) {
+                    const safePos = Math.min(
+                      startPos,
+                      cmEditor.state.doc.length - 1
+                    );
+                    const cursorPos = editor.offsetToPos(safePos);
+                    editor.setCursor(cursorPos);
+
+                    const line = cmEditor.state.doc.lineAt(safePos);
+                    const targetPos = line.from;
+                    console.log(
+                      `active-leaf-change set cursor pos after delay, scrolled to ${targetPos}`
+                    );
+
+                    cmEditor.dispatch({
+                      selection: { anchor: targetPos },
+                      effects: EditorView.scrollIntoView(targetPos, {
+                        y: "start",
+                        yMargin: 0,
+                      }),
+                    });
+                  }
+                }, 500);
+                console.log("listener set cursor pos after delay");
+              }
+            }
+            this.cursorResetTracker.push(flowName);
+            console.log(this.cursorResetTracker);
+          }
+        }
+      })
+    );
   }
 
   // ---------------- Functions: Listeners: Individual ----------
@@ -289,6 +371,9 @@ export default class TextFlowPlugin extends Plugin {
                         plugin.checkActiveRegionCache(
                           plugin.settings.flows[isItFlow],
                           cursorOffset
+                        );
+                        console.log(
+                          "cusor listener calling checkActiveRegionCache"
                         );
                         if (plugin.hadTrackingError) {
                           new Notice(
@@ -481,10 +566,12 @@ export default class TextFlowPlugin extends Plugin {
               const cmEditor = (editor as any).cm;
               if (cmEditor) {
                 // Adjust to correct for a consistent -1 offset error
-                const adjustedStartPos = startPos - 1;
+                const adjustedStartPos = startPos;
                 const line = cmEditor.state.doc.lineAt(adjustedStartPos);
                 const targetPos = line.from;
-
+                console.log(
+                  `fileExplorerClickListener set cursor pos, scrolled to ${targetPos}`
+                );
                 cmEditor.dispatch({
                   selection: { anchor: targetPos },
                   effects: EditorView.scrollIntoView(targetPos, {
@@ -566,9 +653,13 @@ export default class TextFlowPlugin extends Plugin {
           flowName = this.isFlowFile(activeLeafPath);
           if (flowName) {
             this.activateFlow(flowName);
+            console.log(
+              `initialSetup activating flow with last cursor pos `,
+              this.settings.flows[flowName].activeRegion?.lastCursorPosition
+            );
 
             // If we have stored cursor position, restore it
-            const cache = this.settings.flows[flowName].activeRegionCache;
+            const cache = this.settings.flows[flowName].activeRegion;
             if (cache && cache.lastCursorPosition !== undefined) {
               const storedPosition = cache.lastCursorPosition;
               const editor = leaf.view.editor;
@@ -578,10 +669,12 @@ export default class TextFlowPlugin extends Plugin {
                 if (cmEditor) {
                   const startPos = storedPosition;
                   // Adjust to correct for a consistent -1 offset error
-                  const adjustedStartPos = startPos - 1;
+                  const adjustedStartPos = startPos;
                   const line = cmEditor.state.doc.lineAt(adjustedStartPos);
                   const targetPos = line.from;
-
+                  console.log(
+                    `initialSetup set cursor pos, scrolled to ${targetPos}`
+                  );
                   cmEditor.dispatch({
                     selection: { anchor: targetPos },
                     effects: EditorView.scrollIntoView(targetPos, {
@@ -600,6 +693,7 @@ export default class TextFlowPlugin extends Plugin {
               this.settings.flows[flowName],
               cursorOffset
             );
+            console.log(`initialSetup calling checkActiveRegionCache`);
           }
         }
         this.saveSettings();
@@ -696,126 +790,38 @@ export default class TextFlowPlugin extends Plugin {
     cursorOffset: number
   ) => {
     const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-    if (!activeView) return;
+    if (!activeView) {
+      console.log("no active view");
+      return;
+    }
 
     const editor = activeView.editor as ObsidianEditor;
     const cmEditor = editor.cm;
-    if (!cmEditor) return;
+    if (!cmEditor) {
+      console.log("no cmEditor");
+      return;
+    }
 
     // Get full document text from CodeMirror state
     const text = cmEditor.state.doc.toString();
-    if (
-      flow.activeRegionCache !== undefined &&
-      (cursorOffset < flow.activeRegionCache.regions[0].startInFlow ||
-        cursorOffset > flow.activeRegionCache.regions[0].endInFlow) &&
-      (flow.activeRegionCache.regions[-1].path ===
-        "path for region with UIDPlain -1/+1 does not exist" ||
-        cursorOffset >= flow.activeRegionCache.regions[-1].startInFlow) &&
-      (flow.activeRegionCache.regions[1].path ===
-        "path for region with UIDPlain -1/+1 does not exist" ||
-        cursorOffset <= flow.activeRegionCache.regions[1].endInFlow)
-    ) {
-      flow.activeRegionCache.lastCursorPosition = cursorOffset;
-      this.shiftCacheWindow(flow, cursorOffset, flow.activeRegionCache, text);
-    } else {
-      flow.activeRegionCache = {
-        persistentCursorPos: cursorOffset,
-        lastCursorPosition: cursorOffset,
-        regions: {
-          [-1]: {
-            // relative to active region
-            path: "",
-            UID: "", // for boundary verification
-            UIDPlain: 0, // for easy navigation
-            startInFlow: 0,
-            endInFlow: 0,
-          },
-          [0]: {
-            path: "",
-            UID: "",
-            UIDPlain: 0,
-            startInFlow: 0,
-            endInFlow: 0,
-          },
-          [1]: {
-            path: "",
-            UID: "",
-            UIDPlain: 0,
-            startInFlow: 0,
-            endInFlow: 0,
-          },
-        },
-      };
-      // --------- shorthands -----------------
-      let shPrevRegion = flow.activeRegionCache.regions[-1];
-      let shActiveRegion = flow.activeRegionCache.regions[0];
-      let shNextRegion = flow.activeRegionCache.regions[1];
-      // --------------------------------------
-
-      let activeRegion = await this.findActiveRegion(flow, cursorOffset, text);
-      if (activeRegion) {
-        shActiveRegion = activeRegion;
-        let prevRegion = this.findOtherRegion(
-          flow,
-          activeRegion.UIDPlain - 1,
-          text
-        );
-        let nextRegion = this.findOtherRegion(
-          flow,
-          shActiveRegion.UIDPlain + 1,
-          text
-        );
-        if (prevRegion) {
-          shPrevRegion = prevRegion;
-        }
-        if (nextRegion) {
-          shNextRegion = nextRegion;
-        }
-      }
-
-      console.log(`active region is ${shActiveRegion.path}`);
+    if (flow.activeRegion) {
+      console.log("active region object exists");
+      flow.activeRegion.persistentCursorPos = cursorOffset;
+      flow.activeRegion.lastCursorPosition = cursorOffset;
     }
-    this.saveSettings();
-  };
-
-  // -----------------------------------------------------
-  private shiftCacheWindow = (
-    flow: Types.FlowDef,
-    cursorOffset: number,
-    activeRegionCache: Types.ActiveRegionCache,
-    text: string
-  ) => {
-    // --------- shorthands -----------------
-    let shPrevRegion = activeRegionCache.regions[-1];
-    let shActiveRegion = activeRegionCache.regions[0];
-    let shNextRegion = activeRegionCache.regions[1];
-    // --------------------------------------
-
-    if (activeRegionCache !== undefined) {
-      if (cursorOffset < activeRegionCache.regions[0].startInFlow) {
-        const prevRegion = this.findOtherRegion(
-          flow,
-          shActiveRegion.UIDPlain - 1,
-          text
-        );
-        if (prevRegion) {
-          activeRegionCache.regions[1] = shActiveRegion;
-          activeRegionCache.regions[0] = shPrevRegion;
-          activeRegionCache.regions[-1] = prevRegion;
-        }
+    if (
+      cursorOffset > flow.activeRegion.startInFlow &&
+      cursorOffset < flow.activeRegion.endInFlow
+    ) {
+      console.log("still in active region");
+      return;
+    } else {
+      let activeRegion = await this.findActiveRegion(flow, cursorOffset, text);
+      console.log(`checkActiveRegion looking for active region`);
+      if (activeRegion) {
+        flow.activeRegion = activeRegion;
       }
-      if (cursorOffset > activeRegionCache.regions[0].endInFlow) {
-        const nextRegion = this.findOtherRegion(
-          flow,
-          shActiveRegion.UIDPlain + 1,
-          text
-        );
-        if (nextRegion) {
-          activeRegionCache.regions[-1] = shActiveRegion;
-          activeRegionCache.regions[0] = shNextRegion;
-          activeRegionCache.regions[1] = nextRegion;
-        }
-      }
+      this.saveSettings();
     }
   };
 
@@ -843,7 +849,9 @@ export default class TextFlowPlugin extends Plugin {
         );
         if (startInFlow) {
           const markerLength = (activeRegionMap.UID + "<hr>").length + 1; // +1 for \r
-          const activeRegionObject: Types.RegionObject = {
+          const activeRegionObject: Types.ActiveRegion = {
+            persistentCursorPos: cursorOffset,
+            lastCursorPosition: cursorOffset,
             path: activeRegionPath,
             UID: uid,
             UIDPlain: activeRegionMap.UIDPlain,
@@ -851,47 +859,6 @@ export default class TextFlowPlugin extends Plugin {
             endInFlow: text.indexOf(activeRegionMap.UID) + markerLength,
           };
           return activeRegionObject;
-        }
-      }
-    }
-  };
-
-  // --------------------------------
-  private findOtherRegion = (
-    flow: Types.FlowDef,
-    UIDPlain: number,
-    text: string
-  ) => {
-    const otherRegion = Object.entries(flow.flowMap).find(
-      ([otherRegion, otherRegionFlowMapEntry]) =>
-        otherRegionFlowMapEntry.UIDPlain === UIDPlain
-    );
-    if (otherRegion) {
-      const [otherRegionPath, otherRegionMap] = otherRegion;
-
-      if (UIDPlain > 1) {
-        // if it's not the first region
-        const startInFlow = this.findStartOfRegion(flow, UIDPlain - 1, text);
-        if (startInFlow) {
-          const markerLength = (otherRegionMap.UID + "<hr>").length + 1; // +1 for \r
-          const otherRegionObject: Types.RegionObject = {
-            path: otherRegionPath,
-            UID: otherRegionMap.UID,
-            UIDPlain: UIDPlain,
-            startInFlow: startInFlow,
-            endInFlow: text.indexOf(otherRegionMap.UID) + markerLength,
-          };
-          return otherRegionObject;
-        } else {
-          // path name is to make sure we don't have accidental matches with user content
-          const otherRegionObject: Types.RegionObject = {
-            path: "path for region with UIDPlain -1/+1 does not exist",
-            UID: "none",
-            UIDPlain: -1,
-            startInFlow: 0,
-            endInFlow: 0,
-          };
-          return otherRegionObject;
         }
       }
     }
@@ -1004,6 +971,7 @@ export default class TextFlowPlugin extends Plugin {
         this.removeReadOnlyExtension(editor);
       }
     }
+    this.cursorResetTracker = [];
 
     // ------------ ONUNLOAD: REMOVE cursor listeners -----------
     for (const path in this.listenerBasket) {
