@@ -567,7 +567,7 @@ export default class TextFlowPlugin extends Plugin {
                             !flow.modifiedRegionsArray.contains(activeLeafPath)
                           )
                             flow.modifiedRegionsArray.push(activeLeafPath);
-                            console.log(flow.modifiedRegionsArray)
+                          console.log(flow.modifiedRegionsArray);
                         }
                       } // Here you can handle the changes
                       changes.iterChanges(
@@ -1019,27 +1019,43 @@ export default class TextFlowPlugin extends Plugin {
     if (matches) {
       const uid = matches[0].slice(0, 10);
 
-      const activeRegion = Object.entries(flow.flowMap).find(
-        ([activeRegionPath, activeRegionMap]) => activeRegionMap.UID === uid
+      const newRegion = Object.entries(flow.flowMap).find(
+        ([newRegionPath, newRegionMap]) => newRegionMap.UID === uid
       );
-      if (activeRegion) {
-        const [activeRegionPath, activeRegionMap] = activeRegion;
-        const startInFlow = this.findStartOfRegion(
-          flow,
-          activeRegionMap.UIDPlain - 1,
-          text
-        );
-        if (startInFlow) {
-          const markerLength = (activeRegionMap.UID + "<hr>").length + 1; // +1 for \r
+      if (newRegion) {
+        const [newRegionPath, newRegionMap] = newRegion;
+        const markerLength = (newRegionMap.UID + "<hr>").length + 1; // +1 for \r
+
+        if (uid === flow.activeRegion.UID) {
+          // if the user just typed their way out of the region bounds
           const activeRegionObject: Types.ActiveRegion = {
             lastCursorPosition: cursorOffset,
-            path: activeRegionPath,
+            path: flow.activeRegion.path,
             UID: uid,
-            UIDPlain: activeRegionMap.UIDPlain,
-            startInFlow: startInFlow,
-            endInFlow: text.indexOf(activeRegionMap.UID) + markerLength,
+            flowOrder: flow.activeRegion.flowOrder,
+            startInFlow: flow.activeRegion.startInFlow,
+            endInFlow: text.indexOf(newRegionMap.UID) + markerLength,
           };
           return activeRegionObject;
+        } else {
+          // if they're actually in a new region
+          const startInFlow = this.findStartOfRegion(
+            flow,
+            newRegionMap.flowOrder - 1,
+            text
+          );
+          if (startInFlow) {
+            const markerLength = (newRegionMap.UID + "<hr>").length + 1; // +1 for \r
+            const activeRegionObject: Types.ActiveRegion = {
+              lastCursorPosition: cursorOffset,
+              path: newRegionPath,
+              UID: uid,
+              flowOrder: newRegionMap.flowOrder,
+              startInFlow: startInFlow,
+              endInFlow: text.indexOf(newRegionMap.UID) + markerLength,
+            };
+            return activeRegionObject;
+          }
         }
       }
     }
@@ -1048,17 +1064,17 @@ export default class TextFlowPlugin extends Plugin {
   // ------------------
   private findStartOfRegion = (
     flow: Types.FlowDef,
-    UIDPlain: number,
+    flowOrder: number,
     text: string
   ) => {
     const previousRegion = Object.entries(flow.flowMap).find(
       ([previousRegion, previousRegionFlowMapEntry]) =>
-        previousRegionFlowMapEntry.UIDPlain === UIDPlain
+        previousRegionFlowMapEntry.flowOrder === flowOrder
     );
     if (previousRegion) {
       const [previousRegionPath, previousRegionMap] = previousRegion;
 
-      if (UIDPlain - 1 !== 0) {
+      if (flowOrder - 1 !== 0) {
         const UID = previousRegionMap.UID;
         const index = text.indexOf(UID);
         const startPos = index + (UID + "<hr>").length + 1;

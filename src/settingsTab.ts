@@ -32,7 +32,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     const shSettings: Types.TextFlowSettings = this.plugin.settings;
     let createOrEditFlowName: string = "";
     let createOrEditsourcePath: string = "";
-    // divider song and dance routine
 
     //#######################################################################
     //###########################    Functions   ############################
@@ -71,7 +70,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       const flow: Types.FlowDef = shFlowObjects[flowName] || {
         sourcePath: folderPath,
         flowFileName: flowName,
-        divider: `***`,
+        divider: `<hr>`,
         excludedFolders: [],
         includedMetaData: {},
         excludedMetaData: {},
@@ -86,18 +85,21 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       const flow: Types.FlowDef = shFlowObjects[flowName] || {
         sourcePath: folderPath,
         flowFileName: flowName,
-        divider: "***",
+        divider: "<hr>",
         flowMap: {}, // Flat map
       };
       let mapValueBasket: Types.mapValueBasket = {
-        tempFileContents: "",
-        currentStart: -1,
-        currentEnd: 0,
+        concatenatedFileContents: "",
         initialIteration: true,
-        UIDCounter: 0,
+        timeStamp: 0,
+        flowOrder: 0,
         UID: "",
+        yamlMini: "",
+        yamlComplete: "",
+        singleFileContent: "",
+        currentEnd: 0,
+        idDivider: "",
       };
-      this.plugin.saveSettings();
 
       const rootFolder = this.app.vault.getAbstractFileByPath(folderPath);
       if (!(rootFolder instanceof TFolder) || !rootFolder) {
@@ -107,7 +109,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       }
 
       // Start processing from the root folder
-      await updateFlatMap(rootFolder, flow, shSettings.divider, mapValueBasket);
+      await updateFlatMap(rootFolder, flow, mapValueBasket);
       // Save back the updated FlowDef
       shFlowObjects[flowName] = flow;
 
@@ -119,78 +121,141 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         const tempFilePath = `${shSettings.tempFolderPlace}/x_textFlowTemp/${flowName}.md`;
         this.app.vault.adapter.write(
           tempFilePath,
-          mapValueBasket.tempFileContents
+          mapValueBasket.concatenatedFileContents
         );
       } else {
         new Notice("Please create a temp folder first.");
         return;
       }
       // save temp file
+      this.plugin.saveSettings();
     };
     // wider scope variables that can't be reset during iteration
 
-    const extractYAML = (
-      content: string
-    ): { yaml: string | null; content: string } => {
-      const yamlRegex = /^---\n([\s\S]*?)\n---\n*/;
+    const extractYAML = async (
+      content: string,
+      mapValueBasket: Types.mapValueBasket
+    ) => {
+      const yamlRegex = /^(---\n[\s\S]*?\n---)\n*/;
       const match = content.match(yamlRegex);
 
       if (match) {
-        return {
-          yaml: match[1],
-          content: content.slice(match[0].length).trim(),
-        };
-      }
+        const yaml = match[1];
+        const cleanContent = content.slice(match[0].length).trim();
 
-      return {
-        yaml: null,
-        content: content.trim(),
-      };
+        // Look for TextFlowUID line
+        const textFlowPropertyRegEx =
+          /TextFlowUID:\s*(【\d{13}】⟦[\u200B\u200C\u200D]{10}⟧)/;
+        const textFlowPropertyMatch = yaml.match(textFlowPropertyRegEx);
+
+        if (textFlowPropertyMatch) {
+          // Then to extract just the invisible UID:
+          const invisibleUIDRegex = /⟦([\u200B\u200C\u200D]{10})⟧/;
+          const invisibleMatch =
+            textFlowPropertyMatch[1].match(invisibleUIDRegex);
+
+          // And to extract just the timestamp:
+          const timestampRegex = /【(\d{13})】/;
+          const timestampMatch = textFlowPropertyMatch[1].match(timestampRegex);
+
+          if (timestampMatch) {
+            // If timestamp is there
+            if (invisibleMatch) {
+              // if the invisible UID is also there
+              mapValueBasket.UID = invisibleMatch[0];
+              mapValueBasket.yamlMini = `TextFlowUID: 【${timestampMatch[0]}】⟦${invisibleMatch[0]}⟧`;
+              mapValueBasket.yamlComplete = `${textFlowPropertyMatch[0]}`;
+              mapValueBasket.singleFileContent = cleanContent;
+              console.log(
+                `good yaml found on file no ${mapValueBasket.flowOrder}`
+              );
+            } else {
+              // If there is no invisible UID, recreate it
+              const timestamp = Number(timestampMatch[1]);
+              mapValueBasket.UID = await reCreateInvisibleUID(timestamp);
+
+              // Replace the YAML line with complete version
+              console.log(
+                `repairing yaml for file no ${mapValueBasket.flowOrder}`
+              );
+              const updatedYaml = yaml.replace(
+                textFlowPropertyRegEx,
+                `TextFlowUID: 【${timestamp}】⟦${mapValueBasket.UID}⟧`
+              );
+              mapValueBasket.yamlComplete = `${updatedYaml}`;
+              mapValueBasket.singleFileContent = cleanContent;
+              return mapValueBasket;
+            }
+          } else {
+            // If there is only the property name but no valid value
+            throw new Error(
+              "TextFlow: Invalid UID format in properties.\n" +
+                "This file seems to be part of a flow but its UID is corrupted.\n" +
+                "Please restore from backup or remove TextFlowUID from properties to treat as new file."
+            );
+          }
+        } else {
+          // There is YAML but not TextFlowID porperty
+          console.log(
+            `missing yaml found on file no ${mapValueBasket.flowOrder}`
+          );
+          await createInvisibleUID(mapValueBasket);
+
+          const completedYaml = `${yaml}\r${mapValueBasket.yamlMini}`;
+          console.log(`yaml appended: ${completedYaml}`);
+          mapValueBasket.yamlComplete = `${yaml}\r${mapValueBasket.yamlMini}`;
+          mapValueBasket.singleFileContent = cleanContent;
+          return mapValueBasket;
+        }
+      } else {
+        // No YAML at all
+        console.log(`no yaml found on file no ${mapValueBasket.flowOrder}`);
+        await createInvisibleUID(mapValueBasket);
+        mapValueBasket.yamlMini = `TextFlowUID: 【${mapValueBasket.timeStamp}】⟦${mapValueBasket.UID}⟧`;
+        mapValueBasket.yamlComplete = `TextFlowUID: 【${mapValueBasket.timeStamp}】⟦${mapValueBasket.UID}⟧`;
+        mapValueBasket.singleFileContent = content;
+        return mapValueBasket;
+      }
     };
 
-    const createMarker = (mapValueBasket: Types.mapValueBasket) => {
+    // ----------- translate timestamp into invisible base2 UID and make YAML entry
+    const createInvisibleUID = (mapValueBasket: Types.mapValueBasket) => {
+      const INVISIBLE_CHARS = [
+        "\u200B", // Zero-width space (0)
+        "\u200C", // Zero-width non-joiner (1)
+        "\u200D", // Zero-width joiner (2)
+      ];
+
+      const timestamp = Date.now();
+      const base3 = timestamp.toString(3);
+
+      const encodedTimestamp = [...base3]
+        .map((digit) => INVISIBLE_CHARS[parseInt(digit)])
+        .join("");
+
+      mapValueBasket.UID = encodedTimestamp;
+      mapValueBasket.yamlMini = `\nTextFlowUID: 【${timestamp}】⟦${encodedTimestamp}⟧`;
+      mapValueBasket.idDivider = `\r${encodedTimestamp}<hr>\r\r`;
+    };
+
+    // ----------------- If invisible UID got eaten by external editor -----------
+    const reCreateInvisibleUID = (timestamp: number) => {
       // Define our invisible characters
       const INVISIBLE_CHARS = [
         "\u200B", // Zero-width space (0)
         "\u200C", // Zero-width non-joiner (1)
         "\u200D", // Zero-width joiner (2)
       ];
-      //console.log(mapValueBasket.UIDCounter);
 
-      // count up by one
-      const countUp = mapValueBasket.UIDCounter++;
-      // Convert to base-3 string and ensure exactly 10 digits
-      const base3 = countUp.toString(3).padStart(10, "0");
+      // Convert to base-3 string
+      const base3 = timestamp.toString(3);
 
       // Convert each base-3 digit to the corresponding invisible character
-      const encoded = [...base3]
+      const reCreatedUID = [...base3]
         .map((digit) => INVISIBLE_CHARS[parseInt(digit)])
         .join("");
-      mapValueBasket.UID = encoded;
-      //console.log(mapValueBasket.UID);
 
-      // make the divider
-      const divider = `\r${encoded}<hr>\r\r`;
-      const idDivider = divider.replace(/\\r/g, "\r");
-
-      // Wrap in non-breaking spaces
-      return idDivider;
-    };
-
-    // For debugging/verification purposes
-    const decodeMarker = (marker: string) => {
-      const INVISIBLE_CHARS = ["\u200B", "\u200C", "\u200D"];
-
-      // Remove non-breaking spaces
-      const encoded = marker.slice(1, -1);
-
-      // Convert invisible characters back to base-3 digits
-      let value = 0;
-      for (const char of encoded) {
-        value = value * 3 + INVISIBLE_CHARS.indexOf(char);
-      }
-
-      return value;
+      return reCreatedUID;
     };
 
     const debugMarker = (marker: string) => {
@@ -217,7 +282,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     const updateFlatMap = async (
       item: TAbstractFile,
       flow: Types.FlowDef,
-      flowDivider: string,
       mapValueBasket: Types.mapValueBasket
     ): Promise<void> => {
       const fullPath = item.path;
@@ -228,47 +292,49 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         item instanceof TFolder &&
         item.path !== shSettings.tempFolderPlace + "/x_textFlowTemp"
       ) {
-        const timestamp = Date.now();
-        const idDivider = await createMarker(mapValueBasket);
+        mapValueBasket.flowOrder++; // increment counter if needed
+        const idDivider = await createInvisibleUID(mapValueBasket);
+
+        if (mapValueBasket.initialIteration) {
+          flow.flowMap[fullPath].startEndInFlow.start = 0;
+          mapValueBasket.initialIteration = false;
+        } else {
+          flow.flowMap[fullPath].startEndInFlow.start =
+            mapValueBasket.concatenatedFileContents.length;
+        }
 
         flow.flowMap[fullPath] = {
           type: "folder",
           path: fullPath,
           itemName: item.name,
           UID: mapValueBasket.UID,
-          UIDPlain: mapValueBasket.UIDCounter,
-          lastModifiedInFlow: timestamp,
+          flowOrder: mapValueBasket.flowOrder,
           minLength: itemName.length,
-          lengthPlusDividers: itemName.length + idDivider.length,
+          lengthPlusDividers: itemName.length + mapValueBasket.idDivider.length,
           startEndInFlow: {
-            start: mapValueBasket.tempFileContents.length,
-            end: 0,
+            // start: defined further up depending on iteration status
+            end: itemName.length + mapValueBasket.idDivider.length,
           },
-        } as Types.FlowMap;
-
-        if (mapValueBasket.initialIteration) {
-          flow.flowMap[fullPath].startEndInFlow.start = 0;
-        }
-        mapValueBasket.initialIteration = false;
+        } as Types.SourceFileObject;
 
         // Add content with marker before divider
-        mapValueBasket.tempFileContents += `<center><b>${itemName}</b></center>${idDivider}`;
-        mapValueBasket.currentEnd = mapValueBasket.tempFileContents.length;
+        mapValueBasket.concatenatedFileContents += `<center><b>${itemName}</b></center>${idDivider}`;
+        mapValueBasket.currentEnd =
+          mapValueBasket.concatenatedFileContents.length;
         flow.flowMap[fullPath].startEndInFlow.end = mapValueBasket.currentEnd;
 
         for (const subItem of item.children) {
-          await updateFlatMap(
-            subItem,
-            flow,
-            shSettings.divider,
-            mapValueBasket
-          );
+          await updateFlatMap(subItem, flow, mapValueBasket);
         }
       } else if (item instanceof TFile) {
+        mapValueBasket.flowOrder++; // increment counter if needed
+        const modificationTimestamp = Date.now();
         let fileContent: string = await this.app.vault.read(item);
-        // Extract YAML and clean content
-        const { yaml, content } = extractYAML(fileContent);
-        fileContent = content;
+
+        // Extract, fix or create YAML and separate it from other content
+        // this calls UID creation, too
+        await extractYAML(fileContent, mapValueBasket);
+        fileContent = mapValueBasket.singleFileContent;
 
         // find and remove the title line; normalize
         const titleLine = `## ${item.name.replace(/\.md$/, "")}`;
@@ -282,34 +348,39 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             .substring(normalizedTitleLine.length + 1)
             .trimStart();
         }
-        const timestamp = Date.now();
-        const idDivider = await createMarker(mapValueBasket);
+
+        if (mapValueBasket.initialIteration) {
+          flow.flowMap[fullPath].startEndInFlow.start = 0;
+          mapValueBasket.initialIteration = false;
+        } else {
+          flow.flowMap[fullPath].startEndInFlow.start =
+            mapValueBasket.concatenatedFileContents.length;
+        }
 
         flow.flowMap[fullPath] = {
           type: "file",
           path: fullPath,
           itemName: item.name,
           UID: mapValueBasket.UID,
-          UIDPlain: mapValueBasket.UIDCounter,
-          lastModifiedInFlow: timestamp,
-          sourceLastModified: item.stat.mtime,
+          flowOrder: mapValueBasket.flowOrder,
           minLength: fileContent.length,
-          lengthPlusDividers: fileContent.length + idDivider.length,
+          lengthPlusDividers:
+            fileContent.length + mapValueBasket.idDivider.length,
           startEndInFlow: {
-            start: mapValueBasket.tempFileContents.length,
-            end: 0,
+            // start: defined further up depending on iteration status
+            end:
+              mapValueBasket.concatenatedFileContents.length +
+              fileContent.length +
+              mapValueBasket.idDivider.length,
           },
-          YAML: yaml || "", // Store the extracted YAML
-        } as Types.FlowMap;
-
-        if (mapValueBasket.initialIteration) {
-          flow.flowMap[fullPath].startEndInFlow.start = 0;
-        }
-        mapValueBasket.initialIteration = false;
+          yamlComplete: mapValueBasket.yamlComplete,
+          yamlMini: mapValueBasket.yamlMini,
+        } as Types.SourceFileObject;
 
         // Add content with marker before divider
-        mapValueBasket.tempFileContents += `${fileContent}${idDivider}`;
-        mapValueBasket.currentEnd = mapValueBasket.tempFileContents.length;
+        mapValueBasket.concatenatedFileContents += `${fileContent}${mapValueBasket.idDivider}`;
+        mapValueBasket.currentEnd =
+          mapValueBasket.concatenatedFileContents.length;
         flow.flowMap[fullPath].startEndInFlow.end = mapValueBasket.currentEnd;
       } else {
         console.error("End of folder OR invalid file.");
@@ -466,9 +537,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           });
       });
 
-    // #############   choose a divider	    ######### (dropdown)
-    // ---  /  ***  //  ___
-
     // ###############   Create a new flowObject   #############################
 
     const createFlows = containerEl.createDiv({
@@ -544,7 +612,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             lastCursorPosition: 0,
             path: "",
             UID: "",
-            UIDPlain: 1,
+            flowOrder: 1,
             startInFlow: 0,
             endInFlow: 1,
           },
