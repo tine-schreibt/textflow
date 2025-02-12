@@ -136,26 +136,27 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       content: string,
       mapValueBasket: Types.mapValueBasket
     ) => {
-      const yamlRegex = /^(---\n[\s\S]*?\n---)\n*/;
+      const yamlRegex = /^---\n([\s\S]*?)\n---\n*/;
       const match = content.match(yamlRegex);
 
       if (match) {
-        const yaml = match[1];
+        const nakedYaml = match[1];
         const cleanContent = content.slice(match[0].length).trim();
+        // console.log(`nakedYaml = ${nakedYaml}`);
 
         // Look for TextFlowUID line
         const textFlowPropertyRegEx =
-          /TextFlowUID:\s*(【\d{13}】⟦[\u200B\u200C\u200D]{10}⟧)/;
-        const textFlowPropertyMatch = yaml.match(textFlowPropertyRegEx);
+          /TextFlowUID:\s*(【\d{13,}】⟦[\u200B\u200C\u200D]{26,}⟧)/;
+        const textFlowPropertyMatch = nakedYaml.match(textFlowPropertyRegEx);
 
         if (textFlowPropertyMatch) {
           // Then to extract just the invisible UID:
-          const invisibleUIDRegex = /⟦([\u200B\u200C\u200D]{10})⟧/;
+          const invisibleUIDRegex = /⟦([\u200B\u200C\u200D]{26,})⟧/;
           const invisibleMatch =
             textFlowPropertyMatch[1].match(invisibleUIDRegex);
 
           // And to extract just the timestamp:
-          const timestampRegex = /【(\d{13})】/;
+          const timestampRegex = /【(\d{13,})】/;
           const timestampMatch = textFlowPropertyMatch[1].match(timestampRegex);
 
           if (timestampMatch) {
@@ -164,23 +165,23 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               // if the invisible UID is also there
               mapValueBasket.UID = invisibleMatch[0];
               mapValueBasket.yamlMini = `TextFlowUID: 【${timestampMatch[0]}】⟦${invisibleMatch[0]}⟧`;
-              mapValueBasket.yamlComplete = `${textFlowPropertyMatch[0]}`;
+              mapValueBasket.yamlComplete = `${textFlowPropertyMatch[1]}`;
               mapValueBasket.singleFileContent = cleanContent;
-              console.log(
+              /*  console.log(
                 `good yaml found on file no ${mapValueBasket.flowOrder}`
-              );
+              );*/
             } else {
               // If there is no invisible UID, recreate it
               const timestamp = Number(timestampMatch[1]);
               mapValueBasket.UID = await reCreateInvisibleUID(timestamp);
 
               // Replace the YAML line with complete version
-              console.log(
+              /*console.log(
                 `repairing yaml for file no ${mapValueBasket.flowOrder}`
-              );
-              const updatedYaml = yaml.replace(
+              );*/
+              const updatedYaml = nakedYaml.replace(
                 textFlowPropertyRegEx,
-                `TextFlowUID: 【${timestamp}】⟦${mapValueBasket.UID}⟧`
+                `- TextFlowUID: 【${timestamp}】⟦${mapValueBasket.UID}⟧`
               );
               mapValueBasket.yamlComplete = `${updatedYaml}`;
               mapValueBasket.singleFileContent = cleanContent;
@@ -196,24 +197,26 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           }
         } else {
           // There is YAML but not TextFlowID porperty
-          console.log(
+          /* console.log(
             `missing yaml found on file no ${mapValueBasket.flowOrder}`
-          );
+          );*/
           await createInvisibleUID(mapValueBasket);
 
-          const completedYaml = `${yaml}\r${mapValueBasket.yamlMini}`;
-          console.log(`yaml appended: ${completedYaml}`);
-          mapValueBasket.yamlComplete = `${yaml}\r${mapValueBasket.yamlMini}`;
+          const completedYaml = `${nakedYaml}\r${mapValueBasket.yamlMini}`;
+          // console.log(`yaml appended: ${completedYaml}`);
+          mapValueBasket.yamlComplete = `${nakedYaml}\r${mapValueBasket.yamlMini}`;
           mapValueBasket.singleFileContent = cleanContent;
           return mapValueBasket;
         }
       } else {
         // No YAML at all
-        console.log(`no yaml found on file no ${mapValueBasket.flowOrder}`);
+        //console.log(`no yaml found on file no ${mapValueBasket.flowOrder}`);
         await createInvisibleUID(mapValueBasket);
         mapValueBasket.yamlMini = `TextFlowUID: 【${mapValueBasket.timeStamp}】⟦${mapValueBasket.UID}⟧`;
         mapValueBasket.yamlComplete = `TextFlowUID: 【${mapValueBasket.timeStamp}】⟦${mapValueBasket.UID}⟧`;
         mapValueBasket.singleFileContent = content;
+        //console.log(`added yaml: ${mapValueBasket.UID.length}`);
+
         return mapValueBasket;
       }
     };
@@ -227,15 +230,21 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       ];
 
       const timestamp = Date.now();
+      //console.log(`createInvisibleUID timestamp ${timestamp}`);
       const base3 = timestamp.toString(3);
-
       const encodedTimestamp = [...base3]
         .map((digit) => INVISIBLE_CHARS[parseInt(digit)])
         .join("");
+      //console.log(`base3 timestamp: ${base3}`);
+      // debugMarker(encodedTimestamp);
 
+      // make the divider
+      const divider = `\r${encodedTimestamp}<hr>\r\r`;
+
+      mapValueBasket.timeStamp = timestamp;
       mapValueBasket.UID = encodedTimestamp;
       mapValueBasket.yamlMini = `\nTextFlowUID: 【${timestamp}】⟦${encodedTimestamp}⟧`;
-      mapValueBasket.idDivider = `\r${encodedTimestamp}<hr>\r\r`;
+      mapValueBasket.idDivider = divider.replace(/\\r/g, "\r");
     };
 
     // ----------------- If invisible UID got eaten by external editor -----------
@@ -293,15 +302,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         item.path !== shSettings.tempFolderPlace + "/x_textFlowTemp"
       ) {
         mapValueBasket.flowOrder++; // increment counter if needed
-        const idDivider = await createInvisibleUID(mapValueBasket);
-
-        if (mapValueBasket.initialIteration) {
-          flow.flowMap[fullPath].startEndInFlow.start = 0;
-          mapValueBasket.initialIteration = false;
-        } else {
-          flow.flowMap[fullPath].startEndInFlow.start =
-            mapValueBasket.concatenatedFileContents.length;
-        }
+        await createInvisibleUID(mapValueBasket);
 
         flow.flowMap[fullPath] = {
           type: "folder",
@@ -312,13 +313,16 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           minLength: itemName.length,
           lengthPlusDividers: itemName.length + mapValueBasket.idDivider.length,
           startEndInFlow: {
-            // start: defined further up depending on iteration status
+            start: mapValueBasket.initialIteration
+              ? 0
+              : mapValueBasket.concatenatedFileContents.length,
             end: itemName.length + mapValueBasket.idDivider.length,
           },
         } as Types.SourceFileObject;
+        mapValueBasket.initialIteration = false;
 
         // Add content with marker before divider
-        mapValueBasket.concatenatedFileContents += `<center><b>${itemName}</b></center>${idDivider}`;
+        mapValueBasket.concatenatedFileContents += `<center><b>${itemName}</b></center>${mapValueBasket.idDivider}`;
         mapValueBasket.currentEnd =
           mapValueBasket.concatenatedFileContents.length;
         flow.flowMap[fullPath].startEndInFlow.end = mapValueBasket.currentEnd;
@@ -349,14 +353,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             .trimStart();
         }
 
-        if (mapValueBasket.initialIteration) {
-          flow.flowMap[fullPath].startEndInFlow.start = 0;
-          mapValueBasket.initialIteration = false;
-        } else {
-          flow.flowMap[fullPath].startEndInFlow.start =
-            mapValueBasket.concatenatedFileContents.length;
-        }
-
         flow.flowMap[fullPath] = {
           type: "file",
           path: fullPath,
@@ -367,7 +363,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           lengthPlusDividers:
             fileContent.length + mapValueBasket.idDivider.length,
           startEndInFlow: {
-            // start: defined further up depending on iteration status
+            start: mapValueBasket.initialIteration
+              ? 0
+              : mapValueBasket.concatenatedFileContents.length,
             end:
               mapValueBasket.concatenatedFileContents.length +
               fileContent.length +
@@ -376,6 +374,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           yamlComplete: mapValueBasket.yamlComplete,
           yamlMini: mapValueBasket.yamlMini,
         } as Types.SourceFileObject;
+
+        mapValueBasket.initialIteration = false;
 
         // Add content with marker before divider
         mapValueBasket.concatenatedFileContents += `${fileContent}${mapValueBasket.idDivider}`;

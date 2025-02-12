@@ -389,9 +389,9 @@ export default class TextFlowPlugin extends Plugin {
                           plugin.settings.flows[isItFlow],
                           cursorOffset
                         );
-                        console.log(
+                        /* console.log(
                           "cusor listener calling checkActiveRegionCache"
-                        );
+                        );*/
                         if (plugin.hadTrackingError) {
                           new Notice(
                             "Flow tracking restored. :)\n" +
@@ -905,48 +905,50 @@ export default class TextFlowPlugin extends Plugin {
     const editor = leaf.editor as any;
     if (!editor.cm) return;
 
-    if (this.hasReadOnlyExtension(editor)) {
-      this.removeReadOnlyExtension(editor);
-    }
+    if (!this.hasReadOnlyExtension(editor)) {
+      console.log("attaching readOnlyExtension to: ", flowName);
+      const preventEdit = EditorState.transactionFilter.of((tr) => {
+        if (!tr.changes.empty) {
+          let shouldReject = false;
 
-    const preventEdit = EditorState.transactionFilter.of((tr) => {
-      if (!tr.changes.empty) {
-        let shouldReject = false;
+          tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
+            const windowStart = Math.max(0, fromA - 50);
+            const windowEnd = Math.min(tr.startState.doc.length, toA + 50);
+            const windowText = tr.startState.sliceDoc(windowStart, windowEnd);
 
-        tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
-          // Get a larger window around the edit point
-          const windowStart = Math.max(0, fromA - 20);
-          const windowEnd = Math.min(tr.startState.doc.length, toA + 20);
-          const windowText = tr.startState.sliceDoc(windowStart, windowEnd);
+            let match;
+            const regex = /(?:^|\n)[\u200B\u200C\u200D]{26,}(<hr>)(?:\n\n|$)/g;
 
-          let match;
-          const regex = /(?:^|\n)[\u200B\u200C\u200D]{10}(<hr>)(?:\n\n|$)/g;
+            while ((match = regex.exec(windowText)) !== null) {
+              console.log("Found protected region:", {
+                match: match[0],
+                start: windowStart + match.index,
+                end: windowStart + match.index + match[0].length,
+              });
+              // Get absolute positions of the protected `***`, including required newlines
+              const absoluteDividerStart = windowStart + match.index;
+              const absoluteDividerEnd = absoluteDividerStart + match[0].length;
 
-          //  /(?:^|\n)(\*\*\*|___|<hr>)(?:\n|$)/g;
-          while ((match = regex.exec(windowText)) !== null) {
-            // Get absolute positions of the protected `***`, including required newlines
-            const absoluteDividerStart = windowStart + match.index;
-            const absoluteDividerEnd = absoluteDividerStart + match[0].length;
-
-            if (
-              (fromA < absoluteDividerEnd && toA > absoluteDividerStart) ||
-              (fromA <= absoluteDividerStart && toA >= absoluteDividerEnd)
-            ) {
-              shouldReject = true;
+              if (
+                (fromA < absoluteDividerEnd && toA > absoluteDividerStart) ||
+                (fromA <= absoluteDividerStart && toA >= absoluteDividerEnd)
+              ) {
+                shouldReject = true;
+              }
             }
+          });
+
+          if (shouldReject) {
+            return []; // Reject the transaction
           }
-        });
-
-        if (shouldReject) {
-          return []; // Reject the transaction
         }
-      }
-      return tr; // Allow normal edits
-    });
+        return tr; // Allow normal edits
+      });
 
-    editor.cm.dispatch({
-      effects: StateEffect.appendConfig.of([preventEdit]),
-    });
+      editor.cm.dispatch({
+        effects: StateEffect.appendConfig.of([preventEdit]),
+      });
+    }
   };
 
   // -----------------------------------------------------------
@@ -999,7 +1001,9 @@ export default class TextFlowPlugin extends Plugin {
     } else {
       flow.activeRegion.lastCursorPosition = cursorOffset;
       let activeRegion = await this.findActiveRegion(flow, cursorOffset, text);
-      console.log(`checkActiveRegion looking for active region`);
+      console.log(
+        `cursor is at ${cursorOffset}, that's ourside fo ${flow.activeRegion.startInFlow} and ${flow.activeRegion.endInFlow}`
+      );
       if (activeRegion) {
         flow.activeRegion = activeRegion;
       }
@@ -1013,11 +1017,13 @@ export default class TextFlowPlugin extends Plugin {
     cursorOffset: number,
     text: string
   ) => {
-    const markerRegex = /[\u200B\u200C\u200D]{10}<hr>/;
+    const markerRegex = /[\u200B\u200C\u200D]{26,}<hr>/;
     const searchStart = text.slice(cursorOffset);
     const matches = searchStart.match(markerRegex);
+    // console.log(`findActiveRegion: UIDs found: ${matches}`);
     if (matches) {
-      const uid = matches[0].slice(0, 10);
+      const uidLength = matches[0].length - 4;
+      const uid = matches[0].slice(0, uidLength);
 
       const newRegion = Object.entries(flow.flowMap).find(
         ([newRegionPath, newRegionMap]) => newRegionMap.UID === uid
