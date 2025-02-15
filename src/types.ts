@@ -8,7 +8,9 @@ export interface TextFlowSettings {
   tempFolderPlace?: string;
   tempFolderHidden: boolean;
   flowLeafInFocus?: boolean;
+  autoSave: boolean;
   activeFlows: string[];
+  flagForRebuild: string[];
   flows: { [key: string]: FlowDef };
 }
 
@@ -56,7 +58,9 @@ export interface SourceFileObject {
 export const DEFAULT_SETTINGS: TextFlowSettings = {
   tempFolderPlace: "",
   tempFolderHidden: true,
+  autoSave: true,
   activeFlows: [],
+  flagForRebuild: [],
   flows: {},
 };
 

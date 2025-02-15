@@ -59,6 +59,7 @@ export default class TextFlowPlugin extends Plugin {
   private lastShiftTime: number = 0;
   private shiftDebounceTime: number = 300;
   private wakingUp: boolean = true;
+
   // ----------------- tracking read-only ranges --------------------------
   private hadTrackingError: boolean = false; // Add this line
   private readOnlyHighlight = Decoration.mark({
@@ -104,6 +105,25 @@ export default class TextFlowPlugin extends Plugin {
 
   private updateRangesEffect =
     StateEffect.define<Array<{ from: number; to: number }>>();
+
+  // ------------------ protects the editor from changes while a save is going on
+  private toggleProtectionEffect = StateEffect.define<boolean>();
+
+  private protectDuringSaveExtension = StateField.define<boolean>({
+    create: () => false,
+    update: (value, tr) => {
+      for (let effect of tr.effects) {
+        if (effect.is(this.toggleProtectionEffect)) {
+          return effect.value; // Still boolean
+        }
+      }
+      return value;
+    },
+    provide: (field) =>
+      EditorView.editorAttributes.of((value) => ({
+        editable: value ? "false" : "true", // Convert boolean to string here
+      })),
+  });
 
   // ---------------- Functions ------------------------------------
   // ---------------- Functions: Utilities -------------------------
@@ -199,10 +219,23 @@ export default class TextFlowPlugin extends Plugin {
         console.log(`File modified: ${file.path}`);
       })
     );
-    // ---------------- Layout change (tab closure) -------------------------------
+
+    this.registerDomEvent(window, "blur", async () => {
+      if (this.settings.autoSave) {
+        console.log("blur listener calls saveAllLeavesAuto");
+        await this.saveAllLeavesAuto();
+        console.log("blur listener: saves finished");
+      }
+    });
+
+    // ---------------- Change to focus -------------------------------
 
     this.registerEvent(
       this.app.workspace.on("active-leaf-change", async (leaf) => {
+        // Save inactive leaves
+        //console.log("active-leaf-change calling saveInactiveLeaves");
+        await this.saveInactiveLeaves();
+        // console.log("active-leaf-change: save finished");
         if (leaf?.view instanceof MarkdownView) {
           const activeLeafPath = leaf.view.file?.path;
 
@@ -219,26 +252,12 @@ export default class TextFlowPlugin extends Plugin {
                   flow.flowMap[activeLeafPath] &&
                   this.settings.activeFlows.includes(flowName)
                 ) {
-                  // Found an orphaned constituent file
-                  const handleOrphanedFileClick =
-                    new Modals.HandleOrphanedFiles(
-                      this.app,
-                      flow.flowFilePath,
-                      activeLeafPath,
-                      this.settings.flows[flowName],
-                      flowName
-                    );
-                  break;
+                  // Add read-only and activate
                 }
               }
             }
           }
         }
-      })
-    );
-
-    this.registerEvent(
-      this.app.workspace.on("active-leaf-change", async (leaf) => {
         const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (activeView?.file) {
           const flowName = this.isFlowFile(activeView.file.path);
@@ -471,7 +490,7 @@ export default class TextFlowPlugin extends Plugin {
             effects: extension,
           });
         } catch (error) {
-          console.error("Error attaching navigation listener:", error);
+          //  console.error("Error attaching navigation listener:", error);
           if (activeLeafPath) {
             delete this.listenerBasket[activeLeafPath];
           }
@@ -559,30 +578,53 @@ export default class TextFlowPlugin extends Plugin {
 
                   debounceTimeout = setTimeout(() => {
                     try {
-                      for (const [flowName, flow] of Object.entries(
-                        shSettings.flows as Record<string, Types.FlowDef>
-                      )) {
-                        if (flow.flowMap[activeLeafPath]) {
-                          if (
-                            !flow.modifiedRegionsArray.contains(activeLeafPath)
+                      console.log("textChangeListener looking for path");
+                      if (shSettings.flows[isItFlow].activeRegion) {
+                        console.log("textChangeListener found path");
+                        if (
+                          // if the active region isn't registered as edited
+                          !shSettings.flows[
+                            isItFlow
+                          ].modifiedRegionsArray.includes(
+                            shSettings.flows[isItFlow].activeRegion.path
                           )
-                            flow.modifiedRegionsArray.push(activeLeafPath);
-                          console.log(flow.modifiedRegionsArray);
+                        ) {
+                          shSettings.flows[isItFlow].modifiedRegionsArray.push(
+                            shSettings.flows[isItFlow].activeRegion.path
+                          );
+                          console.log(
+                            "region added to modifiedRegionsArray: ",
+                            shSettings.flows[isItFlow].modifiedRegionsArray
+                          );
                         }
-                      } // Here you can handle the changes
-                      changes.iterChanges(
-                        (fromA, toA, fromB, toB, inserted) => {
-                          console.log("Text change detected:", {
-                            fromA,
-                            toA,
-                            fromB,
-                            toB,
-                            insertedText: inserted.toString(),
-                          });
-                          // You can add your change handling logic here
-                          // For example, tracking what changed in the active region
+                        if (
+                          !shSettings.flagForRebuild.includes(
+                            shSettings.flows[isItFlow].activeRegion.path
+                          )
+                        ) {
+                          shSettings.flagForRebuild.push(
+                            shSettings.flows[isItFlow].activeRegion.path
+                          );
+                          console.log(
+                            "path added to flaggedForRebuild array: ",
+                            shSettings.flagForRebuild
+                          );
                         }
-                      );
+                        // Here you can handle the changes
+                        changes.iterChanges(
+                          (fromA, toA, fromB, toB, inserted) => {
+                            console.log("Text change detected:", {
+                              fromA,
+                              toA,
+                              fromB,
+                              toB,
+                              insertedText: inserted.toString(),
+                            });
+                            // You can add your change handling logic here
+                            // For example, tracking what changed in the active region
+                          }
+                        );
+                      }
                     } catch (error) {
                       console.error("Error processing text change:", error);
                       new Notice(
@@ -638,7 +680,7 @@ export default class TextFlowPlugin extends Plugin {
             effects: extension,
           });
         } catch (error) {
-          console.error("Error attaching change listener:", error);
+          //  console.error("Error attaching change listener:", error);
           if (activeLeafPath) {
             delete this.listenerBasket[`${activeLeafPath}-changes`];
           }
@@ -730,6 +772,8 @@ export default class TextFlowPlugin extends Plugin {
             event.preventDefault();
             await this.app.workspace.setActiveLeaf(flowLeaf);
             if (flowLeaf.view instanceof MarkdownView) {
+              const editor = flowLeaf.view.editor as any;
+              this.addProtectDuringSaveExtension(editor);
               this.addReadOnlyExtension(flowLeaf.view, flowName);
               this.addCursorListener(flowLeaf.view);
               this.addTextChangeListener(flowLeaf.view);
@@ -789,6 +833,8 @@ export default class TextFlowPlugin extends Plugin {
 
   // ---------------- Functions: Flow management -------------------------
   private async setupFlowView(flowName: string, view: MarkdownView) {
+    const editor = view.editor as any;
+    this.addProtectDuringSaveExtension(editor);
     this.addReadOnlyExtension(view, flowName);
     this.addCursorListener(view);
     this.addTextChangeListener(view);
@@ -826,7 +872,6 @@ export default class TextFlowPlugin extends Plugin {
   // --------------------- Set up open flows with listeners -----------
   initialSetup = async () => {
     await this.persistCursorPosition();
-    console.log("persisting cursor on inititalSetup");
     const allLeaves = this.app.workspace.getLeavesOfType("markdown");
     // Iterate over all the leavesfileExplorerClickListener
     for (const leaf of allLeaves) {
@@ -840,11 +885,6 @@ export default class TextFlowPlugin extends Plugin {
           flowName = this.isFlowFile(activeLeafPath);
           if (flowName) {
             this.activateFlow(flowName);
-            console.log(
-              `initialSetup activating flow with last cursor pos `,
-              this.settings.flows[flowName].activeRegion?.lastCursorPosition
-            );
-
             // If we have stored cursor position, restore it
             const cache = this.settings.flows[flowName];
             if (
@@ -859,9 +899,6 @@ export default class TextFlowPlugin extends Plugin {
                   const startPos = cache.persistentCursorPos;
                   const line = cmEditor.state.doc.lineAt(startPos);
                   const targetPos = line.from;
-                  console.log(
-                    `initialSetup set cursor pos, scrolled to ${targetPos}`
-                  );
                   cmEditor.dispatch({
                     selection: { anchor: targetPos },
                     effects: EditorView.scrollIntoView(targetPos, {
@@ -877,7 +914,6 @@ export default class TextFlowPlugin extends Plugin {
               this.settings.flows[flowName],
               cache.persistentCursorPos
             );
-            console.log(`initialSetup calling checkActiveRegionCache`);
           }
         }
         this.saveSettings();
@@ -896,8 +932,9 @@ export default class TextFlowPlugin extends Plugin {
     }
   };
 
-  // ---------------------- Functions: Flow management: Region tracking ----------------------------
+  // ---------------------- Functions: Data safety ----------------------------
 
+  // --------------------- Functions: Data safety: Read-only for UIDs and dividers
   private addReadOnlyExtension = (leaf: MarkdownView, flowName: string) => {
     const flow = this.settings.flows[flowName];
     if (!flow) return;
@@ -906,7 +943,7 @@ export default class TextFlowPlugin extends Plugin {
     if (!editor.cm) return;
 
     if (!this.hasReadOnlyExtension(editor)) {
-      console.log("attaching readOnlyExtension to: ", flowName);
+      // console.log("attaching readOnlyExtension to: ", flowName);
       const preventEdit = EditorState.transactionFilter.of((tr) => {
         if (!tr.changes.empty) {
           let shouldReject = false;
@@ -920,11 +957,6 @@ export default class TextFlowPlugin extends Plugin {
             const regex = /(?:^|\n)[\u200B\u200C\u200D]{26,}(<hr>)(?:\n\n|$)/g;
 
             while ((match = regex.exec(windowText)) !== null) {
-              console.log("Found protected region:", {
-                match: match[0],
-                start: windowStart + match.index,
-                end: windowStart + match.index + match[0].length,
-              });
               // Get absolute positions of the protected `***`, including required newlines
               const absoluteDividerStart = windowStart + match.index;
               const absoluteDividerEnd = absoluteDividerStart + match[0].length;
@@ -970,101 +1002,388 @@ export default class TextFlowPlugin extends Plugin {
     return hasField;
   };
 
-  // --------------- Functions: Flow management: Regions cache + utilities -----------------------------------------
+  /// --------------- Functions: Data safety: Protect editor during saving
+
+  private addProtectDuringSaveExtension(editor: any) {
+    try {
+      if (editor.cm instanceof EditorView) {
+        // Check if protection extension already exists
+        const hasProtection = editor.cm.state.field(
+          this.protectDuringSaveExtension,
+          false
+        );
+
+        if (!hasProtection) {
+          editor.cm.dispatch({
+            effects: StateEffect.appendConfig.of([
+              this.protectDuringSaveExtension,
+            ]),
+          });
+          //  console.log("Added protection extension to editor");
+        } else {
+          //  console.log("Editor already has protection extension");
+        }
+      } else {
+        console.warn("Could not find EditorView instance:", editor);
+      }
+    } catch (error) {
+      if (error.message?.includes("Field is not present")) {
+        // This is fine - means we need to add the extension
+        editor.cm.dispatch({
+          effects: StateEffect.appendConfig.of([
+            this.protectDuringSaveExtension,
+          ]),
+        });
+        //  console.log("Added protection extension to editor");
+      } else {
+        console.error("Failed to add protection extension:", error);
+      }
+    }
+  }
+
+  // Toggle protection state
+  private toggleProtectionDuringSave(editor: EditorView, protect: boolean) {
+    try {
+      editor.dispatch({
+        effects: this.toggleProtectionEffect.of(protect),
+      });
+    } catch (error) {
+      console.error("Failed to toggle protection:", error);
+    }
+  }
+  // ----------------- Functions: Data safety: Save changes to source files
+  // For window/leaf changes - only save inactive flows
+  private saveInactiveLeaves = async () => {
+    if (!this.settings.autoSave) return;
+
+    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    const inactiveLeaves = this.app.workspace
+      .getLeavesOfType("markdown")
+      .filter(
+        (leaf) =>
+          leaf.view instanceof MarkdownView &&
+          activeView &&
+          leaf.view !== activeView
+      );
+
+    // Create a map of flowId to leaf
+    const flowLeaves: Record<string, MarkdownView> = {};
+
+    // Populate flowLeaves
+    for (const leaf of inactiveLeaves) {
+      const view = leaf.view as MarkdownView;
+      const filePath = view.file?.path;
+      if (filePath) {
+        const flowName = await this.isFlowFile(filePath);
+        if (flowName && !flowLeaves[flowName]) {
+          flowLeaves[flowName] = view;
+        }
+      }
+    }
+    try {
+      // Enable protection
+      for (const [_, view] of Object.entries(flowLeaves)) {
+        const editor = view.editor as ObsidianEditor;
+        if (editor.cm) {
+          await this.toggleProtectionDuringSave(editor.cm, true);
+        }
+      }
+      // Perform saves
+      await Promise.all(
+        Object.entries(flowLeaves).map(async ([flowId, view]) => {
+          const text = view.editor.getValue();
+          await this.saveBackToSource(flowId, text);
+        })
+      );
+    } finally {
+      // Remove protection
+      for (const [_, view] of Object.entries(flowLeaves)) {
+        const editor = view.editor as ObsidianEditor;
+        if (editor.cm) {
+          this.toggleProtectionDuringSave(editor.cm, false);
+        }
+      }
+    }
+  };
+
+  // For app blur and manual save - save everything
+  private saveAllLeavesAuto = async () => {
+    if (!this.settings.autoSave) return;
+
+    const allLeaves = this.app.workspace.getLeavesOfType("markdown");
+    const flowLeaves: Record<string, MarkdownView> = {};
+
+    // Populate flowLeaves
+    for (const leaf of allLeaves) {
+      const view = leaf.view as MarkdownView;
+      const filePath = view.file?.path;
+      if (filePath) {
+        const flowId = await this.isFlowFile(filePath);
+        if (flowId && !flowLeaves[flowId]) {
+          flowLeaves[flowId] = view;
+        }
+      }
+    }
+    try {
+      // Enable protection
+      for (const [_, view] of Object.entries(flowLeaves)) {
+        const editor = view.editor as ObsidianEditor;
+        if (editor.cm) {
+          await this.toggleProtectionDuringSave(editor.cm, true);
+        }
+      }
+      // Perform saves
+      await Promise.all(
+        Object.entries(flowLeaves).map(async ([flowId, view]) => {
+          const text = view.editor.getValue();
+          await this.saveBackToSource(flowId, text);
+        })
+      );
+    } finally {
+      // Remove protection
+      for (const [_, view] of Object.entries(flowLeaves)) {
+        const editor = view.editor as ObsidianEditor;
+        if (editor.cm) {
+          this.toggleProtectionDuringSave(editor.cm, false);
+        }
+      }
+    }
+  };
+
+  private saveAllLeavesManual = async () => {
+    const allLeaves = this.app.workspace.getLeavesOfType("markdown");
+    const flowLeaves: Record<string, MarkdownView> = {};
+
+    // Populate flowLeaves
+    for (const leaf of allLeaves) {
+      const view = leaf.view as MarkdownView;
+      const filePath = view.file?.path;
+      if (filePath) {
+        const flowId = await this.isFlowFile(filePath);
+        if (flowId && !flowLeaves[flowId]) {
+          flowLeaves[flowId] = view;
+        }
+      }
+    }
+    try {
+      // Enable protection
+      for (const [_, view] of Object.entries(flowLeaves)) {
+        const editor = view.editor as ObsidianEditor;
+        if (editor.cm) {
+          await this.toggleProtectionDuringSave(editor.cm, true);
+        }
+      }
+      // Perform saves
+      await Promise.all(
+        Object.entries(flowLeaves).map(async ([flowId, view]) => {
+          const text = view.editor.getValue();
+          await this.saveBackToSource(flowId, text);
+        })
+      );
+    } finally {
+      // Remove protection
+      for (const [_, view] of Object.entries(flowLeaves)) {
+        const editor = view.editor as ObsidianEditor;
+        if (editor.cm) {
+          this.toggleProtectionDuringSave(editor.cm, false);
+        }
+      }
+    }
+  };
+
+  //---- The actual save function -------------
+  private saveBackToSource = async (flow: string, text: string) => {
+    // console.log("saveBackToSource responding");
+    if (this.settings.flows[flow].modifiedRegionsArray) {
+      /* console.log(
+        "saveBackToSource iterating trough modifiedRegions: ",
+        this.settings.flows[flow].modifiedRegionsArray
+      );*/
+      const map = this.settings.flows[flow].flowMap;
+      const remainingPaths: string[] = [];
+      for (const path of this.settings.flows[flow].modifiedRegionsArray) {
+        const sourceFile = await this.app.vault.getFileByPath(path);
+        if (!sourceFile) {
+          console.error(`File not found at path: ${path}`);
+          return;
+        }
+        // console.log("saveBackToSource calling findStartOfRegion");
+        const startOfRegion = await this.findStartOfRegion(
+          this.settings.flows[flow],
+          map[path].flowOrder - 1,
+          text
+        );
+        console.log(
+          "saveBackToSource findStartOfRegion says: ",
+          path,
+          " starts at ",
+          startOfRegion
+        );
+
+        // console.log("saveBackToSource calling findEndOfRegion");
+        const endOfRegion = text.indexOf(map[path].UID) - 1; // subtract 1 for the \r before the UID
+        const flowFile = await this.app.vault.getFileByPath(
+          this.settings.flows[flow].flowFilePath
+        );
+        console.log(
+          "saveBackToSource findEndOfRegion says: ",
+          path,
+          " ends at ",
+          endOfRegion
+        );
+
+        if (!flowFile) {
+          console.error(`File not found at path: ${path}`);
+          return;
+        } else if (sourceFile instanceof TFile) {
+          const flowContent = await this.app.vault.read(flowFile);
+          console.log("Source file is: ", sourceFile);
+          console.log(
+            "saveBackToSource reading ",
+            this.settings.flows[flow].flowFilePath
+          );
+          {
+            const regionSlice = flowContent.slice(startOfRegion, endOfRegion);
+            console.log("saveBackToSource slices from flow: ", regionSlice);
+            try {
+              // Read existing content
+              const existingContent = await this.app.vault.read(sourceFile);
+
+              // Replace content portion while keeping YAML
+              const yamlMatch = existingContent.match(/^---\n[\s\S]*?\n---\n/);
+              const newContent = yamlMatch
+                ? `${yamlMatch[0]}${regionSlice}`
+                : regionSlice;
+
+              // Save modified content
+              await this.app.vault.modify(sourceFile, newContent);
+              // console.log("saveBackToSource is done saving");
+            } catch (error) {
+              remainingPaths.push(path);
+
+              // console.error(`Failed to save changes to ${file.path}:`, error);
+              throw error;
+            }
+          }
+        }
+      }
+      this.settings.flows[flow].modifiedRegionsArray = remainingPaths;
+    }
+  };
+
+  // --------------- Functions: Flow management: Regions -----------------------------------------
   private checkActiveRegionCache = async (
     flow: Types.FlowDef,
     cursorOffset: number
   ) => {
+    /* console.log("=== checkActiveRegionCache called ===");
+    console.log("Cursor offset:", cursorOffset);*/
+
     const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (!activeView) {
-      console.log("no active view");
+      console.log("No active view found");
       return;
     }
 
     const editor = activeView.editor as ObsidianEditor;
     const cmEditor = editor.cm;
     if (!cmEditor) {
-      console.log("no cmEditor");
+      console.log("No cmEditor found");
       return;
     }
 
     // Get full document text from CodeMirror state
     const text = cmEditor.state.doc.toString();
+    // console.log("Document length:", text.length);
+
     if (
       cursorOffset > flow.activeRegion.startInFlow &&
       cursorOffset < flow.activeRegion.endInFlow
     ) {
+      // console.log("Cursor still in same region, updating position");
       flow.activeRegion.lastCursorPosition = cursorOffset;
-      console.log("still in active region");
       this.saveSettings();
       return;
     } else {
+      // console.log("Cursor in new region, finding active region");
       flow.activeRegion.lastCursorPosition = cursorOffset;
       let activeRegion = await this.findActiveRegion(flow, cursorOffset, text);
-      console.log(
-        `cursor is at ${cursorOffset}, that's ourside fo ${flow.activeRegion.startInFlow} and ${flow.activeRegion.endInFlow}`
-      );
       if (activeRegion) {
+        console.log("New active region found:", activeRegion.path);
         flow.activeRegion = activeRegion;
+      } else {
+        console.log("No new active region found");
       }
       this.saveSettings();
     }
   };
 
-  // ------------- regions cache utilities ----------------------
+  // ------------- region tracking utilities ----------------------
   private findActiveRegion = async (
     flow: Types.FlowDef,
     cursorOffset: number,
     text: string
   ) => {
+    /* console.log("=== findActiveRegion called ===");
+    console.log("Cursor offset:", cursorOffset);
+    console.log("Text length:", text.length);*/
+
     const markerRegex = /[\u200B\u200C\u200D]{26,}<hr>/;
     const searchStart = text.slice(cursorOffset);
+    // console.log("Search start length:", searchStart.length);
+
     const matches = searchStart.match(markerRegex);
-    // console.log(`findActiveRegion: UIDs found: ${matches}`);
+    // console.log("Marker matches:", matches ? "yes" : "no");
+
     if (matches) {
       const uidLength = matches[0].length - 4;
       const uid = matches[0].slice(0, uidLength);
+      // console.log("Found UID:", uid);
 
-      const newRegion = Object.entries(flow.flowMap).find(
-        ([newRegionPath, newRegionMap]) => newRegionMap.UID === uid
+      const foundRegion = Object.entries(flow.flowMap).find(
+        ([_, foundRegionMap]) => foundRegionMap.UID === uid
       );
-      if (newRegion) {
-        const [newRegionPath, newRegionMap] = newRegion;
-        const markerLength = (newRegionMap.UID + "<hr>").length + 1; // +1 for \r
 
-        if (uid === flow.activeRegion.UID) {
-          // if the user just typed their way out of the region bounds
-          const activeRegionObject: Types.ActiveRegion = {
-            lastCursorPosition: cursorOffset,
-            path: flow.activeRegion.path,
-            UID: uid,
-            flowOrder: flow.activeRegion.flowOrder,
-            startInFlow: flow.activeRegion.startInFlow,
-            endInFlow: text.indexOf(newRegionMap.UID) + markerLength,
-          };
-          return activeRegionObject;
+      if (foundRegion) {
+        const [foundRegionPath, foundRegionMap] = foundRegion;
+        // console.log(`Match found: ${foundRegionPath} (${foundRegionMap.type})`);
+
+        let newStartInFlow;
+        if (foundRegionMap.flowOrder > 1) {
+          newStartInFlow =
+            this.findStartOfRegion(flow, foundRegionMap.flowOrder - 1, text) ||
+            0;
         } else {
-          // if they're actually in a new region
-          const startInFlow = this.findStartOfRegion(
-            flow,
-            newRegionMap.flowOrder - 1,
-            text
-          );
-          if (startInFlow) {
-            const markerLength = (newRegionMap.UID + "<hr>").length + 1; // +1 for \r
-            const activeRegionObject: Types.ActiveRegion = {
-              lastCursorPosition: cursorOffset,
-              path: newRegionPath,
-              UID: uid,
-              flowOrder: newRegionMap.flowOrder,
-              startInFlow: startInFlow,
-              endInFlow: text.indexOf(newRegionMap.UID) + markerLength,
-            };
-            return activeRegionObject;
-          }
+          newStartInFlow = 0;
         }
+
+        const endInFlow = text.indexOf(foundRegionMap.UID) + matches[0].length;
+
+        /* console.log("Region bounds:", {
+          start: newStartInFlow,
+          end: endInFlow,
+          path: foundRegionPath,
+        });*/
+
+        const activeRegionObject: Types.ActiveRegion = {
+          lastCursorPosition: cursorOffset,
+          path: foundRegionPath,
+          UID: uid,
+          flowOrder: foundRegionMap.flowOrder,
+          startInFlow: newStartInFlow,
+          endInFlow: endInFlow,
+        };
+
+        // console.log("Returning active region:", activeRegionObject);
+        return activeRegionObject;
+      } else {
+        console.log("No matching region found for UID");
       }
+    } else {
+      console.log("No marker found in text after cursor");
     }
+    // console.log("=== findActiveRegion end ===");
+    return undefined;
   };
 
   // ------------------
@@ -1125,24 +1444,12 @@ export default class TextFlowPlugin extends Plugin {
         new Modals.FlowSwitcherModal(this.app, this).open();
       });
 
-      await this.initialSetup();
+      await this.initialSetup(); //
 
       // Handle temp folder visibility
       if (this.settings.tempFolderHidden) {
         this.discernAndSetTempFolderState(true, this.settings.tempFolderPlace);
       }
-
-      // Set up active view if it exists and is a markdown view
-      // Set up active view if it exists and is a markdown view
-      const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-      if (activeView?.file) {
-        const flowName = this.isFlowFile(activeView.file.path);
-        if (flowName !== null) {
-          // Use the standard flow activation path
-          await this.activateFlow(flowName, activeView);
-        }
-      }
-
       // -------------------------------
       this.fileExplorerClickListener();
       const fileExplorer = document.querySelector(".nav-files-container");

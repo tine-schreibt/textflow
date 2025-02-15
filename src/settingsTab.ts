@@ -1,3 +1,5 @@
+import * as jsYaml from "js-yaml";
+import * as Modals from "./modals";
 import {
   App,
   PluginSettingTab,
@@ -9,7 +11,6 @@ import {
   ButtonComponent,
 } from "obsidian";
 import TextFlow from "main";
-import * as Modals from "./modals";
 import * as Types from "./types";
 
 export class TextFlowSettingsTab extends PluginSettingTab {
@@ -130,164 +131,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       // save temp file
       this.plugin.saveSettings();
     };
-    // wider scope variables that can't be reset during iteration
 
-    const extractYAML = async (
-      content: string,
-      mapValueBasket: Types.mapValueBasket
-    ) => {
-      const yamlRegex = /^---\n([\s\S]*?)\n---\n*/;
-      const match = content.match(yamlRegex);
-
-      if (match) {
-        const nakedYaml = match[1];
-        const cleanContent = content.slice(match[0].length).trim();
-        // console.log(`nakedYaml = ${nakedYaml}`);
-
-        // Look for TextFlowUID line
-        const textFlowPropertyRegEx =
-          /TextFlowUID:\s*(【\d{13,}】⟦[\u200B\u200C\u200D]{26,}⟧)/;
-        const textFlowPropertyMatch = nakedYaml.match(textFlowPropertyRegEx);
-
-        if (textFlowPropertyMatch) {
-          // Then to extract just the invisible UID:
-          const invisibleUIDRegex = /⟦([\u200B\u200C\u200D]{26,})⟧/;
-          const invisibleMatch =
-            textFlowPropertyMatch[1].match(invisibleUIDRegex);
-
-          // And to extract just the timestamp:
-          const timestampRegex = /【(\d{13,})】/;
-          const timestampMatch = textFlowPropertyMatch[1].match(timestampRegex);
-
-          if (timestampMatch) {
-            // If timestamp is there
-            if (invisibleMatch) {
-              // if the invisible UID is also there
-              mapValueBasket.UID = invisibleMatch[0];
-              mapValueBasket.yamlMini = `TextFlowUID: 【${timestampMatch[0]}】⟦${invisibleMatch[0]}⟧`;
-              mapValueBasket.yamlComplete = `${textFlowPropertyMatch[1]}`;
-              mapValueBasket.singleFileContent = cleanContent;
-              /*  console.log(
-                `good yaml found on file no ${mapValueBasket.flowOrder}`
-              );*/
-            } else {
-              // If there is no invisible UID, recreate it
-              const timestamp = Number(timestampMatch[1]);
-              mapValueBasket.UID = await reCreateInvisibleUID(timestamp);
-
-              // Replace the YAML line with complete version
-              /*console.log(
-                `repairing yaml for file no ${mapValueBasket.flowOrder}`
-              );*/
-              const updatedYaml = nakedYaml.replace(
-                textFlowPropertyRegEx,
-                `- TextFlowUID: 【${timestamp}】⟦${mapValueBasket.UID}⟧`
-              );
-              mapValueBasket.yamlComplete = `${updatedYaml}`;
-              mapValueBasket.singleFileContent = cleanContent;
-              return mapValueBasket;
-            }
-          } else {
-            // If there is only the property name but no valid value
-            throw new Error(
-              "TextFlow: Invalid UID format in properties.\n" +
-                "This file seems to be part of a flow but its UID is corrupted.\n" +
-                "Please restore from backup or remove TextFlowUID from properties to treat as new file."
-            );
-          }
-        } else {
-          // There is YAML but not TextFlowID porperty
-          /* console.log(
-            `missing yaml found on file no ${mapValueBasket.flowOrder}`
-          );*/
-          await createInvisibleUID(mapValueBasket);
-
-          const completedYaml = `${nakedYaml}\r${mapValueBasket.yamlMini}`;
-          // console.log(`yaml appended: ${completedYaml}`);
-          mapValueBasket.yamlComplete = `${nakedYaml}\r${mapValueBasket.yamlMini}`;
-          mapValueBasket.singleFileContent = cleanContent;
-          return mapValueBasket;
-        }
-      } else {
-        // No YAML at all
-        //console.log(`no yaml found on file no ${mapValueBasket.flowOrder}`);
-        await createInvisibleUID(mapValueBasket);
-        mapValueBasket.yamlMini = `TextFlowUID: 【${mapValueBasket.timeStamp}】⟦${mapValueBasket.UID}⟧`;
-        mapValueBasket.yamlComplete = `TextFlowUID: 【${mapValueBasket.timeStamp}】⟦${mapValueBasket.UID}⟧`;
-        mapValueBasket.singleFileContent = content;
-        //console.log(`added yaml: ${mapValueBasket.UID.length}`);
-
-        return mapValueBasket;
-      }
-    };
-
-    // ----------- translate timestamp into invisible base2 UID and make YAML entry
-    const createInvisibleUID = (mapValueBasket: Types.mapValueBasket) => {
-      const INVISIBLE_CHARS = [
-        "\u200B", // Zero-width space (0)
-        "\u200C", // Zero-width non-joiner (1)
-        "\u200D", // Zero-width joiner (2)
-      ];
-
-      const timestamp = Date.now();
-      //console.log(`createInvisibleUID timestamp ${timestamp}`);
-      const base3 = timestamp.toString(3);
-      const encodedTimestamp = [...base3]
-        .map((digit) => INVISIBLE_CHARS[parseInt(digit)])
-        .join("");
-      //console.log(`base3 timestamp: ${base3}`);
-      // debugMarker(encodedTimestamp);
-
-      // make the divider
-      const divider = `\r${encodedTimestamp}<hr>\r\r`;
-
-      mapValueBasket.timeStamp = timestamp;
-      mapValueBasket.UID = encodedTimestamp;
-      mapValueBasket.yamlMini = `\nTextFlowUID: 【${timestamp}】⟦${encodedTimestamp}⟧`;
-      mapValueBasket.idDivider = divider.replace(/\\r/g, "\r");
-    };
-
-    // ----------------- If invisible UID got eaten by external editor -----------
-    const reCreateInvisibleUID = (timestamp: number) => {
-      // Define our invisible characters
-      const INVISIBLE_CHARS = [
-        "\u200B", // Zero-width space (0)
-        "\u200C", // Zero-width non-joiner (1)
-        "\u200D", // Zero-width joiner (2)
-      ];
-
-      // Convert to base-3 string
-      const base3 = timestamp.toString(3);
-
-      // Convert each base-3 digit to the corresponding invisible character
-      const reCreatedUID = [...base3]
-        .map((digit) => INVISIBLE_CHARS[parseInt(digit)])
-        .join("");
-
-      return reCreatedUID;
-    };
-
-    const debugMarker = (marker: string) => {
-      console.log({
-        fullMarker: marker,
-        length: marker.length,
-        chars: Array.from(marker).map((char) => ({
-          char: char,
-          code: char.charCodeAt(0).toString(16), // hex code
-          name:
-            char === "\u00A0"
-              ? "NBSP"
-              : char === "\u200B"
-              ? "ZWSP"
-              : char === "\u200C"
-              ? "ZWNJ"
-              : char === "\u200D"
-              ? "ZWJ"
-              : "unknown",
-        })),
-      });
-    };
-
+    // ------------ actual flat map logic -------
     const updateFlatMap = async (
       item: TAbstractFile,
       flow: Types.FlowDef,
@@ -296,6 +141,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       const fullPath = item.path;
       const itemName = item.name;
 
+      new Notice("Building flow...");
       // Calculate new positions once
       if (
         item instanceof TFolder &&
@@ -336,8 +182,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         let fileContent: string = await this.app.vault.read(item);
 
         // Extract, fix or create YAML and separate it from other content
-        // this calls UID creation, too
-        await extractYAML(fileContent, mapValueBasket);
+        // this also calls UID creation
+        await manageYaml(item, mapValueBasket);
         fileContent = mapValueBasket.singleFileContent;
 
         // find and remove the title line; normalize
@@ -386,6 +232,124 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         console.error("End of folder OR invalid file.");
       }
       this.plugin.saveSettings();
+    };
+
+    // -------------- manage YAML ------------------
+
+    // ---------------- the actual handling of YAML -------
+    const manageYaml = async (
+      file: TFile,
+      mapValueBasket: Types.mapValueBasket
+    ) => {
+      let foundUID = false;
+
+      try {
+        await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+          if (frontmatter?.TextFlowUID) {
+            const uidMatch = frontmatter.TextFlowUID.match(
+              /【(\d{13,})】⟦([\u200B\u200C\u200D]{26,})⟧/
+            );
+
+            if (uidMatch) {
+              const [_, timestamp, invisibleUID] = uidMatch;
+              mapValueBasket.UID = invisibleUID;
+              mapValueBasket.timeStamp = Number(timestamp);
+              foundUID = true;
+            } else {
+              throw new Error(
+                "TextFlow: Invalid UID format in properties.\n" +
+                  "This file seems to be part of a flow but its UID is corrupted.\n" +
+                  "Please restore from backup or remove TextFlowUID from properties to treat as new file."
+              );
+            }
+          }
+
+          if (!foundUID) {
+            // No TextFlowUID, create one
+            createInvisibleUID(mapValueBasket);
+            frontmatter.TextFlowUID = `【${mapValueBasket.timeStamp}】⟦${mapValueBasket.UID}⟧`;
+          }
+        });
+      } catch (error) {
+        console.error("Error processing frontmatter:", error);
+        throw error;
+      }
+
+      // Get content without YAML for flow map
+      const content = await this.app.vault.read(file);
+      mapValueBasket.singleFileContent = content
+        .replace(/^---\n[\s\S]*?\n---\n*/, "")
+        .trim();
+
+      debugMarker(mapValueBasket.UID);
+      return mapValueBasket;
+    };
+
+    // ----------- translate timestamp into invisible base2 UID and make YAML entry
+    const createInvisibleUID = (mapValueBasket: Types.mapValueBasket) => {
+      const INVISIBLE_CHARS = [
+        "\u200B", // Zero-width space (0)
+        "\u200C", // Zero-width non-joiner (1)
+        "\u200D", // Zero-width joiner (2)
+      ];
+
+      const timestamp = Date.now();
+      //console.log(`createInvisibleUID timestamp ${timestamp}`);
+      const base3 = timestamp.toString(3);
+      const encodedTimestamp = [...base3]
+        .map((digit) => INVISIBLE_CHARS[parseInt(digit)])
+        .join("");
+      //console.log(`base3 timestamp: ${base3}`);
+      // debugMarker(encodedTimestamp);
+
+      // make the divider
+      const divider = `\r${encodedTimestamp}<hr>\r\r`;
+
+      mapValueBasket.timeStamp = timestamp;
+      mapValueBasket.UID = encodedTimestamp;
+      mapValueBasket.yamlMini = `\nTextFlowUID: 【${timestamp}】⟦${encodedTimestamp}⟧`;
+      mapValueBasket.idDivider = divider.replace(/\\r/g, "\r");
+    };
+
+    // ----------------- If invisible UID got eaten by external editor -----------
+    const reCreateInvisibleUID = (timestamp: number) => {
+      // Define our invisible characters
+      const INVISIBLE_CHARS = [
+        "\u200B", // Zero-width space (0)
+        "\u200C", // Zero-width non-joiner (1)
+        "\u200D", // Zero-width joiner (2)
+      ];
+
+      // Convert to base-3 string
+      const base3 = timestamp.toString(3);
+
+      // Convert each base-3 digit to the corresponding invisible character
+      const reCreatedUID = [...base3]
+        .map((digit) => INVISIBLE_CHARS[parseInt(digit)])
+        .join("");
+
+      return reCreatedUID;
+    };
+    // --------------- debug the UID
+    const debugMarker = (marker: string) => {
+      console.log({
+        fullMarker: marker,
+        length: marker.length,
+        chars: Array.from(marker).map((char) => ({
+          char: char,
+          code: char.charCodeAt(0).toString(16), // hex code
+          name:
+            char === "\u00A0"
+              ? "NBSP"
+              : char === "\u200B"
+              ? "ZWSP"
+              : char === "\u200C"
+              ? "ZWNJ"
+              : char === "\u200D"
+              ? "ZWJ"
+              : "unknown",
+        })),
+      });
     };
 
     //#######################################################################
