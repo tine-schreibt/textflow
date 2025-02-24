@@ -30,6 +30,7 @@ export interface FlowDef {
 
 export interface ActiveRegion {
   lastCursorPosition: number;
+  type: string;
   path: string;
   UID: string;
   flowOrder: number;
@@ -47,11 +48,11 @@ export interface SourceFileObject {
   path: string;
   itemName: string;
   UID: string;
+  timestamp: number;
   flowOrder: number;
   minLength: number;
   lengthPlusDividers: number;
   startEndInFlow: { start: number; end: number };
-  yamlComplete: string;
   yamlMini: string;
 }
 
@@ -67,11 +68,10 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
 export interface mapValueBasket {
   concatenatedFileContents: string;
   initialIteration: boolean;
-  timeStamp: number;
+  timestamp: number;
   flowOrder: number;
   UID: string;
   yamlMini: string;
-  yamlComplete: string;
   singleFileContent: string;
   currentEnd: number;
   idDivider: string;

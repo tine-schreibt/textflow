@@ -139,7 +139,7 @@ export default class TextFlowPlugin extends Plugin {
   // ---------------------------------------------------------------
   async ensureTempFolder() {
     if (this.settings.tempFolderPlace !== undefined) {
-      const tempFolderPath: string = `${this.settings.tempFolderPlace}/x_textFlowTemp`;
+      const tempFolderPath: string = `${this.settings.tempFolderPlace}/TextFlow_SystemFolder`;
       try {
         let folder = this.app.vault.getAbstractFileByPath(tempFolderPath);
         if (!folder) {
@@ -178,8 +178,8 @@ export default class TextFlowPlugin extends Plugin {
 
     // Construct the full path
     let tempFolderPath = tempFolderPlace
-      ? `${tempFolderPlace}/x_textFlowTemp`
-      : "x_textFlowTemp";
+      ? `${tempFolderPlace}/TextFlow_SystemFolder`
+      : "TextFlow_SystemFolder";
 
     // More specific CSS selector that only targets the temp folder and its direct children
     hiddenStyle.textContent = `
@@ -293,9 +293,6 @@ export default class TextFlowPlugin extends Plugin {
                     yMargin: 0,
                   }),
                 });
-                console.log(
-                  `active-leaf-change set cursor pos, scrolled to ${targetPos}`
-                );
               } else {
                 // Document not ready, try again in a moment
                 setTimeout(() => {
@@ -310,9 +307,6 @@ export default class TextFlowPlugin extends Plugin {
 
                     const line = cmEditor.state.doc.lineAt(safePos);
                     const targetPos = line.from;
-                    console.log(
-                      `active-leaf-change set cursor pos after delay, scrolled to ${targetPos}`
-                    );
 
                     cmEditor.dispatch({
                       selection: { anchor: targetPos },
@@ -323,11 +317,9 @@ export default class TextFlowPlugin extends Plugin {
                     });
                   }
                 }, 500);
-                console.log("listener set cursor pos after delay");
               }
             }
             this.cursorResetTracker.push(flowName);
-            console.log(this.cursorResetTracker);
           }
         }
       })
@@ -578,9 +570,20 @@ export default class TextFlowPlugin extends Plugin {
 
                   debounceTimeout = setTimeout(() => {
                     try {
-                      console.log("textChangeListener looking for path");
-                      if (shSettings.flows[isItFlow].activeRegion) {
-                        console.log("textChangeListener found path");
+                      console.log(
+                        "textChangeListener looking for path of region: ",
+                        shSettings.flows[isItFlow].activeRegion
+                      );
+                      if (
+                        shSettings.flows[isItFlow].activeRegion &&
+                        shSettings.flows[isItFlow].activeRegion.type ===
+                          "file" &&
+                        shSettings.flows[isItFlow].activeRegion.path != ""
+                      ) {
+                        console.log(
+                          "textChangeListener found path: ",
+                          shSettings.flows[isItFlow].activeRegion.path
+                        );
                         if (
                           // if the active region isn't registered as edited
                           !shSettings.flows[
@@ -611,7 +614,7 @@ export default class TextFlowPlugin extends Plugin {
                           );
                         }
                         // Here you can handle the changes
-                        changes.iterChanges(
+                        /*changes.iterChanges(
                           (fromA, toA, fromB, toB, inserted) => {
                             console.log("Text change detected:", {
                               fromA,
@@ -623,7 +626,7 @@ export default class TextFlowPlugin extends Plugin {
                             // You can add your change handling logic here
                             // For example, tracking what changed in the active region
                           }
-                        );
+                        );*/
                       }
                     } catch (error) {
                       console.error("Error processing text change:", error);
@@ -797,9 +800,6 @@ export default class TextFlowPlugin extends Plugin {
                 const adjustedStartPos = startPos;
                 const line = cmEditor.state.doc.lineAt(adjustedStartPos);
                 const targetPos = line.from;
-                console.log(
-                  `fileExplorerClickListener set cursor pos, scrolled to ${targetPos}`
-                );
                 cmEditor.dispatch({
                   selection: { anchor: targetPos },
                   effects: EditorView.scrollIntoView(targetPos, {
@@ -943,7 +943,6 @@ export default class TextFlowPlugin extends Plugin {
     if (!editor.cm) return;
 
     if (!this.hasReadOnlyExtension(editor)) {
-      // console.log("attaching readOnlyExtension to: ", flowName);
       const preventEdit = EditorState.transactionFilter.of((tr) => {
         if (!tr.changes.empty) {
           let shouldReject = false;
@@ -1019,9 +1018,7 @@ export default class TextFlowPlugin extends Plugin {
               this.protectDuringSaveExtension,
             ]),
           });
-          //  console.log("Added protection extension to editor");
         } else {
-          //  console.log("Editor already has protection extension");
         }
       } else {
         console.warn("Could not find EditorView instance:", editor);
@@ -1034,7 +1031,6 @@ export default class TextFlowPlugin extends Plugin {
             this.protectDuringSaveExtension,
           ]),
         });
-        //  console.log("Added protection extension to editor");
       } else {
         console.error("Failed to add protection extension:", error);
       }
@@ -1210,7 +1206,7 @@ export default class TextFlowPlugin extends Plugin {
         // console.log("saveBackToSource calling findStartOfRegion");
         const startOfRegion = await this.findStartOfRegion(
           this.settings.flows[flow],
-          map[path].flowOrder - 1,
+          map[path].flowOrder,
           text
         );
         console.log(
@@ -1221,7 +1217,7 @@ export default class TextFlowPlugin extends Plugin {
         );
 
         // console.log("saveBackToSource calling findEndOfRegion");
-        const endOfRegion = text.indexOf(map[path].UID) - 1; // subtract 1 for the \r before the UID
+        const endOfRegion = text.indexOf(map[path].timestamp.toString()) - 1; // subtract 1 for the \r before the UID
         const flowFile = await this.app.vault.getFileByPath(
           this.settings.flows[flow].flowFilePath
         );
@@ -1235,7 +1231,7 @@ export default class TextFlowPlugin extends Plugin {
         if (!flowFile) {
           console.error(`File not found at path: ${path}`);
           return;
-        } else if (sourceFile instanceof TFile) {
+        } else if (sourceFile instanceof TFile && startOfRegion) {
           const flowContent = await this.app.vault.read(flowFile);
           console.log("Source file is: ", sourceFile);
           console.log(
@@ -1243,7 +1239,10 @@ export default class TextFlowPlugin extends Plugin {
             this.settings.flows[flow].flowFilePath
           );
           {
-            const regionSlice = flowContent.slice(startOfRegion, endOfRegion);
+            const regionSlice = flowContent.slice(
+              startOfRegion + 1,
+              endOfRegion
+            );
             console.log("saveBackToSource slices from flow: ", regionSlice);
             try {
               // Read existing content
@@ -1300,7 +1299,7 @@ export default class TextFlowPlugin extends Plugin {
       cursorOffset > flow.activeRegion.startInFlow &&
       cursorOffset < flow.activeRegion.endInFlow
     ) {
-      // console.log("Cursor still in same region, updating position");
+      //console.log("Cursor still in same region, updating position");
       flow.activeRegion.lastCursorPosition = cursorOffset;
       this.saveSettings();
       return;
@@ -1324,49 +1323,42 @@ export default class TextFlowPlugin extends Plugin {
     cursorOffset: number,
     text: string
   ) => {
-    /* console.log("=== findActiveRegion called ===");
-    console.log("Cursor offset:", cursorOffset);
-    console.log("Text length:", text.length);*/
+    // regEx for proper divider
+    //const markerRegex = /[\u200B\u200C\u200D]{26,}<hr>/;
 
-    const markerRegex = /[\u200B\u200C\u200D]{26,}<hr>/;
+    // regEx for timestamp divider for debugging
+    const markerRegex = /[0-9]{5,}<hr>/;
+
     const searchStart = text.slice(cursorOffset);
-    // console.log("Search start length:", searchStart.length);
 
     const matches = searchStart.match(markerRegex);
-    // console.log("Marker matches:", matches ? "yes" : "no");
 
     if (matches) {
       const uidLength = matches[0].length - 4;
       const uid = matches[0].slice(0, uidLength);
-      // console.log("Found UID:", uid);
 
+      // remove toString after debugging
       const foundRegion = Object.entries(flow.flowMap).find(
-        ([_, foundRegionMap]) => foundRegionMap.UID === uid
+        ([_, foundRegionMap]) => foundRegionMap.timestamp.toString() === uid
       );
 
       if (foundRegion) {
         const [foundRegionPath, foundRegionMap] = foundRegion;
-        // console.log(`Match found: ${foundRegionPath} (${foundRegionMap.type})`);
 
         let newStartInFlow;
         if (foundRegionMap.flowOrder > 1) {
           newStartInFlow =
-            this.findStartOfRegion(flow, foundRegionMap.flowOrder - 1, text) ||
-            0;
+            this.findStartOfRegion(flow, foundRegionMap.flowOrder, text) || 0;
         } else {
           newStartInFlow = 0;
         }
-
-        const endInFlow = text.indexOf(foundRegionMap.UID) + matches[0].length;
-
-        /* console.log("Region bounds:", {
-          start: newStartInFlow,
-          end: endInFlow,
-          path: foundRegionPath,
-        });*/
+        // change back to UID after debugging
+        const endInFlow =
+          text.indexOf(foundRegionMap.timestamp.toString()) + matches[0].length;
 
         const activeRegionObject: Types.ActiveRegion = {
           lastCursorPosition: cursorOffset,
+          type: foundRegionMap.type,
           path: foundRegionPath,
           UID: uid,
           flowOrder: foundRegionMap.flowOrder,
@@ -1382,7 +1374,6 @@ export default class TextFlowPlugin extends Plugin {
     } else {
       console.log("No marker found in text after cursor");
     }
-    // console.log("=== findActiveRegion end ===");
     return undefined;
   };
 
@@ -1394,15 +1385,18 @@ export default class TextFlowPlugin extends Plugin {
   ) => {
     const previousRegion = Object.entries(flow.flowMap).find(
       ([previousRegion, previousRegionFlowMapEntry]) =>
-        previousRegionFlowMapEntry.flowOrder === flowOrder
+        previousRegionFlowMapEntry.flowOrder === flowOrder - 1
     );
+
     if (previousRegion) {
       const [previousRegionPath, previousRegionMap] = previousRegion;
 
       if (flowOrder - 1 !== 0) {
         const UID = previousRegionMap.UID;
-        const index = text.indexOf(UID);
-        const startPos = index + (UID + "<hr>").length + 1;
+        // for debugging only
+        const timestamp = previousRegionMap.timestamp.toString();
+        const index = text.indexOf(timestamp);
+        const startPos = index + (timestamp + "<hr>").length + 1;
         return startPos;
       } else {
         return 0;

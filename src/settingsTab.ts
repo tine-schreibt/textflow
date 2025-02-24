@@ -1,4 +1,6 @@
 import * as jsYaml from "js-yaml";
+import { getAPI } from "obsidian-dataview";
+import type { DataviewApi } from "obsidian-dataview";
 import * as Modals from "./modals";
 import {
   App,
@@ -7,6 +9,7 @@ import {
   TFolder,
   TFile,
   TAbstractFile,
+  normalizePath,
   Notice,
   ButtonComponent,
 } from "obsidian";
@@ -21,240 +24,265 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     this.plugin = plugin;
   }
 
-  display(): void {
-    const { containerEl } = this;
-    containerEl.empty();
+  //#######################################################################
+  //###########################    Functions   ############################
+  //#######################################################################
 
-    //#######################################################################
-    //###########################   Shorthands/Globals   ####################
-    //#######################################################################
-    const shFlowObjects: { [key: string]: Types.FlowDef } =
-      this.plugin.settings.flows;
-    const shSettings: Types.TextFlowSettings = this.plugin.settings;
-    let createOrEditFlowName: string = "";
-    let createOrEditsourcePath: string = "";
-
-    //#######################################################################
-    //###########################    Functions   ############################
-    //#######################################################################
-
-    const newTempFolderCreation = async (newTempFolderPath: string) => {
-      try {
-        // Ensure the folder exists, create it if necessary
-        let newTempFolder =
-          this.app.vault.getAbstractFileByPath(newTempFolderPath);
-        if (!newTempFolder) {
-          await this.app.vault.createFolder(newTempFolderPath);
-          console.log(`Temp folder created at ${newTempFolderPath}`);
-        } else if (!(newTempFolder instanceof TFolder)) {
-          throw new Error(`"${newTempFolderPath}" exists but is not a folder.`);
-        }
-      } catch (e) {
-        console.log(
-          `Something went wrong when trying to create ${newTempFolderPath}: ${e}`
-        );
+  private newTempFolderCreation = async (newTempFolderPath: string) => {
+    try {
+      // Ensure the folder exists, create it if necessary
+      let newTempFolder =
+        this.app.vault.getAbstractFileByPath(newTempFolderPath);
+      if (!newTempFolder) {
+        await this.app.vault.createFolder(newTempFolderPath);
+        console.log(`Temp folder created at ${newTempFolderPath}`);
+      } else if (!(newTempFolder instanceof TFolder)) {
+        throw new Error(`"${newTempFolderPath}" exists but is not a folder.`);
       }
-    };
-
-    // to avoid leading slashes
-    const constructTempFolderPath = (basePath: string) => {
-      if (basePath === "") {
-        return "x_textFlowTemp"; // No leading slash for root
-      }
-      return `${basePath}/x_textFlowTemp`;
-    };
-
-    const calculateExcludedItemsThenMakeMap = async (
-      folderPath: string,
-      flowName: string
-    ): Promise<void> => {
-      const flow: Types.FlowDef = shFlowObjects[flowName] || {
-        sourcePath: folderPath,
-        flowFileName: flowName,
-        divider: `<hr>`,
-        excludedFolders: [],
-        includedMetaData: {},
-        excludedMetaData: {},
-        flowMap: {}, // Flat map
-      };
-    };
-
-    const buildFlatFlowMap = async (
-      folderPath: string,
-      flowName: string
-    ): Promise<void> => {
-      const flow: Types.FlowDef = shFlowObjects[flowName] || {
-        sourcePath: folderPath,
-        flowFileName: flowName,
-        divider: "<hr>",
-        flowMap: {}, // Flat map
-      };
-      let mapValueBasket: Types.mapValueBasket = {
-        concatenatedFileContents: "",
-        initialIteration: true,
-        timeStamp: 0,
-        flowOrder: 0,
-        UID: "",
-        yamlMini: "",
-        yamlComplete: "",
-        singleFileContent: "",
-        currentEnd: 0,
-        idDivider: "",
-      };
-
-      const rootFolder = this.app.vault.getAbstractFileByPath(folderPath);
-      if (!(rootFolder instanceof TFolder) || !rootFolder) {
-        console.error(`There's a problem with ${folderPath}`);
-        new Notice(`Please check if ${folderPath} exists and is a folder`);
-        return;
-      }
-
-      // Start processing from the root folder
-      await updateFlatMap(rootFolder, flow, mapValueBasket);
-      // Save back the updated FlowDef
-      shFlowObjects[flowName] = flow;
-
-      // Check if temp folder exists before writing
-      const tempFolder = this.app.vault.getAbstractFileByPath(
-        `${shSettings.tempFolderPlace}/x_textFlowTemp`
+    } catch (e) {
+      console.log(
+        `Something went wrong when trying to create ${newTempFolderPath}: ${e}`
       );
-      if (tempFolder && tempFolder instanceof TFolder) {
-        const tempFilePath = `${shSettings.tempFolderPlace}/x_textFlowTemp/${flowName}.md`;
-        this.app.vault.adapter.write(
-          tempFilePath,
-          mapValueBasket.concatenatedFileContents
-        );
-      } else {
-        new Notice("Please create a temp folder first.");
-        return;
-      }
-      // save temp file
-      this.plugin.saveSettings();
+    }
+  };
+
+  // ------------ prepare receipe for flow --------------
+  private calculateExcludedItemsThenMakeMap = async (
+    folderPath: string,
+    flowName: string
+  ): Promise<void> => {
+    const flow: Types.FlowDef = this.plugin.settings.flows[flowName] || {
+      sourcePath: folderPath,
+      flowFileName: flowName,
+      divider: `<hr>`,
+      excludedFolders: [],
+      includedMetaData: {},
+      excludedMetaData: {},
+      flowMap: {}, // Flat map
+    };
+  };
+
+  // ---------- flow creation ----------------
+  private buildFlatFlowMap = async (
+    folderPath: string,
+    flowName: string
+  ): Promise<void> => {
+    const flow: Types.FlowDef = this.plugin.settings.flows[flowName] || {
+      sourcePath: folderPath,
+      flowFileName: flowName,
+      divider: "<hr>",
+      flowMap: {}, // Flat map
+    };
+    let mapValueBasket: Types.mapValueBasket = {
+      concatenatedFileContents: "",
+      initialIteration: true,
+      timestamp: 0,
+      flowOrder: 0,
+      UID: "",
+      yamlMini: "",
+      singleFileContent: "",
+      currentEnd: 0,
+      idDivider: "",
     };
 
-    // ------------ actual flat map logic -------
-    const updateFlatMap = async (
-      item: TAbstractFile,
-      flow: Types.FlowDef,
-      mapValueBasket: Types.mapValueBasket
-    ): Promise<void> => {
-      const fullPath = item.path;
-      const itemName = item.name;
+    const rootFolder = this.app.vault.getAbstractFileByPath(folderPath);
+    if (!(rootFolder instanceof TFolder) || !rootFolder) {
+      console.error(`There's a problem with ${folderPath}`);
+      new Notice(`Please check if ${folderPath} exists and is a folder`);
+      return;
+    }
 
-      new Notice("Building flow...");
-      // Calculate new positions once
-      if (
-        item instanceof TFolder &&
-        item.path !== shSettings.tempFolderPlace + "/x_textFlowTemp"
-      ) {
-        mapValueBasket.flowOrder++; // increment counter if needed
-        await createInvisibleUID(mapValueBasket);
+    // Start processing from the root folder
+    await this.updateFlatMap(rootFolder, flow, mapValueBasket);
+    // Save back the updated FlowDef
+    this.plugin.settings.flows[flowName] = flow;
 
-        flow.flowMap[fullPath] = {
-          type: "folder",
-          path: fullPath,
-          itemName: item.name,
-          UID: mapValueBasket.UID,
-          flowOrder: mapValueBasket.flowOrder,
-          minLength: itemName.length,
-          lengthPlusDividers: itemName.length + mapValueBasket.idDivider.length,
-          startEndInFlow: {
-            start: mapValueBasket.initialIteration
-              ? 0
-              : mapValueBasket.concatenatedFileContents.length,
-            end: itemName.length + mapValueBasket.idDivider.length,
-          },
-        } as Types.SourceFileObject;
-        mapValueBasket.initialIteration = false;
+    // Check if temp folder exists before writing
+    const tempFolder = this.app.vault.getAbstractFileByPath(
+      `${this.plugin.settings.tempFolderPlace}/TextFlow_SystemFolder`
+    );
+    if (tempFolder && tempFolder instanceof TFolder) {
+      const tempFilePath = `${this.plugin.settings.tempFolderPlace}/TextFlow_SystemFolder/${flowName}.md`;
+      this.app.vault.adapter.write(
+        tempFilePath,
+        mapValueBasket.concatenatedFileContents
+      );
+    } else {
+      new Notice("Please create a temp folder first.");
+      return;
+    }
+    // save temp file
+    this.plugin.saveSettings();
+  };
 
-        // Add content with marker before divider
-        mapValueBasket.concatenatedFileContents += `<center><b>${itemName}</b></center>${mapValueBasket.idDivider}`;
-        mapValueBasket.currentEnd =
-          mapValueBasket.concatenatedFileContents.length;
-        flow.flowMap[fullPath].startEndInFlow.end = mapValueBasket.currentEnd;
+  // ------------ actual flat map logic -------
+  private updateFlatMap = async (
+    item: TAbstractFile,
+    flow: Types.FlowDef,
+    mapValueBasket: Types.mapValueBasket
+  ): Promise<void> => {
+    const fullPath = item.path;
+    const itemName = item.name;
 
-        for (const subItem of item.children) {
-          await updateFlatMap(subItem, flow, mapValueBasket);
-        }
-      } else if (item instanceof TFile) {
-        mapValueBasket.flowOrder++; // increment counter if needed
-        const modificationTimestamp = Date.now();
-        let fileContent: string = await this.app.vault.read(item);
+    new Notice("Building flow...");
+    // Calculate new positions once
+    if (
+      item instanceof TFolder &&
+      item.path !==
+        this.plugin.settings.tempFolderPlace + "/TextFlow_SystemFolder"
+    ) {
+      mapValueBasket.flowOrder++; // increment counter if needed
+      await this.createInvisibleUID(mapValueBasket);
+      // make the proper divider
+      //const divider = `\r${mapValueBasket.UID}<hr>\r\r`;
 
-        // Extract, fix or create YAML and separate it from other content
-        // this also calls UID creation
-        await manageYaml(item, mapValueBasket);
-        fileContent = mapValueBasket.singleFileContent;
+      // make unencoded divider for debugging
+      const divider = `\r${mapValueBasket.timestamp}<hr>\r\r`;
+      mapValueBasket.idDivider = divider.replace(/\\r/g, "\r");
 
-        // find and remove the title line; normalize
-        const titleLine = `## ${item.name.replace(/\.md$/, "")}`;
-        const normalize = (fileContent: string) =>
-          fileContent.replace(/\uFEFF|\s+$/g, "").trim();
-        const normalizedTitleLine = normalize(titleLine);
-        const normalizedFileContent = normalize(fileContent);
+      flow.flowMap[fullPath] = {
+        type: "folder",
+        path: fullPath,
+        itemName: item.name,
+        UID: mapValueBasket.UID,
+        timestamp: mapValueBasket.timestamp,
+        flowOrder: mapValueBasket.flowOrder,
+        minLength: itemName.length,
+        lengthPlusDividers: itemName.length + mapValueBasket.idDivider.length,
+        startEndInFlow: {
+          start: mapValueBasket.initialIteration
+            ? 0
+            : mapValueBasket.concatenatedFileContents.length,
+          end: itemName.length + mapValueBasket.idDivider.length,
+        },
+      } as Types.SourceFileObject;
+      mapValueBasket.initialIteration = false;
 
-        if (normalizedFileContent.startsWith(normalizedTitleLine)) {
-          fileContent = fileContent
-            .substring(normalizedTitleLine.length + 1)
-            .trimStart();
-        }
+      // Add content with marker before divider
+      mapValueBasket.concatenatedFileContents += `<center><b>${itemName}</b></center>${mapValueBasket.idDivider}`;
+      mapValueBasket.currentEnd =
+        mapValueBasket.concatenatedFileContents.length;
+      flow.flowMap[fullPath].startEndInFlow.end = mapValueBasket.currentEnd;
 
-        flow.flowMap[fullPath] = {
-          type: "file",
-          path: fullPath,
-          itemName: item.name,
-          UID: mapValueBasket.UID,
-          flowOrder: mapValueBasket.flowOrder,
-          minLength: fileContent.length,
-          lengthPlusDividers:
-            fileContent.length + mapValueBasket.idDivider.length,
-          startEndInFlow: {
-            start: mapValueBasket.initialIteration
-              ? 0
-              : mapValueBasket.concatenatedFileContents.length,
-            end:
-              mapValueBasket.concatenatedFileContents.length +
-              fileContent.length +
-              mapValueBasket.idDivider.length,
-          },
-          yamlComplete: mapValueBasket.yamlComplete,
-          yamlMini: mapValueBasket.yamlMini,
-        } as Types.SourceFileObject;
-
-        mapValueBasket.initialIteration = false;
-
-        // Add content with marker before divider
-        mapValueBasket.concatenatedFileContents += `${fileContent}${mapValueBasket.idDivider}`;
-        mapValueBasket.currentEnd =
-          mapValueBasket.concatenatedFileContents.length;
-        flow.flowMap[fullPath].startEndInFlow.end = mapValueBasket.currentEnd;
-      } else {
-        console.error("End of folder OR invalid file.");
+      for (const subItem of item.children) {
+        await this.updateFlatMap(subItem, flow, mapValueBasket);
       }
-      this.plugin.saveSettings();
-    };
+    } else if (item instanceof TFile) {
+      mapValueBasket.flowOrder++; // increment counter if needed
+      const modificationTimestamp = Date.now();
+      let fileContent: string = await this.app.vault.read(item);
 
-    // -------------- manage YAML ------------------
+      // Extract, fix or create YAML and separate it from other content
+      // this also calls UID creation
+      await this.manageYaml(item, mapValueBasket);
+      // make the proper divider
+      //const divider = `\r${mapValueBasket.UID}<hr>\r\r`;
 
-    // ---------------- the actual handling of YAML -------
-    const manageYaml = async (
-      file: TFile,
-      mapValueBasket: Types.mapValueBasket
-    ) => {
-      let foundUID = false;
+      // make unencoded divider for debugging
+      const divider = `\r${mapValueBasket.timestamp}<hr>\r\r`;
+      mapValueBasket.idDivider = divider.replace(/\\r/g, "\r");
 
-      try {
-        await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+      fileContent = mapValueBasket.singleFileContent;
+
+      // find and remove the title line; normalize
+      const titleLine = `${item.name.replace(/\.md$/, "")}`;
+      const normalize = (fileContent: string) =>
+        fileContent.replace(/\uFEFF|\s+$/g, "").trim();
+      const normalizedTitleLine = normalize(titleLine);
+      const normalizedFileContent = normalize(fileContent);
+
+      if (normalizedFileContent.startsWith(normalizedTitleLine)) {
+        fileContent = fileContent
+          .substring(normalizedTitleLine.length + 1)
+          .trimStart();
+      }
+
+      flow.flowMap[fullPath] = {
+        type: "file",
+        path: fullPath,
+        itemName: item.name,
+        UID: mapValueBasket.UID,
+        timestamp: mapValueBasket.timestamp,
+        flowOrder: mapValueBasket.flowOrder,
+        minLength: fileContent.length,
+        lengthPlusDividers:
+          fileContent.length + mapValueBasket.idDivider.length,
+        startEndInFlow: {
+          start: mapValueBasket.initialIteration
+            ? 0
+            : mapValueBasket.concatenatedFileContents.length,
+          end:
+            mapValueBasket.concatenatedFileContents.length +
+            fileContent.length +
+            mapValueBasket.idDivider.length,
+        },
+        yamlMini: mapValueBasket.yamlMini,
+      } as Types.SourceFileObject;
+
+      mapValueBasket.initialIteration = false;
+
+      // Add content with marker before divider
+      mapValueBasket.concatenatedFileContents += `${fileContent}${mapValueBasket.idDivider}`;
+      mapValueBasket.currentEnd =
+        mapValueBasket.concatenatedFileContents.length;
+      flow.flowMap[fullPath].startEndInFlow.end = mapValueBasket.currentEnd;
+    } else {
+      console.error("End of folder OR invalid file.");
+    }
+    this.plugin.saveSettings();
+  };
+
+  // -------------- manage YAML ------------------
+
+  // ---------------- the actual handling of YAML -------
+  private manageYaml = async (
+    file: TFile,
+    mapValueBasket: Types.mapValueBasket
+  ) => {
+    let foundUID = false;
+
+    console.log("entering manageYaml for file", file.path);
+    try {
+      await this.app.fileManager.processFrontMatter(
+        file,
+        async (frontmatter) => {
           if (frontmatter?.TextFlowUID) {
-            const uidMatch = frontmatter.TextFlowUID.match(
-              /【(\d{13,})】⟦([\u200B\u200C\u200D]{26,})⟧/
-            );
+            const timestampMatch =
+              frontmatter.TextFlowUID.match(/【(\d{13,})】/);
 
-            if (uidMatch) {
-              const [_, timestamp, invisibleUID] = uidMatch;
-              mapValueBasket.UID = invisibleUID;
-              mapValueBasket.timeStamp = Number(timestamp);
-              foundUID = true;
+            if (timestampMatch) {
+              const [_, timestamp] = timestampMatch;
+              mapValueBasket.timestamp = Number(timestamp);
+              console.log(
+                "existing timestamp found for ",
+                file.path,
+                ": ",
+                timestamp
+              );
+              console.log(
+                "mapValueBasket.timestamp for ",
+                file.path,
+                ": ",
+                mapValueBasket.timestamp
+              );
+              // look for complete yaml
+              const completeYamldMatch = frontmatter.TextFlowUID.match(
+                /(【\d{13,}】⟦[\u200B\u200C\u200D]{26,}⟧)/
+              );
+              if (completeYamldMatch) {
+                const [_, timestamp, invisibleUID] = timestampMatch;
+                mapValueBasket.UID = invisibleUID;
+                console.log("existing invisible UID found");
+                // make the proper divider
+                //const divider = `\r${encodedTimestamp}<hr>\r\r`;
+
+                // make unencoded divider for debugging
+                const divider = `\r${timestamp}<hr>\r\r`;
+                mapValueBasket.idDivider = divider.replace(/\\r/g, "\r");
+              } else {
+                console.log("recreating UID");
+                await this.reCreateInvisibleUID(timestamp, mapValueBasket);
+              }
             } else {
               throw new Error(
                 "TextFlow: Invalid UID format in properties.\n" +
@@ -262,95 +290,107 @@ export class TextFlowSettingsTab extends PluginSettingTab {
                   "Please restore from backup or remove TextFlowUID from properties to treat as new file."
               );
             }
+          } else {
+            // No TextFlowUID found, create one
+            console.log("No yaml found for ", file.path);
+            await this.createInvisibleUID(mapValueBasket);
+            frontmatter.TextFlowUID = `【${mapValueBasket.timestamp}】⟦${mapValueBasket.UID}⟧`;
           }
+        }
+      );
+    } catch (error) {
+      console.error("Error processing frontmatter:", error);
+      throw error;
+    }
 
-          if (!foundUID) {
-            // No TextFlowUID, create one
-            createInvisibleUID(mapValueBasket);
-            frontmatter.TextFlowUID = `【${mapValueBasket.timeStamp}】⟦${mapValueBasket.UID}⟧`;
-          }
-        });
-      } catch (error) {
-        console.error("Error processing frontmatter:", error);
-        throw error;
-      }
+    // Get content without YAML for flow map
+    const content = await this.app.vault.read(file);
+    mapValueBasket.singleFileContent = content
+      .replace(/^---\n[\s\S]*?\n---\n*/, "")
+      .trim();
 
-      // Get content without YAML for flow map
-      const content = await this.app.vault.read(file);
-      mapValueBasket.singleFileContent = content
-        .replace(/^---\n[\s\S]*?\n---\n*/, "")
-        .trim();
+    //this.debugMarker(mapValueBasket.UID);
+    return mapValueBasket;
+  };
 
-      debugMarker(mapValueBasket.UID);
-      return mapValueBasket;
-    };
+  // ----------- translate timestamp into invisible base2 UID and make YAML entry
+  private createInvisibleUID = (mapValueBasket: Types.mapValueBasket) => {
+    const INVISIBLE_CHARS = [
+      "\u200B", // Zero-width space (0)
+      "\u200C", // Zero-width non-joiner (1)
+      "\u200D", // Zero-width joiner (2)
+    ];
 
-    // ----------- translate timestamp into invisible base2 UID and make YAML entry
-    const createInvisibleUID = (mapValueBasket: Types.mapValueBasket) => {
-      const INVISIBLE_CHARS = [
-        "\u200B", // Zero-width space (0)
-        "\u200C", // Zero-width non-joiner (1)
-        "\u200D", // Zero-width joiner (2)
-      ];
+    let timestamp = Date.now();
+    if (timestamp === mapValueBasket.timestamp) {
+      timestamp += 1;
+    }
+    //console.log(`createInvisibleUID timestamp ${timestamp}`);
+    const base3 = timestamp.toString(3);
+    const encodedTimestamp = [...base3]
+      .map((digit) => INVISIBLE_CHARS[parseInt(digit)])
+      .join("");
+    //console.log(`base3 timestamp: ${base3}`);
+    // debugMarker(encodedTimestamp);
 
-      const timestamp = Date.now();
-      //console.log(`createInvisibleUID timestamp ${timestamp}`);
-      const base3 = timestamp.toString(3);
-      const encodedTimestamp = [...base3]
-        .map((digit) => INVISIBLE_CHARS[parseInt(digit)])
-        .join("");
-      //console.log(`base3 timestamp: ${base3}`);
-      // debugMarker(encodedTimestamp);
+    mapValueBasket.timestamp = timestamp;
+    mapValueBasket.UID = encodedTimestamp;
+    mapValueBasket.yamlMini = `\nTextFlowUID: 【${timestamp}】⟦${encodedTimestamp}⟧`;
+  };
 
-      // make the divider
-      const divider = `\r${encodedTimestamp}<hr>\r\r`;
+  // ----------------- If invisible UID got eaten by external editor -----------
+  private reCreateInvisibleUID = (
+    timestamp: number,
+    mapValueBasket: Types.mapValueBasket
+  ) => {
+    // Define our invisible characters
+    const INVISIBLE_CHARS = [
+      "\u200B", // Zero-width space (0)
+      "\u200C", // Zero-width non-joiner (1)
+      "\u200D", // Zero-width joiner (2)
+    ];
 
-      mapValueBasket.timeStamp = timestamp;
-      mapValueBasket.UID = encodedTimestamp;
-      mapValueBasket.yamlMini = `\nTextFlowUID: 【${timestamp}】⟦${encodedTimestamp}⟧`;
-      mapValueBasket.idDivider = divider.replace(/\\r/g, "\r");
-    };
+    // Convert to base-3 string
+    const base3 = timestamp.toString(3);
 
-    // ----------------- If invisible UID got eaten by external editor -----------
-    const reCreateInvisibleUID = (timestamp: number) => {
-      // Define our invisible characters
-      const INVISIBLE_CHARS = [
-        "\u200B", // Zero-width space (0)
-        "\u200C", // Zero-width non-joiner (1)
-        "\u200D", // Zero-width joiner (2)
-      ];
+    // Convert each base-3 digit to the corresponding invisible character
+    const reCreatedUID = [...base3]
+      .map((digit) => INVISIBLE_CHARS[parseInt(digit)])
+      .join("");
 
-      // Convert to base-3 string
-      const base3 = timestamp.toString(3);
+    return reCreatedUID;
+  };
+  // --------------- debug the UID
+  private debugMarker = (marker: string) => {
+    console.log({
+      fullMarker: marker,
+      length: marker.length,
+      chars: Array.from(marker).map((char) => ({
+        char: char,
+        code: char.charCodeAt(0).toString(16), // hex code
+        name:
+          char === "\u00A0"
+            ? "NBSP"
+            : char === "\u200B"
+            ? "ZWSP"
+            : char === "\u200C"
+            ? "ZWNJ"
+            : char === "\u200D"
+            ? "ZWJ"
+            : "unknown",
+      })),
+    });
+  };
 
-      // Convert each base-3 digit to the corresponding invisible character
-      const reCreatedUID = [...base3]
-        .map((digit) => INVISIBLE_CHARS[parseInt(digit)])
-        .join("");
+  display(): void {
+    const { containerEl } = this;
+    containerEl.empty();
 
-      return reCreatedUID;
-    };
-    // --------------- debug the UID
-    const debugMarker = (marker: string) => {
-      console.log({
-        fullMarker: marker,
-        length: marker.length,
-        chars: Array.from(marker).map((char) => ({
-          char: char,
-          code: char.charCodeAt(0).toString(16), // hex code
-          name:
-            char === "\u00A0"
-              ? "NBSP"
-              : char === "\u200B"
-              ? "ZWSP"
-              : char === "\u200C"
-              ? "ZWNJ"
-              : char === "\u200D"
-              ? "ZWJ"
-              : "unknown",
-        })),
-      });
-    };
+    //#######################################################################
+    //###########################  Globals   ####################
+    //#######################################################################
+    let createOrEditFlowName: string = "";
+    let createOrEditsourcePath: string = "";
 
     //#######################################################################
     //###########################   Settings Tab   ##########################
@@ -359,22 +399,14 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     const setUpTextFlow = containerEl.createDiv({
       cls: "headline-container",
     });
-    setUpTextFlow.createEl("h3", {
-      text: "Set up TextFlow",
-      cls: "headline-text",
-    });
 
     // ###############   SET A TEMP FOLDER   ###########################
     const setTempFolder = new Setting(setUpTextFlow)
-      .setName("Create a folder for your Flows")
+      .setName("Choose a place for TextFlow_SystemFolder")
       .setDesc(
         createFragment((desc) => {
           desc.createSpan({
-            text: "TextFlow needs a folder to keep its temporary Flow files in.",
-          });
-          desc.createEl("br");
-          desc.createSpan({
-            text: "If you don't specify a folder here, the temp folder will be created in the root folder of your vault.",
+            text: "Don't forget to click 'save'.",
           });
         })
       );
@@ -399,7 +431,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           )
           .onChange(async (value) => {
             // Normalize the input value
-            newTempFolderPlace = value.trim() === "root" ? "" : value.trim();
+            value = value.trim() === "root" ? "" : value;
+            newTempFolderPlace = normalizePath(value);
             this.plugin.settings.tempFolderPlace = newTempFolderPlace;
           })
       )
@@ -416,14 +449,14 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           let oldTempFolderPlace = this.plugin.settings.tempFolderPlace
             ? this.plugin.settings.tempFolderPlace
             : (this.plugin.settings.tempFolderPlace = "");
-          let oldTempFolderPath = constructTempFolderPath(oldTempFolderPlace);
+          let oldTempFolderPath = oldTempFolderPlace;
           console.log(`Creating temp folder at: ${oldTempFolderPath}`);
           console.log(`Current tempFolderPlace: ${oldTempFolderPlace}`);
 
           this.plugin.settings.tempFolderPlace = newTempFolderPlace;
           console.log(`New tempFolderPlace: ${newTempFolderPlace}`);
 
-          let newTempFolderPath = constructTempFolderPath(newTempFolderPlace);
+          let newTempFolderPath = newTempFolderPlace;
           console.log(`Creating temp folder at: ${newTempFolderPath}`);
 
           let oldTempFolderCheck =
@@ -441,7 +474,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             const deleteOldTempFolder = new Modals.DeleteOldTempFolderModal(
               this.app,
               this.plugin,
-              newTempFolderCreation,
+              this.newTempFolderCreation,
               this.plugin.discernAndSetTempFolderState,
               oldTempFolderPath,
               newTempFolderPath,
@@ -453,7 +486,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               let folder =
                 this.app.vault.getAbstractFileByPath(newTempFolderPath);
               if (!folder) {
-                await this.app.vault.createFolder(newTempFolderPath);
+                await this.newTempFolderCreation(newTempFolderPath);
                 new Notice(`Temp folder created at ${newTempFolderPath}`);
               } else if (!(folder instanceof TFolder)) {
                 new Notice(`${newTempFolderPath}" exists but is not a folder.`);
@@ -474,25 +507,18 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           }
         });
       });
-    // ############   HIDE FOLDER?   #####################
+
+    // -----------   hide temp folder  ---------------
     const hideTempFolder = new Setting(setUpTextFlow)
       .setName("Hide temp folder")
       .setDesc(
-        createFragment((desc) => {
-          desc.createSpan({
-            text: "Toggle visibility of the temporary folder in your vault.",
-          });
-          desc.createEl("br");
-          desc.createSpan({
-            text: "Hiding the folder is advisable to avoid accidentally messing with it.",
-          });
-        })
+        "Hiding the folder is recommended to avoid accidentally messing with it."
       )
       .addToggle((hideTempFolderToggle) => {
         hideTempFolderToggle
-          .setValue(shSettings.tempFolderHidden)
+          .setValue(this.plugin.settings.tempFolderHidden)
           .onChange(async (value) => {
-            shSettings.tempFolderHidden = value;
+            this.plugin.settings.tempFolderHidden = value;
             this.plugin.discernAndSetTempFolderState(
               value,
               this.plugin.settings.tempFolderPlace
@@ -501,13 +527,13 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           });
       });
 
-    // ###############   Create a new flowObject   #############################
+    // --------   Create a new flowObject   ----------------
 
     const createFlows = containerEl.createDiv({
       cls: "headline-container",
     });
     createFlows.createEl("h3", {
-      text: "Create a Flow",
+      text: "Create a new Flow",
       cls: "headline-text",
     });
 
@@ -524,11 +550,13 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           });
         })
       )
-      .addText((text) =>
-        text.setPlaceholder("Enter a unique name").onChange(async (value) => {
-          // state check creating vs editing
-          createOrEditFlowName = value.trim();
-        })
+      .addText((flowName) =>
+        flowName
+          .setPlaceholder("Enter a unique name")
+          .onChange(async (value) => {
+            // state check creating vs editing
+            createOrEditFlowName = value.trim();
+          })
       );
 
     const chooseSourceFolder = new Setting(createFlows)
@@ -552,7 +580,29 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             console.log(`folder is: ${createOrEditsourcePath}`);
           })
       );
+
     // #############   excluded folders     #########
+    const TextFlow_SystemFolder = `${this.plugin.settings.tempFolderPlace}/TextFlow_SystemFolder`;
+    let exclusionList: string[] = [];
+    const excludeSubFolders = new Setting(createFlows)
+      .setName("Exclude Folders")
+      .setDesc(
+        "Folders to exclude when building flows (one per line). TextFlow_SystemFloder is always excluded."
+      )
+      .addTextArea((text) => {
+        text
+          .setPlaceholder(`folder1, folder2`)
+          .setValue(exclusionList.join(", "))
+          .onChange(async (value) => {
+            // Just store the raw input - we'll process it when saving
+            exclusionList = value.split(",");
+          });
+
+        text.inputEl.setAttribute("spellcheck", "false");
+        text.inputEl.rows = 4;
+        text.inputEl.cols = 25;
+      });
+
     // #############   excluded meta data   #########
     // #############   included meta data   #########
 
@@ -567,34 +617,110 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       .setIcon("save")
       .setTooltip("Save")
       .onClick(async (buttonEl: MouseEvent) => {
-        shFlowObjects[createOrEditFlowName] = {
-          sourcePath: createOrEditsourcePath, // Will be set later when user selects a folder
-          flowFileName: createOrEditFlowName, // Using the entered name
-          flowFilePath: `${shSettings.tempFolderPlace}/x_textFlowTemp/${createOrEditFlowName}.md`,
-          flowActive: false,
-          activeRegion: {
-            lastCursorPosition: 0,
-            path: "",
-            UID: "",
-            flowOrder: 1,
-            startInFlow: 0,
-            endInFlow: 1,
-          },
-          persistentCursorPos: 0,
-          modifiedRegionsArray: [],
-          flowMap: {}, // Empty flowMap to start with
-        };
-        await this.plugin.saveSettings();
-        buildFlatFlowMap(
-          shFlowObjects[createOrEditFlowName].sourcePath,
-          createOrEditFlowName
-        );
+        try {
+          // Validate source path first
+          if (!createOrEditsourcePath) {
+            new Notice("Please select a source folder");
+            return;
+          }
+          const sourceExists = await this.app.vault.adapter.exists(
+            createOrEditsourcePath
+          );
+          if (!sourceExists) {
+            new Notice("Source folder not found. Please check the path.");
+            return;
+          }
+
+          // Process exclusion list
+          exclusionList.unshift(
+            `${this.plugin.settings.tempFolderPlace}/TextFlow_SystemFolder`
+          );
+
+          // First pass: normalize and deduplicate
+          const processedPaths = [
+            ...new Set(
+              exclusionList
+                .map((f) => f.trim())
+                .map((f) => normalizePath(f))
+                .filter((f) => f.length > 0)
+                .sort((a, b) => a.localeCompare(b))
+            ),
+          ];
+
+          // Validate all paths
+          const invalidPaths: string[] = [];
+          for (const path of processedPaths) {
+            const exists = await this.app.vault.adapter.exists(path);
+            if (!exists) {
+              invalidPaths.push(path);
+            }
+          }
+
+          // If any paths are invalid, stop and show error
+          if (invalidPaths.length > 0) {
+            const errorMessage = createFragment((fragment) => {
+              fragment.createSpan({
+                text: "Cannot create flow: The following paths were not found:",
+                cls: "error-message",
+              });
+              fragment.createEl("br");
+              invalidPaths.forEach((path) => {
+                fragment.createSpan({
+                  text: `• ${path}`,
+                  cls: "error-path",
+                });
+                fragment.createEl("br");
+              });
+              fragment.createSpan({
+                text: "Please check the paths and try again.",
+                cls: "error-hint",
+              });
+            });
+
+            new Notice(errorMessage, 10000); // Show for 10 seconds
+            return;
+          }
+
+          // If we get here, all paths are valid
+          const finalExclusionList = processedPaths;
+
+          // Create the flow object
+          this.plugin.settings.flows[createOrEditFlowName] = {
+            sourcePath: createOrEditsourcePath, // Will be set later when user selects a folder
+            flowFileName: createOrEditFlowName, // Using the entered name
+            flowFilePath: `${this.plugin.settings.tempFolderPlace}/TextFlow_SystemFolder/${createOrEditFlowName}.md`,
+            flowActive: false,
+            activeRegion: {
+              lastCursorPosition: 0,
+              type: "",
+              path: "",
+              UID: "",
+              flowOrder: 1,
+              startInFlow: 0,
+              endInFlow: 1,
+            },
+            persistentCursorPos: 0,
+            modifiedRegionsArray: [],
+            excludedFolders: finalExclusionList,
+            flowMap: {},
+          };
+
+          await this.plugin.saveSettings();
+          this.buildFlatFlowMap(
+            this.plugin.settings.flows[createOrEditFlowName].sourcePath,
+            createOrEditFlowName
+          );
+
+          new Notice("Flow created successfully!");
+        } catch (error) {
+          console.error("Error creating flow:", error);
+          new Notice(
+            "An error occurred while creating the flow. Check the console for details."
+          );
+        }
       });
 
-    // name the flow  - > this.plugin.settings.flowObjects.flow (save on input)
-    // Input a file path to make the flow out of this file; input a hashtag to make an abstract flow.
+    // ########### YOUR FLOWS ###################
+    // rename flows, change flows, delete flows
   }
-
-  // ########### YOUR FLOWS ###################
-  // rename flows, change flows, delete flows
 }
