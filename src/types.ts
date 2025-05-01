@@ -5,8 +5,9 @@
 //#######################################################################
 
 export interface TextFlowSettings {
-  tempFolderPlace?: string;
-  tempFolderHidden: boolean;
+  systemFolderPlace?: string;
+  systemFolderPath?: string;
+  systemFolderHidden: boolean;
   flowLeafInFocus?: boolean;
   autoSave: boolean;
   activeFlows: string[];
@@ -15,16 +16,15 @@ export interface TextFlowSettings {
 }
 
 export interface FlowDef {
-  sourcePath: string;
+  flowCookbook: { [key: string]: string };
+  flowReceipe: { [key: string]: string[] };
   flowFileName: string;
   flowFilePath: string;
+  flowBuilt: boolean;
   flowActive: boolean;
   activeRegion: ActiveRegion;
   persistentCursorPos: number;
   modifiedRegionsArray: string[];
-  excludedFolders?: string[];
-  includedMetaData?: { [key: string]: [value: string] };
-  excludedMetaData?: { [key: string]: [value: string] };
   flowMap: { [key: string]: SourceFileObject };
 }
 
@@ -56,15 +56,16 @@ export interface SourceFileObject {
   yamlMini: string;
 }
 
+// --------- them defaults --------------------
 export const DEFAULT_SETTINGS: TextFlowSettings = {
-  tempFolderPlace: "",
-  tempFolderHidden: true,
+  systemFolderHidden: true,
   autoSave: true,
   activeFlows: [],
   flagForRebuild: [],
   flows: {},
 };
 
+// ---- flow creation helper object --------
 export interface mapValueBasket {
   concatenatedFileContents: string;
   initialIteration: boolean;
@@ -77,4 +78,40 @@ export interface mapValueBasket {
   idDivider: string;
 }
 
+// ---------- Flow management
 export type ModalFlowStatus = "on" | "off" | "incompatible";
+
+// ------- Dataview stuff
+export interface DataviewFolder {
+  file: {
+    folder: string;
+  };
+}
+
+export interface FolderGroup {
+  key: string;
+  rows: DataviewFolder[];
+}
+
+// -----------------------
+export interface BookmarkItem {
+  type: "file" | "group";
+  ctime: number;
+  path?: string; // only for type "file"
+  items?: BookmarkItem[]; // only for type "group"
+  title?: string; // only for type "group"
+}
+
+export interface BookmarksData {
+  items: BookmarkItem[];
+}
+
+export type DVNote = {
+  file: {
+    path: string;
+    tags: string[]; // or string, depending on your Dataview config
+    // ...other file fields if needed
+  };
+  // Properties: these are dynamic, so use an index signature
+  [key: string]: any;
+};

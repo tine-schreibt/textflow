@@ -38,12 +38,13 @@ interface ObsidianEditor extends Editor {
   cm?: EditorView;
 }
 
-// You can also create more specific types for your use cases:
+// used by the cursor listener
 interface CodeMirrorCursor {
   line: number;
   ch: number;
 }
 
+// the basket is used to keep all listener data in one accessible place
 interface ListenerBasketItem {
   plugin: ViewPlugin<any>;
   extension: StateEffect<any>;
@@ -54,18 +55,17 @@ export default class TextFlowPlugin extends Plugin {
   tempFilePath: string;
 
   // ---------------- Global objects and variables -------------------------
-  private cursorResetTracker: string[] = [];
-  private scrollToConstituent: boolean;
-  private lastShiftTime: number = 0;
-  private shiftDebounceTime: number = 300;
-  private wakingUp: boolean = true;
 
-  // ----------------- tracking read-only ranges --------------------------
-  private hadTrackingError: boolean = false; // Add this line
+  // ----------------- tracking read-only ranges (to protect region IDs) --------------------------
+  // helper stuff and auxiliaries
+  private hadTrackingError: boolean = false;
+
+  // adds a lock symbol to read-only files
   private readOnlyHighlight = Decoration.mark({
     class: "cm-read-only-region",
   });
 
+  // state field for id protection
   private readOnlyRanges = StateField.define<{
     ranges: Array<{ from: number; to: number }>;
     decorations: DecorationSet;
@@ -74,23 +74,22 @@ export default class TextFlowPlugin extends Plugin {
       ranges: [],
       decorations: Decoration.none,
     }),
+    // tr -> transaction
     update: (state, tr) => {
       let ranges = state.ranges;
 
       // Handle range updates
+      // e -> effect
       for (let e of tr.effects) {
         if (e.is(this.updateRangesEffect)) {
           ranges = e.value;
         }
       }
 
-      // Create decorations from ranges, but normalize position 0
+      // Create decorations from ranges; normalize position 0
       const decorations = Decoration.set(
         ranges.map((range) =>
-          this.readOnlyHighlight.range(
-            Math.max(0, range.from), // Ensure decoration starts at 0 minimum
-            range.to
-          )
+          this.readOnlyHighlight.range(Math.max(0, range.from), range.to)
         )
       );
 
@@ -106,7 +105,7 @@ export default class TextFlowPlugin extends Plugin {
   private updateRangesEffect =
     StateEffect.define<Array<{ from: number; to: number }>>();
 
-  // ------------------ protects the editor from changes while a save is going on
+  // ----- protect the editor from changes while a save is going on ----------------
   private toggleProtectionEffect = StateEffect.define<boolean>();
 
   private protectDuringSaveExtension = StateField.define<boolean>({
@@ -121,44 +120,70 @@ export default class TextFlowPlugin extends Plugin {
     },
     provide: (field) =>
       EditorView.editorAttributes.of((value) => ({
-        editable: value ? "false" : "true", // Convert boolean to string here
+        editable: value ? "false" : "true",
       })),
   });
 
   // ---------------- Functions ------------------------------------
+
   // ---------------- Functions: Utilities -------------------------
   async loadSettings(): Promise<TextFlowSettings> {
     const loaded = await this.loadData();
     const mergedSettings = Object.assign({}, DEFAULT_SETTINGS, loaded);
     return mergedSettings;
   }
+
   // ---------------------------------------------------------------
   async saveSettings() {
     await this.saveData(this.settings);
   }
+
   // ---------------------------------------------------------------
-  async ensureTempFolder() {
-    if (this.settings.tempFolderPlace !== undefined) {
-      const tempFolderPath: string = `${this.settings.tempFolderPlace}/TextFlow_SystemFolder`;
-      try {
-        let folder = this.app.vault.getAbstractFileByPath(tempFolderPath);
-        if (!folder) {
-          await this.app.vault.createFolder(tempFolderPath);
-        } else if (!(folder instanceof TFolder)) {
-          throw new Error(`"${tempFolderPath}" exists but is not a folder.`);
-        }
-      } catch (error) {
-        console.error(`Error handling temp folder: ${error.message}`);
-        // new Notice("Failed to create or verify temp folder");
+  async ensureSystemFolder() {
+    const systemFolder = this.app.vault
+      .getAllLoadedFiles()
+      .find(
+        (file) =>
+          file instanceof TFolder && file.name === "TextFlow_SystemFolder"
+      );
+
+    if (!systemFolder) {
+      // if there is no system folder
+      if (
+        // but place/path are defined
+        this.settings.systemFolderPlace != undefined &&
+        this.settings.systemFolderPath != undefined
+      ) {
+        new Notice(
+          `The TextFlow_SystemFolder could not be found. Please return it to ${this.settings.systemFolderPlace} or create a new one via the TextFlow settings.`
+        );
+      }
+    }
+    if (systemFolder) {
+      // if there is a systemFolder
+      if (
+        // but expected place/path don't agree with actual place/path
+        this.settings.systemFolderPlace != (systemFolder.parent?.path ?? "") || // if parent is null, use "" as the path
+        this.settings.systemFolderPath != systemFolder.path
+      ) {
+        // defer to reality and update settings
+        const oldPlace = this.settings.systemFolderPlace;
+        this.settings.systemFolderPlace = systemFolder.parent?.path ?? "";
+        this.settings.systemFolderPath = systemFolder.path;
+
+        new Notice(
+          `The TextFlow_SystemFolder seems to have been moved manually from ${oldPlace} to ${this.settings.systemFolderPlace}. TextFlow's settings have been updated accordingly.`
+        );
+        this.saveSettings();
       }
     }
   }
 
   // ---------------- Functions: Utilities: UI -------------------------
   // ----- is called onload
-  discernAndSetTempFolderState = (
-    tempFolderState?: boolean,
-    tempFolderPlace?: string
+  discernAndSetsystemFolderState = (
+    systemFolderState?: boolean,
+    systemFolderPlace?: string
   ): void => {
     // Remove any existing style
     const existingStyle = document.head.querySelector(
@@ -169,7 +194,7 @@ export default class TextFlowPlugin extends Plugin {
     }
 
     // If we're not hiding or don't have a place defined, just return after removing style
-    if (!tempFolderState || tempFolderPlace === undefined) {
+    if (!systemFolderState || systemFolderPlace === undefined) {
       return;
     }
 
@@ -177,14 +202,14 @@ export default class TextFlowPlugin extends Plugin {
     hiddenStyle.setAttribute("data-textflow-temp", "true");
 
     // Construct the full path
-    let tempFolderPath = tempFolderPlace
-      ? `${tempFolderPlace}/TextFlow_SystemFolder`
+    let systemFolderPath = systemFolderPlace
+      ? `${systemFolderPlace}/TextFlow_SystemFolder`
       : "TextFlow_SystemFolder";
 
-    // More specific CSS selector that only targets the temp folder and its direct children
+    // CSS selector that only targets the temp folder and its direct children
     hiddenStyle.textContent = `
-			div[data-path='${tempFolderPath}'],
-			div[data-path^='${tempFolderPath}/'] {
+			div[data-path='${systemFolderPath}'],
+			div[data-path^='${systemFolderPath}/'] {
 				display: none !important;
 			}
 		`;
@@ -193,6 +218,7 @@ export default class TextFlowPlugin extends Plugin {
   };
 
   // ------------- persist cursor position --------
+  // ########## To-Do: Turn into a button!!
   private persistCursorPosition = () => {
     Object.entries(this.settings.flows).map(([name, flow]) => ({
       name,
@@ -210,35 +236,38 @@ export default class TextFlowPlugin extends Plugin {
   };
 
   // ---------------- Functions: Listeners -------------------------
-  // ---------------- Functions: Listeners: Global -----------------
 
+  // ---------------- Functions: Listeners: Global -----------------
   addListeners() {
-    // ---------------- File mod -------------------------------
+    // ---------------- File modification -------------------------------
     this.registerEvent(
       this.app.vault.on("modify", (file) => {
-        console.log(`File modified: ${file.path}`);
+        //console.log(`File modified: ${file.path}`);
       })
     );
 
+    // ----------------- Auto-save on blur  -------------------------------
     this.registerDomEvent(window, "blur", async () => {
       if (this.settings.autoSave) {
-        console.log("blur listener calls saveAllLeavesAuto");
+        //console.log("blur listener calls saveAllLeavesAuto");
         await this.saveAllLeavesAuto();
-        console.log("blur listener: saves finished");
+        //console.log("blur listener: saves finished");
       }
     });
 
-    // ---------------- Change to focus -------------------------------
+    // ---------------- Auto-save on focus change -------------------------------
+    this.registerEvent(
+      this.app.workspace.on("active-leaf-change", () => {
+        this.saveInactiveLeaves();
+      })
+    );
+    // console.log("active-leaf-change: save finished");
 
+    // --------------- Call setupFlowView in case newly focused leaf is flow a without its editors -------------
     this.registerEvent(
       this.app.workspace.on("active-leaf-change", async (leaf) => {
-        // Save inactive leaves
-        //console.log("active-leaf-change calling saveInactiveLeaves");
-        await this.saveInactiveLeaves();
-        // console.log("active-leaf-change: save finished");
         if (leaf?.view instanceof MarkdownView) {
           const activeLeafPath = leaf.view.file?.path;
-
           if (activeLeafPath) {
             const flowName = this.isFlowFile(activeLeafPath);
             if (flowName) {
@@ -253,19 +282,24 @@ export default class TextFlowPlugin extends Plugin {
                   this.settings.activeFlows.includes(flowName)
                 ) {
                   // Add read-only and activate
+                  this.addReadOnlyExtension(leaf.view, flowName);
+                  new Notice(
+                    `This file is part of "${flowName}". Please edit it through the flow.`
+                  );
                 }
               }
             }
           }
         }
+      })
+    );
+
+    this.registerEvent(
+      this.app.workspace.on("active-leaf-change", async (leaf) => {
         const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (activeView?.file) {
           const flowName = this.isFlowFile(activeView.file.path);
-          if (
-            flowName &&
-            !this.scrollToConstituent &&
-            !this.cursorResetTracker.includes(flowName)
-          ) {
+          if (flowName) {
             const startPos = this.settings.flows[flowName].persistentCursorPos;
 
             // Add safety checks
@@ -319,7 +353,6 @@ export default class TextFlowPlugin extends Plugin {
                 }, 500);
               }
             }
-            this.cursorResetTracker.push(flowName);
           }
         }
       })
@@ -850,6 +883,17 @@ export default class TextFlowPlugin extends Plugin {
     if (!flow) {
       return;
     }
+    console.log("=== Activating Flow ===");
+    console.log("Flow name:", flowName);
+    console.log(
+      "Existing view?",
+      existingView ? existingView.file?.path : "none"
+    );
+    console.log(
+      "Active view path:",
+      this.app.workspace.getActiveViewOfType(MarkdownView)?.file?.path ??
+        "no active markdown view"
+    );
 
     if (existingView) {
       // Flow is already open, just set it up
@@ -871,7 +915,20 @@ export default class TextFlowPlugin extends Plugin {
 
   // --------------------- Set up open flows with listeners -----------
   initialSetup = async () => {
-    await this.persistCursorPosition();
+    //await this.persistCursorPosition();
+    console.log(
+      "Current leaves:",
+      this.app.workspace.getLeavesOfType("markdown").map((leaf) => ({
+        path:
+          leaf.view instanceof MarkdownView ? leaf.view.file?.path : undefined,
+        // Obsidian internally uses leaf.id but it's not in the type definitions
+        id: (leaf as any).id,
+        isFlow:
+          leaf.view instanceof MarkdownView && leaf.view.file
+            ? this.isFlowFile(leaf.view.file.path)
+            : false,
+      }))
+    );
     const allLeaves = this.app.workspace.getLeavesOfType("markdown");
     // Iterate over all the leavesfileExplorerClickListener
     for (const leaf of allLeaves) {
@@ -884,7 +941,7 @@ export default class TextFlowPlugin extends Plugin {
         if (activeLeafPath !== undefined) {
           flowName = this.isFlowFile(activeLeafPath);
           if (flowName) {
-            this.activateFlow(flowName);
+            this.activateFlow(flowName, leaf.view as MarkdownView);
             // If we have stored cursor position, restore it
             const cache = this.settings.flows[flowName];
             if (
@@ -1209,23 +1266,11 @@ export default class TextFlowPlugin extends Plugin {
           map[path].flowOrder,
           text
         );
-        console.log(
-          "saveBackToSource findStartOfRegion says: ",
-          path,
-          " starts at ",
-          startOfRegion
-        );
 
         // console.log("saveBackToSource calling findEndOfRegion");
-        const endOfRegion = text.indexOf(map[path].timestamp.toString()) - 1; // subtract 1 for the \r before the UID
+        const endOfRegion = text.indexOf(map[path].UID) - 1; // subtract 1 for the \r before the UID
         const flowFile = await this.app.vault.getFileByPath(
           this.settings.flows[flow].flowFilePath
-        );
-        console.log(
-          "saveBackToSource findEndOfRegion says: ",
-          path,
-          " ends at ",
-          endOfRegion
         );
 
         if (!flowFile) {
@@ -1233,17 +1278,11 @@ export default class TextFlowPlugin extends Plugin {
           return;
         } else if (sourceFile instanceof TFile && startOfRegion) {
           const flowContent = await this.app.vault.read(flowFile);
-          console.log("Source file is: ", sourceFile);
-          console.log(
-            "saveBackToSource reading ",
-            this.settings.flows[flow].flowFilePath
-          );
           {
             const regionSlice = flowContent.slice(
               startOfRegion + 1,
               endOfRegion
             );
-            console.log("saveBackToSource slices from flow: ", regionSlice);
             try {
               // Read existing content
               const existingContent = await this.app.vault.read(sourceFile);
@@ -1324,22 +1363,21 @@ export default class TextFlowPlugin extends Plugin {
     text: string
   ) => {
     // regEx for proper divider
-    //const markerRegex = /[\u200B\u200C\u200D]{26,}<hr>/;
+    const markerRegex = /[\u200B\u200C\u200D]{26,}<hr>/;
 
     // regEx for timestamp divider for debugging
-    const markerRegex = /[0-9]{5,}<hr>/;
+    //    const markerRegex = /[0-9]{5,}<hr>/;
 
     const searchStart = text.slice(cursorOffset);
 
     const matches = searchStart.match(markerRegex);
 
     if (matches) {
-      const uidLength = matches[0].length - 4;
-      const uid = matches[0].slice(0, uidLength);
+      const UIDLength = matches[0].length - 4;
+      const UID = matches[0].slice(0, UIDLength);
 
-      // remove toString after debugging
       const foundRegion = Object.entries(flow.flowMap).find(
-        ([_, foundRegionMap]) => foundRegionMap.timestamp.toString() === uid
+        ([_, foundRegionMap]) => foundRegionMap.UID === UID
       );
 
       if (foundRegion) {
@@ -1352,15 +1390,13 @@ export default class TextFlowPlugin extends Plugin {
         } else {
           newStartInFlow = 0;
         }
-        // change back to UID after debugging
-        const endInFlow =
-          text.indexOf(foundRegionMap.timestamp.toString()) + matches[0].length;
+        const endInFlow = text.indexOf(foundRegionMap.UID) + matches[0].length;
 
         const activeRegionObject: Types.ActiveRegion = {
           lastCursorPosition: cursorOffset,
           type: foundRegionMap.type,
           path: foundRegionPath,
-          UID: uid,
+          UID: UID,
           flowOrder: foundRegionMap.flowOrder,
           startInFlow: newStartInFlow,
           endInFlow: endInFlow,
@@ -1392,11 +1428,9 @@ export default class TextFlowPlugin extends Plugin {
       const [previousRegionPath, previousRegionMap] = previousRegion;
 
       if (flowOrder - 1 !== 0) {
-        const UID = previousRegionMap.UID;
-        // for debugging only
-        const timestamp = previousRegionMap.timestamp.toString();
-        const index = text.indexOf(timestamp);
-        const startPos = index + (timestamp + "<hr>").length + 1;
+        const invisibleUID = previousRegionMap.UID;
+        const index = text.indexOf(invisibleUID);
+        const startPos = index + (invisibleUID + "<hr>").length + 1;
         return startPos;
       } else {
         return 0;
@@ -1410,18 +1444,12 @@ export default class TextFlowPlugin extends Plugin {
   async onload() {
     this.settings = await this.loadSettings();
 
-    // ------ ONLOAD: if plugin has been set up before, make sure the temp folder exists ------------
-    if (
-      this.settings.tempFolderPlace !== "not set yet" &&
-      this.settings.tempFolderPlace !== undefined
-    ) {
-      this.ensureTempFolder();
-    }
-
     // -------------------------------------------------------------------
     // ------------------- ONLOAD: add listeners for cursor and clicks
     // Wait for the file explorer to be available in the DOM
     this.app.workspace.onLayoutReady(async () => {
+      // ---------- Look for TextFlow_SystemFolder
+      this.ensureSystemFolder();
       // ----- ONLOAD: set up UI -------------------------
       // ------------------- Flow switcher modal ---------------------
       // Add status bar item
@@ -1441,8 +1469,11 @@ export default class TextFlowPlugin extends Plugin {
       await this.initialSetup(); //
 
       // Handle temp folder visibility
-      if (this.settings.tempFolderHidden) {
-        this.discernAndSetTempFolderState(true, this.settings.tempFolderPlace);
+      if (this.settings.systemFolderHidden) {
+        this.discernAndSetsystemFolderState(
+          true,
+          this.settings.systemFolderPlace
+        );
       }
       // -------------------------------
       this.fileExplorerClickListener();
@@ -1467,7 +1498,6 @@ export default class TextFlowPlugin extends Plugin {
     this.persistCursorPosition();
     this.saveSettings();
     // ---------------- Store data for all active flows ----
-    this.cursorResetTracker = [];
 
     // Remove read-only extensions from all markdown views
     const markdownLeaves = this.app.workspace.getLeavesOfType("markdown");

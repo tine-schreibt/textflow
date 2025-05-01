@@ -1,3 +1,67 @@
+/* --------- RADIO BUTTONS -----------*/
+.settings-radio-button {
+  display: flex;
+  text-align: left;
+  justify-content: flex-start;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.settings-radio-button::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--interactive-accent);
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.settings-radio-button.settings-radio-button-active {
+  box-shadow: 0 0 0 2px var(--interactive-accent);
+}
+
+.settings-radio-button.settings-radio-button-active::before {
+  background: radial-gradient(
+    circle,
+    var(--interactive-accent) 40%,
+    /* Inner filled circle */ transparent 60% /* Transparent gap to border */
+  );
+}
+
+.radio-button-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 200px;
+}
+
+/* */
+/* Remove bottom borders except for last item */
+.setting-item.border-top-none {
+  border-top: none;
+}
+
+/* Make input fields wider */
+.input-width-400 .setting-item-control input {
+  width: 400px; /* or whatever width you prefer */
+}
+
+.input-width-200 .setting-item-control input {
+  width: 300px; /* or whatever width you prefer */
+}
+
+/* --------------- PREVIEW MODAL ---------------*/
+.preview-container {
+  max-height: 400px; /* or any height that works for your use case */
+  overflow-y: auto;
+  padding: 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background-color: var(--background-primary);
+}
+
+/*----------- SWITCHER MODAL --------------*/
 .textflow-switcher-option.flow-status-on {
   color: var(--text-accent);
 }
@@ -41,19 +105,22 @@
 .flow-read-only .cm-content {
   background-color: rgba(255, 255, 255, 0.1); /* Light tint */
   opacity: 0.7; /* Make text slightly faded */
-   /*pointer-events: none; /* Prevent clicks */
-   /*user-select: none; /* Prevent text selection */
+  /*pointer-events: none; /* Prevent clicks */
+  /*user-select: none; /* Prevent text selection */
   position: relative; /* Needed for the lock icon */
 }
 
 /* 🔒 Add a "LOCKED" overlay */
 .flow-read-only .cm-content::after {
-  content: "🔒 Open in flow to edit";
+  content: "🔒 This file is a constituent of an active flow. It is read-only to prevent data loss. Please edit it within the flow.";
   position: absolute;
+  white-space: normal;
+  max-width: 90%;
+  word-wrap: break-word;
   top: 10px;
   right: 10px;
-  background: rgba(0, 0, 0, 0.6);
-  color: white;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
   padding: 4px 8px;
   font-size: 12px;
   border-radius: 4px;
