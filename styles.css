@@ -102,7 +102,7 @@
 }
 
 /* ------------ to make read-only visible ----------------*/
-.flow-read-only .cm-content {
+.source-read-only .cm-content {
   background-color: rgba(255, 255, 255, 0.1); /* Light tint */
   opacity: 0.7; /* Make text slightly faded */
   /*pointer-events: none; /* Prevent clicks */
@@ -111,7 +111,7 @@
 }
 
 /* 🔒 Add a "LOCKED" overlay */
-.flow-read-only .cm-content::after {
+.source-read-only .cm-content::after {
   content: "🔒 This file is a constituent of an active flow. It is read-only to prevent data loss. Please edit it within the flow.";
   position: absolute;
   white-space: normal;

@@ -40,14 +40,13 @@ export class previewModal extends Modal {
       );
     } else {
       let previewContent: string[] = [];
-      for (let i = 0; this.finalReceipe.length > i; i++) {
-        let item = this.finalReceipe[i];
-        if (item.startsWith("§")) {
-          previewContent.push(item.replace("§", "#"));
+      for (let ingretient of this.finalReceipe) {
+        if (ingretient.startsWith("§")) {
+          previewContent.push(ingretient.replace("§", "#"));
         } else {
-          const itemArray = item.split("/");
-          item = `-- ${itemArray[itemArray.length - 1]}`;
-          previewContent.push(item);
+          const ingredientArray = ingretient.split("/");
+          ingretient = `-- ${ingredientArray[ingredientArray.length - 1]}`;
+          previewContent.push(ingretient);
         }
       }
       const finishedPreviewContent = previewContent.join("\n");
@@ -77,102 +76,96 @@ export class previewModal extends Modal {
 
 //--------------------------
 
-export class HandleOrphanedFiles extends Modal {
-  private flowPath: string;
-  private orphanPath: string;
-  private flow: Types.FlowDef;
+export class ProtectSourceFilesModal extends Modal {
+  private leafArray: MarkdownView[];
   private flowName: string;
+  private dismissedSourceWarnings: Record<string, boolean>;
+  //  private rebuildFlow(): function;
 
   constructor(
     app: App,
-    flowPath: string,
-    orphanPath: string,
-    flow: Types.FlowDef,
-    flowName: string
+    leafArray: MarkdownView[],
+    flowName: string,
+    dismissedSourceWarnings: Record<string, boolean>
+    //  rebuildFlow(): function
   ) {
     super(app);
-    this.flowPath = flowPath;
-    this.orphanPath = orphanPath;
-    this.flow = flow;
+    this.leafArray = leafArray;
     this.flowName = flowName;
+    this.dismissedSourceWarnings = dismissedSourceWarnings;
+    //   this.rebuildFlow = rebuildFlow();
   }
 
-  private closeOrphanFile = () => {
-    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-    if (activeView) {
-      activeView.leaf.detach();
+  private closeSourceFiles = () => {
+    for (let view of this.leafArray) {
+      view.leaf.detach();
     }
   };
-
-  private closeFlow = (flowPath: string) => {
-    const leaves = this.app.workspace.getLeavesOfType("markdown");
-    const targetLeaf = leaves.find(
-      (leaf) =>
-        leaf.view instanceof MarkdownView && leaf.view.file?.path === flowPath
-    );
-    if (targetLeaf) {
-      targetLeaf.detach();
+  private getNoteNames = () => {
+    const noteNamesArray: string[] = [];
+    for (let view of this.leafArray) {
+      if (view.file) {
+        const path = view.file.path;
+        const noteNameSplit = path.split("/");
+        const noteName = noteNameSplit[noteNameSplit.length - 1];
+        noteNamesArray.push(noteName);
+      }
     }
+    return noteNamesArray.join(", ");
   };
 
   onOpen() {
     const { contentEl } = this;
     const modalTitle = contentEl.createEl("h2", {
-      text: `Orphaned flow source`,
+      text: `Recently opened source files detected`,
     });
+
     const modalText = contentEl.createEl("span", {
       text:
-        `The file ${this.orphanPath} is part of the active flow ${this.flowName}.\r` +
-        `Editing it now could lead to data loss.\r` +
-        `How would you like to proceed?`,
+        `The following source files of flow ${
+          this.flowName
+        } have recently been active: ${this.getNoteNames()}.\r` +
+        `To transfer any changes made to the contents of these files into the flow, please rebuild the flow.`,
     });
 
+    let closeFiles = false;
+    let rebuildFlow = false;
+    let dontShowAgain = false;
+
     new Setting(modalText)
-      .addButton((viewInFlow) =>
-        viewInFlow
-          .setButtonText("View in Flow")
-          .setCta()
-          .onClick(async () => {
-            console.log("View in Flow button clicked");
+      .addToggle((closeToggle) => {
+        closeToggle
+          .setValue(false)
+          .setTooltip("Close all source files")
+          .onChange((value) => (closeFiles = value));
+      })
+      .addToggle((rebuildToggle) => {
+        rebuildToggle
+          .setValue(false)
+          .setTooltip(`Rebuild ${this.flowName}`)
+          .onChange((value) => (rebuildFlow = value));
+      })
+      .addToggle((dismissToggle) => {
+        dismissToggle
+          .setValue(false)
+          .setTooltip(`Don't show this warning again`)
+          .onChange((value) => (dontShowAgain = value));
+      })
 
-            try {
-              // Find and focus the flow file
-              const flowFile = this.app.vault.getAbstractFileByPath(
-                this.flow.flowFilePath
-              );
-              if (flowFile instanceof TFile) {
-                console.log("Opening flow file");
-                const leaf = this.app.workspace.getMostRecentLeaf();
-                await leaf?.openFile(flowFile);
-                const startPos =
-                  this.flow.flowMap[this.orphanPath].startEndInFlow.start;
-                if (leaf?.view instanceof MarkdownView) {
-                  const editor = leaf.view.editor;
-                  editor.setCursor(editor.offsetToPos(startPos));
-                }
-              }
-
-              // Try different close approaches
-              console.log("Attempting to close modal");
-              super.close();
-              this.contentEl.empty();
-              this.modalEl.remove();
-            } catch (error) {
-              console.error("Error in modal close:", error);
-            }
-          })
-      )
-      .addButton((closeFlow) =>
-        closeFlow.setButtonText("Close Flow").onClick(async () => {
-          // Close flow and open this file
-          this.closeFlow(this.flow.flowFilePath);
-          super.close();
-        })
-      )
-      .addButton((closeFile) =>
-        closeFile.setButtonText("Close orphan file").onClick(() => {
-          this.closeOrphanFile(); // Close the constituent file
-          super.close();
+      .addButton((okayButton) =>
+        okayButton.setButtonText("Okay").onClick(async () => {
+          try {
+            if (closeFiles) this.closeSourceFiles();
+            if (rebuildFlow) this.rebuildFlow(this.flowName);
+            if (dontShowAgain)
+              this.dismissedSourceWarnings[this.flowName] = true;
+            super.close();
+          } catch (error) {
+            console.error(
+              "Error when trying to close leaves or rebuild flow",
+              error
+            );
+          }
         })
       );
   }

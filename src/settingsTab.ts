@@ -70,7 +70,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
   }
 
   // ------------- FETCHING PATHS AND ALSO CLEANING UP STUFF
-  // so we're using the opportunity to get a clean cookbook for storage
+  // so we're using the opportunity to get a clean cookbook (user input) for storage
   cleanCookbook: { [key: string]: string } = {};
 
   // -------------- GET ALL PATHS IN BOOKMARK GROUP ----------------
@@ -113,7 +113,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
     const finalGroup = navigateToGroup(bookmarkItems, groupPathArray);
 
-    // Recursively collect file paths
+    // Recursively collect file paths and group names
     const collectPaths = (items: Types.BookmarkItem[]): string[] => {
       for (const item of items) {
         if (item.type === "file" && item.path) {
@@ -161,6 +161,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     return arrayWithFolderTitles;
   };
 
+  // --- Get the paths
   private getPathsByFoldersTagsProps = (
     folderIncluded: string, //
     folderExcluded: string,
@@ -290,25 +291,27 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         })
     );
 
+    // pick the paths out of the resulting array
     const filteredPathArray = Array.from(filteredNotes).map(
       (note) => (note as Types.DVNote).file.path
     );
+
+    // finally use the helper function from the top
     const pathArrayWithFolderTitles = this.findFolderTitles(
       filteredPathArray,
       normalizePath(folderIncluded.trim())
     );
+    // presto
     return pathArrayWithFolderTitles;
   };
 
-  // !!! FOLDER TITLES !!!
-
   // ---------- flow creation ----------------
   private buildFlatFlowMap = async (
-    folderPath: string,
+    folderPath: string, // <- will be an array of paths and folder titles instead
     flowName: string
   ): Promise<void> => {
     const flow: Types.FlowDef = this.plugin.settings.flows[flowName] || {
-      sourcePath: folderPath,
+      sourcePath: folderPath, // <- will be an array of paths and folder titles instead
       flowFileName: flowName,
       divider: "<hr>",
       flowMap: {}, // Flat map
@@ -325,6 +328,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       idDivider: "",
     };
 
+    // this part is obsolete since we got paths already
     const rootFolder = this.app.vault.getAbstractFileByPath(folderPath);
     if (!(rootFolder instanceof TFolder) || !rootFolder) {
       console.error(`There's a problem with ${folderPath}`);

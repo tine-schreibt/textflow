@@ -263,7 +263,7 @@ export default class TextFlowPlugin extends Plugin {
     );
     // console.log("active-leaf-change: save finished");
 
-    // --------------- Call setupFlowView in case newly focused leaf is flow a without its editors -------------
+    // -- Ensure that all flows have their editors in place -------------
     this.registerEvent(
       this.app.workspace.on("active-leaf-change", async (leaf) => {
         if (leaf?.view instanceof MarkdownView) {
@@ -272,20 +272,41 @@ export default class TextFlowPlugin extends Plugin {
             const flowName = this.isFlowFile(activeLeafPath);
             if (flowName) {
               this.setupFlowView(flowName, leaf.view);
-            } else {
+            }
+          }
+        }
+      })
+    );
+
+    /*  1. The user has a flow active and a source file becomes active in a different leaf
+2. The user has a source file active and a flow that it's part of becomes active. */
+
+    // -- Make sure constituent files can't be edited when their flow is active --
+
+    // scenario 1: User has a flows active and opens constituents
+    this.registerEvent(
+      this.app.workspace.on("active-leaf-change", async (leaf) => {
+        if (leaf?.view instanceof MarkdownView) {
+          const activeLeafPath = leaf.view.file?.path;
+          if (activeLeafPath) {
+            // check
+            const flowName = this.isFlowFile(activeLeafPath);
+            if (!flowName) {
+              const activeFlowArray = this.settings.activeFlows;
               // Check if this is a constituent file of any active flow
-              for (const [flowName, flow] of Object.entries(
-                this.settings.flows
-              )) {
-                if (
-                  flow.flowMap[activeLeafPath] &&
-                  this.settings.activeFlows.includes(flowName)
-                ) {
-                  // Add read-only and activate
-                  this.addReadOnlyExtension(leaf.view, flowName);
-                  new Notice(
-                    `This file is part of "${flowName}". Please edit it through the flow.`
-                  );
+              for (let activeFlow of activeFlowArray) {
+                if (this.settings.flows[activeFlow].flowMap[activeLeafPath]) {
+                  if (!this.hasSourceFileProtection(leaf.view)) {
+                    this.addSourceFileProtection(leaf.view, activeFlowArray[i]);
+                    new Notice(
+                      `This file is part of "${activeFlowArray[i]}". Please edit it through the flow.`
+                    );
+                  }
+                } else {
+                  if (this.hasSourceFileProtection(leaf.view)) {
+                    const editor = leaf.view.editor as any;
+                    this.removeSourceFileProtection(editor, leaf.view);
+                  }
                 }
               }
             }
@@ -294,6 +315,7 @@ export default class TextFlowPlugin extends Plugin {
       })
     );
 
+    // ----------------
     this.registerEvent(
       this.app.workspace.on("active-leaf-change", async (leaf) => {
         const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
@@ -810,7 +832,7 @@ export default class TextFlowPlugin extends Plugin {
             if (flowLeaf.view instanceof MarkdownView) {
               const editor = flowLeaf.view.editor as any;
               this.addProtectDuringSaveExtension(editor);
-              this.addReadOnlyExtension(flowLeaf.view, flowName);
+              this.addIdDividerProtection(flowLeaf.view, flowName);
               this.addCursorListener(flowLeaf.view);
               this.addTextChangeListener(flowLeaf.view);
             }
@@ -865,35 +887,36 @@ export default class TextFlowPlugin extends Plugin {
   }
 
   // ---------------- Functions: Flow management -------------------------
+  // The big bundle that centralises flow management
   private async setupFlowView(flowName: string, view: MarkdownView) {
     const editor = view.editor as any;
     this.addProtectDuringSaveExtension(editor);
-    this.addReadOnlyExtension(view, flowName);
+    this.addIdDividerProtection(view, flowName);
     this.addCursorListener(view);
     this.addTextChangeListener(view);
-
+    this.checkForActiveSourceFiles(flowName);
     if (!this.settings.activeFlows.includes(flowName)) {
       this.settings.activeFlows = [...this.settings.activeFlows, flowName];
       await this.saveSettings();
     }
   }
 
+  // ---- Identity check
+  isFlowFile = (activeLeafPath: string) => {
+    const flowName = activeLeafPath.match(/([^/]+)(?=\.md$)/)?.[0]; // gets the flow name out of the path
+    if (flowName && this.settings.flows[flowName]) {
+      return flowName;
+    } else {
+      return null;
+    }
+  };
+
+  // ---- Make sure flows are set up when they are activated
   async activateFlow(flowName: string, existingView?: MarkdownView) {
     const flow = this.settings.flows[flowName];
     if (!flow) {
       return;
     }
-    console.log("=== Activating Flow ===");
-    console.log("Flow name:", flowName);
-    console.log(
-      "Existing view?",
-      existingView ? existingView.file?.path : "none"
-    );
-    console.log(
-      "Active view path:",
-      this.app.workspace.getActiveViewOfType(MarkdownView)?.file?.path ??
-        "no active markdown view"
-    );
 
     if (existingView) {
       // Flow is already open, just set it up
@@ -913,9 +936,8 @@ export default class TextFlowPlugin extends Plugin {
     }
   }
 
-  // --------------------- Set up open flows with listeners -----------
-  initialSetup = async () => {
-    //await this.persistCursorPosition();
+  // ---- Set up open flows with listeners -----------
+  initialSetup = () => {
     console.log(
       "Current leaves:",
       this.app.workspace.getLeavesOfType("markdown").map((leaf) => ({
@@ -978,28 +1000,43 @@ export default class TextFlowPlugin extends Plugin {
     }
   };
 
-  // --------------------------------------------------------------------
-
-  isFlowFile = (activeLeafPath: string) => {
-    const flowName = activeLeafPath.match(/([^/]+)(?=\.md$)/)?.[0]; // gets the flow name out of the path
-    if (flowName && this.settings.flows[flowName]) {
-      return flowName;
-    } else {
-      return null;
+  // ---- Functions: Flow management:Data protection helper
+  private checkForActiveSourceFiles = (flowName: string) => {
+    const leaves = this.app.workspace.getLeavesOfType("markdown");
+    const leafArray: MarkdownView[] = [];
+    for (let leaf of leaves) {
+      const view = leaf.view as MarkdownView;
+      if (view.file) {
+        const path = view.file.path;
+        if (this.settings.flows[flowName].flowMap[path]) {
+          const noteNameSplit = path.split("/");
+          const noteName = noteNameSplit[noteNameSplit.length - 1];
+          leafArray.push(view);
+        }
+      }
+    }
+    if (leafArray.length != 0) {
+      new Modals.ProtectSourceFilesModal(
+        this.app,
+        leafArray,
+        flowName,
+        this.settings.dismissedSourceWarnings
+        /*, rebuildFlow()*/
+      ).open();
     }
   };
 
-  // ---------------------- Functions: Data safety ----------------------------
+  // ---- Functions: Data safety ----------------------------
 
-  // --------------------- Functions: Data safety: Read-only for UIDs and dividers
-  private addReadOnlyExtension = (leaf: MarkdownView, flowName: string) => {
+  // ---- Functions: Data safety: Read-only for UIDs and dividers
+  private addIdDividerProtection = (leaf: MarkdownView, flowName: string) => {
     const flow = this.settings.flows[flowName];
     if (!flow) return;
 
     const editor = leaf.editor as any;
     if (!editor.cm) return;
 
-    if (!this.hasReadOnlyExtension(editor)) {
+    if (!this.hasIdDividerProtection(editor)) {
       const preventEdit = EditorState.transactionFilter.of((tr) => {
         if (!tr.changes.empty) {
           let shouldReject = false;
@@ -1040,10 +1077,10 @@ export default class TextFlowPlugin extends Plugin {
   };
 
   // -----------------------------------------------------------
-  private removeReadOnlyExtension = (editor: any) => {
+  private removeIdDividerProtection = (editor: any) => {
     if (!editor.cm) return;
 
-    if (this.hasReadOnlyExtension(editor)) {
+    if (this.hasIdDividerProtection(editor)) {
       editor.cm.dispatch({
         effects: StateEffect.reconfigure.of([]),
       });
@@ -1051,15 +1088,68 @@ export default class TextFlowPlugin extends Plugin {
   };
 
   // ----------------------------------------------------------
-  private hasReadOnlyExtension = (editor: any) => {
+  private hasIdDividerProtection = (editor: any) => {
     if (!editor.cm) return false;
     const hasField =
       editor.cm.state.field(this.readOnlyRanges, false) !== undefined;
     return hasField;
   };
 
-  /// --------------- Functions: Data safety: Protect editor during saving
+  // ---- Functions: Data safety: Protect source files of known open flows ------------------
+  private readonly SOURCE_PROTECTION_MARKER = "textflow-source-protection";
 
+  private addSourceFileProtection = (leaf: MarkdownView, flowName: string) => {
+    const flow = this.settings.flows[flowName];
+    if (!flow) return;
+
+    const editor = leaf.editor as any;
+    if (!editor.cm) return;
+
+    if (!this.hasSourceFileProtection(editor)) {
+      leaf.containerEl.addClass("source-read-only");
+
+      const preventEdit = EditorState.transactionFilter.of(
+        (tr: Transaction) => {
+          if (!tr.changes.empty) {
+            return [];
+          }
+          return tr;
+        }
+      );
+      // Add a marker property to identify our filter
+      (preventEdit as any).sourceProtection = this.SOURCE_PROTECTION_MARKER;
+
+      editor.cm.dispatch({
+        effects: StateEffect.appendConfig.of([preventEdit]),
+      });
+    }
+  };
+
+  // ------------------------------------------------
+  private removeSourceFileProtection = (editor: any, leaf: MarkdownView) => {
+    if (!editor.cm) return;
+    leaf.containerEl.removeClass("source-read-only");
+    if (this.hasSourceFileProtection(editor)) {
+      editor.cm.dispatch({
+        effects: StateEffect.reconfigure.of([]),
+      });
+    }
+  };
+
+  // ------------------------------------------------
+  private hasSourceFileProtection = (editor: any) => {
+    if (!editor.cm) return false;
+
+    // Check specifically for our marked protection filter
+    return editor.cm.state
+      .facet(EditorState.transactionFilter)
+      .some(
+        (filter: any) =>
+          filter.sourceProtection === this.SOURCE_PROTECTION_MARKER
+      );
+  };
+
+  /// --- Functions: Data safety: Protect editor during saving
   private addProtectDuringSaveExtension(editor: any) {
     try {
       if (editor.cm instanceof EditorView) {
@@ -1504,7 +1594,7 @@ export default class TextFlowPlugin extends Plugin {
     for (const leaf of markdownLeaves) {
       if (leaf.view instanceof MarkdownView) {
         const editor = leaf.view.editor as any;
-        this.removeReadOnlyExtension(editor);
+        this.removeIdDividerProtection(editor);
       }
     }
 

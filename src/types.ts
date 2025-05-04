@@ -11,13 +11,14 @@ export interface TextFlowSettings {
   flowLeafInFocus?: boolean;
   autoSave: boolean;
   activeFlows: string[];
+  dismissedSourceWarnings: Record<string, boolean>;
   flagForRebuild: string[];
   flows: { [key: string]: FlowDef };
 }
 
 export interface FlowDef {
-  flowCookbook: { [key: string]: string };
-  flowReceipe: { [key: string]: string[] };
+  flowCookbook: { [key: string]: string }; // user input
+  flowReceipe: { [key: string]: string[] }; // paths
   flowFileName: string;
   flowFilePath: string;
   flowBuilt: boolean;
@@ -61,6 +62,7 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
   systemFolderHidden: true,
   autoSave: true,
   activeFlows: [],
+  dismissedSourceWarnings: {},
   flagForRebuild: [],
   flows: {},
 };
