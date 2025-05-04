@@ -1,6 +1,6 @@
-/node_modules
-yarn.lock
-main.js
-flow-view.md
-*.xml
-data.json
+# Ignore everything
+*
+# except for src
+!src
+# but especially ignore node_modules! 
+node_modules/
