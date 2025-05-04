@@ -297,9 +297,9 @@ export default class TextFlowPlugin extends Plugin {
               for (let activeFlow of activeFlowArray) {
                 if (this.settings.flows[activeFlow].flowMap[activeLeafPath]) {
                   if (!this.hasSourceFileProtection(leaf.view)) {
-                    this.addSourceFileProtection(leaf.view, activeFlowArray[i]);
+                    this.addSourceFileProtection(leaf.view, activeFlow);
                     new Notice(
-                      `This file is part of "${activeFlowArray[i]}". Please edit it through the flow.`
+                      `This file is part of "${activeFlow}". Please edit it through the flow.`
                     );
                   }
                 } else {
