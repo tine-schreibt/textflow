@@ -1,6 +1,13 @@
 # Ignore everything
 *
-# except for src
-!src
+# except for plugin
+!plugin/
+!plugin/**
+!src/
+!src/*+
+# and also: 
+!manifest.json
+!styles.css
+
 # but especially ignore node_modules! 
 node_modules/
