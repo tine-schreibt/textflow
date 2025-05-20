@@ -34,6 +34,33 @@ class FlowDefVariables {
   }
 }
 
+// --- A class for the progress bar
+class ProgressNotice {
+  private notice: Notice;
+  private progress: number = 0;
+  private flowName: string;
+
+  constructor(flowName: string) {
+    this.flowName = flowName;
+    this.notice = new Notice(
+      `Building ${this.flowName}: [▱▱▱▱▱▱▱▱▱▱] 0% \nFirst build might take longer.`,
+      0
+    ); // 0 duration makes it persistent
+  }
+  updateProgress(current: number, total: number) {
+    const percent = Math.floor((current / total) * 100);
+    const filled = Math.floor(percent / 10);
+    const bar = "[" + "▰".repeat(filled) + "-".repeat(10 - filled) + "]";
+    this.notice.setMessage(
+      `Building ${this.flowName}: ${bar} ${percent}% \nFirst build might take longer.`
+    );
+  }
+
+  close() {
+    this.notice.hide();
+  }
+}
+
 // --- The class that defines the settings tab
 export class TextFlowSettingsTab extends PluginSettingTab {
   plugin: TextFlow;
@@ -443,6 +470,15 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .join("");
       });
     const filteredNotes = allNotes.where((note: Types.DVNote) => {
+      // First ensure that TextFlow_SystemFolder is always excluded; don't want to create an ourobouros
+      if (
+        this.plugin.settings.systemFolderPath &&
+        !cleanFolderExclusionArray.includes(
+          this.plugin.settings.systemFolderPath
+        )
+      ) {
+        cleanFolderExclusionArray.push(this.plugin.settings.systemFolderPath);
+      }
       return (
         // exlude folders
         !cleanFolderExclusionArray.some((path) =>
@@ -565,6 +601,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
   private flowBuilder = async (
     receipeArray: string[],
     flow: Types.FlowDef,
+    flowName: string,
     mapValueBasket: Types.mapValueBasket
   ): Promise<void> => {
     // pre-flight check for SystemFolder
@@ -573,9 +610,17 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       new Notice("TextFlow_SystemFolder not found.");
       return;
     }
-    new Notice("Building flow..."); // use pathArray
+
+    const progressBar = new ProgressNotice(flowName);
+    let counter = 0;
+    const total = receipeArray.length;
 
     for (let ingredient of receipeArray) {
+      counter++;
+      progressBar.updateProgress(counter, total);
+
+      // Your existing loop logic here
+
       if (ingredient.startsWith("§")) {
         // if it's a folder name
         mapValueBasket.flowOrder++;
@@ -673,7 +718,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           mapValueBasket.initialIteration = false;
 
           // Add content with marker before divider
-          mapValueBasket.concatenatedFileContents += `${fileContent}${mapValueBasket.idDivider}`;
+          mapValueBasket.concatenatedFileContents += `${fileContent}-divider-${mapValueBasket.idDivider}`;
           mapValueBasket.currentEnd =
             mapValueBasket.concatenatedFileContents.length;
           flow.flowMap[ingredient].startEndInFlow.end =
@@ -692,6 +737,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       flow.isFreshBuild = false;
       this.plugin.saveSettings();
     }
+    if (counter === total) {
+      progressBar.close();
+    }
   };
 
   // -------------- manage YAML ------------------
@@ -701,7 +749,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     file: TFile,
     mapValueBasket: Types.mapValueBasket
   ) => {
-    let foundUID = false;
     try {
       // Create a variable to store the modified frontmatter
       let modifiedFrontmatter: any = {};
@@ -717,26 +764,32 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               frontmatter.TextFlowUID.match(/【(\d{13,})】/);
 
             if (timestampMatch) {
-              const [_, timestamp] = timestampMatch;
-              mapValueBasket.timestamp = Number(timestamp);
+              const [_, timestampString] = timestampMatch;
+              const timestampNumber = Number(timestampString);
+              mapValueBasket.timestamp = timestampNumber;
 
-              // look for complete yaml
-              const completeYamldMatch = frontmatter.TextFlowUID.match(
-                /(【\d{13,}】⟦[\u200B\u200C\u200D]{26,}⟧)/
-              );
-              if (completeYamldMatch) {
-                const [_, timestamp, invisibleUID] = timestampMatch;
-                mapValueBasket.UID = invisibleUID;
-                // make the proper divider
-                //const divider = `\r${encodedTimestamp}<hr>\r\r`;
+              const invisibleUidRegex = /⟦([\u200B\u200C\u200D]{26,})⟧/;
+              const invisibleUidMatchResult =
+                frontmatter.TextFlowUID.match(invisibleUidRegex);
 
-                // make unencoded divider for debugging
-                const divider = `\r${invisibleUID}<hr>\r\r`;
-                mapValueBasket.idDivider = divider.replace(/\\r/g, "\r");
+              if (invisibleUidMatchResult && invisibleUidMatchResult[1]) {
+                // Invisible UID part found and captured
+                mapValueBasket.UID = invisibleUidMatchResult[1];
+                modifiedFrontmatter.TextFlowUID = `【${timestampNumber}】⟦${mapValueBasket.UID}⟧`;
               } else {
-                await this.reCreateInvisibleUID(timestamp, mapValueBasket);
+                // Timestamp part was found, but the invisible UID part is missing or malformed.
+                // Recreate the invisible UID.
+                const newInvisibleUID = this.reCreateInvisibleUID(
+                  timestampNumber,
+                  mapValueBasket
+                );
+                mapValueBasket.UID = newInvisibleUID;
+
+                // Update frontmatter to store the newly created/recreated complete UID
+                modifiedFrontmatter.TextFlowUID = `【${timestampNumber}】⟦${newInvisibleUID}⟧`;
               }
             } else {
+              // if (!timestampMatch) - TextFlowUID exists but is incomplete (no timestamp)
               throw new Error(
                 "TextFlow: Invalid UID format in properties.\n" +
                   "This file seems to be part of a flow but its UID is corrupted.\n" +
@@ -744,8 +797,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               );
             }
           } else {
-            // No TextFlowUID found, create one
-            await this.createInvisibleUID(mapValueBasket);
+            // if (!frontmatter?.TextFlowUID) - No TextFlowUID found
+            // Create one
+            await this.createInvisibleUID(mapValueBasket); // This sets mapValueBasket.UID and .timestamp
             modifiedFrontmatter.TextFlowUID = `【${mapValueBasket.timestamp}】⟦${mapValueBasket.UID}⟧`;
           }
         }
@@ -916,6 +970,11 @@ export class TextFlowSettingsTab extends PluginSettingTab {
                 // Update settings with new location
                 this.plugin.settings.systemFolderPath = newPath;
                 this.plugin.settings.systemFolderPlace = newSystemFolderPlace;
+                for (let flow in this.plugin.settings.flows) {
+                  this.plugin.settings.flows[flow].flowFilePath = normalizePath(
+                    `${this.plugin.settings.systemFolderPath}/${flow}.md`
+                  );
+                }
                 await this.plugin.saveSettings();
 
                 new Notice(`SystemFolder moved to ${newSystemFolderPlace}`);
@@ -1404,6 +1463,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             this.flowBuilder(
               shownFlow.flowReceipe[key],
               shownFlow,
+              flow,
               this.mapValueBasket
             );
           })

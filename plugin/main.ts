@@ -5,6 +5,7 @@ import {
   FileView,
   MarkdownView,
   Modal,
+  normalizePath,
   Notice,
   Plugin,
   PluginSettingTab,
@@ -170,6 +171,11 @@ export default class TextFlowPlugin extends Plugin {
         const oldPlace = this.settings.systemFolderPlace;
         this.settings.systemFolderPlace = systemFolder.parent?.path ?? "";
         this.settings.systemFolderPath = systemFolder.path;
+        for (let flow in this.settings.flows) {
+          this.settings.flows[flow].flowFilePath = normalizePath(
+            `${this.settings.systemFolderPath}/${flow}.md`
+          );
+        }
 
         new Notice(
           `The TextFlow_SystemFolder seems to have been moved manually from ${oldPlace} to ${this.settings.systemFolderPlace}. TextFlow's settings have been updated accordingly.`
@@ -219,7 +225,7 @@ export default class TextFlowPlugin extends Plugin {
 
   // ------------- persist cursor position --------
   // ########## To-Do: Turn into a button!!
-  private persistCursorPosition = () => {
+  /*private persistCursorPosition = () => {
     Object.entries(this.settings.flows).map(([name, flow]) => ({
       name,
       hasActiveRegion: !!flow.activeRegion,
@@ -233,7 +239,7 @@ export default class TextFlowPlugin extends Plugin {
         flow.persistentCursorPos = flow.activeRegion.lastCursorPosition;
       }
     }
-  };
+  };*/
 
   // ---------------- Functions: Listeners -------------------------
 
@@ -278,36 +284,53 @@ export default class TextFlowPlugin extends Plugin {
       })
     );
 
-    /*  1. The user has a flow active and a source file becomes active in a different leaf
-2. The user has a source file active and a flow that it's part of becomes active. */
-
     // -- Make sure constituent files can't be edited when their flow is active --
-
     // scenario 1: User has a flows active and opens constituents
     this.registerEvent(
       this.app.workspace.on("active-leaf-change", async (leaf) => {
         if (leaf?.view instanceof MarkdownView) {
           const activeLeafPath = leaf.view.file?.path;
+          console.log(activeLeafPath);
           if (activeLeafPath) {
             // check
             const flowName = this.isFlowFile(activeLeafPath);
+            console.log("is flow: ", flowName);
             if (!flowName) {
               const activeFlowArray = this.settings.activeFlows;
+              let isPartOfActiveFlow = false;
               // Check if this is a constituent file of any active flow
               for (let activeFlow of activeFlowArray) {
                 if (this.settings.flows[activeFlow].flowMap[activeLeafPath]) {
+                  isPartOfActiveFlow = true;
+
                   if (!this.hasSourceFileProtection(leaf.view)) {
                     this.addSourceFileProtection(leaf.view, activeFlow);
                     new Notice(
                       `This file is part of "${activeFlow}". Please edit it through the flow.`
                     );
                   }
-                } else {
-                  if (this.hasSourceFileProtection(leaf.view)) {
-                    const editor = leaf.view.editor as any;
-                    this.removeSourceFileProtection(editor, leaf.view);
-                  }
                 }
+              }
+              // If the file is not part of any active flow, remove protection
+              console.log(
+                "After flow/source check: isPartOfActiveFlow:",
+                isPartOfActiveFlow
+              );
+              console.log(
+                "Has protection:",
+                this.hasSourceFileProtection(leaf.view)
+              );
+              console.log(
+                "Container classes:",
+                leaf.view.containerEl.className
+              );
+              if (
+                !isPartOfActiveFlow &&
+                this.hasSourceFileProtection(leaf.view)
+              ) {
+                console.log("removing protection");
+                const editor = leaf.view.editor as any;
+                this.removeSourceFileProtection(editor, leaf.view);
               }
             }
           }
@@ -315,8 +338,8 @@ export default class TextFlowPlugin extends Plugin {
       })
     );
 
-    // ----------------
-    this.registerEvent(
+    // ---------------- Restore saved cursor position (defunct?)
+    /*  this.registerEvent(
       this.app.workspace.on("active-leaf-change", async (leaf) => {
         const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (activeView?.file) {
@@ -378,7 +401,7 @@ export default class TextFlowPlugin extends Plugin {
           }
         }
       })
-    );
+    );*/
   }
 
   // ---------------- Functions: Listeners: Individual ----------
@@ -828,14 +851,14 @@ export default class TextFlowPlugin extends Plugin {
                 (leaf.view as MarkdownView).file?.path ===
                   this.settings.flows[flow].flowFilePath
             );
-            let flowLeaf: WorkspaceLeaf | undefined; 
+            let flowLeaf: WorkspaceLeaf | undefined;
 
             if (!flowIsOpen) {
               await this.activateFlow(flow);
               if (!flowLeaf) {
                 console.error("Failed to find or create flow leaf");
                 return;
-            }
+              }
               flowLeaf = this.app.workspace
                 .getLeavesOfType("markdown")
                 .find(
@@ -1087,6 +1110,14 @@ export default class TextFlowPlugin extends Plugin {
     }
   };
 
+  // ----------------------------------------------------------
+  private hasIdDividerProtection = (editor: any) => {
+    if (!editor.cm) return false;
+    const hasField =
+      editor.cm.state.field(this.readOnlyRanges, false) !== undefined;
+    return hasField;
+  };
+
   // -----------------------------------------------------------
   private removeIdDividerProtection = (editor: any) => {
     if (!editor.cm) return;
@@ -1096,14 +1127,6 @@ export default class TextFlowPlugin extends Plugin {
         effects: StateEffect.reconfigure.of([]),
       });
     }
-  };
-
-  // ----------------------------------------------------------
-  private hasIdDividerProtection = (editor: any) => {
-    if (!editor.cm) return false;
-    const hasField =
-      editor.cm.state.field(this.readOnlyRanges, false) !== undefined;
-    return hasField;
   };
 
   // ---- Functions: Data safety: Protect source files of known open flows ------------------
@@ -1137,19 +1160,15 @@ export default class TextFlowPlugin extends Plugin {
   };
 
   // ------------------------------------------------
-  private removeSourceFileProtection = (editor: any, leaf: MarkdownView) => {
-    if (!editor.cm) return;
-    leaf.containerEl.removeClass("source-read-only");
-    if (this.hasSourceFileProtection(editor)) {
-      editor.cm.dispatch({
-        effects: StateEffect.reconfigure.of([]),
-      });
+  private hasSourceFileProtection = (view: MarkdownView) => {
+    // First check if the CSS class is present
+    if (view.containerEl.hasClass("source-read-only")) {
+      return true;
     }
-  };
 
-  // ------------------------------------------------
-  private hasSourceFileProtection = (editor: any) => {
-    if (!editor.cm) return false;
+    // Then check the editor state if we have access to it
+    const editor = view.editor as any;
+    if (!editor?.cm) return false;
 
     // Check specifically for our marked protection filter
     return editor.cm.state
@@ -1158,6 +1177,25 @@ export default class TextFlowPlugin extends Plugin {
         (filter: any) =>
           filter.sourceProtection === this.SOURCE_PROTECTION_MARKER
       );
+  };
+
+  // ------------------------------------------------
+  private removeSourceFileProtection = (editor: any, leaf: MarkdownView) => {
+    if (!editor.cm) return;
+    console.log(
+      "Before removal - Has protection:",
+      this.hasSourceFileProtection(leaf)
+    );
+    console.log("Before removal - Classes:", leaf.containerEl.className);
+
+    if (this.hasSourceFileProtection(leaf)) {
+      // Note: using leaf instead of editor
+      leaf.containerEl.removeClass("source-read-only");
+      editor.cm.dispatch({
+        effects: StateEffect.reconfigure.of([]),
+      });
+      console.log("After removal - Classes:", leaf.containerEl.className);
+    }
   };
 
   /// --- Functions: Data safety: Protect editor during saving
@@ -1596,7 +1634,7 @@ export default class TextFlowPlugin extends Plugin {
   // ------------------ ONUNLOAD---------------------------
   // -------------------------------------------------------
   onunload() {
-    this.persistCursorPosition();
+    // this.persistCursorPosition();
     this.saveSettings();
     // ---------------- Store data for all active flows ----
 

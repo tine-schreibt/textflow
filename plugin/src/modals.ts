@@ -1,4 +1,4 @@
-import TextFlowPlugin from "../../main";
+import TextFlowPlugin from "../main";
 import {
   App,
   ButtonComponent,
