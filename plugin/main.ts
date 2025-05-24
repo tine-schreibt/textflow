@@ -204,23 +204,32 @@ export default class TextFlowPlugin extends Plugin {
       return;
     }
 
-    let hiddenStyle = document.createElement("style");
-    hiddenStyle.setAttribute("data-textflow-temp", "true");
+    let sysFolderPath = "";
+    if (systemFolderPlace === "/") {
+      sysFolderPath = normalizePath(`/TextFlow_SystemFolder`);
+    } else {
+      sysFolderPath = normalizePath(
+        `${systemFolderPlace}/TextFlow_SystemFolder`
+      );
+    }
 
-    // Construct the full path
-    let systemFolderPath = systemFolderPlace
-      ? `${systemFolderPlace}/TextFlow_SystemFolder`
-      : "TextFlow_SystemFolder";
+    // Create and append style with the correct selector
+    const addStyle = () => {
+      let hiddenStyle = document.createElement("style");
+      hiddenStyle.setAttribute("data-textflow-temp", "true");
 
-    // CSS selector that only targets the temp folder and its direct children
-    hiddenStyle.textContent = `
-			div[data-path='${systemFolderPath}'],
-			div[data-path^='${systemFolderPath}/'] {
-				display: none !important;
-			}
-		`;
+      hiddenStyle.textContent = `
+            div[data-path='${sysFolderPath}'],
+            div[data-path^='${sysFolderPath}'] {
+                display: none !important;
+            }
+        `;
+      document.head.appendChild(hiddenStyle);
+    };
 
-    document.head.appendChild(hiddenStyle);
+    // Try immediately and also with a small delay to ensure DOM is ready
+    addStyle();
+    setTimeout(addStyle, 500); // Add style again after 500ms
   };
 
   // ------------- persist cursor position --------
@@ -290,11 +299,11 @@ export default class TextFlowPlugin extends Plugin {
       this.app.workspace.on("active-leaf-change", async (leaf) => {
         if (leaf?.view instanceof MarkdownView) {
           const activeLeafPath = leaf.view.file?.path;
-          console.log(activeLeafPath);
+          // console.log(activeLeafPath);
           if (activeLeafPath) {
             // check
             const flowName = this.isFlowFile(activeLeafPath);
-            console.log("is flow: ", flowName);
+            // console.log("is flow: ", flowName);
             if (!flowName) {
               const activeFlowArray = this.settings.activeFlows;
               let isPartOfActiveFlow = false;
@@ -312,28 +321,45 @@ export default class TextFlowPlugin extends Plugin {
                 }
               }
               // If the file is not part of any active flow, remove protection
-              console.log(
-                "After flow/source check: isPartOfActiveFlow:",
-                isPartOfActiveFlow
-              );
-              console.log(
-                "Has protection:",
-                this.hasSourceFileProtection(leaf.view)
-              );
-              console.log(
-                "Container classes:",
-                leaf.view.containerEl.className
-              );
+
               if (
                 !isPartOfActiveFlow &&
                 this.hasSourceFileProtection(leaf.view)
               ) {
-                console.log("removing protection");
                 const editor = leaf.view.editor as any;
                 this.removeSourceFileProtection(editor, leaf.view);
               }
             }
           }
+        }
+      })
+    );
+    // ------------ REMOVE ON UNLOAD --------
+    // listens if a deletion involves
+    this.registerEvent(
+      this.app.vault.on("delete", (file) => {
+        // Check if the deleted file is a flow file
+        if (!(file instanceof TFile)) return;
+
+        const flowName = this.isFlowFile(file.path);
+        /* console.log("Deleted file path:", file.path);
+        console.log("Detected flow name:", flowName);
+        console.log("Active flows:", this.settings.activeFlows);*/
+
+        if (!flowName || !this.settings.activeFlows.includes(flowName)) return;
+
+        if (this.settings.activeFlows.includes(flowName)) {
+          console.log("Flow array before:", this.settings.activeFlows);
+          console.log(`Removing flow ${flowName}`);
+
+          this.settings.activeFlows = this.settings.activeFlows.filter(
+            (activeFlowName) => flowName !== activeFlowName
+          );
+
+          console.log("Flow array after:", this.settings.activeFlows);
+
+          // Save settings after modification
+          this.saveSettings();
         }
       })
     );
@@ -799,7 +825,8 @@ export default class TextFlowPlugin extends Plugin {
   // ---------------------------------------------------------
   private boundFileExplorerClick: (event: MouseEvent) => void;
   // ---------- This listener is removed in ONUNLOAD ---------------------
-  fileExplorerClickListener() {
+  // it checks, if left-clicked files are flows or constituents of open flows and handles the behaviour
+  fileExplorerOpenClickListener() {
     this.boundFileExplorerClick = async (event: MouseEvent) => {
       const target = event.target as HTMLElement;
       const filePath = target.getAttribute("data-path");
@@ -942,7 +969,7 @@ export default class TextFlowPlugin extends Plugin {
   async activateFlow(flowName: string, existingView?: MarkdownView) {
     const flow = this.settings.flows[flowName];
     if (!flow) {
-      console.log("Flow not found:", flowName); // Add logging
+      new Notice(`No flow with name ${flow} found.`, 10000);
       return;
     }
 
@@ -952,7 +979,6 @@ export default class TextFlowPlugin extends Plugin {
       await this.app.workspace.setActiveLeaf(existingView.leaf);
     } else {
       // Need to open new leaf
-      console.log("Opening flow file:", flow.flowFilePath); // Add logging
       const flowFile = this.app.vault.getAbstractFileByPath(flow.flowFilePath);
 
       if (flowFile instanceof TFile) {
@@ -965,26 +991,16 @@ export default class TextFlowPlugin extends Plugin {
           console.log("View is not MarkdownView after opening"); // Add logging
         }
       } else {
-        console.log("Flow file not found:", flow.flowFilePath); // Add logging
+        new Notice(
+          `Flow file not found: ${flow.flowFilePath}\nTry clicking the 'Move' button for the TextFlow_SystemFolder location.`,
+          10000
+        ); // Add logging
       }
     }
   }
 
   // ---- Set up open flows with listeners -----------
   initialSetup = () => {
-    console.log(
-      "Current leaves:",
-      this.app.workspace.getLeavesOfType("markdown").map((leaf) => ({
-        path:
-          leaf.view instanceof MarkdownView ? leaf.view.file?.path : undefined,
-        // Obsidian internally uses leaf.id but it's not in the type definitions
-        id: (leaf as any).id,
-        isFlow:
-          leaf.view instanceof MarkdownView && leaf.view.file
-            ? this.isFlowFile(leaf.view.file.path)
-            : false,
-      }))
-    );
     const allLeaves = this.app.workspace.getLeavesOfType("markdown");
     // Iterate over all the leavesfileExplorerClickListener
     for (const leaf of allLeaves) {
@@ -1182,11 +1198,6 @@ export default class TextFlowPlugin extends Plugin {
   // ------------------------------------------------
   private removeSourceFileProtection = (editor: any, leaf: MarkdownView) => {
     if (!editor.cm) return;
-    console.log(
-      "Before removal - Has protection:",
-      this.hasSourceFileProtection(leaf)
-    );
-    console.log("Before removal - Classes:", leaf.containerEl.className);
 
     if (this.hasSourceFileProtection(leaf)) {
       // Note: using leaf instead of editor
@@ -1194,7 +1205,6 @@ export default class TextFlowPlugin extends Plugin {
       editor.cm.dispatch({
         effects: StateEffect.reconfigure.of([]),
       });
-      console.log("After removal - Classes:", leaf.containerEl.className);
     }
   };
 
@@ -1615,10 +1625,20 @@ export default class TextFlowPlugin extends Plugin {
         );
       }
       // -------------------------------
-      this.fileExplorerClickListener();
+      this.fileExplorerOpenClickListener();
       const fileExplorer = document.querySelector(".nav-files-container");
       if (fileExplorer && this.boundFileExplorerClick) {
         fileExplorer.addEventListener("click", this.boundFileExplorerClick);
+
+        // Add a small delay before trying to hide the folder
+        if (this.settings.systemFolderHidden) {
+          setTimeout(() => {
+            this.discernAndSetsystemFolderState(
+              true,
+              this.settings.systemFolderPlace
+            );
+          }, 100);
+        }
       }
     });
 

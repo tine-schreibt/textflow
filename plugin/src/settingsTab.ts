@@ -23,6 +23,7 @@ class FlowDefVariables {
   definitionMode: string = "";
   flowCookbook: { [key: string]: string } = {};
   cleanCookbook: { [key: string]: string } = {};
+  dataviewSearchPath: string = "";
   previewUsed: boolean = false;
 
   reset() {
@@ -30,6 +31,7 @@ class FlowDefVariables {
     this.definitionMode = "";
     this.flowCookbook = {};
     this.cleanCookbook = {};
+    this.dataviewSearchPath = "";
     this.previewUsed = false;
   }
 }
@@ -184,7 +186,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         flowCookbook: this.flowDefVariables.cleanCookbook, // cleaned up user input
         flowReceipe: this.finalReceipe, // { defMode: pathArray }
         isFreshBuild: true,
-        flowFileName: flowDefBasket.fdbCreateOrEditFlowName, // Using the entered name
+        flowName: flowDefBasket.fdbCreateOrEditFlowName, // Using the entered name
         flowFilePath: `${this.plugin.settings.systemFolderPlace}TextFlow_SystemFolder/${flowDefBasket.fdbCreateOrEditFlowName}.md`,
         flowBuilt: false,
         flowMap: {},
@@ -338,13 +340,34 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     if (folderInclusionArray.length > 1) {
       new Notice("Folder inclusion can only contain a single folder.");
     } else {
-      cleanInclusionPath = normalizePath(shCookbook.folderIncluded.trim());
-      const searchPath =
+      // Clean up the whole "" and \ stuff we have to add for Dataview so rebuilds don't accumulate it
+      cleanInclusionPath = shCookbook.folderIncluded
+        .replace(/["\\\s]/g, "")
+        .replace(/\/+/g, "/") // Replace multiple forward slashes with single ones
+        .trim();
+      // check for trailing slash, because normalizePath will eat it
+      let hasSlash = cleanInclusionPath.endsWith("/");
+      // Normalize
+      cleanInclusionPath = normalizePath(cleanInclusionPath);
+      // save path with trailing slash
+      if (hasSlash) {
+        this.flowDefVariables.cleanCookbook.folderIncluded = `${cleanInclusionPath}/`;
+      } else {
+        this.flowDefVariables.cleanCookbook.folderIncluded = `${cleanInclusionPath}`;
+      }
+      /* console.log(
+        "included folder: ",
+        this.flowDefVariables.cleanCookbook.folderIncluded
+      );*/
+      //console.log("clean inclusion path: ", cleanInclusionPath);
+      // dataview likes paths only with extra garnish
+      this.flowDefVariables.dataviewSearchPath =
         cleanInclusionPath === "" || cleanInclusionPath === "/"
           ? "" // Empty string in Dataview queries means "search everywhere"
-          : `"${cleanInclusionPath.replace(/"/g, '\\"')}"`; // For specific paths, we need to wrap in quotes
-      this.flowDefVariables.cleanCookbook.folderIncluded = searchPath;
+          : `\"${cleanInclusionPath}\"`; // For specific paths, we need to wrap in quotes
     }
+    // console.log("dataviewPath: ", this.flowDefVariables.dataviewSearchPath);
+
     //--- EXCLUDED FOLDERS - clean up paths
     let cleanFolderExclusionArray: string[] = [];
     const folderExclusionArray = shCookbook.folderExcluded.split(",");
@@ -457,8 +480,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     buildFileTree(vault.getRoot());
 
     // ---- CALL DATAVIEW API to fetch all included, then filter
-    const allNotes = dv
-      .pages(this.flowDefVariables.cleanCookbook.folderIncluded)
+    // console.log("dv search path", this.flowDefVariables.dataviewSearchPath);
+    let allNotes = dv
+      .pages(this.flowDefVariables.dataviewSearchPath)
       .sort((note: Types.DVNote) => {
         const parts = note.file.path.split("/");
         return parts
@@ -469,6 +493,27 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           })
           .join("");
       });
+
+    // Function to exclude subfolders
+    const isDirectChild = (filePath: string, basePath: string): boolean => {
+      // Remove the base path from the start
+      const relativePath = filePath.replace(basePath, "").replace(/^\//, "");
+      // Count remaining forward slashes
+      return relativePath.split("/").length <= 1;
+    };
+    // If inclusion path ends with slash, do the thing
+    if (
+      this.flowDefVariables.cleanCookbook.folderIncluded != "/" &&
+      this.flowDefVariables.cleanCookbook.folderIncluded.endsWith("/")
+    ) {
+      allNotes = allNotes.filter((page: Types.DVNote) =>
+        isDirectChild(
+          page.file.path,
+          this.flowDefVariables.cleanCookbook.folderIncluded.slice(0, -1)
+        )
+      );
+    }
+
     const filteredNotes = allNotes.where((note: Types.DVNote) => {
       // First ensure that TextFlow_SystemFolder is always excluded; don't want to create an ourobouros
       if (
@@ -546,7 +591,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       let currentParentFolder = "";
       let arrayWithFolderTitles: string[] = [];
       if (folderIncluded === "" || folderIncluded === "/") {
-        arrayWithFolderTitles.push(`§${this.app.vault.getName()}`);
+        arrayWithFolderTitles.push(`#${this.app.vault.getName()}`);
       }
       for (let path of finalPathArray) {
         // split the path into an array, then get the second-to-last entry or empty string
@@ -556,17 +601,11 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             ? parentFolderPathArray[parentFolderPathArray.length - 2]
             : "";
         if (currentParentFolder != lastParentFolder) {
-          arrayWithFolderTitles.push(`§${currentParentFolder}`);
+          arrayWithFolderTitles.push(`#${currentParentFolder}`);
           lastParentFolder = currentParentFolder;
         }
         arrayWithFolderTitles.push(path);
       }
-      console.log(
-        "FOLDER INCLUDED: ",
-        folderIncluded,
-        "ARRAY: ",
-        arrayWithFolderTitles
-      );
       return arrayWithFolderTitles;
     };
 
@@ -581,20 +620,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
     // presto
     return Promise.resolve(pathArrayWithFolderTitles);
-  };
-
-  // ---------- flow creation ----------------
-  // the object that shuttles the values between the functions
-  mapValueBasket: Types.mapValueBasket = {
-    concatenatedFileContents: "",
-    initialIteration: true,
-    timestamp: 0,
-    flowOrder: 0,
-    UID: "",
-    yamlMini: "",
-    singleFileContent: "",
-    currentEnd: 0,
-    idDivider: "",
   };
 
   // ------ The flowBuilder --------------------------
@@ -621,7 +646,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
       // Your existing loop logic here
 
-      if (ingredient.startsWith("§")) {
+      if (ingredient.startsWith("#")) {
         // if it's a folder name
         mapValueBasket.flowOrder++;
         await this.createInvisibleUID(mapValueBasket);
@@ -631,7 +656,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         // const divider = `\r${mapValueBasket.timestamp}<hr>\r\r`;
         mapValueBasket.idDivider = divider.replace(/\\r/g, "\r");
 
-        const ingredientName = ingredient.replace("§", "");
+        const ingredientName = ingredient.replace("#", "");
 
         flow.flowMap[ingredient] = {
           type: "folder",
@@ -718,7 +743,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           mapValueBasket.initialIteration = false;
 
           // Add content with marker before divider
-          mapValueBasket.concatenatedFileContents += `${fileContent}-divider-${mapValueBasket.idDivider}`;
+          mapValueBasket.concatenatedFileContents += `${fileContent}${mapValueBasket.idDivider}`;
           mapValueBasket.currentEnd =
             mapValueBasket.concatenatedFileContents.length;
           flow.flowMap[ingredient].startEndInFlow.end =
@@ -729,7 +754,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       }
     }
     if (systemFolder && systemFolder instanceof TFolder) {
-      const flowFilePath = `${this.plugin.settings.systemFolderPlace}TextFlow_SystemFolder/${flow.flowFileName}.md`;
+      const flowFilePath = `${this.plugin.settings.systemFolderPlace}TextFlow_SystemFolder/${flow.flowName}.md`;
       this.app.vault.adapter.write(
         flowFilePath,
         mapValueBasket.concatenatedFileContents
@@ -960,13 +985,27 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .onClick(async () => {
             // Create SystemFolder
             if (!systemFolder) {
-              const newPath = `${newSystemFolderPlace}TextFlow_SystemFolder`;
-              this.createSystemFolder(newPath);
+              const newPath = normalizePath(
+                `${newSystemFolderPlace}/TextFlow_SystemFolder`
+              );
+              console.log("newPath: ", newPath);
+              await this.createSystemFolder(newPath);
+              this.plugin.discernAndSetsystemFolderState(
+                this.plugin.settings.systemFolderHidden,
+                newSystemFolderPlace
+              );
             } else {
               //Move SystemFolder
               try {
-                const newPath = `${newSystemFolderPlace}TextFlow_SystemFolder`;
+                const newPath = normalizePath(
+                  `${newSystemFolderPlace}/TextFlow_SystemFolder`
+                );
+                console.log("newPath: ", newPath);
                 await this.app.vault.rename(systemFolder, newPath);
+                this.plugin.discernAndSetsystemFolderState(
+                  this.plugin.settings.systemFolderHidden,
+                  newSystemFolderPlace
+                );
                 // Update settings with new location
                 this.plugin.settings.systemFolderPath = newPath;
                 this.plugin.settings.systemFolderPlace = newSystemFolderPlace;
@@ -987,9 +1026,17 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
     // -----------   hide temp folder  ---------------
     const hidesystemFolder = new Setting(setUpTextFlow)
-      .setName("Hide temp folder")
+      .setName("Hide TextFlow_SystemFolder")
       .setDesc(
-        "Hiding the folder is recommended to avoid accidentally messing with it."
+        createFragment((desc) => {
+          desc.createSpan({
+            text: "Hiding this folder is strongly recommended, since accidentally messing with it could lead to data loss or corruption.",
+          });
+          desc.createEl("br"); // Add line break
+          desc.createSpan({
+            text: "Unhiding the folder requires a reload of the vault.",
+          });
+        })
       )
       .addToggle((hideSystemFolderToggle) => {
         hideSystemFolderToggle
@@ -1405,7 +1452,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       if (shownFlow.flowCookbook.tagIncluded != "") {
         included.push(`Tags: ${shownFlow.flowCookbook.tagIncluded}`);
       }
-      console.log("tag included: ", shownFlow.flowCookbook.tagIncluded);
+
       if (shownFlow.flowCookbook.propertyIncluded != "") {
         included.push(`Props: ${shownFlow.flowCookbook.propertyIncluded}`);
       }
@@ -1424,17 +1471,15 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
       if (shownFlow.flowCookbook.tagExcluded != "")
         excluded.push(`Tags: ${shownFlow.flowCookbook.tagExcluded}`);
-      console.log("tag excluded: ", shownFlow.flowCookbook.tagExcluded);
       if (shownFlow.flowCookbook.propertyExcluded != "") {
         excluded.push(`Props: ${shownFlow.flowCookbook.propertyExcluded}`);
       }
-      console.log("props excluded: ", shownFlow.flowCookbook.propertyExcluded);
       const exclusionsJoined = excluded.join(" / ");
       exclusionString += exclusionsJoined;
 
       // --- THE DISPLAY ITSELF -------------------------------
       const flowShow = new Setting(flowDisplay)
-        .setName(`${shownFlow.flowFileName}`)
+        .setName(`${shownFlow.flowName}`)
         .setDesc(
           createFragment((desc) => {
             desc.createSpan({
@@ -1454,20 +1499,58 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             }
           })
         )
-        .addButton((rebuildFlow) =>
-          rebuildFlow.setButtonText("(Re)build").onClick(async () => {
+
+        .addButton((rebuildButton) =>
+          rebuildButton.setButtonText("(Re)build)").onClick(async () => {
+            // gather all info for the flowDefinition
+            const flowDefBasket: Types.flowDefBasket = {
+              fdbCreateOrEditFlowName:
+                this.plugin.settings.flows[flow].flowName,
+              fdbCreateOrEdit: "edit",
+              fdbDefinitionMode: Object.keys(
+                this.plugin.settings.flows[flow].flowReceipe
+              )[0],
+              fdbFlowCookbook: this.plugin.settings.flows[flow].flowCookbook,
+              fdbCleanCookbook: {},
+              fdbSuccess: false,
+            };
+
+            await this.createFlowDefinition(flowDefBasket);
+
+            // Get fresh reference to the flow object after createFlowDefinition
+            const updatedFlow = this.plugin.settings.flows[flow];
+
+            // ---------- flow creation ----------------
+            // the object that shuttles the values between the functions
+            const mapValueBasket: Types.mapValueBasket = {
+              concatenatedFileContents: "",
+              initialIteration: true,
+              timestamp: 0,
+              flowOrder: 0,
+              UID: "",
+              yamlMini: "",
+              singleFileContent: "",
+              currentEnd: 0,
+              idDivider: "",
+            };
+
             let key = "";
-            shownFlow.flowReceipe.bookmarks
+            updatedFlow.flowReceipe.bookmarks // Use updatedFlow instead of shownFlow
               ? (key = "bookmarks")
               : (key = "foldersTagsProps");
-            this.flowBuilder(
-              shownFlow.flowReceipe[key],
-              shownFlow,
+
+            await this.flowBuilder(
+              updatedFlow.flowReceipe[key], // Use updatedFlow instead of shownFlow
+              updatedFlow, // Use updatedFlow instead of shownFlow
               flow,
               this.mapValueBasket
             );
+
+            await this.plugin.saveSettings();
+            this.display();
           })
         )
+
         .addButton((editFlow) =>
           editFlow.setButtonText("Edit").onClick(async () => {
             // state check creating vs editing

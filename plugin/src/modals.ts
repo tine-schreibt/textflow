@@ -47,9 +47,9 @@ export class previewModal extends Modal {
       );
     } else {
       for (let ingretient of this.finalReceipe[key]!) {
-        if (ingretient.startsWith("§")) {
+        if (ingretient.startsWith("#")) {
           previewContainer.createEl("p", {
-            text: ingretient.replace("§", ""),
+            text: ingretient.replace("#", ""),
             cls: "preview-group-header",
           });
         } else {
