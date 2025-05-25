@@ -17,25 +17,6 @@ import {
 import TextFlow from "../main";
 import * as Types from "./types";
 
-// --- A class that helps with resetting values
-class FlowDefVariables {
-  createOrEditFlowName: string = "";
-  definitionMode: string = "";
-  flowCookbook: { [key: string]: string } = {};
-  cleanCookbook: { [key: string]: string } = {};
-  dataviewSearchPath: string = "";
-  previewUsed: boolean = false;
-
-  reset() {
-    this.createOrEditFlowName = "";
-    this.definitionMode = "";
-    this.flowCookbook = {};
-    this.cleanCookbook = {};
-    this.dataviewSearchPath = "";
-    this.previewUsed = false;
-  }
-}
-
 // --- A class for the progress bar
 class ProgressNotice {
   private notice: Notice;
@@ -66,12 +47,10 @@ class ProgressNotice {
 // --- The class that defines the settings tab
 export class TextFlowSettingsTab extends PluginSettingTab {
   plugin: TextFlow;
-  flowDefVariables: FlowDefVariables;
 
   constructor(app: App, plugin: TextFlow) {
     super(app, plugin);
     this.plugin = plugin;
-    this.flowDefVariables = new FlowDefVariables();
   }
 
   //#######################################################################
@@ -122,48 +101,48 @@ export class TextFlowSettingsTab extends PluginSettingTab {
   finalReceipe: { [key: string]: string[] } = {};
 
   createFlowDefinition = async (
-    flowDefBasket: Types.flowDefBasket
+    flowBuildBasket: Types.flowBuildBasket
   ): Promise<void> => {
     // Pre-flight check 01 - flowName set / uniqueness when creating
-    if (flowDefBasket.fdbCreateOrEditFlowName === "") {
+    if (flowBuildBasket.fbbCreateOrEditFlowName === "") {
       new Notice("Flow name can not be empty.");
-      flowDefBasket.fdbSuccess = false;
+      flowBuildBasket.fbbSuccess = false;
       return Promise.reject(Error);
     }
     if (
-      flowDefBasket.fdbCreateOrEdit === "create" &&
-      this.plugin.settings.flows[flowDefBasket.fdbCreateOrEditFlowName]
+      flowBuildBasket.fbbCreateOrEdit === "create" &&
+      this.plugin.settings.flows[flowBuildBasket.fbbCreateOrEditFlowName]
     ) {
       new Notice(
-        `A flow with the name ${flowDefBasket.fdbCreateOrEditFlowName} already exist. Please choose a different name or edit the existing flow.`
+        `A flow with the name ${flowBuildBasket.fbbCreateOrEditFlowName} already exist. Please choose a different name or edit the existing flow.`
       );
-      flowDefBasket.fdbSuccess = false;
+      flowBuildBasket.fbbSuccess = false;
       return Promise.reject(Error);
     }
 
     // -------- Putting the finalReceipe together by fetching/filtering all paths
     try {
       // ----------- FINAL RECEIPE FOR BOOKMARKS ---------------------
-      if (flowDefBasket.fdbDefinitionMode === "bookmarks") {
+      if (flowBuildBasket.fbbDefinitionMode === "bookmarks") {
         if (
-          flowDefBasket.fdbFlowCookbook.bookmarkGroup === undefined ||
-          flowDefBasket.fdbFlowCookbook.bookmarkGroup === ""
+          flowBuildBasket.fbbFlowCookbook.bookmarkGroup === undefined ||
+          flowBuildBasket.fbbFlowCookbook.bookmarkGroup === ""
         ) {
           new Notice("Please enter at least one bookmark group.");
-          flowDefBasket.fdbSuccess = false;
+          flowBuildBasket.fbbSuccess = false;
           return Promise.reject(Error);
         } else {
           const bookmarkPathArray = await this.getBookmarkPathsByGroupName(
-            flowDefBasket
+            flowBuildBasket
           );
           this.finalReceipe = { bookmarks: bookmarkPathArray };
         }
 
         // ------ FINAL RECEIPE FOR PATH TAG PROPERTY -----------------------
       } else {
-        const ensureNoUndefined = await this.ensureNoUndefined(flowDefBasket);
+        const ensureNoUndefined = await this.ensureNoUndefined(flowBuildBasket);
         const foldersTagsPropsPathArray = await this.getPathsByFoldersTagsProps(
-          flowDefBasket
+          flowBuildBasket
         );
         this.finalReceipe = { foldersTagsProps: foldersTagsPropsPathArray };
       }
@@ -177,52 +156,71 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         new Notice(
           "Your flow definition leads to an empty flow. Please edit it to be less restrictive"
         );
-        flowDefBasket.fdbSuccess = false;
+        flowBuildBasket.fbbSuccess = false;
         return Promise.reject(Error);
       }
 
-      // -------- CREATE THE FLOW OBJECT (doesn't save yet!) -------------------------------
-      this.plugin.settings.flows[flowDefBasket.fdbCreateOrEditFlowName] = {
-        flowCookbook: this.flowDefVariables.cleanCookbook, // cleaned up user input
-        flowReceipe: this.finalReceipe, // { defMode: pathArray }
-        isFreshBuild: true,
-        flowName: flowDefBasket.fdbCreateOrEditFlowName, // Using the entered name
-        flowFilePath: `${this.plugin.settings.systemFolderPlace}TextFlow_SystemFolder/${flowDefBasket.fdbCreateOrEditFlowName}.md`,
-        flowBuilt: false,
-        flowMap: {},
-        flowActive: false,
-        activeRegion: {
-          lastCursorPosition: 0,
-          type: "",
-          path: "",
-          UID: "",
-          flowOrder: 1,
-          startInFlow: 0,
-          endInFlow: 1,
-        },
-        persistentCursorPos: 0,
-        modifiedRegionsArray: [],
-      };
-
-      flowDefBasket.fdbSuccess = true;
+      flowBuildBasket.fbbSuccess = true;
       return Promise.resolve();
     } catch (error) {
       new Notice(
         "An error occurred while creating the finalReceipe for your flow. Check the console for details."
       );
-      flowDefBasket.fdbSuccess = false;
+      flowBuildBasket.fbbSuccess = false;
       return Promise.reject(error);
     }
   };
 
-  // --- Reset flowDefBasket
+  writeFlowDef = (
+    settings: Types.TextFlowSettings,
+    flowBuildBasket: Types.flowBuildBasket
+  ) => {
+    // -------- CREATE THE FLOW OBJECT (doesn't save yet!) -------------------------------
+    settings.flows[flowBuildBasket.fbbCreateOrEditFlowName] = {
+      flowCookbook: flowBuildBasket.fbbCleanCookbook, // cleaned up user input
+      flowReceipe: this.finalReceipe, // { defMode: pathArray }
+      depthFirst: flowBuildBasket.fbbDepthFirst,
+      isFreshBuild: true,
+      flowName: flowBuildBasket.fbbCreateOrEditFlowName, // Using the entered name
+      flowFilePath: `${this.plugin.settings.systemFolderPlace}TextFlow_SystemFolder/${flowBuildBasket.fbbCreateOrEditFlowName}.md`,
+      flowBuilt: false,
+      flowMap: {},
+      flowActive: false,
+      activeRegion: {
+        lastCursorPosition: 0,
+        type: "",
+        path: "",
+        UID: "",
+        flowOrder: 1,
+        startInFlow: 0,
+        endInFlow: 1,
+      },
+      persistentCursorPos: 0,
+      modifiedRegionsArray: [],
+    };
+  };
+
+  // --- Reset flowBuildBasket
+  resetFlowBuildBasket = (flowBuildBasket: Types.flowBuildBasket) => {
+    flowBuildBasket.fbbCreateOrEditFlowName = "";
+    flowBuildBasket.fbbCreateOrEdit = "";
+    flowBuildBasket.fbbDefinitionMode = "";
+    flowBuildBasket.fbbDepthFirst = true;
+    flowBuildBasket.fbbFlowCookbook = {};
+    flowBuildBasket.fbbCleanCookbook = {};
+    flowBuildBasket.fbbDataviewSearchPath = "";
+    flowBuildBasket.fbbSuccess = false;
+    flowBuildBasket.fbbFresh = true;
+  };
+
+  // --- Reset flowBuildBasket
   resetFlowDefBasket = (flowDefBasket: Types.flowDefBasket) => {
-    flowDefBasket.fdbCreateOrEditFlowName = "";
-    flowDefBasket.fdbCreateOrEdit = "";
-    flowDefBasket.fdbDefinitionMode = "";
-    flowDefBasket.fdbFlowCookbook = {};
-    flowDefBasket.fdbCleanCookbook = {};
-    flowDefBasket.fdbSuccess = false;
+    flowDefBasket.createOrEditFlowName = "";
+    flowDefBasket.definitionMode = "";
+    flowDefBasket.depthFirst = true;
+    flowDefBasket.flowCookbook = {};
+    flowDefBasket.cleanCookbook = {};
+    flowDefBasket.previewUsed = false;
   };
 
   // --- HELPER FUNCTIONS FOR FETCHING PATHS (AND CLEANING UP STUFF)
@@ -230,12 +228,12 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
   // ---- GET PATHS IN BOOKMARK GROUP ----------------
   private getBookmarkPathsByGroupName = async (
-    flowDefBasket: Types.flowDefBasket
+    flowBuildBasket: Types.flowBuildBasket
   ) => {
-    let groupName = flowDefBasket.fdbFlowCookbook.bookmarkGroup;
+    let groupName = flowBuildBasket.fbbFlowCookbook.bookmarkGroup;
     // prepare path for further processing:
     const cleanPath = groupName.replace(/\/+/g, "/");
-    this.flowDefVariables.cleanCookbook.bookmarks = cleanPath;
+    flowBuildBasket.fbbCleanCookbook.bookmarks = cleanPath;
     const groupPathArray = cleanPath.split("/");
     let includeSubgroups: boolean = true;
     if (groupPathArray[groupPathArray.length - 1] === "") {
@@ -299,31 +297,31 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
   // --- GET ALL PATHS FROM FOLDER TAG PROPERTY -------------------
   // In case input hasn't been touched; also makes ! safe to use
-  ensureNoUndefined = async (flowDefBasket: Types.flowDefBasket) => {
-    if (flowDefBasket.fdbFlowCookbook.folderIncluded === undefined) {
-      flowDefBasket.fdbFlowCookbook.folderIncluded = "";
+  ensureNoUndefined = async (flowBuildBasket: Types.flowBuildBasket) => {
+    if (flowBuildBasket.fbbFlowCookbook.folderIncluded === undefined) {
+      flowBuildBasket.fbbFlowCookbook.folderIncluded = "";
     }
-    if (flowDefBasket.fdbFlowCookbook.folderExcluded === undefined) {
-      flowDefBasket.fdbFlowCookbook.folderExcluded = "";
+    if (flowBuildBasket.fbbFlowCookbook.folderExcluded === undefined) {
+      flowBuildBasket.fbbFlowCookbook.folderExcluded = "";
     }
-    if (flowDefBasket.fdbFlowCookbook.tagIncluded === undefined) {
-      flowDefBasket.fdbFlowCookbook.tagIncluded = "";
+    if (flowBuildBasket.fbbFlowCookbook.tagIncluded === undefined) {
+      flowBuildBasket.fbbFlowCookbook.tagIncluded = "";
     }
-    if (flowDefBasket.fdbFlowCookbook.tagExcluded === undefined) {
-      flowDefBasket.fdbFlowCookbook.tagExcluded = "";
+    if (flowBuildBasket.fbbFlowCookbook.tagExcluded === undefined) {
+      flowBuildBasket.fbbFlowCookbook.tagExcluded = "";
     }
-    if (flowDefBasket.fdbFlowCookbook.propertyIncluded === undefined) {
-      flowDefBasket.fdbFlowCookbook.propertyIncluded = "";
+    if (flowBuildBasket.fbbFlowCookbook.propertyIncluded === undefined) {
+      flowBuildBasket.fbbFlowCookbook.propertyIncluded = "";
     }
-    if (flowDefBasket.fdbFlowCookbook.propertyExcluded === undefined) {
-      flowDefBasket.fdbFlowCookbook.propertyExcluded = "";
+    if (flowBuildBasket.fbbFlowCookbook.propertyExcluded === undefined) {
+      flowBuildBasket.fbbFlowCookbook.propertyExcluded = "";
     }
     return Promise.resolve();
   };
 
   // --- Function to get the paths
   private getPathsByFoldersTagsProps = async (
-    flowDefBasket: Types.flowDefBasket
+    flowBuildBasket: Types.flowBuildBasket
   ) => {
     const dv = getAPI();
     if (!dv) {
@@ -331,7 +329,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       return Promise.reject(Error);
     }
     // unpack into shorthand for easier reading
-    const shCookbook = flowDefBasket.fdbFlowCookbook;
+    const shCookbook = flowBuildBasket.fbbFlowCookbook;
     // ---- Pre-flight checks and cleanup --------------
 
     //--- INCLUDED FOLDER - only one path; notify if multiple
@@ -351,22 +349,22 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       cleanInclusionPath = normalizePath(cleanInclusionPath);
       // save path with trailing slash
       if (hasSlash) {
-        this.flowDefVariables.cleanCookbook.folderIncluded = `${cleanInclusionPath}/`;
+        flowBuildBasket.fbbCleanCookbook.folderIncluded = `${cleanInclusionPath}/`;
       } else {
-        this.flowDefVariables.cleanCookbook.folderIncluded = `${cleanInclusionPath}`;
+        flowBuildBasket.fbbCleanCookbook.folderIncluded = `${cleanInclusionPath}`;
       }
       /* console.log(
         "included folder: ",
-        this.flowDefVariables.cleanCookbook.folderIncluded
+        flowDefBasket.cleanCookbook.folderIncluded
       );*/
       //console.log("clean inclusion path: ", cleanInclusionPath);
       // dataview likes paths only with extra garnish
-      this.flowDefVariables.dataviewSearchPath =
+      flowBuildBasket.fbbDataviewSearchPath =
         cleanInclusionPath === "" || cleanInclusionPath === "/"
           ? "" // Empty string in Dataview queries means "search everywhere"
           : `\"${cleanInclusionPath}\"`; // For specific paths, we need to wrap in quotes
     }
-    // console.log("dataviewPath: ", this.flowDefVariables.dataviewSearchPath);
+    // console.log("dataviewPath: ", flowBuildBasket.fbbDataviewSearchPath);
 
     //--- EXCLUDED FOLDERS - clean up paths
     let cleanFolderExclusionArray: string[] = [];
@@ -379,11 +377,11 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         let cleanExcludedPath = normalizePath(excludedFolder.trim());
         cleanFolderExclusionArray.push(cleanExcludedPath);
       }
-      this.flowDefVariables.cleanCookbook.folderExcluded =
+      flowBuildBasket.fbbCleanCookbook.folderExcluded =
         cleanFolderExclusionArray.join(", ");
     } else {
       cleanFolderExclusionArray.push("");
-      this.flowDefVariables.cleanCookbook.folderExcluded = "";
+      flowBuildBasket.fbbCleanCookbook.folderExcluded = "";
     }
 
     //--- INCLUDED and EXCLUDED TAGS - strip #
@@ -405,10 +403,10 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
     // use cleanup on tags
     const cleanTagInclusionArray = tagCleanup(shCookbook.tagIncluded);
-    this.flowDefVariables.cleanCookbook.tagIncluded =
+    flowBuildBasket.fbbCleanCookbook.tagIncluded =
       cleanTagInclusionArray.join(", ");
     const cleanTagExclusionArray = tagCleanup(shCookbook.tagExcluded);
-    this.flowDefVariables.cleanCookbook.tagExcluded =
+    flowBuildBasket.fbbCleanCookbook.tagExcluded =
       cleanTagExclusionArray.join(", ");
 
     //--- INCLUDED and  EXCLUDED PROPERTIES - clean up and split at =
@@ -440,13 +438,13 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     let cleanPropertiesInclusionArray = propertyCleanup(
       shCookbook.propertyIncluded
     );
-    this.flowDefVariables.cleanCookbook.propertyIncluded =
+    flowBuildBasket.fbbCleanCookbook.propertyIncluded =
       cleanPropertiesInclusionArray.join(", ");
 
     let cleanPropertiesExclusionArray = propertyCleanup(
       shCookbook.propertyExcluded
     );
-    this.flowDefVariables.cleanCookbook.propertyExcluded =
+    flowBuildBasket.fbbCleanCookbook.propertyExcluded =
       cleanPropertiesExclusionArray.join(", ");
 
     // -------- cleanup done ----------------
@@ -456,8 +454,24 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     const fileTreeArray: string[] = [];
     const vault = this.app.vault;
 
-    // Recursive function to build the file tree in correct order
-    const buildFileTree = (folder: TFolder) => {
+    // Build tree in the same order as seen in fileExplorer
+    const buildDepthFirstFileTree = (folder: TFolder) => {
+      const children = folder.children.sort((a, b) =>
+        a.name.localeCompare(b.name)
+      );
+
+      // Process each child (file or folder) in order
+      for (const child of children) {
+        if (child instanceof TFile) {
+          fileTreeArray.push(child.path);
+        } else if (child instanceof TFolder) {
+          buildDepthFirstFileTree(child);
+        }
+      }
+    };
+
+    // Recursive function to build file tree files first (changes order)
+    const buildFilesFirstFileTree = (folder: TFolder) => {
       const children = folder.children.sort((a, b) =>
         a.name.localeCompare(b.name)
       );
@@ -471,28 +485,19 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       // then recurse into subfolders
       for (const child of children) {
         if (child instanceof TFolder) {
-          buildFileTree(child);
+          buildFilesFirstFileTree(child);
         }
       }
     };
 
     // Build the complete file tree (which puts results in fileTreeArray)
-    buildFileTree(vault.getRoot());
+    flowBuildBasket.fbbDepthFirst
+      ? buildDepthFirstFileTree(vault.getRoot())
+      : buildFilesFirstFileTree(vault.getRoot());
 
     // ---- CALL DATAVIEW API to fetch all included, then filter
-    // console.log("dv search path", this.flowDefVariables.dataviewSearchPath);
-    let allNotes = dv
-      .pages(this.flowDefVariables.dataviewSearchPath)
-      .sort((note: Types.DVNote) => {
-        const parts = note.file.path.split("/");
-        return parts
-          .map((part, index) => {
-            // For each level of depth, create a fixed-width string
-            // This ensures "folder" comes before "folder/subfolder"
-            return part.padEnd(100, "\0");
-          })
-          .join("");
-      });
+    // console.log("dv search path", flowBuildBasket.fbbDataviewSearchPath);
+    let allNotes = dv.pages(flowBuildBasket.fbbDataviewSearchPath);
 
     // Function to exclude subfolders
     const isDirectChild = (filePath: string, basePath: string): boolean => {
@@ -503,13 +508,13 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     };
     // If inclusion path ends with slash, do the thing
     if (
-      this.flowDefVariables.cleanCookbook.folderIncluded != "/" &&
-      this.flowDefVariables.cleanCookbook.folderIncluded.endsWith("/")
+      flowBuildBasket.fbbCleanCookbook.folderIncluded != "/" &&
+      flowBuildBasket.fbbCleanCookbook.folderIncluded.endsWith("/")
     ) {
       allNotes = allNotes.filter((page: Types.DVNote) =>
         isDirectChild(
           page.file.path,
-          this.flowDefVariables.cleanCookbook.folderIncluded.slice(0, -1)
+          flowBuildBasket.fbbCleanCookbook.folderIncluded.slice(0, -1)
         )
       );
     }
@@ -582,8 +587,49 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       }
     }
 
-    // Helper function for including folder titles
-    const findFolderTitles = (
+    // Helper functions for including folder titles
+
+    // Depth first approach
+    const findFolderTitlesDepthFirst = (
+      finalPathArray: string[],
+      folderIncluded: string
+    ) => {
+      let arrayWithFolderTitles: string[] = [];
+      let lastProcessedPath = "";
+
+      if (folderIncluded === "" || folderIncluded === "/") {
+        arrayWithFolderTitles.push(`#${this.app.vault.getName()}`);
+      }
+      for (let path of finalPathArray) {
+        // Split current and last path into segments
+        const currentSegments = path.split("/");
+        const lastSegments = lastProcessedPath.split("/");
+
+        // Find the point where the current path diverges from the last path
+        let divergeIndex = 0;
+        while (
+          divergeIndex < currentSegments.length - 1 && // -1 to not process the file name
+          divergeIndex < lastSegments.length &&
+          currentSegments[divergeIndex] === lastSegments[divergeIndex]
+        ) {
+          divergeIndex++;
+        }
+
+        // Add folder titles for new path segments
+        for (let i = divergeIndex; i < currentSegments.length - 1; i++) {
+          arrayWithFolderTitles.push(`#${currentSegments[i]}`);
+        }
+
+        // Add the file path
+        arrayWithFolderTitles.push(path);
+        lastProcessedPath = path;
+      }
+
+      return arrayWithFolderTitles;
+    };
+
+    // Files first approach
+    const findFolderTitlesFilesFirst = (
       finalPathArray: string[],
       folderIncluded: string
     ) => {
@@ -610,13 +656,22 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     };
 
     //-- function call for folder titles
-    const pathArrayWithFolderTitles = findFolderTitles(
-      finalPathArray,
-      normalizePath(shCookbook.folderIncluded.trim())
-    );
+    let pathArrayWithFolderTitles: string[] = [];
+    if (flowBuildBasket.fbbDepthFirst) {
+      console.log("calling findFolderTitlesDepthFirst");
+      pathArrayWithFolderTitles = findFolderTitlesDepthFirst(
+        finalPathArray,
+        normalizePath(shCookbook.folderIncluded.trim())
+      );
+    } else {
+      pathArrayWithFolderTitles = findFolderTitlesFilesFirst(
+        finalPathArray,
+        normalizePath(shCookbook.folderIncluded.trim())
+      );
+    }
 
     // pack the cookbook back into the basket
-    flowDefBasket.fdbFlowCookbook = shCookbook;
+    flowBuildBasket.fbbFlowCookbook = shCookbook;
 
     // presto
     return Promise.resolve(pathArrayWithFolderTitles);
@@ -925,7 +980,14 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     //#######################################################################
     //###########################  Globals   ################################
     //#######################################################################
-
+    const flowDefBasket: Types.flowDefBasket = {
+      createOrEditFlowName: "",
+      definitionMode: "",
+      depthFirst: true,
+      flowCookbook: {},
+      cleanCookbook: {},
+      previewUsed: false,
+    };
     //#######################################################################
     //###########################   Settings Tab   ##########################
     //#######################################################################
@@ -1077,9 +1139,29 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .setPlaceholder("Enter a unique name")
           .onChange(async (value) => {
             // state check creating vs editing
-            this.flowDefVariables.createOrEditFlowName = value.trim();
+            flowDefBasket.createOrEditFlowName = value.trim();
           })
       );
+
+    // ---- SORT FLOW ---------
+    const sortFlow = new Setting(createFlows)
+      .setName("Sort your flow")
+      .setDesc(
+        createFragment((desc) => {
+          desc.createSpan({
+            text: "Same order as in file explorer.",
+          });
+          desc.createEl("br"); // Add line break
+          desc.createSpan({
+            text: "If toggled off, files will be processed before subfolders.",
+          });
+        })
+      )
+      .addToggle((sortToggle) => {
+        sortToggle.setValue(true).onChange(async (value) => {
+          flowDefBasket.depthFirst = value;
+        });
+      });
 
     //------- DEFINE FLOW --------------------
     const defineFlow = new Setting(createFlows)
@@ -1110,8 +1192,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       .setButtonText("... by a bookmark group")
       .setClass("settings-radio-button")
       .onClick(() => {
-        this.flowDefVariables.definitionMode = "bookmarks";
-        this.flowDefVariables.previewUsed = false;
+        flowDefBasket.definitionMode = "bookmarks";
+        flowDefBasket.previewUsed = false;
         this.radioButtonManager(buttons.bookmarks, buttons.foldersTagsProps);
         chooseBookmarks.settingEl.show(); // Show bookmark settings
         iHateLayoutingWithHTMLAndCSS("hide");
@@ -1122,8 +1204,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       .setButtonText("... by folder, tags, properties")
       .setClass("settings-radio-button")
       .onClick(() => {
-        this.flowDefVariables.definitionMode = "pathsTagsProps";
-        this.flowDefVariables.previewUsed = false;
+        flowDefBasket.definitionMode = "pathsTagsProps";
+        flowDefBasket.previewUsed = false;
         this.radioButtonManager(buttons.foldersTagsProps, buttons.bookmarks);
         iHateLayoutingWithHTMLAndCSS("show");
         chooseBookmarks.settingEl.hide();
@@ -1155,8 +1237,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     );
     chooseBookmarks.addText((chooseFlowFolder) =>
       chooseFlowFolder.onChange(async (value) => {
-        this.flowDefVariables.previewUsed = false;
-        this.flowDefVariables.flowCookbook.bookmarkGroup = value.trim();
+        flowDefBasket.previewUsed = false;
+        flowDefBasket.flowCookbook.bookmarkGroup = value.trim();
       })
     );
 
@@ -1226,8 +1308,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       )
       .addText((chooseSourceFolder) =>
         chooseSourceFolder.onChange(async (value) => {
-          this.flowDefVariables.previewUsed = false;
-          this.flowDefVariables.flowCookbook.folderIncluded = value;
+          flowDefBasket.previewUsed = false;
+          flowDefBasket.flowCookbook.folderIncluded = value;
         })
       );
 
@@ -1250,9 +1332,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       )
       .addText((chooseExcludedFolders) =>
         chooseExcludedFolders.onChange(async (value) => {
-          this.flowDefVariables.previewUsed = false;
+          flowDefBasket.previewUsed = false;
           const folders = value;
-          this.flowDefVariables.flowCookbook.folderExcluded = value.trim();
+          flowDefBasket.flowCookbook.folderExcluded = value.trim();
         })
       );
 
@@ -1275,8 +1357,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       )
       .addText((chooseIncludedTags) =>
         chooseIncludedTags.onChange(async (value) => {
-          this.flowDefVariables.previewUsed = false;
-          this.flowDefVariables.flowCookbook.tagIncluded = value.trim();
+          flowDefBasket.previewUsed = false;
+          flowDefBasket.flowCookbook.tagIncluded = value.trim();
         })
       );
 
@@ -1298,8 +1380,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       )
       .addText((chooseExcludedTags) =>
         chooseExcludedTags.onChange(async (value) => {
-          this.flowDefVariables.previewUsed = false;
-          this.flowDefVariables.flowCookbook.tagExcluded = value.trim();
+          flowDefBasket.previewUsed = false;
+          flowDefBasket.flowCookbook.tagExcluded = value.trim();
         })
       );
 
@@ -1326,8 +1408,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       )
       .addText((chooseIncludedProperties) =>
         chooseIncludedProperties.onChange(async (value) => {
-          this.flowDefVariables.previewUsed = false;
-          this.flowDefVariables.flowCookbook.propertyIncluded = value.trim();
+          flowDefBasket.previewUsed = false;
+          flowDefBasket.flowCookbook.propertyIncluded = value.trim();
         })
       );
 
@@ -1353,8 +1435,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       )
       .addText((chooseExcludedProperties) =>
         chooseExcludedProperties.onChange(async (value) => {
-          this.flowDefVariables.previewUsed = false;
-          this.flowDefVariables.flowCookbook.propertyExcluded = value.trim();
+          flowDefBasket.previewUsed = false;
+          flowDefBasket.flowCookbook.propertyExcluded = value.trim();
         })
       );
 
@@ -1368,17 +1450,22 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     previewButton
       .setButtonText("Preview your flow structure")
       .onClick(async (buttonEl: MouseEvent) => {
-        const flowDefBasket: Types.flowDefBasket = {
-          fdbCreateOrEditFlowName: this.flowDefVariables.createOrEditFlowName,
-          fdbCreateOrEdit: createOrEdit,
-          fdbDefinitionMode: this.flowDefVariables.definitionMode,
-          fdbFlowCookbook: this.flowDefVariables.flowCookbook,
-          fdbCleanCookbook: {},
-          fdbSuccess: false,
+        this.plugin.settings.flowBuildBasket = {
+          fbbCreateOrEditFlowName: flowDefBasket.createOrEditFlowName,
+          fbbCreateOrEdit: createOrEdit,
+          fbbDepthFirst: flowDefBasket.depthFirst,
+          fbbDefinitionMode: flowDefBasket.definitionMode,
+          fbbFlowCookbook: flowDefBasket.flowCookbook,
+          fbbCleanCookbook: {},
+          fbbDataviewSearchPath: "",
+          fbbSuccess: false,
+          fbbFresh: false,
         };
-        await this.createFlowDefinition(flowDefBasket);
-        this.flowDefVariables.previewUsed = true;
-        if (flowDefBasket.fdbSuccess === true) {
+        console.log("flowBuildBasket", this.plugin.settings.flowBuildBasket);
+        await this.createFlowDefinition(this.plugin.settings.flowBuildBasket);
+        console.log("finalReceipe", this.finalReceipe);
+        flowDefBasket.previewUsed = true;
+        if (this.plugin.settings.flowBuildBasket.fbbSuccess === true) {
           const previewModal = new Modals.previewModal(
             this.app,
             this.plugin,
@@ -1396,31 +1483,54 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     saveButton
       .setButtonText("Save Flow definition")
       .onClick(async (buttonEl: MouseEvent) => {
-        const flowDefBasket: Types.flowDefBasket = {
-          fdbCreateOrEditFlowName: this.flowDefVariables.createOrEditFlowName,
-          fdbCreateOrEdit: createOrEdit,
-          fdbDefinitionMode: this.flowDefVariables.definitionMode,
-          fdbFlowCookbook: this.flowDefVariables.flowCookbook,
-          fdbCleanCookbook: {},
-          fdbSuccess: false,
-        };
-        if (!this.flowDefVariables.previewUsed) {
-          await this.createFlowDefinition(flowDefBasket);
-          if (flowDefBasket.fdbSuccess === true) {
-            // reset all values
-            this.flowDefVariables.reset();
-            this.resetFlowDefBasket(flowDefBasket);
-            this.plugin.saveSettings();
-            this.display();
+        if (!flowDefBasket.previewUsed) {
+          this.plugin.settings.flowBuildBasket = {
+            fbbCreateOrEditFlowName: flowDefBasket.createOrEditFlowName,
+            fbbCreateOrEdit: createOrEdit,
+            fbbDepthFirst: flowDefBasket.depthFirst,
+            fbbDefinitionMode: flowDefBasket.definitionMode,
+            fbbFlowCookbook: flowDefBasket.flowCookbook,
+            fbbCleanCookbook: flowDefBasket.cleanCookbook,
+            fbbDataviewSearchPath: "",
+            fbbSuccess: false,
+            fbbFresh: false,
+          };
+          console.log(
+            "flowBuildBasket on save no preview: ",
+            this.plugin.settings.flowBuildBasket
+          );
+          await this.createFlowDefinition(this.plugin.settings.flowBuildBasket);
+          if (!this.plugin.settings.flowBuildBasket.fbbSuccess) {
+            return;
           }
-        } else {
+          await this.writeFlowDef(
+            this.plugin.settings,
+            this.plugin.settings.flowBuildBasket
+          );
           // reset all values
-          this.flowDefVariables.reset();
           this.resetFlowDefBasket(flowDefBasket);
+          this.resetFlowBuildBasket(this.plugin.settings.flowBuildBasket);
+          this.finalReceipe = {};
+          this.plugin.saveSettings();
+          this.display();
+        } else {
+          console.log(
+            "flowBuildBasket on save with preview: ",
+            this.plugin.settings.flowBuildBasket
+          );
+          await this.writeFlowDef(
+            this.plugin.settings,
+            this.plugin.settings.flowBuildBasket
+          );
+          // reset all values
+          this.resetFlowDefBasket(flowDefBasket);
+          this.resetFlowBuildBasket(this.plugin.settings.flowBuildBasket);
+          this.finalReceipe = {};
           this.plugin.saveSettings();
           this.display();
         }
       });
+
     const flowDisplay = containerEl.createDiv({
       cls: "headline-container",
     });
@@ -1485,13 +1595,13 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             desc.createSpan({
               text: `Source: ${source}`,
             });
-            if (inclusionString != "") {
+            if (inclusionString != "" && inclusionString != undefined) {
               desc.createEl("br"); // Add line break
               desc.createSpan({
                 text: `Inclusion criteria: ${inclusionString}`,
               });
             }
-            if (exclusionString != "") {
+            if (exclusionString != "" && exclusionString != undefined) {
               desc.createEl("br"); // Add line break
               desc.createSpan({
                 text: `Exclusion criteria: ${exclusionString}`,
@@ -1503,19 +1613,31 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         .addButton((rebuildButton) =>
           rebuildButton.setButtonText("(Re)build)").onClick(async () => {
             // gather all info for the flowDefinition
-            const flowDefBasket: Types.flowDefBasket = {
-              fdbCreateOrEditFlowName:
+            const flowBuildBasket: Types.flowBuildBasket = {
+              fbbCreateOrEditFlowName:
                 this.plugin.settings.flows[flow].flowName,
-              fdbCreateOrEdit: "edit",
-              fdbDefinitionMode: Object.keys(
+              fbbCreateOrEdit: "edit",
+              fbbDepthFirst: this.plugin.settings.flows[flow].depthFirst,
+              fbbDefinitionMode: Object.keys(
                 this.plugin.settings.flows[flow].flowReceipe
               )[0],
-              fdbFlowCookbook: this.plugin.settings.flows[flow].flowCookbook,
-              fdbCleanCookbook: {},
-              fdbSuccess: false,
+              fbbFlowCookbook: this.plugin.settings.flows[flow].flowCookbook,
+              fbbCleanCookbook: {},
+              fbbDataviewSearchPath: "",
+              fbbSuccess: false,
+              fbbFresh: false,
             };
 
-            await this.createFlowDefinition(flowDefBasket);
+            await this.createFlowDefinition(flowBuildBasket);
+            this.plugin.settings.flows[
+              flowBuildBasket.fbbCreateOrEditFlowName
+            ].flowCookbook = flowBuildBasket.fbbCleanCookbook; // cleaned up user input
+            this.plugin.settings.flows[
+              flowBuildBasket.fbbCreateOrEditFlowName
+            ].flowReceipe = this.finalReceipe; // { defMode: pathArray }
+
+            this.resetFlowBuildBasket(flowBuildBasket);
+            this.finalReceipe = {};
 
             // Get fresh reference to the flow object after createFlowDefinition
             const updatedFlow = this.plugin.settings.flows[flow];
@@ -1543,7 +1665,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               updatedFlow.flowReceipe[key], // Use updatedFlow instead of shownFlow
               updatedFlow, // Use updatedFlow instead of shownFlow
               flow,
-              this.mapValueBasket
+              mapValueBasket
             );
 
             await this.plugin.saveSettings();

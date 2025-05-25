@@ -8,6 +8,7 @@ export interface TextFlowSettings {
   systemFolderPlace?: string;
   systemFolderPath?: string;
   systemFolderHidden: boolean;
+  flowBuildBasket: flowBuildBasket; // For storing preview data
   flowLeafInFocus?: boolean;
   autoSave: boolean;
   activeFlows: string[];
@@ -19,8 +20,9 @@ export interface TextFlowSettings {
 export interface FlowDef {
   flowCookbook: { [key: string]: string }; // user input
   flowReceipe: { [key: string]: string[] }; // paths
+  depthFirst: boolean;
   isFreshBuild: boolean;
-  flowFileName: string;
+  flowName: string;
   flowFilePath: string;
   flowBuilt: boolean;
   flowActive: boolean;
@@ -60,7 +62,18 @@ export interface SourceFileObject {
 
 // --------- them defaults --------------------
 export const DEFAULT_SETTINGS: TextFlowSettings = {
-  systemFolderHidden: true,
+  systemFolderHidden: false,
+  flowBuildBasket: {
+    fbbCreateOrEditFlowName: "",
+    fbbCreateOrEdit: "",
+    fbbDefinitionMode: "",
+    fbbDepthFirst: true,
+    fbbFlowCookbook: {},
+    fbbCleanCookbook: {},
+    fbbDataviewSearchPath: "",
+    fbbSuccess: false,
+    fbbFresh: true,
+  },
   autoSave: true,
   activeFlows: [],
   dismissedSourceWarnings: {},
@@ -82,12 +95,24 @@ export interface mapValueBasket {
 }
 
 export interface flowDefBasket {
-  fdbCreateOrEditFlowName: string;
-  fdbCreateOrEdit: string;
-  fdbDefinitionMode: string;
-  fdbFlowCookbook: { [key: string]: string };
-  fdbCleanCookbook: { [key: string]: string };
-  fdbSuccess: boolean;
+  createOrEditFlowName: string;
+  definitionMode: string;
+  depthFirst: boolean;
+  flowCookbook: { [key: string]: string };
+  cleanCookbook: { [key: string]: string };
+  previewUsed: boolean;
+}
+
+export interface flowBuildBasket {
+  fbbCreateOrEditFlowName: string;
+  fbbCreateOrEdit: string;
+  fbbDefinitionMode: string;
+  fbbDepthFirst: boolean;
+  fbbFlowCookbook: { [key: string]: string };
+  fbbCleanCookbook: { [key: string]: string };
+  fbbDataviewSearchPath: string;
+  fbbSuccess: boolean;
+  fbbFresh: boolean;
 }
 
 // ---------- Flow management

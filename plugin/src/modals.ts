@@ -31,7 +31,7 @@ export class previewModal extends Modal {
     const { contentEl } = this;
 
     const modalTitle = contentEl.createEl("h2", {
-      text: `Here is a preview of the notes that your flow will contain.`,
+      text: `These are the notes that will be assembled into your flow.`,
     });
 
     const previewContainer = contentEl.createDiv({
@@ -43,20 +43,24 @@ export class previewModal extends Modal {
     if (this.finalReceipe[key]!.length <= 1) {
       // there's a whole fucking function making sure no fragment of the value is ever undefined, so... ! it is.
       previewContainer.setText(
-        "Your criteria yielded no results. Try editing them to be less restrictive."
+        "Your criteria yielded no results. Check them for typos and/or make them less restrictive."
       );
     } else {
-      for (let ingretient of this.finalReceipe[key]!) {
-        if (ingretient.startsWith("#")) {
+      for (let ingredient of this.finalReceipe[key]!) {
+        if (ingredient.startsWith("#")) {
           previewContainer.createEl("p", {
-            text: ingretient.replace("#", ""),
+            text: ingredient.replace("#", ""),
             cls: "preview-group-header",
           });
         } else {
-          const ingredientArray = ingretient.split("/");
-          ingretient = `- ${ingredientArray[ingredientArray.length - 1]}`;
+          const ingredientArray = ingredient.split("/");
+          let dashes = "";
+          for (let i = 0; i < ingredientArray.length - 1; i++) dashes += "-";
+          ingredient = `${dashes} ${
+            ingredientArray[ingredientArray.length - 1]
+          }`;
           previewContainer.createEl("p", {
-            text: `${ingretient}`,
+            text: `${ingredient}`,
             cls: "preview-note-name",
           });
         }
