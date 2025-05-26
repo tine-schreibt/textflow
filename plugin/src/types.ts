@@ -65,7 +65,8 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
   systemFolderHidden: false,
   flowBuildBasket: {
     createOrEditFlowName: "",
-    createOrEdit: "",
+    oldFlowName: "",
+    createOrEdit: "create",
     definitionMode: "",
     depthFirst: true,
     flowCookbook: {},
@@ -95,17 +96,9 @@ export interface mapValueBasket {
   idDivider: string;
 }
 
-export interface flowDefBasket {
-  createOrEditFlowName: string;
-  definitionMode: string;
-  depthFirst: boolean;
-  flowCookbook: { [key: string]: string };
-  cleanCookbook: { [key: string]: string };
-  previewUsed: boolean;
-}
-
 export interface flowBuildBasket {
   createOrEditFlowName: string;
+  oldFlowName: string;
   createOrEdit: string;
   definitionMode: string;
   depthFirst: boolean;

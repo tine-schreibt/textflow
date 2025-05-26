@@ -215,6 +215,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
   // --- Reset flowBuildBasket
   resetFlowBuildBasket = (flowBuildBasket: Types.flowBuildBasket) => {
     flowBuildBasket.createOrEditFlowName = "";
+    flowBuildBasket.oldFlowName = "";
     flowBuildBasket.createOrEdit = "";
     flowBuildBasket.definitionMode = "";
     flowBuildBasket.depthFirst = true;
@@ -981,14 +982,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     //#######################################################################
     //###########################  Globals   ################################
     //#######################################################################
-    /* const flowDefBasket: Types.flowDefBasket = {
-      createOrEditFlowName: "",
-      definitionMode: "",
-      depthFirst: true,
-      flowCookbook: {},
-      cleanCookbook: {},
-      previewUsed: false,
-    };*/
+
     //#######################################################################
     //###########################   Settings Tab   ##########################
     //#######################################################################
@@ -1115,8 +1109,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       });
 
     // --------   Create a new flowObject   ----------------
-    let createOrEdit = "creating";
-
     const createFlows = containerEl.createDiv({
       cls: "headline-container",
     });
@@ -1138,9 +1130,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       .addText((flowName) => {
         flowName.setPlaceholder("Enter a unique name");
         if (!this.plugin.settings.flowBuildBasket?.fresh) {
-          flowName.setValue(
-            this.plugin.settings.flowBuildBasket.createOrEditFlowName
-          );
+          flowName.setValue(this.plugin.settings.flowBuildBasket.oldFlowName);
         }
         flowName.onChange(async (value) => {
           this.plugin.settings.flowBuildBasket.createOrEditFlowName =
@@ -1152,15 +1142,15 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
     // ---- SORT FLOW ---------
     const sortFlow = new Setting(createFlows)
-      .setName("Sort your flow")
+      .setName("Follow file explorer order")
       .setDesc(
         createFragment((desc) => {
           desc.createSpan({
-            text: "Same order as in file explorer.",
+            text: "(Sub)folders and notes will be processed in the same order as they appear in the file explorer.",
           });
           desc.createEl("br"); // Add line break
           desc.createSpan({
-            text: "If toggled off, files will be processed before subfolders.",
+            text: "If toggled off, files will be processed first, then (sub)folders.",
           });
         })
       )
@@ -1219,10 +1209,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     }
 
     // ------ BOOKMARKS INPUT ELEMENT AND STUFF --------------------------------------
-    const hideBookmarks = () => {
-      chooseBookmarks.settingEl.hide();
-    };
-
     const chooseBookmarks = new Setting(createFlows);
     chooseBookmarks.settingEl.hide(); // HIDE INITIALLY
     chooseBookmarks.settingEl.addClass("border-top-none");
@@ -1554,17 +1540,14 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     // ----------- Preview and save BUTTONS --------------------
 
     const previewButton = new ButtonComponent(containerEl);
-    previewButton.buttonEl.setAttribute(
-      "state",
-      createOrEdit == "creating" ? "creating" : "editing"
-    );
     previewButton
       .setButtonText("Preview your flow structure")
       .onClick(async (buttonEl: MouseEvent) => {
         this.plugin.settings.flowBuildBasket = {
           createOrEditFlowName:
             this.plugin.settings.flowBuildBasket.createOrEditFlowName,
-          createOrEdit: createOrEdit,
+          oldFlowName: this.plugin.settings.flowBuildBasket.oldFlowName,
+          createOrEdit: this.plugin.settings.flowBuildBasket.createOrEdit,
           depthFirst: this.plugin.settings.flowBuildBasket.depthFirst,
           definitionMode: this.plugin.settings.flowBuildBasket.definitionMode,
           flowCookbook: this.plugin.settings.flowBuildBasket.flowCookbook,
@@ -1589,71 +1572,79 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       });
 
     const saveButton = new ButtonComponent(containerEl);
-    saveButton.buttonEl.setAttribute(
-      "state",
-      createOrEdit == "creating" ? "creating" : "editing"
-    );
     saveButton
       .setButtonText("Save Flow definition")
       .onClick(async (buttonEl: MouseEvent) => {
-        if (!this.plugin.settings.flowBuildBasket.previewUsed) {
-          this.plugin.settings.flowBuildBasket = {
-            createOrEditFlowName:
-              this.plugin.settings.flowBuildBasket.createOrEditFlowName,
-            createOrEdit: createOrEdit,
-            depthFirst: this.plugin.settings.flowBuildBasket.depthFirst,
-            definitionMode: this.plugin.settings.flowBuildBasket.definitionMode,
-            flowCookbook: this.plugin.settings.flowBuildBasket.flowCookbook,
-            cleanCookbook: this.plugin.settings.flowBuildBasket.cleanCookbook,
-            dataviewSearchPath: "",
-            previewUsed: true,
-            success: false,
-            fresh: false,
-          };
-          console.log(
-            "flowBuildBasket on save no preview: ",
-            this.plugin.settings.flowBuildBasket
+        // if no flow name is given
+        console.log(
+          "createoredit at save flow def press: ",
+          this.plugin.settings.flowBuildBasket.createOrEdit
+        );
+        if (!this.plugin.settings.flowBuildBasket.createOrEditFlowName) {
+          new Notice("Please give your flow a name first.");
+          return;
+        }
+        // if we're creating and a flow with the given name already exists
+        if (
+          this.plugin.settings.flowBuildBasket.createOrEdit === "create" &&
+          this.plugin.settings.flows[
+            this.plugin.settings.flowBuildBasket.createOrEditFlowName
+          ]
+        ) {
+          new Notice(
+            "A flow by this name already exists. Rename your new flow or delete the old one."
           );
+          return;
+        }
+
+        // If we're editing the flow and changing its name
+        let currentFlowName =
+          this.plugin.settings.flowBuildBasket.createOrEditFlowName;
+        let oldFlowName = this.plugin.settings.flowBuildBasket.oldFlowName;
+        console.log("oldFlowName: ", oldFlowName);
+        console.log("newFlowName: ", currentFlowName);
+        console.log(
+          "createOrEdit: ",
+          this.plugin.settings.flowBuildBasket.createOrEdit
+        );
+        if (
+          this.plugin.settings.flowBuildBasket.createOrEdit === "edit" &&
+          currentFlowName != oldFlowName
+        ) {
+          // delete the old flow object
+          delete this.plugin.settings.flows[oldFlowName];
+        }
+
+        // Build a flow definition if preview hasn't done that yet
+        if (!this.plugin.settings.flowBuildBasket.previewUsed) {
           await this.createFlowDefinition(this.plugin.settings.flowBuildBasket);
           if (!this.plugin.settings.flowBuildBasket.success) {
             return;
           }
-          await this.writeFlowDef(
-            this.plugin.settings,
-            this.plugin.settings.flowBuildBasket
-          );
-          // reset all values
-          this.resetFlowBuildBasket(this.plugin.settings.flowBuildBasket);
-          this.finalReceipe = {};
-          this.plugin.saveSettings();
-          this.display();
-        } else {
-          console.log(
-            "flowBuildBasket on save with preview: ",
-            this.plugin.settings.flowBuildBasket
-          );
-          await this.writeFlowDef(
-            this.plugin.settings,
-            this.plugin.settings.flowBuildBasket
-          );
-          // reset all values
-          this.resetFlowBuildBasket(this.plugin.settings.flowBuildBasket);
-          this.finalReceipe = {};
-          this.plugin.saveSettings();
-          this.display();
         }
-      });
-
-    const clearValues = new ButtonComponent(containerEl);
-    clearValues
-      .setButtonText("Clear all values")
-      .onClick(async (buttonEl: MouseEvent) => {
-        this.plugin.settings.flowBuildBasket.previewUsed = false;
+        console.log(
+          "flowBuildBasket on save with preview: ",
+          this.plugin.settings.flowBuildBasket
+        );
+        await this.writeFlowDef(
+          this.plugin.settings,
+          this.plugin.settings.flowBuildBasket
+        );
+        // reset all values
         this.resetFlowBuildBasket(this.plugin.settings.flowBuildBasket);
         this.finalReceipe = {};
         this.plugin.saveSettings();
         this.display();
       });
+
+    const clearValues = new ButtonComponent(containerEl);
+    clearValues.setButtonText("Reset").onClick(async (buttonEl: MouseEvent) => {
+      this.plugin.settings.flowBuildBasket.previewUsed = false;
+      this.resetFlowBuildBasket(this.plugin.settings.flowBuildBasket);
+      this.finalReceipe = {};
+      this.plugin.saveSettings();
+      this.display();
+    });
 
     const flowDisplay = containerEl.createDiv({
       cls: "headline-container",
@@ -1739,7 +1730,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             // gather all info for the flowDefinition
             const flowReBuildBasket: Types.flowBuildBasket = {
               createOrEditFlowName: this.plugin.settings.flows[flow].flowName,
-              createOrEdit: "edit",
+              oldFlowName: this.plugin.settings.flows[flow].flowName,
+              createOrEdit: "",
               depthFirst: this.plugin.settings.flows[flow].depthFirst,
               definitionMode: Object.keys(
                 this.plugin.settings.flows[flow].flowReceipe
@@ -1801,14 +1793,39 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           })
         )
 
-        .addButton((editFlow) =>
+        .addButton((editFlow) => {
           editFlow.setButtonText("Edit").onClick(async () => {
             // state check creating vs editing
-          })
-        )
+            console.log(
+              "create or edit at editButton press: ",
+              this.plugin.settings.flowBuildBasket.createOrEdit
+            );
+            this.plugin.settings.flowBuildBasket = {
+              createOrEditFlowName: "",
+              oldFlowName: shownFlow.flowName,
+              createOrEdit: "edit",
+              depthFirst: shownFlow.depthFirst,
+              definitionMode: Object.keys(shownFlow.flowReceipe)[0],
+              flowCookbook: shownFlow.flowCookbook,
+              cleanCookbook: shownFlow.flowCookbook,
+              dataviewSearchPath: "",
+              previewUsed: false,
+              success: true,
+              fresh: false,
+            };
+            console.log(
+              "flowBuildBasket",
+              this.plugin.settings.flowBuildBasket
+            );
+            this.plugin.saveSettings();
+            this.display();
+          });
+        })
         .addButton((deleteFile) =>
           deleteFile.setButtonText("Delete").onClick(async () => {
-            // state check creating vs editing
+            delete this.plugin.settings.flows[flow];
+            this.plugin.saveSettings();
+            this.display();
           })
         );
     }
