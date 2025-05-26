@@ -304,17 +304,17 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     if (flowBuildBasket.fbbFlowCookbook.folderExcluded === undefined) {
       flowBuildBasket.fbbFlowCookbook.folderExcluded = "";
     }
-    if (flowBuildBasket.fbbFlowCookbook.tagIncluded === undefined) {
-      flowBuildBasket.fbbFlowCookbook.tagIncluded = "";
+    if (flowBuildBasket.fbbFlowCookbook.tagsIncluded === undefined) {
+      flowBuildBasket.fbbFlowCookbook.tagsIncluded = "";
     }
-    if (flowBuildBasket.fbbFlowCookbook.tagExcluded === undefined) {
-      flowBuildBasket.fbbFlowCookbook.tagExcluded = "";
+    if (flowBuildBasket.fbbFlowCookbook.tagsExcluded === undefined) {
+      flowBuildBasket.fbbFlowCookbook.tagsExcluded = "";
     }
-    if (flowBuildBasket.fbbFlowCookbook.propertyIncluded === undefined) {
-      flowBuildBasket.fbbFlowCookbook.propertyIncluded = "";
+    if (flowBuildBasket.fbbFlowCookbook.propsIncluded === undefined) {
+      flowBuildBasket.fbbFlowCookbook.propsIncluded = "";
     }
-    if (flowBuildBasket.fbbFlowCookbook.propertyExcluded === undefined) {
-      flowBuildBasket.fbbFlowCookbook.propertyExcluded = "";
+    if (flowBuildBasket.fbbFlowCookbook.propsExcluded === undefined) {
+      flowBuildBasket.fbbFlowCookbook.propsExcluded = "";
     }
     return Promise.resolve();
   };
@@ -402,11 +402,11 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     };
 
     // use cleanup on tags
-    const cleanTagInclusionArray = tagCleanup(shCookbook.tagIncluded);
-    flowBuildBasket.fbbCleanCookbook.tagIncluded =
+    const cleanTagInclusionArray = tagCleanup(shCookbook.tagsIncluded);
+    flowBuildBasket.fbbCleanCookbook.tagsIncluded =
       cleanTagInclusionArray.join(", ");
-    const cleanTagExclusionArray = tagCleanup(shCookbook.tagExcluded);
-    flowBuildBasket.fbbCleanCookbook.tagExcluded =
+    const cleanTagExclusionArray = tagCleanup(shCookbook.tagsExcluded);
+    flowBuildBasket.fbbCleanCookbook.tagsExcluded =
       cleanTagExclusionArray.join(", ");
 
     //--- INCLUDED and  EXCLUDED PROPERTIES - clean up and split at =
@@ -436,15 +436,15 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
     // Use cleanup on properties
     let cleanPropertiesInclusionArray = propertyCleanup(
-      shCookbook.propertyIncluded
+      shCookbook.propsIncluded
     );
-    flowBuildBasket.fbbCleanCookbook.propertyIncluded =
+    flowBuildBasket.fbbCleanCookbook.propsIncluded =
       cleanPropertiesInclusionArray.join(", ");
 
     let cleanPropertiesExclusionArray = propertyCleanup(
-      shCookbook.propertyExcluded
+      shCookbook.propsExcluded
     );
-    flowBuildBasket.fbbCleanCookbook.propertyExcluded =
+    flowBuildBasket.fbbCleanCookbook.propsExcluded =
       cleanPropertiesExclusionArray.join(", ");
 
     // -------- cleanup done ----------------
@@ -1134,14 +1134,20 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           });
         })
       )
-      .addText((flowName) =>
-        flowName
-          .setPlaceholder("Enter a unique name")
-          .onChange(async (value) => {
-            // state check creating vs editing
-            flowDefBasket.createOrEditFlowName = value.trim();
-          })
-      );
+      .addText((flowName) => {
+        flowName.setPlaceholder("Enter a unique name");
+        if (!this.plugin.settings.flowBuildBasket?.fbbFresh) {
+          flowName.setValue(
+            this.plugin.settings.flowBuildBasket.fbbCreateOrEditFlowName
+          );
+          flowDefBasket.createOrEditFlowName =
+            this.plugin.settings.flowBuildBasket.fbbCreateOrEditFlowName;
+        }
+        flowName.onChange(async (value) => {
+          flowDefBasket.createOrEditFlowName = value.trim();
+          this.plugin.saveSettings();
+        });
+      });
 
     // ---- SORT FLOW ---------
     const sortFlow = new Setting(createFlows)
@@ -1158,8 +1164,17 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         })
       )
       .addToggle((sortToggle) => {
-        sortToggle.setValue(true).onChange(async (value) => {
+        const toggleSetting = sortToggle.setValue(true);
+        if (!this.plugin.settings.flowBuildBasket?.fbbFresh) {
+          sortToggle.setValue(
+            this.plugin.settings.flowBuildBasket.fbbDepthFirst
+          );
+          flowDefBasket.depthFirst =
+            this.plugin.settings.flowBuildBasket.fbbDepthFirst;
+        }
+        sortToggle.onChange(async (value) => {
           flowDefBasket.depthFirst = value;
+          this.plugin.saveSettings();
         });
       });
 
@@ -1169,47 +1184,32 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       .setDesc(
         createFragment((desc) => {
           desc.createSpan({
-            text: "How do you want to define your Flow?",
+            text: "Only the values of the active input mask will be saved.",
           });
           desc.createEl("br"); // Add line break
           desc.createSpan({
-            text: "Changing modes doesn't clear the input mask, but only values of the active mask will be considered.",
-          });
-          desc.createEl("br"); // Add line break
-          desc.createSpan({
-            text: "If you don't enter any criteria, your enitre vault will be included.",
+            text: "If you don't enter any criteria, your enitre vault will be included in your flow.",
+            cls: "text-emphasis",
           });
         })
       );
 
+    //------- RADIO BUTTONS
     const radioButtonContainer = defineFlow.controlEl.createDiv({
       cls: "radio-button-group",
     });
     const buttons: { [key: string]: ButtonComponent } = {};
 
-    // -------- Bookmarks button ---------------
+    // -------- Radio Buttons ---------------
+    // Creating just the buttons to keep UI order; settings and .onClick
+    // are below the input element setup
     buttons.bookmarks = new ButtonComponent(radioButtonContainer)
       .setButtonText("... by a bookmark group")
-      .setClass("settings-radio-button")
-      .onClick(() => {
-        flowDefBasket.definitionMode = "bookmarks";
-        flowDefBasket.previewUsed = false;
-        this.radioButtonManager(buttons.bookmarks, buttons.foldersTagsProps);
-        chooseBookmarks.settingEl.show(); // Show bookmark settings
-        iHateLayoutingWithHTMLAndCSS("hide");
-      });
+      .setClass("settings-radio-button");
 
-    // -------- Paths and properties button ---------------
     buttons.foldersTagsProps = new ButtonComponent(radioButtonContainer)
-      .setButtonText("... by folder, tags, properties")
-      .setClass("settings-radio-button")
-      .onClick(() => {
-        flowDefBasket.definitionMode = "pathsTagsProps";
-        flowDefBasket.previewUsed = false;
-        this.radioButtonManager(buttons.foldersTagsProps, buttons.bookmarks);
-        iHateLayoutingWithHTMLAndCSS("show");
-        chooseBookmarks.settingEl.hide();
-      });
+      .setButtonText("... by folders, tags, properties")
+      .setClass("settings-radio-button");
 
     // ------ BOOKMARKS INPUT ELEMENT AND STUFF --------------------------------------
     const chooseBookmarks = new Setting(createFlows);
@@ -1235,17 +1235,24 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         });
       })
     );
-    chooseBookmarks.addText((chooseFlowFolder) =>
-      chooseFlowFolder.onChange(async (value) => {
+    chooseBookmarks.addText((setBookmarksGroup) => {
+      if (!this.plugin.settings.flowBuildBasket?.fbbFresh) {
+        setBookmarksGroup.setValue(
+          this.plugin.settings.flowBuildBasket.fbbFlowCookbook.bookmarkGroup
+        );
+        flowDefBasket.flowCookbook.bookmarkGroup =
+          this.plugin.settings.flowBuildBasket.fbbFlowCookbook.bookmarkGroup;
+      }
+      setBookmarksGroup.onChange(async (value) => {
         flowDefBasket.previewUsed = false;
         flowDefBasket.flowCookbook.bookmarkGroup = value.trim();
-      })
-    );
+        this.plugin.saveSettings();
+      });
+    });
 
     // ---------- FOLDERS, TAGS AND PROPERTIES INPUT ELEMENT -----------------------------------------
-
     // ------ function to show or hide all the paths, tags, properties elements ---------
-    const iHateLayoutingWithHTMLAndCSS = (state: string) => {
+    const showOrHideAlLPathsTagsProperties = (state: string) => {
       if (state === "show") {
         headlineChoosePathsTagsProperties.settingEl.show();
         folderIncludeInput.settingEl.show();
@@ -1265,7 +1272,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         propertiesExcludeInput.settingEl.hide();
       }
     };
-
     // --- headline object ------
     const headlineChoosePathsTagsProperties = new Setting(createFlows);
     headlineChoosePathsTagsProperties.settingEl.hide();
@@ -1306,12 +1312,20 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           });
         })
       )
-      .addText((chooseSourceFolder) =>
-        chooseSourceFolder.onChange(async (value) => {
+      .addText((folderIncludeInput) => {
+        if (!this.plugin.settings.flowBuildBasket?.fbbFresh) {
+          folderIncludeInput.setValue(
+            this.plugin.settings.flowBuildBasket.fbbFlowCookbook.folderIncluded
+          );
+          flowDefBasket.flowCookbook.folderIncluded =
+            this.plugin.settings.flowBuildBasket.fbbFlowCookbook.folderIncluded;
+        }
+        folderIncludeInput.onChange(async (value) => {
           flowDefBasket.previewUsed = false;
           flowDefBasket.flowCookbook.folderIncluded = value;
-        })
-      );
+          this.plugin.saveSettings();
+        });
+      });
 
     // ----- Folder exclude
     const folderExcludeInput = new Setting(createFlows);
@@ -1330,13 +1344,20 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           });
         })
       )
-      .addText((chooseExcludedFolders) =>
+      .addText((chooseExcludedFolders) => {
+        if (!this.plugin.settings.flowBuildBasket?.fbbFresh) {
+          chooseExcludedFolders.setValue(
+            this.plugin.settings.flowBuildBasket.fbbFlowCookbook.folderExcluded
+          );
+          flowDefBasket.flowCookbook.folderExcluded =
+            this.plugin.settings.flowBuildBasket.fbbFlowCookbook.folderExcluded;
+        }
         chooseExcludedFolders.onChange(async (value) => {
           flowDefBasket.previewUsed = false;
-          const folders = value;
           flowDefBasket.flowCookbook.folderExcluded = value.trim();
-        })
-      );
+          this.plugin.saveSettings();
+        });
+      });
 
     // ----- Tags
     const tagsIncludeInput = new Setting(createFlows);
@@ -1355,12 +1376,21 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           });
         })
       )
-      .addText((chooseIncludedTags) =>
+      .addText((chooseIncludedTags) => {
+        if (!this.plugin.settings.flowBuildBasket?.fbbFresh) {
+          chooseIncludedTags.setValue(
+            this.plugin.settings.flowBuildBasket.fbbFlowCookbook.tagsIncluded
+          );
+          flowDefBasket.flowCookbook.tagsIncluded =
+            this.plugin.settings.flowBuildBasket.fbbFlowCookbook.tagsIncluded;
+        }
         chooseIncludedTags.onChange(async (value) => {
           flowDefBasket.previewUsed = false;
-          flowDefBasket.flowCookbook.tagIncluded = value.trim();
-        })
-      );
+          const folders = value;
+          flowDefBasket.flowCookbook.tagsIncluded = value.trim();
+          this.plugin.saveSettings();
+        });
+      });
 
     const tagsExcludeInput = new Setting(createFlows);
     tagsExcludeInput.settingEl.hide();
@@ -1378,12 +1408,20 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           });
         })
       )
-      .addText((chooseExcludedTags) =>
+      .addText((chooseExcludedTags) => {
+        if (!this.plugin.settings.flowBuildBasket?.fbbFresh) {
+          chooseExcludedTags.setValue(
+            this.plugin.settings.flowBuildBasket.fbbFlowCookbook.tagsExcluded
+          );
+          flowDefBasket.flowCookbook.tagsExcluded =
+            this.plugin.settings.flowBuildBasket.fbbFlowCookbook.tagsExcluded;
+        }
         chooseExcludedTags.onChange(async (value) => {
           flowDefBasket.previewUsed = false;
-          flowDefBasket.flowCookbook.tagExcluded = value.trim();
-        })
-      );
+          flowDefBasket.flowCookbook.tagsExcluded = value.trim();
+          this.plugin.saveSettings();
+        });
+      });
 
     // ----- Properties
     const propertiesIncludeInput = new Setting(createFlows);
@@ -1406,12 +1444,20 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           });
         })
       )
-      .addText((chooseIncludedProperties) =>
+      .addText((chooseIncludedProperties) => {
+        if (!this.plugin.settings.flowBuildBasket?.fbbFresh) {
+          chooseIncludedProperties.setValue(
+            this.plugin.settings.flowBuildBasket.fbbFlowCookbook.propsIncluded
+          );
+          flowDefBasket.flowCookbook.propsIncluded =
+            this.plugin.settings.flowBuildBasket.fbbFlowCookbook.propsIncluded;
+        }
         chooseIncludedProperties.onChange(async (value) => {
           flowDefBasket.previewUsed = false;
-          flowDefBasket.flowCookbook.propertyIncluded = value.trim();
-        })
-      );
+          flowDefBasket.flowCookbook.propsIncluded = value.trim();
+          this.plugin.saveSettings();
+        });
+      });
 
     const propertiesExcludeInput = new Setting(createFlows);
     propertiesExcludeInput.settingEl.hide();
@@ -1433,14 +1479,71 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           });
         })
       )
-      .addText((chooseExcludedProperties) =>
+      .addText((chooseExcludedProperties) => {
+        if (!this.plugin.settings.flowBuildBasket?.fbbFresh) {
+          chooseExcludedProperties.setValue(
+            this.plugin.settings.flowBuildBasket.fbbFlowCookbook.propsExcluded
+          );
+          flowDefBasket.flowCookbook.propsExcluded =
+            this.plugin.settings.flowBuildBasket.fbbFlowCookbook.propsExcluded;
+        }
         chooseExcludedProperties.onChange(async (value) => {
           flowDefBasket.previewUsed = false;
-          flowDefBasket.flowCookbook.propertyExcluded = value.trim();
-        })
-      );
+          flowDefBasket.flowCookbook.propsExcluded = value.trim();
+          this.plugin.saveSettings();
+        });
+      });
 
-    // ----------- BUTTONS --------------------
+    // ---- RADIO BUTTON SETTINGS AND LOGIC
+    // Presets for the BOOKMARKS button
+    if (this.plugin.settings.flowBuildBasket?.fbbFresh) {
+      if (
+        this.plugin.settings.flowBuildBasket.fbbDefinitionMode === "bookmarks"
+      ) {
+        this.radioButtonManager(buttons.bookmarks, buttons.foldersTagsProps);
+        chooseBookmarks.settingEl.show();
+        showOrHideAlLPathsTagsProperties("hide");
+      } else {
+        this.radioButtonManager(buttons.foldersTagsProps, buttons.bookmarks);
+        showOrHideAlLPathsTagsProperties("show");
+        chooseBookmarks.settingEl.hide();
+      }
+    }
+    // onClick for the BOOKMARKS button
+    buttons.bookmarks.onClick(() => {
+      flowDefBasket.definitionMode = "bookmarks";
+      flowDefBasket.previewUsed = false;
+      this.radioButtonManager(buttons.bookmarks, buttons.foldersTagsProps);
+      chooseBookmarks.settingEl.show();
+      showOrHideAlLPathsTagsProperties("hide");
+    });
+
+    // Presets for the pathsTagsProps button
+    if (this.plugin.settings.flowBuildBasket?.fbbFresh) {
+      if (
+        this.plugin.settings.flowBuildBasket.fbbDefinitionMode ===
+        "pathsTagsProps"
+      ) {
+        this.radioButtonManager(buttons.foldersTagsProps, buttons.bookmarks);
+        chooseBookmarks.settingEl.hide();
+        showOrHideAlLPathsTagsProperties("show");
+      } else {
+        this.radioButtonManager(buttons.bookmarks, buttons.foldersTagsProps);
+        showOrHideAlLPathsTagsProperties("hide");
+        chooseBookmarks.settingEl.show();
+      }
+    }
+
+    // onClick for the pathsTagsProps button
+    buttons.foldersTagsProps.onClick(() => {
+      flowDefBasket.definitionMode = "foldersTagsProps";
+      flowDefBasket.previewUsed = false;
+      this.radioButtonManager(buttons.foldersTagsProps, buttons.bookmarks);
+      chooseBookmarks.settingEl.hide();
+      showOrHideAlLPathsTagsProperties("show");
+    });
+
+    // ----------- Preview and save BUTTONS --------------------
 
     const previewButton = new ButtonComponent(containerEl);
     previewButton.buttonEl.setAttribute(
@@ -1559,12 +1662,12 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       }
       // INCLUSION
       // if flow is based on folderTagProp
-      if (shownFlow.flowCookbook.tagIncluded != "") {
-        included.push(`Tags: ${shownFlow.flowCookbook.tagIncluded}`);
+      if (shownFlow.flowCookbook.tagsIncluded != "") {
+        included.push(`Tags: ${shownFlow.flowCookbook.tagsIncluded}`);
       }
 
-      if (shownFlow.flowCookbook.propertyIncluded != "") {
-        included.push(`Props: ${shownFlow.flowCookbook.propertyIncluded}`);
+      if (shownFlow.flowCookbook.propsIncluded != "") {
+        included.push(`Props: ${shownFlow.flowCookbook.propsIncluded}`);
       }
       const inclusionsJoined = included.join(" / ");
       inclusionString += inclusionsJoined;
@@ -1579,10 +1682,10 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         excluded.push(`Folders: ${shownFlow.flowCookbook.folderExcluded}`);
       }
 
-      if (shownFlow.flowCookbook.tagExcluded != "")
-        excluded.push(`Tags: ${shownFlow.flowCookbook.tagExcluded}`);
-      if (shownFlow.flowCookbook.propertyExcluded != "") {
-        excluded.push(`Props: ${shownFlow.flowCookbook.propertyExcluded}`);
+      if (shownFlow.flowCookbook.tagsExcluded != "")
+        excluded.push(`Tags: ${shownFlow.flowCookbook.tagsExcluded}`);
+      if (shownFlow.flowCookbook.propsExcluded != "") {
+        excluded.push(`Props: ${shownFlow.flowCookbook.propsExcluded}`);
       }
       const exclusionsJoined = excluded.join(" / ");
       exclusionString += exclusionsJoined;
