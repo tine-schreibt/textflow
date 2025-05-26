@@ -64,15 +64,16 @@ export interface SourceFileObject {
 export const DEFAULT_SETTINGS: TextFlowSettings = {
   systemFolderHidden: false,
   flowBuildBasket: {
-    fbbCreateOrEditFlowName: "",
-    fbbCreateOrEdit: "",
-    fbbDefinitionMode: "",
-    fbbDepthFirst: true,
-    fbbFlowCookbook: {},
-    fbbCleanCookbook: {},
-    fbbDataviewSearchPath: "",
-    fbbSuccess: false,
-    fbbFresh: true,
+    createOrEditFlowName: "",
+    createOrEdit: "",
+    definitionMode: "",
+    depthFirst: true,
+    flowCookbook: {},
+    cleanCookbook: {},
+    dataviewSearchPath: "",
+    previewUsed: false,
+    success: false,
+    fresh: true,
   },
   autoSave: true,
   activeFlows: [],
@@ -104,15 +105,16 @@ export interface flowDefBasket {
 }
 
 export interface flowBuildBasket {
-  fbbCreateOrEditFlowName: string;
-  fbbCreateOrEdit: string;
-  fbbDefinitionMode: string;
-  fbbDepthFirst: boolean;
-  fbbFlowCookbook: { [key: string]: string };
-  fbbCleanCookbook: { [key: string]: string };
-  fbbDataviewSearchPath: string;
-  fbbSuccess: boolean;
-  fbbFresh: boolean;
+  createOrEditFlowName: string;
+  createOrEdit: string;
+  definitionMode: string;
+  depthFirst: boolean;
+  flowCookbook: { [key: string]: string };
+  cleanCookbook: { [key: string]: string };
+  dataviewSearchPath: string;
+  success: boolean;
+  previewUsed: boolean;
+  fresh: boolean;
 }
 
 // ---------- Flow management
