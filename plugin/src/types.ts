@@ -18,13 +18,14 @@ export interface TextFlowSettings {
 }
 
 export interface FlowDef {
-  flowCookbook: { [key: string]: string }; // user input
-  flowReceipe: { [key: string]: string[] }; // paths
-  depthFirst: boolean;
-  isFreshBuild: boolean;
   flowName: string;
   flowFilePath: string;
+  flowCookbook: { [key: string]: string }; // user input
+  flowReceipe: { [key: string]: string[] };
+  depthFirst: boolean;
+  isFreshBuild: boolean;
   flowBuilt: boolean;
+  conflictArray: string[];
   flowActive: boolean;
   activeRegion: ActiveRegion;
   persistentCursorPos: number;
@@ -62,24 +63,26 @@ export interface SourceFileObject {
 
 // --------- them defaults --------------------
 export const DEFAULT_SETTINGS: TextFlowSettings = {
+  activeFlows: [],
+  flagForRebuild: [],
+  autoSave: true,
   systemFolderHidden: false,
+  dismissedSourceWarnings: {},
   flowBuildBasket: {
     createOrEditFlowName: "",
     oldFlowName: "",
     createOrEdit: "create",
     definitionMode: "",
-    depthFirst: true,
     flowCookbook: {},
     cleanCookbook: {},
+    finalReceipe: {},
+    conflicts: [],
+    depthFirst: true,
     dataviewSearchPath: "",
     previewUsed: false,
     success: false,
     fresh: true,
   },
-  autoSave: true,
-  activeFlows: [],
-  dismissedSourceWarnings: {},
-  flagForRebuild: [],
   flows: {},
 };
 
@@ -100,11 +103,13 @@ export interface flowBuildBasket {
   createOrEditFlowName: string;
   oldFlowName: string;
   createOrEdit: string;
-  definitionMode: string;
-  depthFirst: boolean;
   flowCookbook: { [key: string]: string };
   cleanCookbook: { [key: string]: string };
+  finalReceipe: { [key: string]: string[] };
+  conflicts: string[];
   dataviewSearchPath: string;
+  definitionMode: string;
+  depthFirst: boolean;
   success: boolean;
   previewUsed: boolean;
   fresh: boolean;
