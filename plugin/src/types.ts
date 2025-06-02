@@ -11,9 +11,8 @@ export interface TextFlowSettings {
   flowBuildBasket: flowBuildBasket; // For storing preview data
   flowLeafInFocus?: boolean;
   autoSave: boolean;
-  activeFlows: string[];
-  dismissedSourceWarnings: Record<string, boolean>;
-  flagForRebuild: string[];
+  activeFlowObject: { [key: string]: number | any };
+  deletionInProgress: boolean;
   flows: { [key: string]: FlowDef };
 }
 
@@ -25,18 +24,18 @@ export interface FlowDef {
   depthFirst: boolean;
   isFreshBuild: boolean;
   flowBuilt: boolean;
+  flaggedForRebuild: boolean;
   conflictArray: string[];
-  flowActive: boolean;
-  activeRegion: ActiveRegion;
-  persistentCursorPos: number;
+  activeRegions: { [key: number]: ActiveRegion };
+  persistentCursors: { [key: number]: number };
   modifiedRegionsArray: string[];
   flowMap: { [key: string]: SourceFileObject };
 }
 
 export interface ActiveRegion {
-  lastCursorPosition: number;
+  currentCursorPos: number;
   type: string;
-  path: string;
+  path?: string;
   UID: string;
   flowOrder: number;
   startInFlow: number;
@@ -57,17 +56,14 @@ export interface SourceFileObject {
   flowOrder: number;
   minLength: number;
   lengthPlusDividers: number;
-  startEndInFlow: { start: number; end: number };
   yamlMini: string;
 }
 
 // --------- them defaults --------------------
 export const DEFAULT_SETTINGS: TextFlowSettings = {
-  activeFlows: [],
-  flagForRebuild: [],
+  activeFlowObject: {},
   autoSave: true,
   systemFolderHidden: false,
-  dismissedSourceWarnings: {},
   flowBuildBasket: {
     createOrEditFlowName: "",
     oldFlowName: "",
@@ -83,6 +79,7 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
     success: false,
     fresh: true,
   },
+  deletionInProgress: true,
   flows: {},
 };
 

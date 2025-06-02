@@ -147,9 +147,9 @@
   position: relative; /* Needed for the lock icon */
 }
 
-/* 🔒 Add a "LOCKED" overlay */
+/* Add a "LOCKED" overlay */
 .source-read-only .cm-content::after {
-  content: "🔒 This file is a constituent of an active flow. It is read-only to prevent data loss. Please edit it within the flow.";
+  content: "!! This note is the source of a flow. Please only edit its properties. !!";
   position: absolute;
   white-space: normal;
   max-width: 90%;

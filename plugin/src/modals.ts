@@ -37,12 +37,12 @@ export class previewModal extends Modal {
           desc.createSpan({
             text: `The following flows overlap with ${this.flowBuildBasket.createOrEditFlowName}:`,
           });
-          for (let flow in this.flowBuildBasket.conflicts) {
+          this.flowBuildBasket.conflicts.forEach((flow) => {
             desc.createEl("br");
             desc.createSpan({
-              text: `- ${this.flowBuildBasket.conflicts[flow]}`,
+              text: `- ${flow}`,
             });
-          }
+          });
         })
       );
     }
@@ -103,130 +103,6 @@ export class previewModal extends Modal {
   }
 }
 
-//--------------------------
-
-export class ProtectSourceFilesModal extends Modal {
-  constructor(
-    app: App,
-    private leafArray: MarkdownView[],
-    private flowName: string,
-    private dismissedSourceWarnings: Record<string, boolean> //  private rebuildFlow(): function;
-  ) {
-    super(app);
-    this.leafArray = leafArray;
-    this.flowName = flowName;
-    this.dismissedSourceWarnings = dismissedSourceWarnings;
-    //   this.rebuildFlow = rebuildFlow();
-  }
-
-  private closeSourceFiles = () => {
-    for (let view of this.leafArray) {
-      view.leaf.detach();
-    }
-  };
-  private getNoteNames = () => {
-    const noteNamesArray: string[] = [];
-    for (let view of this.leafArray) {
-      if (view.file) {
-        const path = view.file.path;
-        const noteNameSplit = path.split("/");
-        const noteName = noteNameSplit[noteNameSplit.length - 1];
-        noteNamesArray.push(noteName);
-      }
-    }
-    return noteNamesArray;
-  };
-
-  onOpen() {
-    const { contentEl } = this;
-    const modalTitle = contentEl.createEl("h2", {
-      text: `Recently opened source files detected`,
-    });
-
-    const modalText = new Setting(modalTitle);
-    modalText.setDesc(
-      createFragment((desc) => {
-        desc.createSpan({
-          text: `The following source file(s) of flow "${this.flowName}" have recently been active: `,
-        });
-        desc.createEl("br"); // Add line break
-        const noteNames = this.getNoteNames();
-        if (Array.isArray(noteNames)) {
-          noteNames.forEach((noteName) => {
-            desc.createSpan({
-              text: `- ${noteName}`,
-            });
-            desc.createEl("br");
-          });
-          desc.createEl("br");
-
-          desc.createSpan({
-            text: "Please choose how you would like to proceed: ",
-          });
-          desc.createEl("br");
-        }
-        modalText.setClass("modal-desc-text");
-      })
-    );
-
-    const modalContent = contentEl.createDiv({ cls: "modal-content" });
-
-    let closeFiles = false;
-    let rebuildFlow = false;
-    let dontShowAgain = false;
-
-    const closeToggle = new Setting(modalContent);
-    closeToggle
-      .setDesc("Close detected source files")
-      .setClass("modal-toggle-text-size")
-      .addToggle((closeToggle) => {
-        closeToggle.setValue(false).onChange((value) => (closeFiles = value));
-      });
-
-    const rebuildToggle = new Setting(modalContent);
-    rebuildToggle
-      .setDesc(`Rebuild flow "${this.flowName}" to incorprate changes`)
-      .setClass("modal-toggle-text-size")
-      .addToggle((rebuildToggle) => {
-        rebuildToggle
-          .setValue(false)
-          .onChange((value) => (rebuildFlow = value));
-      });
-
-    const dismissToggle = new Setting(modalContent);
-    dismissToggle
-      .setDesc(`Don't show this warning again`)
-      .setClass("modal-toggle-text-size")
-      .addToggle((dismissToggle) => {
-        dismissToggle
-          .setValue(false)
-          .onChange((value) => (dontShowAgain = value));
-      });
-
-    const okayButton = new Setting(modalContent);
-    okayButton.addButton((okayButton) =>
-      okayButton.setButtonText("Okay").onClick(async () => {
-        try {
-          if (closeFiles) this.closeSourceFiles();
-          //if (rebuildFlow) this.rebuildFlow(this.flowName);
-          if (dontShowAgain) this.dismissedSourceWarnings[this.flowName] = true;
-          super.close();
-        } catch (error) {
-          console.error(
-            "Error when trying to close leaves or rebuild flow",
-            error
-          );
-        }
-      })
-    );
-  }
-
-  onClose() {
-    const { contentEl } = this;
-    this.contentEl.empty();
-  }
-}
-
 //-------- FLOW SWITCHING
 export class FlowSwitcherModal extends Modal {
   private plugin: TextFlowPlugin;
@@ -238,8 +114,8 @@ export class FlowSwitcherModal extends Modal {
 
   private getFlowStatus(flowName: string): Types.ModalFlowStatus {
     // Check if flow is currently active
-    if (this.plugin.settings.activeFlows) {
-      if (this.plugin.settings.activeFlows.includes(flowName)) {
+    if (this.plugin.settings.activeFlowObject) {
+      if (this.plugin.settings.activeFlowObject[flowName]) {
         return "on";
       }
     }
@@ -330,18 +206,20 @@ export class DeleteFlowDefModal extends Modal {
     deleteButton.setTooltip(`Delete "${this.flowName}".`);
     deleteButton.setIcon("trash");
     deleteButton.onClick(async () => {
+      this.settings.deletionInProgress = true;
+      await this.modalSaveAndReload();
+
       const flowFilePath = `${this.settings.systemFolderPlace}TextFlow_SystemFolder/${this.flowName}.md`;
       const flowFile = this.app.vault.getAbstractFileByPath(flowFilePath);
 
       try {
         delete this.settings.flows[this.flowName];
-        this.settings.activeFlows = this.settings.activeFlows.filter(
-          (h) => h !== this.flowName
-        );
-        
+        delete this.settings.activeFlowObject[this.flowName];
+
         if (flowFile) {
           await this.app.vault.delete(flowFile);
         }
+        this.settings.deletionInProgress = true;
 
         await this.modalSaveAndReload();
         new Notice(

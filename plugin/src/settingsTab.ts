@@ -10,6 +10,7 @@ import {
   TFile,
   TAbstractFile,
   TextComponent,
+  MarkdownView,
   normalizePath,
   Notice,
   ButtonComponent,
@@ -80,9 +81,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
   conflictCollector = (flowBuildBasket: Types.flowBuildBasket) => {
     const conflicts: string[] = [];
     const key1 = Object.keys(flowBuildBasket.finalReceipe)[0];
-    console.log("key: ", key1);
     flowLoop: for (let flowName in this.plugin.settings.flows) {
-      console.log("flowName", flowName);
       if (flowName != flowBuildBasket.createOrEditFlowName) {
         const key2 = Object.keys(
           this.plugin.settings.flows[flowName].flowReceipe
@@ -95,7 +94,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             )
           ) {
             conflicts.push(flowName);
-            console.log(conflicts);
             continue flowLoop;
           }
         }
@@ -109,26 +107,31 @@ export class TextFlowSettingsTab extends PluginSettingTab {
   syncConflicts = (referenceFlow: Types.flowBuildBasket) => {
     const refFlowName = referenceFlow.createOrEditFlowName;
 
-    for (let syncFlow in this.plugin.settings.flows) {
+    Object.keys(this.plugin.settings.flows).forEach((syncFlowName) => {
+      // Case 1: Flow is in reference conflicts but not in sync flow's conflicts
       if (
-        referenceFlow.conflicts.includes(syncFlow) &&
-        !this.plugin.settings.flows[syncFlow].conflictArray.includes(
+        referenceFlow.conflicts.includes(syncFlowName) &&
+        !this.plugin.settings.flows[syncFlowName].conflictArray.includes(
           refFlowName
         )
       ) {
-        this.plugin.settings.flows[syncFlow].conflictArray.push(refFlowName);
+        this.plugin.settings.flows[syncFlowName].conflictArray.push(
+          refFlowName
+        );
       }
+      // Case 2: Flow is not in reference conflicts but is in sync flow's conflicts
       if (
-        !referenceFlow.conflicts.includes(syncFlow) &&
-        this.plugin.settings.flows[syncFlow].conflictArray.includes(refFlowName)
+        !referenceFlow.conflicts.includes(syncFlowName) &&
+        this.plugin.settings.flows[syncFlowName].conflictArray.includes(
+          refFlowName
+        )
       ) {
-        const filteredConflictArray = this.plugin.settings.flows[
-          syncFlow
-        ].conflictArray.filter((name) => name != refFlowName);
-        this.plugin.settings.flows[syncFlow].conflictArray =
-          filteredConflictArray;
+        this.plugin.settings.flows[syncFlowName].conflictArray =
+          this.plugin.settings.flows[syncFlowName].conflictArray.filter(
+            (name) => name !== refFlowName
+          );
       }
-    }
+    });
   };
 
   private createSystemFolder = async (newSystemFolderPath: string) => {
@@ -207,8 +210,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           );
           flowBuildBasket.finalReceipe = { bookmarks: bookmarkPathArray };
           flowBuildBasket.conflicts = this.conflictCollector(flowBuildBasket);
-          console.log("finalReceipe: ", flowBuildBasket.finalReceipe);
-          console.log("conflicts: ", flowBuildBasket.conflicts);
         }
 
         // ------ FINAL RECEIPE FOR PATH TAG PROPERTY -----------------------
@@ -221,8 +222,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           foldersTagsProps: foldersTagsPropsPathArray,
         };
         flowBuildBasket.conflicts = this.conflictCollector(flowBuildBasket);
-        console.log("finalReceipe: ", flowBuildBasket.finalReceipe);
-        console.log("conflicts: ", flowBuildBasket.conflicts);
       }
       // ---- Pre-flight check 02 - finalReceipe array
       if (
@@ -256,25 +255,17 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     const conflicts = this.conflictCollector(flowBuildBasket);
     // -------- CREATE THE FLOW OBJECT (doesn't save yet!) -------------------------------
     settings.flows[flowBuildBasket.createOrEditFlowName] = {
+      flowName: flowBuildBasket.createOrEditFlowName,
+      flowFilePath: `${this.plugin.settings.systemFolderPlace}TextFlow_SystemFolder/${flowBuildBasket.createOrEditFlowName}.md`,
       flowCookbook: flowBuildBasket.cleanCookbook, // cleaned up user input
       flowReceipe: flowBuildBasket.finalReceipe, // { defMode: pathArray }
       depthFirst: flowBuildBasket.depthFirst,
       isFreshBuild: true,
-      flowName: flowBuildBasket.createOrEditFlowName, // Using the entered name
-      flowFilePath: `${this.plugin.settings.systemFolderPlace}TextFlow_SystemFolder/${flowBuildBasket.createOrEditFlowName}.md`,
       flowBuilt: false,
+      flaggedForRebuild: false,
       conflictArray: conflicts,
-      flowActive: false,
-      activeRegion: {
-        lastCursorPosition: 0,
-        type: "",
-        path: "",
-        UID: "",
-        flowOrder: 1,
-        startInFlow: 0,
-        endInFlow: 1,
-      },
-      persistentCursorPos: 0,
+      activeRegions: {},
+      persistentCursors: {},
       modifiedRegionsArray: [],
       flowMap: {},
     };
@@ -787,20 +778,11 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           minLength: ingredientName.length,
           lengthPlusDividers:
             ingredientName.length + mapValueBasket.idDivider.length,
-          startEndInFlow: {
-            start: mapValueBasket.initialIteration
-              ? 0
-              : mapValueBasket.concatenatedFileContents.length,
-            end: ingredientName.length + mapValueBasket.idDivider.length,
-          },
         } as Types.SourceFileObject;
         mapValueBasket.initialIteration = false;
 
         // Add content with marker before divider
         mapValueBasket.concatenatedFileContents += `<center><b>${ingredientName}</b></center>${mapValueBasket.idDivider}`;
-        mapValueBasket.currentEnd =
-          mapValueBasket.concatenatedFileContents.length;
-        flow.flowMap[ingredient].startEndInFlow.end = mapValueBasket.currentEnd;
       }
       // it ingredient is a path
       else {
@@ -863,10 +845,10 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
           // Add content with marker before divider
           mapValueBasket.concatenatedFileContents += `${fileContent}${mapValueBasket.idDivider}`;
-          mapValueBasket.currentEnd =
+          /*mapValueBasket.currentEnd =
             mapValueBasket.concatenatedFileContents.length;
           flow.flowMap[ingredient].startEndInFlow.end =
-            mapValueBasket.currentEnd;
+            mapValueBasket.currentEnd;*/
         } else {
           console.error("Invalid file.");
         }
@@ -1126,11 +1108,12 @@ export class TextFlowSettingsTab extends PluginSettingTab {
                 // Update settings with new location
                 this.plugin.settings.systemFolderPath = newPath;
                 this.plugin.settings.systemFolderPlace = newSystemFolderPlace;
-                for (let flow in this.plugin.settings.flows) {
+
+                Object.keys(this.plugin.settings.flows).forEach((flow) => {
                   this.plugin.settings.flows[flow].flowFilePath = normalizePath(
                     `${this.plugin.settings.systemFolderPath}/${flow}.md`
                   );
-                }
+                });
                 await this.plugin.saveSettings();
 
                 new Notice(`SystemFolder moved to ${newSystemFolderPlace}`);
@@ -1621,7 +1604,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           success: false,
           fresh: false,
         };
-        console.log("preview button calling create flow definition");
         await this.createFlowDefinition(this.plugin.settings.flowBuildBasket);
         this.plugin.settings.flowBuildBasket.previewUsed = true;
         if (this.plugin.settings.flowBuildBasket.success === true) {
@@ -1704,7 +1686,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       text: "Your Flow definitions",
       cls: "headline-text",
     });
-    for (let flow in this.plugin.settings.flows) {
+
+    Object.keys(this.plugin.settings.flows).forEach((flow) => {
       const shownFlow = this.plugin.settings.flows[flow];
 
       // --- DISPLAY PREPARATIONS ----------------------------------
@@ -1754,12 +1737,17 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       exclusionString += exclusionsJoined;
 
       // --- THE DISPLAY ITSELF -------------------------------
-      const flowShow = new Setting(flowDisplay)
+      const flowShow = new Setting(flowDisplay);
+      let modWarning = "";
+      if (shownFlow.modifiedRegionsArray.length > 0) {
+        modWarning = " - UNSAVED CHANGES!";
+      }
+      flowShow
         .setName(`${shownFlow.flowName}`)
         .setDesc(
           createFragment((desc) => {
             desc.createSpan({
-              text: `Source: ${source}`,
+              text: `Source: ${source} ${modWarning}`,
             });
             if (inclusionString != "" && inclusionString != undefined) {
               desc.createEl("br"); // Add line break
@@ -1874,6 +1862,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             DeleteFlowDefModal.open();
           });
         });
-    }
+    });
   }
 }
