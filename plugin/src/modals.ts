@@ -206,7 +206,6 @@ export class DeleteFlowDefModal extends Modal {
     deleteButton.setTooltip(`Delete "${this.flowName}".`);
     deleteButton.setIcon("trash");
     deleteButton.onClick(async () => {
-      this.settings.deletionInProgress = true;
       await this.modalSaveAndReload();
 
       const flowFilePath = `${this.settings.systemFolderPlace}TextFlow_SystemFolder/${this.flowName}.md`;
@@ -219,8 +218,6 @@ export class DeleteFlowDefModal extends Modal {
         if (flowFile) {
           await this.app.vault.delete(flowFile);
         }
-        this.settings.deletionInProgress = true;
-
         await this.modalSaveAndReload();
         new Notice(
           `The definition and flowFile of "${this.flowName}" were deleted!`

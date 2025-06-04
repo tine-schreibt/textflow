@@ -8,27 +8,28 @@ export interface TextFlowSettings {
   systemFolderPlace?: string;
   systemFolderPath?: string;
   systemFolderHidden: boolean;
-  flowBuildBasket: flowBuildBasket; // For storing preview data
-  flowLeafInFocus?: boolean;
   autoSave: boolean;
+  explorerDeco: boolean;
+  flowBuildBasket: flowBuildBasket; // For storing preview data
   activeFlowObject: { [key: string]: number | any };
-  deletionInProgress: boolean;
   flows: { [key: string]: FlowDef };
 }
 
 export interface FlowDef {
+  timestamp: string;
   flowName: string;
   flowFilePath: string;
   flowCookbook: { [key: string]: string }; // user input
   flowReceipe: { [key: string]: string[] };
   depthFirst: boolean;
+  folderTitles: boolean;
   isFreshBuild: boolean;
   flowBuilt: boolean;
   flaggedForRebuild: boolean;
   conflictArray: string[];
   activeRegions: { [key: number]: ActiveRegion };
   persistentCursors: { [key: number]: number };
-  modifiedRegionsArray: string[];
+  unsavedRegionsArray: string[];
   flowMap: { [key: string]: SourceFileObject };
 }
 
@@ -61,9 +62,9 @@ export interface SourceFileObject {
 
 // --------- them defaults --------------------
 export const DEFAULT_SETTINGS: TextFlowSettings = {
-  activeFlowObject: {},
-  autoSave: true,
   systemFolderHidden: false,
+  autoSave: true,
+  explorerDeco: true,
   flowBuildBasket: {
     createOrEditFlowName: "",
     oldFlowName: "",
@@ -74,12 +75,13 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
     finalReceipe: {},
     conflicts: [],
     depthFirst: true,
+    folderTitles: true,
     dataviewSearchPath: "",
     previewUsed: false,
     success: false,
     fresh: true,
   },
-  deletionInProgress: true,
+  activeFlowObject: {},
   flows: {},
 };
 
@@ -107,6 +109,7 @@ export interface flowBuildBasket {
   dataviewSearchPath: string;
   definitionMode: string;
   depthFirst: boolean;
+  folderTitles: boolean;
   success: boolean;
   previewUsed: boolean;
   fresh: boolean;

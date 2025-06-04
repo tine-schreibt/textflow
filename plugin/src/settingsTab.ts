@@ -4,19 +4,21 @@ import type { DataviewApi } from "obsidian-dataview";
 import * as Modals from "./modals";
 import {
   App,
+  ButtonComponent,
+  setIcon,
+  MarkdownView,
+  normalizePath,
+  Notice,
   PluginSettingTab,
   Setting,
   TFolder,
   TFile,
   TAbstractFile,
   TextComponent,
-  MarkdownView,
-  normalizePath,
-  Notice,
-  ButtonComponent,
 } from "obsidian";
 import TextFlow from "../main";
 import * as Types from "./types";
+import Pickr from "@simonwep/pickr";
 
 // --- A class for the flowBuilder progress bar
 class ProgressNotice {
@@ -48,6 +50,7 @@ class ProgressNotice {
 // --- The class that defines the settings tab
 export class TextFlowSettingsTab extends PluginSettingTab {
   plugin: TextFlow;
+  private pickrInstance: Pickr;
 
   constructor(app: App, plugin: TextFlow) {
     super(app, plugin);
@@ -214,7 +217,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
         // ------ FINAL RECEIPE FOR PATH TAG PROPERTY -----------------------
       } else {
-        const ensureNoUndefined = await this.ensureNoUndefined(flowBuildBasket);
+        const ensureNoUndefined = this.ensureNoUndefined(flowBuildBasket);
         const foldersTagsPropsPathArray = await this.getPathsByFoldersTagsProps(
           flowBuildBasket
         );
@@ -248,6 +251,18 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     }
   };
 
+  getTimestamp = (): string => {
+    const date = new Date();
+    const weekday = date.toLocaleDateString("en-US", { weekday: "short" });
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+
+    return `${weekday}, ${year}.${month}.${day}, ${hours}:${minutes}`;
+  };
+
   writeFlowDef = (
     settings: Types.TextFlowSettings,
     flowBuildBasket: Types.flowBuildBasket
@@ -255,18 +270,20 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     const conflicts = this.conflictCollector(flowBuildBasket);
     // -------- CREATE THE FLOW OBJECT (doesn't save yet!) -------------------------------
     settings.flows[flowBuildBasket.createOrEditFlowName] = {
+      timestamp: this.getTimestamp(),
       flowName: flowBuildBasket.createOrEditFlowName,
       flowFilePath: `${this.plugin.settings.systemFolderPlace}TextFlow_SystemFolder/${flowBuildBasket.createOrEditFlowName}.md`,
       flowCookbook: flowBuildBasket.cleanCookbook, // cleaned up user input
       flowReceipe: flowBuildBasket.finalReceipe, // { defMode: pathArray }
       depthFirst: flowBuildBasket.depthFirst,
+      folderTitles: flowBuildBasket.folderTitles,
       isFreshBuild: true,
       flowBuilt: false,
       flaggedForRebuild: false,
       conflictArray: conflicts,
       activeRegions: {},
       persistentCursors: {},
-      modifiedRegionsArray: [],
+      unsavedRegionsArray: [],
       flowMap: {},
     };
   };
@@ -334,14 +351,19 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     const finalGroup = navigateToGroup(bookmarkItems, groupPathArray);
 
     //-- Function to recursively collect the file paths and group names
-    const collectPaths = (items: Types.BookmarkItem[]): string[] => {
+    const collectPaths = (
+      items: Types.BookmarkItem[],
+      flowBuildBasket: Types.flowBuildBasket
+    ): string[] => {
       for (const item of items) {
         if (item.type === "file" && item.path) {
           bookmarkedNotePathsArray.push(item.path);
         } else if (includeSubgroups && item.type === "group" && item.items) {
           // Recurse into nested groups
-          bookmarkedNotePathsArray.push(`#${item.title ?? "Unnamed Group"}`);
-          collectPaths(item.items);
+          if (flowBuildBasket.folderTitles) {
+            bookmarkedNotePathsArray.push(`#${item.title ?? "Unnamed Group"}`);
+          }
+          collectPaths(item.items, flowBuildBasket);
         }
       }
       return bookmarkedNotePathsArray;
@@ -350,7 +372,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     // Function call
     if (finalGroup?.items) {
       bookmarkedNotePathsArray.push(`#${finalGroup.title ?? "Unnamed Group"}`); // push name of main group
-      collectPaths(finalGroup.items);
+      collectPaths(finalGroup.items, flowBuildBasket);
     } else {
       new Notice("Please check the name of the bookmark group you submitted");
     }
@@ -359,7 +381,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
   // --- GET ALL PATHS FROM FOLDER TAG PROPERTY -------------------
   // In case input hasn't been touched; also makes ! safe to use
-  ensureNoUndefined = async (flowBuildBasket: Types.flowBuildBasket) => {
+  ensureNoUndefined = (flowBuildBasket: Types.flowBuildBasket) => {
     if (flowBuildBasket.flowCookbook.folderIncluded === undefined) {
       flowBuildBasket.flowCookbook.folderIncluded = "";
     }
@@ -513,17 +535,23 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
     // Build tree in the same order as seen in fileExplorer
     const buildDepthFirstFileTree = (folder: TFolder) => {
-      const children = folder.children.sort((a, b) =>
-        a.name.localeCompare(b.name)
-      );
+      // Split and sort folders and files separately
+      const folders = folder.children
+        .filter((child): child is TFolder => child instanceof TFolder)
+        .sort((a, b) => a.name.localeCompare(b.name));
 
-      // Process each child (file or folder) in order
-      for (const child of children) {
-        if (child instanceof TFile) {
-          fileTreeArray.push(child.path);
-        } else if (child instanceof TFolder) {
-          buildDepthFirstFileTree(child);
-        }
+      const files = folder.children
+        .filter((child): child is TFile => child instanceof TFile)
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      // Process all folders first (depth-first)
+      for (const subfolder of folders) {
+        buildDepthFirstFileTree(subfolder);
+      }
+
+      // Then process all files in current folder
+      for (const file of files) {
+        fileTreeArray.push(file.path);
       }
     };
 
@@ -648,82 +676,46 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     // Depth first approach
     const findFolderTitlesDepthFirst = (
       finalPathArray: string[],
-      folderIncluded: string
+      flowBuildBasket: Types.flowBuildBasket
     ) => {
       let arrayWithFolderTitles: string[] = [];
-      let lastProcessedPath = "";
-
-      if (folderIncluded === "" || folderIncluded === "/") {
-        arrayWithFolderTitles.push(`#${this.app.vault.getName()}`);
-      }
-      for (let path of finalPathArray) {
-        // Split current and last path into segments
-        const currentSegments = path.split("/");
-        const lastSegments = lastProcessedPath.split("/");
-
-        // Find the point where the current path diverges from the last path
-        let divergeIndex = 0;
-        while (
-          divergeIndex < currentSegments.length - 1 && // -1 to not process the file name
-          divergeIndex < lastSegments.length &&
-          currentSegments[divergeIndex] === lastSegments[divergeIndex]
-        ) {
-          divergeIndex++;
-        }
-
-        // Add folder titles for new path segments
-        for (let i = divergeIndex; i < currentSegments.length - 1; i++) {
-          arrayWithFolderTitles.push(`#${currentSegments[i]}`);
-        }
-
-        // Add the file path
-        arrayWithFolderTitles.push(path);
-        lastProcessedPath = path;
-      }
-
-      return arrayWithFolderTitles;
-    };
-
-    // Files first approach
-    const findFolderTitlesFilesFirst = (
-      finalPathArray: string[],
-      folderIncluded: string
-    ) => {
       let lastParentFolder = "";
-      let currentParentFolder = "";
-      let arrayWithFolderTitles: string[] = [];
-      if (folderIncluded === "" || folderIncluded === "/") {
-        arrayWithFolderTitles.push(`#${this.app.vault.getName()}`);
-      }
-      for (let path of finalPathArray) {
-        // split the path into an array, then get the second-to-last entry or empty string
-        let parentFolderPathArray = path.split("/");
-        currentParentFolder =
-          parentFolderPathArray.length > 1
-            ? parentFolderPathArray[parentFolderPathArray.length - 2]
-            : "";
-        if (currentParentFolder != lastParentFolder) {
-          arrayWithFolderTitles.push(`#${currentParentFolder}`);
-          lastParentFolder = currentParentFolder;
+
+      for (let currentPath of finalPathArray) {
+        // Split current and last path into segments
+        const currentPathSegments = currentPath.split("/");
+
+        // find the last parent folder
+        // if there is no parent
+        if (currentPathSegments.length === 1 && flowBuildBasket.folderTitles) {
+          if (lastParentFolder != this.app.vault.getName()) {
+            arrayWithFolderTitles.push(`#${this.app.vault.getName()}`);
+            arrayWithFolderTitles.push(`${currentPath}`);
+          }
+          lastParentFolder = this.app.vault.getName();
         }
-        arrayWithFolderTitles.push(path);
+        // if there is a parent, check if it's a new one
+        if (currentPathSegments.length >= 2 && flowBuildBasket.folderTitles) {
+          let currentParentFolder =
+            currentPathSegments[currentPathSegments.length - 2];
+          if (lastParentFolder != currentParentFolder) {
+            // if it's a new parent, push it and replace
+            arrayWithFolderTitles.push(`#${currentParentFolder}`);
+            lastParentFolder = currentParentFolder;
+          }
+        }
+        arrayWithFolderTitles.push(`${currentPath}`);
       }
+
       return arrayWithFolderTitles;
     };
 
     //-- function call for folder titles
-    let pathArrayWithFolderTitles: string[] = [];
-    if (flowBuildBasket.depthFirst) {
-      pathArrayWithFolderTitles = findFolderTitlesDepthFirst(
-        finalPathArray,
-        normalizePath(shCookbook.folderIncluded.trim())
-      );
-    } else {
-      pathArrayWithFolderTitles = findFolderTitlesFilesFirst(
-        finalPathArray,
-        normalizePath(shCookbook.folderIncluded.trim())
-      );
-    }
+
+    let pathArrayWithFolderTitles = findFolderTitlesDepthFirst(
+      finalPathArray,
+      flowBuildBasket
+    );
 
     // pack the cookbook back into the basket
     flowBuildBasket.flowCookbook = shCookbook;
@@ -1090,7 +1082,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
                 `${newSystemFolderPlace}/TextFlow_SystemFolder`
               );
               await this.createSystemFolder(newPath);
-              this.plugin.discernAndSetsystemFolderState(
+              this.plugin.discernAndSetSystemFolderState(
                 this.plugin.settings.systemFolderHidden,
                 newSystemFolderPlace
               );
@@ -1101,7 +1093,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
                   `${newSystemFolderPlace}/TextFlow_SystemFolder`
                 );
                 await this.app.vault.rename(systemFolder, newPath);
-                this.plugin.discernAndSetsystemFolderState(
+                this.plugin.discernAndSetSystemFolderState(
                   this.plugin.settings.systemFolderHidden,
                   newSystemFolderPlace
                 );
@@ -1124,13 +1116,13 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           });
       });
 
-    // -----------   hide temp folder  ---------------
+    // -----------   hide system folder  ---------------
     const hidesystemFolder = new Setting(setUpTextFlow)
       .setName("Hide TextFlow_SystemFolder")
       .setDesc(
         createFragment((desc) => {
           desc.createSpan({
-            text: "Hiding this folder is strongly recommended, since accidentally messing with it could lead to data loss or corruption.",
+            text: "Hiding this folder is strongly recommended (messing with it can lose you data).",
           });
           desc.createEl("br"); // Add line break
           desc.createSpan({
@@ -1143,7 +1135,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .setValue(this.plugin.settings.systemFolderHidden)
           .onChange(async (value) => {
             this.plugin.settings.systemFolderHidden = value;
-            this.plugin.discernAndSetsystemFolderState(
+            this.plugin.discernAndSetSystemFolderState(
               value,
               this.plugin.settings.systemFolderPlace
             );
@@ -1151,7 +1143,53 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           });
       });
 
-    // --------   Create a new flowObject   ----------------
+    // -----------   Auto-save  ---------------
+    const autoSave = new Setting(setUpTextFlow)
+      .setName("Automatically save back to source")
+      .setDesc(
+        createFragment((desc) => {
+          desc.createSpan({
+            text: "Saves on active-leaf-change and blur.",
+          });
+          desc.createEl("br"); // Add line break
+          desc.createSpan({
+            text: "!! Auto-save does NOT trigger when you close or open your vault / Obsidan !!",
+            cls: "text-emphasis",
+          });
+          desc.createEl("br"); // Add line break
+          desc.createSpan({
+            text: "You can always save manually via command palette / hotkey.",
+          });
+        })
+      )
+      .addToggle((activateAutoSave) => {
+        activateAutoSave
+          .setValue(this.plugin.settings.autoSave)
+          .onChange(async (value) => {
+            this.plugin.settings.autoSave = value;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    const explorerDeco = new Setting(setUpTextFlow)
+      .setName("Mark unsaved notes in file explorer")
+      .setDesc(
+        createFragment((desc) => {
+          desc.createSpan({
+            text: "Turning this off requires a vault reload to take effect.",
+          });
+        })
+      )
+      .addToggle((explorerDeco) => {
+        explorerDeco
+          .setValue(this.plugin.settings.explorerDeco)
+          .onChange(async (value) => {
+            this.plugin.settings.explorerDeco = value;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    // --------   CREATE / EDIT FLOWS   ----------------
     const createFlows = containerEl.createDiv({
       cls: "headline-container",
     });
@@ -1187,15 +1225,19 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
     // ---- SORT FLOW ---------
     const sortFlow = new Setting(createFlows)
-      .setName("Follow file explorer order")
+      .setName("Follow note order in file explorer (ignored for bookmarks)")
       .setDesc(
         createFragment((desc) => {
           desc.createSpan({
-            text: "(Sub)folders and notes will be processed in the same order as they appear in the file explorer.",
+            text: "Note order overrides folder order. Best for flat hierarchy (and folder titles off).",
           });
           desc.createEl("br"); // Add line break
           desc.createSpan({
-            text: "If toggled off, files will be processed first, then (sub)folders.",
+            text: "If toggled off, folder order overrides note order. Best for deep hierarchy (and folder titles on).",
+          });
+          desc.createEl("br"); // Add line break
+          desc.createSpan({
+            text: "Test all options to see which one works best for each flow.",
           });
         })
       )
@@ -1206,6 +1248,29 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         }
         sortToggle.onChange(async (value) => {
           this.plugin.settings.flowBuildBasket.depthFirst = value;
+          this.plugin.saveSettings();
+        });
+      });
+
+    // --------- FOLDER TITLES ------------------
+    const toggleFolderTitles = new Setting(createFlows)
+      .setName("Include folder / bookmark group titles in flow")
+      .setDesc(
+        createFragment((desc) => {
+          desc.createSpan({
+            text: "This will also turn off folder titles in the flow navigation dropdown.",
+          });
+        })
+      )
+      .addToggle((sortToggle) => {
+        const toggleSetting = sortToggle.setValue(true);
+        if (!this.plugin.settings.flowBuildBasket?.fresh) {
+          sortToggle.setValue(
+            this.plugin.settings.flowBuildBasket.folderTitles
+          );
+        }
+        sortToggle.onChange(async (value) => {
+          this.plugin.settings.flowBuildBasket.folderTitles = value;
           this.plugin.saveSettings();
         });
       });
@@ -1594,6 +1659,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           oldFlowName: this.plugin.settings.flowBuildBasket.oldFlowName,
           createOrEdit: this.plugin.settings.flowBuildBasket.createOrEdit,
           depthFirst: this.plugin.settings.flowBuildBasket.depthFirst,
+          folderTitles: this.plugin.settings.flowBuildBasket.folderTitles,
           definitionMode: this.plugin.settings.flowBuildBasket.definitionMode,
           flowCookbook: this.plugin.settings.flowBuildBasket.flowCookbook,
           cleanCookbook: {},
@@ -1665,6 +1731,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           this.plugin.settings.flowBuildBasket
         );
         // reset all values
+        this.syncConflicts(this.plugin.settings.flowBuildBasket);
         this.resetFlowBuildBasket(this.plugin.settings.flowBuildBasket);
         this.plugin.saveSettings();
         this.display();
@@ -1739,15 +1806,15 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       // --- THE DISPLAY ITSELF -------------------------------
       const flowShow = new Setting(flowDisplay);
       let modWarning = "";
-      if (shownFlow.modifiedRegionsArray.length > 0) {
+      if (shownFlow.unsavedRegionsArray.length > 0) {
         modWarning = " - UNSAVED CHANGES!";
       }
       flowShow
-        .setName(`${shownFlow.flowName}`)
+        .setName(`${shownFlow.flowName}${modWarning}`)
         .setDesc(
           createFragment((desc) => {
             desc.createSpan({
-              text: `Source: ${source} ${modWarning}`,
+              text: `Source: ${source}`,
             });
             if (inclusionString != "" && inclusionString != undefined) {
               desc.createEl("br"); // Add line break
@@ -1761,6 +1828,13 @@ export class TextFlowSettingsTab extends PluginSettingTab {
                 text: `Exclusion criteria: ${exclusionString}`,
               });
             }
+            if (shownFlow.conflictArray.length > 0) {
+              const conflictString = shownFlow.conflictArray.join(", ");
+              desc.createEl("br"); // Add line break
+              desc.createSpan({
+                text: `Overlaps with: ${conflictString}`,
+              });
+            }
           })
         )
 
@@ -1772,6 +1846,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               oldFlowName: this.plugin.settings.flows[flow].flowName,
               createOrEdit: "",
               depthFirst: this.plugin.settings.flows[flow].depthFirst,
+              folderTitles: this.plugin.settings.flows[flow].folderTitles,
               definitionMode: Object.keys(
                 this.plugin.settings.flows[flow].flowReceipe
               )[0],
@@ -1786,10 +1861,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             };
 
             await this.createFlowDefinition(flowReBuildBasket);
-            this.plugin.settings.flows[
-              flowReBuildBasket.createOrEditFlowName
-            ].flowReceipe = flowReBuildBasket.finalReceipe; // { defMode: pathArray }
-
+            // null unsavedRegions
+            this.plugin.settings.flows[flow].unsavedRegionsArray = [];
             this.resetFlowBuildBasket(flowReBuildBasket);
 
             // Get fresh reference to the flow object after createFlowDefinition
@@ -1836,6 +1909,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               oldFlowName: shownFlow.flowName,
               createOrEdit: "edit",
               depthFirst: shownFlow.depthFirst,
+              folderTitles: shownFlow.folderTitles,
               definitionMode: Object.keys(shownFlow.flowReceipe)[0],
               flowCookbook: shownFlow.flowCookbook,
               cleanCookbook: shownFlow.flowCookbook,
