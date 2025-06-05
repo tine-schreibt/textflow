@@ -274,7 +274,6 @@ export default class TextFlowPlugin extends Plugin {
         }
         if (!handledPathsArray.includes(successivePath)) {
           handledPathsArray.push(successivePath);
-          console.log("successive path: ", successivePath);
           updateStyles(successivePath, isUnsaved);
         }
       }
@@ -282,7 +281,6 @@ export default class TextFlowPlugin extends Plugin {
 
     const updateStyles = (path: string, isUnsaved: boolean) => {
       // Add console log to check the path being used
-      console.log("Updating styles for path:", path);
 
       // Remove opposite style if exists
       const oppositeStyle = document.head.querySelector(
@@ -404,6 +402,7 @@ export default class TextFlowPlugin extends Plugin {
           // console.log("skipping active-leaf setups because isNavigatingFlow");
           return;
         }
+        this.manageActiveFlowObject();
 
         if (leaf?.view instanceof MarkdownView) {
           const view = leaf.view;
@@ -420,9 +419,6 @@ export default class TextFlowPlugin extends Plugin {
             // if active leaf is flow, set it up
             const isFlow = this.isFlowFile(activeLeafPath);
             if (isFlow) {
-              // if we're just navigating, we don't need a new setup
-
-              // console.log("active leaf change: is flow");
               this.setupFlowView(isFlow, leaf.view);
               return;
             }
@@ -450,6 +446,8 @@ export default class TextFlowPlugin extends Plugin {
           //    console.log("skipping file-open setup because isNavigatingFlow");
           return;
         }
+        this.manageActiveFlowObject();
+
         // In case the newly opened file has been loaded into
         // the active leaf, which doesn't trigger active-leaf-change
         const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
@@ -476,6 +474,15 @@ export default class TextFlowPlugin extends Plugin {
       })
     );
 
+    // catch it, when only an empty leaf remains
+    this.registerEvent(
+      this.app.workspace.on("layout-change", () => {
+        if (this.app.workspace.getLeavesOfType("markdown").length === 0) {
+          // We're definitely in the "empty leaf" state
+          this.manageActiveFlowObject();
+        }
+      })
+    );
     // Add this to track the most recently active flow leaf
     this.registerEvent(
       this.app.workspace.on("active-leaf-change", (leaf) => {
@@ -919,39 +926,25 @@ export default class TextFlowPlugin extends Plugin {
       const activeViewAtClickTime =
         this.app.workspace.getActiveViewOfType(MarkdownView);
 
-      console.log(
-        "Active view at click time:",
-        activeViewAtClickTime?.file?.path
-      );
-      console.log("All markdown leaves:");
       const allLeaves = this.app.workspace.getLeavesOfType("markdown");
       allLeaves.forEach((leaf, index) => {
         const view = leaf.view as MarkdownView;
-        console.log(
-          `  Leaf ${index}: ID=${(leaf as any).id}, file=${
-            view.file?.path
-          }, isActive=${leaf === this.app.workspace.activeLeaf}`
-        );
       });
 
       const target = event.target as HTMLElement;
       const fileItem = target.closest(".nav-file-title");
       if (!fileItem) {
-        console.log("No file item found");
+        new Error("No file item found");
         return;
       }
 
       const clickedFilePath = fileItem.getAttribute("data-path");
       if (!clickedFilePath) {
-        console.log("No clicked file path");
         return;
       }
 
-      console.log("Clicked file path:", clickedFilePath);
-
       const file = this.app.vault.getAbstractFileByPath(clickedFilePath);
       if (!(file instanceof TFile)) {
-        console.log("Not a TFile");
         return;
       }
 
@@ -959,7 +952,6 @@ export default class TextFlowPlugin extends Plugin {
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
-      console.log("Default actions prevented");
 
       let clickHandled = false;
 
@@ -1015,17 +1007,6 @@ export default class TextFlowPlugin extends Plugin {
           try {
             const flowFilePath = flowSettings.flowFilePath;
 
-            console.log("=== DEBUG: Flow leaf selection ===");
-            console.log("Target flowFilePath:", flowFilePath);
-            console.log(
-              "Active view at click time file path:",
-              activeViewAtClickTime?.file?.path
-            );
-            console.log(
-              "Active view at click time leaf ID:",
-              (activeViewAtClickTime?.leaf as any)?.id
-            );
-
             let flowLeaf;
 
             // First priority: Check if the most recently active flow leaf matches our target
@@ -1034,19 +1015,14 @@ export default class TextFlowPlugin extends Plugin {
               (this.mostRecentActiveFlowLeaf.view as MarkdownView).file
                 ?.path === flowFilePath
             ) {
-              console.log("Using most recently active flow leaf");
               flowLeaf = this.mostRecentActiveFlowLeaf;
             } else {
               // Fallback: Find any existing leaf with our flow
-              console.log(
-                "Most recent doesn't match, searching for existing flow leaf"
-              );
               flowLeaf = leaves.find(
                 (leaf) =>
                   leaf.view instanceof MarkdownView &&
                   leaf.view.file?.path === flowFilePath
               );
-              console.log("Found flow leaf ID:", (flowLeaf as any)?.id);
             }
 
             if (!flowLeaf || !(flowLeaf.view instanceof MarkdownView)) {
@@ -1111,19 +1087,11 @@ export default class TextFlowPlugin extends Plugin {
               flowDocumentText
             );
 
-            console.log(
-              `TextFlow: Calculated startPosInFlow for ${clickedFilePath}: ${startPosInFlow}`
-            );
-
             if (startPosInFlow !== undefined && startPosInFlow >= 0) {
               const line = cmEditor.state.doc.lineAt(
                 Math.max(0, startPosInFlow)
               ); // Ensure position is not negative
               const targetPos = line.from; // Scroll to the beginning of the line
-
-              console.log(
-                `TextFlow: Dispatching scroll in ${parentFlowName} to pos: ${targetPos} (line ${line.number})`
-              );
               cmEditor.dispatch({
                 selection: { anchor: targetPos, head: targetPos },
                 effects: EditorView.scrollIntoView(targetPos, {
@@ -1133,13 +1101,6 @@ export default class TextFlowPlugin extends Plugin {
                 userEvent: "select.pointer",
               });
               cmEditor.focus(); // Explicitly focus the editor
-              console.log(
-                "TextFlow: Scroll, selection, and focus dispatched for flow editor."
-              );
-            } else {
-              console.warn(
-                `TextFlow: Could not find start position for region of ${clickedFilePath} in flow ${parentFlowName}. Cannot scroll.`
-              );
             }
           } catch (err) {
             console.error(
@@ -1149,9 +1110,6 @@ export default class TextFlowPlugin extends Plugin {
           } finally {
             setTimeout(() => {
               this.isNavigatingFlow = false;
-              console.log(
-                "TextFlow: isNavigatingFlow reset to false after source file processing."
-              );
             }, 300); // Increased delay
           }
         }
@@ -1159,9 +1117,6 @@ export default class TextFlowPlugin extends Plugin {
 
       // Fallback for files not handled as flows or source files by our logic
       if (!clickHandled) {
-        console.log(
-          `TextFlow: File ${clickedFilePath} is a regular note. Opening it.`
-        );
         this.isNavigatingFlow = false; // Ensure this is false for regular note opening
         if (noteIsOpen) {
           this.app.workspace.setActiveLeaf(noteIsOpen, { focus: true });
@@ -1174,6 +1129,7 @@ export default class TextFlowPlugin extends Plugin {
           this.app.workspace.openLinkText(clickedFilePath, "", openInNewSplit);
         }
       }
+      this.manageActiveFlowObject();
     };
   }
 
@@ -1186,11 +1142,10 @@ export default class TextFlowPlugin extends Plugin {
     this.addIdDividerProtection(view, flowName);
     this.addCursorListener(view);
     this.addTextChangeListener(view);
-    //  console.log("setupFlowView calling manageActiveFlowObject");
-    // this.manageActiveFlowObject(view, flowName);
     if (view.containerEl.hasClass("source-read-only")) {
       view.containerEl.removeClass("source-read-only");
     }
+    setTimeout(() => this.manageActiveFlowObject(), 500);
   }
 
   // ---- Identity check
@@ -1260,70 +1215,52 @@ export default class TextFlowPlugin extends Plugin {
     }
   };
 
-  // If one flow is replaced by another
-  /*manageActiveFlowObject = (view: MarkdownView, flowName: string) => {
-    const leafID = (view.leaf as any).id;
-    console.log("manageActiveFlowObject: ", leafID);
+  // ------------- Used by flowSwitcherModal -----------
+  manageActiveFlowObject = () => {
+    console.log("manageActiveFlowObject: ");
 
-    // Check if there's an entry for the leafID for another flow
-    Object.keys(this.settings.activeFlowObject).forEach(async (flow) => {
-      if (
-        !this.settings.activeFlowObject[flowName] &&
-        this.settings.activeFlowObject[flow][leafID]
-      ) {
-        // remove that entry
-        console.log("manageActiveFlowObject found entry; will delete");
-        delete this.settings.activeFlowObject[flow][leafID];
-        this.saveSettings();
-        console.log("manageActiveFlowObject deleted");
-      }
+    // reset it all
+    Object.keys(this.settings.activeFlowObject).forEach((flow) => {
+      this.settings.activeFlowObject[flow] = {};
     });
 
-    // Initialize the flow object if it doesn't exist
-    if (!this.settings.activeFlowObject[flowName]) {
-      this.settings.activeFlowObject[flowName] = {};
-    }
-
-    // then add the entry for the new flow and leafID
-    if (!this.settings.activeFlowObject[flowName][leafID]) {
-      console.log("manageActiveFlowObject: setting up new entry");
-      this.settings.activeFlowObject[flowName][leafID] = true; // or any other meaningful value
-      console.log("manageActiveFlowObject: entry added");
-      this.saveSettings();
-    }
-  };*/
+    // the repopulate
+    const allLeaves = this.app.workspace.iterateAllLeaves((leaf) => {
+      if (leaf.view instanceof MarkdownView) {
+        console.log("Is markdown");
+        const leafID = (leaf as any).id;
+        console.log(leafID);
+        const leafPath = leaf.view.file?.path;
+        if (leafPath) {
+          console.log(leafPath);
+          // check if it's a flow
+          const flowName = this.isFlowFile(leafPath);
+          console.log(flowName);
+          if (flowName) {
+            // check if it has an object already
+            if (this.settings.activeFlowObject[flowName]) {
+              console.log("had entry. Updating");
+              this.settings.activeFlowObject[flowName][leafID] = true;
+              this.saveSettings();
+            } else {
+              this.settings.activeFlowObject[flowName] = {};
+              this.settings.activeFlowObject[flowName][leafID] = true;
+              this.saveSettings();
+            }
+          }
+        }
+      }
+    });
+  };
 
   // if a flow is replaced by a non-flow
-  /* closeFlow = (view: MarkdownView) => {
+  closeFlow = (view: MarkdownView) => {
     this.removeCursorListener(view);
     this.removeTextChangeListener(view);
     this.removeIdDividerProtection(view.editor as any);
-
-    const storedLeafIDs: string[] = [];
-    for (let leaf in this.settings.activeFlowObject) {
-      for (let leafID in this.settings.activeFlowObject[leaf]) {
-        storedLeafIDs.push(leafID);
-      }
-    }
-    const allLeaves = this.app.workspace.getLeavesOfType("markdown");
-    const currentLeafIDs = allLeaves.map((leaf) => (leaf as any).id);
-    for (let leaf of allLeaves) {
-      const activeLeafID = (leaf as any).id;
-      const removedLeafIDs = storedLeafIDs.filter(
-        (id) => !currentLeafIDs.includes(id)
-      );
-      // If there are superfluous leafIDs (closed leafs), delete them
-      if (removedLeafIDs.length > 0) {
-        for (let flow in this.settings.activeFlowObject)
-          for (let leafID of removedLeafIDs) {
-            if (this.settings.activeFlowObject[flow][leafID]) {
-              delete this.settings.activeFlowObject[flow][leafID];
-            }
-          }
-      }
-    }
+    this.manageActiveFlowObject();
     this.saveSettings();
-  };*/
+  };
 
   // --- Set up source files
   setupSourceNote = (view: MarkdownView) => {
@@ -1331,12 +1268,11 @@ export default class TextFlowPlugin extends Plugin {
       //console.log("Skipping source note setup during navigation");
       return;
     }
-
     if (!view.containerEl.hasClass("source-read-only")) {
       view.containerEl.addClass("source-read-only");
     }
     //console.log("setupSourceNote: calling closeFlow");
-    // this.closeFlow(view);
+    this.closeFlow(view);
   };
 
   // --- set up vanilla note
@@ -1345,7 +1281,7 @@ export default class TextFlowPlugin extends Plugin {
       view.containerEl.removeClass("source-read-only");
     }
     //console.log("setupVanillaNote: calling close flow");
-    // this.closeFlow(view);
+    this.closeFlow(view);
   };
 
   // ---- Functions: Data safety ----------------------------
@@ -1699,7 +1635,7 @@ export default class TextFlowPlugin extends Plugin {
 
     const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (!activeView) {
-      console.log("No active view found");
+      console.log("No  found");
       return;
     }
 

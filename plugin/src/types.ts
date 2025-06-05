@@ -27,7 +27,7 @@ export interface FlowDef {
   flowBuilt: boolean;
   flaggedForRebuild: boolean;
   conflictArray: string[];
-  activeRegions: { [key: number]: ActiveRegion };
+  activeRegions: { [key: number | string]: ActiveRegion };
   persistentCursors: { [key: number]: number };
   unsavedRegionsArray: string[];
   flowMap: { [key: string]: SourceFileObject };
