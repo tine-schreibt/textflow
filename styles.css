@@ -57,7 +57,6 @@
 
 /*---------------- FILE EXPLORER DECO ---------------*/
 
-
 /* --------------- PREVIEW MODAL ---------------*/
 .preview-container {
   max-height: 400px; /* or any height that works for your use case */
@@ -102,43 +101,136 @@
 }
 
 /*----------- SWITCHER MODAL --------------*/
-.textflow-switcher-option.flow-status-on {
-  color: var(--text-accent);
-}
-
-.textflow-switcher-option.flow-status-incompatible {
-  color: var(--text-muted);
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.textflow-switcher-option.flow-status-off {
-  color: var(--text-normal);
-}
-
-.textflow-switcher {
-  max-width: 300px;
-}
-
-.textflow-switcher-container {
-  padding: 6px;
-}
-
-.textflow-switcher-option {
+.textflow-switcher-main-container {
   display: flex;
+  flex-direction: column;
+  gap: 10px; /* space between sections */
+}
+
+.textflow-switcher-border-bottom-1 {
+  border-bottom: 1px dashed var(--text-accent);
+}
+
+.textflow-switcher-border-bottom-0 {
+  border-bottom: 1px dashed var(--text-faint);
+}
+
+.textflow-switcher-border-rounded-accent {
+  border: 1px solid var(--text-accent);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.textflow-switcher-border-rounded-faint {
+  border: 1px solid var(--text-faint);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+/* ACTIVE FLOWS */
+.textflow-switcher-active-container {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.flow-switch-modal-active-header {
+  display: grid;
+  grid-template-columns: minmax(30px, auto) minmax(200px, 1fr) repeat(
+      4,
+      minmax(30px, auto)
+    );
+  gap: 8px;
+  border-bottom: 1px dashed var(--text-faint);
+}
+
+.flow-switch-modal-active-header-flow-name {
+  font-weight: 500;
+  max-width: 200px;
+  white-space: nowrap; /* prevents text from wrapping */
+  overflow: hidden; /* hides overflow */
+  text-overflow: ellipsis;
+  text-align: left;
+}
+
+.flow-switch-modal-header-button-neutral {
+  background-color: var(--background-primary);
+  color: var(--text-normal);
   align-items: center;
-  padding: 6px;
-  gap: 6px;
-  cursor: pointer;
-  border-radius: 4px;
+  width: 30px;
 }
 
-.textflow-switcher-option:hover {
-  background-color: var(--background-modifier-hover);
+.flow-switch-modal-header-button-no-go {
+  background-color: var(--background-primary);
+  color: var(--text-faint);
+  align-items: center;
+  width: 30px;
 }
 
-.textflow-switcher-option.is-active {
-  color: var(--text-accent);
+.flow-switch-modal-header-button-must {
+  background-color: var(--text-accent);
+  color: var(--text-on-accent);
+  align-items: center;
+  width: 30px;
+}
+
+/* ACTIVE REGION */
+.flow-switch-modal-active-region {
+  padding-top: 5px;
+  display: grid;
+  grid-template-columns:
+    minmax(40px, auto) minmax(200px, 1fr)
+    repeat(2, minmax(30px, auto));
+  gap: 8px;
+}
+
+.flow-switch-modal-active-region-down-arrow {
+  margin-left: 10px;
+  align-items: right;
+}
+
+.flow-switch-modal-active-region-name {
+  font-weight: 500;
+  max-width: 200px;
+  white-space: nowrap; /* prevents text from wrapping */
+  overflow: hidden; /* hides overflow */
+  text-overflow: ellipsis;
+  text-align: left;
+  padding-left: 10px;
+}
+
+/* INACTIVE FLOWS */
+
+.textflow-switcher-INactive-container {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.textflow-switcher-INactive-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.flow-switch-modal-INactive-header {
+  display: grid;
+  grid-template-columns: minmax(30px, auto) minmax(200px, 1fr) repeat(
+      4,
+      minmax(30px, auto)
+    );
+  gap: 8px;
+}
+
+.flow-switch-modal-inactive-header-flow-name {
+  font-weight: 300;
+  max-width: 200px;
+  white-space: nowrap; /* prevents text from wrapping */
+  overflow: hidden; /* hides overflow */
+  text-overflow: ellipsis;
+  text-align: left;
 }
 
 /* ------------ to make read-only visible ----------------*/

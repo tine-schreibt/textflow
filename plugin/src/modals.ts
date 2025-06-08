@@ -120,54 +120,35 @@ export class FlowSwitcherModal extends Modal {
     const { contentEl, modalEl } = this;
     contentEl.empty();
 
-    modalEl.addClass("textflow-switcher");
-    
-    const flowContainer = contentEl.createDiv("switcher-modal-container");
-
-    const activeFlowsContainer = flowContainer.createDiv({
-      cls: "switcher-modal-active-flow-container",
-    });
-
-    activeFlowsContainer.createEl("p", {
-      text: "Active flows",
-      cls: "switcher-modal-faint-text",
-    });
-
+    // ----------------------------------------------------------
+    // -------- GATHERING AND PRE-PROCESSING OF FLOW DATA -------
+    // ----------------------------------------------------------
     // ---- PREPARE ACTIVE REGIONS ---------------
-    const unsavedRegionsGlobal: string[] = [];
+    // object to make flow info easier to grab
+    // activeFlowInfoObject: {flowName: {leafID: regionName}
     const activeFlowInfoObject: { [key: string]: { [key: string]: string } } =
       {};
-    // activeFlowInfoObject.flowName.leafID.fileName
+
     // iterate over active flow object
     Object.keys(this.plugin.settings.activeFlowObject).forEach((flow) => {
-      // if there's entries for a flow
-      if (Object.keys(this.plugin.settings.activeFlowObject[flow]).length > 0) {
-        if (this.plugin.settings.flows[flow].unsavedRegionsArray) {
-          for (let unsavedRegion of this.plugin.settings.flows[flow]
-            .unsavedRegionsArray) {
-            if (!unsavedRegionsGlobal.includes(unsavedRegion)) {
-              unsavedRegionsGlobal.push(unsavedRegion);
+      // gather the info on the active flow's leaves:
+      Object.keys(this.plugin.settings.flows[flow].activeRegions).forEach(
+        (leafID) => {
+          const activeRegion =
+            this.plugin.settings.flows[flow].activeRegions[leafID].path?.split(
+              "/"
+            );
+          if (activeRegion) {
+            const fileName = activeRegion[activeRegion.length - 1];
+            if (!activeFlowInfoObject[flow]) {
+              activeFlowInfoObject[flow] = {};
             }
+            activeFlowInfoObject[flow][leafID] = fileName;
           }
         }
-        Object.keys(this.plugin.settings.flows[flow].activeRegions).forEach(
-          (leafID) => {
-            const activeRegion =
-              this.plugin.settings.flows[flow].activeRegions[
-                leafID
-              ].path?.split("/");
-            if (activeRegion) {
-              // construct a sub-array that contains the leafID (region) and the leaf's region's note name
-              const fileName = activeRegion[activeRegion.length - 1];
-              if (!activeFlowInfoObject[flow]) {
-                activeFlowInfoObject[flow] = {};
-              }
-              activeFlowInfoObject[flow][leafID] = fileName;
-            }
-          }
-        );
-      }
+      );
     });
+
     // Now we sort it all to make the display predictable to the user
     const sortActiveRegionsArray: string[] = [];
     Object.keys(activeFlowInfoObject).forEach((flow) => {
@@ -176,76 +157,332 @@ export class FlowSwitcherModal extends Modal {
     sortActiveRegionsArray.sort();
 
     // ---------- PREPARE INACTIVE REGIONS
-    unsavedRegionsGlobal;
+    // ------------------------------------------------------------
+    const inactiveFlowArray: string[] = [];
+    Object.keys(this.plugin.settings.flows).forEach((flow) => {
+      // if there's entries for a flow
+      if (
+        !sortActiveRegionsArray.includes(
+          this.plugin.settings.flows[flow].flowName
+        )
+      ) {
+        inactiveFlowArray.push(this.plugin.settings.flows[flow].flowName);
+      }
+    });
+    const sortedInactiveFlowArray = inactiveFlowArray.sort();
 
-    // ---- DISPLAY ACTIVE REGIONS -----------
-    for (let shownFlow of sortActiveRegionsArray) {
-      const flowInfoRow = activeFlowsContainer.createDiv({
-        text: `${shownFlow} - ${this.plugin.settings.flows[shownFlow].timestamp}`,
-        cls: "flow-switch-modal-active-headline",
+    // ----------------------------------------------------------
+    // --------------------- DISPLAY LOGIC  ---------------------
+    // ----------------------------------------------------------
+
+    // main container that holds active and inactive flows
+    const mainContainer = contentEl.createDiv({
+      cls: "textflow-switcher-main-container",
+    });
+
+    // ---- DISPLAY ACTIVE FLOWS -----------
+    // sub-container that holds only active flows
+    const activeFlowContainer = mainContainer.createDiv({
+      text: sortActiveRegionsArray.length > 0 ? "" : "No active flows found",
+      cls: "textflow-switcher-active-container textflow-switcher-border-rounded-accent",
+    });
+
+    // container for each flow's two parts: header and regions
+    for (let activeFlow of sortActiveRegionsArray) {
+      const activeFlowEntry = activeFlowContainer.createDiv({
+        cls: "flow-switch-modal-active-entry",
       });
 
-      Object.keys(activeFlowInfoObject[shownFlow]).forEach((leafID) => {
-        // ------ NAVIGATION
-        const navigationButton = new ButtonComponent(activeFlowsContainer)
-          .setButtonText(
-            `Active region: ${activeFlowInfoObject[shownFlow][leafID]}`
-          )
-          .onClick(() => {
-            // get leaf with leafID and make it active leaf
-          });
+      // container for the header
+      const flowHeader = activeFlowEntry.createDiv({
+        cls: "flow-switch-modal-active-header",
       });
-      // -------- BUTTONS
-      // ---- save conditional
+
+      // ------------- HEADER FLOW NAME
+      const flowIconSpan = flowHeader.createSpan();
+      setIcon(flowIconSpan, "file-text");
+
+      const flowName = flowHeader.createSpan({
+        text: `${this.plugin.settings.flows[activeFlow].flowName}`,
+        cls: "flow-switch-modal-active-header-flow-name",
+      });
+
+      // -------- HEADER BUTTONS -------
+      // ---- conditionals for styling
       let goOpen = "neutral";
       let goSave = "neutral";
       let goRebuild = "neutral";
 
       // check if there is unsaved stuff for the flow
-      for (let unsavedRegion of unsavedRegionsGlobal) {
-        if (this.plugin.settings.flows[shownFlow].flowMap[unsavedRegion]) {
-          goOpen = "no go"; // don't open
-          goRebuild = "no go";
-          goSave = "must"; // must save
-        }
+      if (this.plugin.settings.flows[activeFlow].unsavedRegionsArray) {
+        goOpen = "no-go"; // don't open
+        goRebuild = "no-go";
+        goSave = "must"; // must save
       }
       // if no save is required, check if flow is flagged for rebuild
       if (
         goSave === "neutral" &&
-        this.plugin.settings.flows[shownFlow].flaggedForRebuild
+        this.plugin.settings.flows[activeFlow].flaggedForRebuild
       ) {
-        goOpen = "no go";
+        goOpen = "no-go";
         goRebuild = "must";
-        goSave = "no go";
+        goSave = "no-go";
       }
       // if no save and no rebuild are required
       if (goRebuild === "neutral") {
-        goOpen = "must";
+        goOpen = "neutral";
       }
 
-      const openButton = new ButtonComponent(activeFlowsContainer)
+      const openButton = new ButtonComponent(flowHeader)
         .setIcon("play")
-        .setClass(`flow-switcher-modal-${goOpen}`)
-        .onClick(() => {
+        .setClass(`flow-switch-modal-header-button-${goOpen}`)
+        .setClass("clickable-icon")
+        .onClick(async () => {
           if (goOpen === "neutral" || goOpen === "must") {
-            //open flow
+            const file = this.app.vault.getAbstractFileByPath(
+              this.plugin.settings.flows[activeFlow].flowFilePath
+            );
+            if (file instanceof TFile) {
+              const leaf = this.app.workspace.getLeaf("split");
+              await leaf.openFile(file);
+              this.app.workspace.setActiveLeaf(leaf, { focus: true });
+            }
+          }
+        });
+
+      const saveButton = new ButtonComponent(flowHeader)
+        .setIcon("download")
+        .setClass(`flow-switch-modal-header-button-${goSave}`)
+        .setClass("clickable-icon")
+        .onClick(async () => {
+          if (goSave === "neutral" || goSave === "must") {
+            await this.plugin.saveAllLeavesManual();
+            await this.plugin.saveSettings();
+          }
+        });
+
+      const rebuildButton = new ButtonComponent(flowHeader)
+        .setIcon("rotate-cw")
+        .setClass(`flow-switch-modal-header-button-${goRebuild}`)
+        .setClass("clickable-icon")
+        .onClick(async () => {
+          if (goRebuild === "neutral" || goRebuild === "must") {
+            const flowReBuildBasket: Types.flowBuildBasket = {
+              createOrEditFlowName:
+                this.plugin.settings.flows[activeFlow].flowName,
+              oldFlowName: this.plugin.settings.flows[activeFlow].flowName,
+              createOrEdit: "",
+              depthFirst: this.plugin.settings.flows[activeFlow].depthFirst,
+              folderTitles: this.plugin.settings.flows[activeFlow].folderTitles,
+              definitionMode: Object.keys(
+                this.plugin.settings.flows[activeFlow].flowReceipe
+              )[0],
+              flowCookbook: this.plugin.settings.flows[activeFlow].flowCookbook,
+              cleanCookbook: {},
+              finalReceipe: this.plugin.settings.flows[activeFlow].flowReceipe,
+              conflicts: this.plugin.settings.flows[activeFlow].conflictArray,
+              dataviewSearchPath: "",
+              previewUsed: true,
+              success: false,
+              fresh: false,
+            };
+
+            await this.createFlowDefinition(flowReBuildBasket);
+            // null unsavedRegions
+            this.plugin.settings.flows[flow].unsavedRegionsArray = [];
+            this.resetFlowBuildBasket(flowReBuildBasket);
+
+            // Get fresh reference to the flow object after createFlowDefinition
+            const updatedFlow = this.plugin.settings.flows[activeFlow];
+
+            // ---------- flow creation ----------------
+            // the object that shuttles the values between the functions
+            const mapValueBasket: Types.mapValueBasket = {
+              concatenatedFileContents: "",
+              initialIteration: true,
+              timestamp: 0,
+              flowOrder: 0,
+              UID: "",
+              yamlMini: "",
+              singleFileContent: "",
+              currentEnd: 0,
+              idDivider: "",
+            };
+
+            let key = "";
+            updatedFlow.flowReceipe.bookmarks // Use updatedFlow instead of shownFlow
+              ? (key = "bookmarks")
+              : (key = "foldersTagsProps");
+
+            // Calling the build function
+            await this.flowBuilder(
+              updatedFlow.flowReceipe[key], // Use updatedFlow instead of shownFlow
+              updatedFlow, // Use updatedFlow instead of shownFlow
+              activeFlow,
+              mapValueBasket
+            );
+
+            await this.plugin.saveSettings();
+            this.display();
           } else {
-            //open modal
+            //open
           }
           // your click handler code here
         });
 
-      const closeButton = new ButtonComponent(activeFlowsContainer)
+      const closeButton = new ButtonComponent(flowHeader)
         .setIcon("x")
-        .setClass(`flow-switcher-modal-go`)
+        .setClass(`flow-switcher-modal-neutral`)
+        .setClass("clickable-icon")
         .onClick(() => {
           // for each open leaf, save and close leaf
           // your click handler code here
         });
 
-      const saveButton = new ButtonComponent(activeFlowsContainer)
+      // ------ ACTIVE FLOW LEAF NAVIGATION --------------
+      let activeRegionBorderColorCounter = 0;
+
+      Object.keys(activeFlowInfoObject[activeFlow]).forEach((leafID) => {
+        activeRegionBorderColorCounter += 1;
+        let activeRegionBorderColorCalculator =
+          activeRegionBorderColorCounter % 2;
+        console.log(
+          `textflow-switcher-border-bottom-${activeRegionBorderColorCalculator}`
+        );
+        // region container
+        const flowRegion = activeFlowEntry.createDiv({
+          cls: `flow-switch-modal-active-region textflow-switcher-border-bottom-${activeRegionBorderColorCalculator}`,
+        });
+
+        // region icon
+        const regionIconSpan = flowRegion.createSpan({
+          cls: `flow-switch-modal-active-region-down-arrow`,
+        });
+        setIcon(regionIconSpan, "corner-down-right");
+
+        // region name
+        const regionName = flowRegion.createSpan({
+          text: `${activeFlowInfoObject[activeFlow][leafID]}`,
+          cls: "flow-switch-modal-active-region-name",
+        });
+
+        const gotoButton = new ButtonComponent(flowRegion)
+          .setIcon("arrow-big-right")
+          .setClass(`flow-switch-modal-header-button-neutral`)
+          .setClass("clickable-icon")
+          .onClick(() => {
+            // make leaf active
+          });
+
+        const closeButton = new ButtonComponent(flowRegion)
+          .setIcon("x")
+          .setClass(`flow-switch-modal-header-button-neutral`)
+          .setClass("clickable-icon")
+          .onClick(() => {
+            // dispatch leaf
+          });
+      });
+    }
+
+    // ------- INactive regions --------
+    // ------- INactive regions --------
+    // ------- INactive regions --------
+    // ------- INactive regions --------
+    // ------- INactive regions --------
+    // ------- INactive regions --------
+    // ------- INactive regions --------
+
+    // ---- DISPLAY INACTIVE FLOWS -----------
+    // sub-container that holds only active flows
+    const inactiveFlowContainer = mainContainer.createDiv({
+      text: sortedInactiveFlowArray.length > 0 ? "" : "No inactive flows found",
+      cls: "textflow-switcher-INactive-container textflow-switcher-border-rounded-faint",
+    });
+
+    let inactiveRegionBorderColorCounter = 0;
+    // container for each flow's two parts: header and regions
+    for (let inactiveFlow of sortedInactiveFlowArray) {
+      inactiveRegionBorderColorCounter += 1;
+      let inactiveRegionBorderColorCalculator =
+        inactiveRegionBorderColorCounter % 2;
+
+      console.log(
+        `textflow-switcher-border-bottom-${inactiveRegionBorderColorCalculator}`
+      );
+      // container for the header
+      const inactiveFlowHeader = inactiveFlowContainer.createDiv({
+        cls: `flow-switch-modal-INactive-header textflow-switcher-border-bottom-${inactiveRegionBorderColorCalculator}`,
+      });
+
+      // ------------- HEADER FLOW NAME
+      const inactiveFlowIconSpan = inactiveFlowHeader.createSpan();
+      setIcon(inactiveFlowIconSpan, "file-text");
+
+      const inactiveFlowName = inactiveFlowHeader.createSpan({
+        text: `${this.plugin.settings.flows[inactiveFlow].flowName}`,
+        cls: "flow-switch-modal-INactive-header-flow-name",
+      });
+
+      // -------- HEADER BUTTONS -------
+      // ---- conditionals for styling
+      let goOpen = "neutral";
+      let goSave = "neutral";
+      let goRebuild = "neutral";
+
+      // check if there is unsaved stuff for the flow
+      if (
+        this.plugin.settings.flows[inactiveFlow].unsavedRegionsArray.length > 0
+      ) {
+        goOpen = "no-go"; // don't open
+        goRebuild = "no-go";
+        goSave = "must"; // must save
+      }
+      // if no save is required, check if flow is flagged for rebuild
+      if (
+        goSave === "neutral" &&
+        this.plugin.settings.flows[inactiveFlow].flaggedForRebuild
+      ) {
+        goOpen = "no-go";
+        goRebuild = "must";
+        goSave = "no-go";
+      }
+
+      // if no save and no rebuild are required, check for conflicts
+      const conflictsWithActive: string[] = [];
+      Object.keys(activeFlowInfoObject).forEach((flow) => {
+        if (
+          this.plugin.settings.flows[inactiveFlow].conflictArray.includes(flow)
+        ) {
+          goOpen = "no-go";
+          conflictsWithActive.push(flow);
+        }
+      });
+
+      if (goOpen === "neutral" || goOpen === "must") {
+        const openButton = new ButtonComponent(inactiveFlowHeader)
+          .setIcon("play")
+          .setClass(`flow-switch-modal-header-button-${goOpen}`)
+          .setClass("clickable-icon")
+          .onClick(() => {
+            if (goOpen === "neutral" || goOpen === "must") {
+              //open flow
+            }
+            // your click handler code here
+          });
+      } else {
+        const openButton = new ButtonComponent(inactiveFlowHeader)
+          .setIcon("pen-off")
+          .setTooltip(`Conflicts with ${conflictsWithActive}`)
+          .setClass(`flow-switch-modal-header-button-neutral`)
+          .setClass("clickable-icon")
+          .onClick(() => {
+            // your click handler code here
+          });
+      }
+      const saveButton = new ButtonComponent(inactiveFlowHeader)
         .setIcon("download")
-        .setClass(`flow-switcher-modal-${goSave}`)
+        .setClass(`flow-switch-modal-header-button-${goSave}`)
+        .setClass("clickable-icon")
         .onClick(() => {
           if (goSave === "neutral" || goSave === "must") {
             //save flow
@@ -255,9 +492,10 @@ export class FlowSwitcherModal extends Modal {
           // your click handler code here
         });
 
-      const rebuildButton = new ButtonComponent(activeFlowsContainer)
+      const rebuildButton = new ButtonComponent(inactiveFlowHeader)
         .setIcon("rotate-cw")
-        .setClass(`flow-switcher-modal-${goSave}`)
+        .setClass(`flow-switch-modal-header-button-${goRebuild}`)
+        .setClass("clickable-icon")
         .onClick(() => {
           if (goRebuild === "neutral" || goRebuild === "must") {
             //rebuild flow
@@ -267,10 +505,14 @@ export class FlowSwitcherModal extends Modal {
           // your click handler code here
         });
 
-      ///
-      ///
-      ///
-      ///
+      /*  const closeButton = new ButtonComponent(inactiveFlowHeader)
+        .setIcon("x")
+        .setClass(`flow-switcher-modal-neutral`)
+        .setClass("clickable-icon")
+        .onClick(() => {
+          // for each open leaf, save and close leaf
+          // your click handler code here
+        });*/
     }
   }
 

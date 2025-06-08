@@ -197,10 +197,10 @@ export default class TextFlowPlugin extends Plugin {
     this.addCommand({
       id: `save-text-flow`,
       name: `Save all modified regions.`,
-      callback: () => {
+      callback: async () => {
         // toggle
-        this.saveAllLeavesManual();
-        this.saveSettings();
+        await this.saveAllLeavesManual();
+        await this.saveSettings();
       },
     });
   }
@@ -298,11 +298,21 @@ export default class TextFlowPlugin extends Plugin {
       const cleanPath = path.endsWith("/") ? path.slice(0, -1) : path;
 
       // Log both file and folder elements for this path
+      function escapeSelector(str: string): string {
+        // Escape special characters that have meaning in CSS selectors
+        return (
+          str
+            .replace(/["'&,.*+?^${}()|[\]\\]/g, "\\$&")
+            // Handle spaces
+            .replace(/\s/g, "\\ ")
+        );
+      }
+
       const fileElement = document.querySelector(
-        `div[data-path='${cleanPath}']`
+        `div[data-path='${escapeSelector(cleanPath)}']`
       );
       const folderElement = document.querySelector(
-        `div[data-path='${cleanPath}'] .nav-folder-title`
+        `div[data-path='${escapeSelector(cleanPath)}'] .nav-folder-title`
       );
 
       let style = document.createElement("style");
@@ -312,8 +322,12 @@ export default class TextFlowPlugin extends Plugin {
       const styleContent =
         isUnsaved === "unsaved"
           ? `
-          div[data-path='${cleanPath}'] .nav-file-title-content::after,
-          div[data-path='${cleanPath}'] .nav-folder-title-content::after {
+          div[data-path='${escapeSelector(
+            cleanPath
+          )}'] .nav-file-title-content::after,
+          div[data-path='${escapeSelector(
+            cleanPath
+          )}'] .nav-folder-title-content::after {
               content: " ●" !important;
               color: ${accentColor} !important;
               font-size: 0.5em !important;
@@ -321,8 +335,12 @@ export default class TextFlowPlugin extends Plugin {
           }
       `
           : `
-          div[data-path='${cleanPath}'] .nav-file-title-content::after,
-          div[data-path='${cleanPath}'] .nav-folder-title-content::after {
+          div[data-path='${escapeSelector(
+            cleanPath
+          )}}'] .nav-file-title-content::after,
+          div[data-path='${escapeSelector(
+            cleanPath
+          )}'] .nav-folder-title-content::after {
               content: " ○" !important;
               color: var(--text-faint) !important;
               font-size: 0.5em !important;
@@ -769,9 +787,7 @@ export default class TextFlowPlugin extends Plugin {
                           shSettings.flows[isItFlow].unsavedRegionsArray.push(
                             activePath
                           );
-                          console.log(
-                            "textChangeListener calling decorateSourceFiles"
-                          );
+                          plugin.saveSettings();
                           if (shSettings.explorerDeco) {
                             plugin.decorateSourceFiles();
                           }
@@ -948,6 +964,7 @@ export default class TextFlowPlugin extends Plugin {
         return;
       }
 
+      const activeFlowObjectSnapshot = this.settings.activeFlowObject;
       // Prevent Obsidian's default click action immediately.
       event.preventDefault();
       event.stopPropagation();
@@ -985,19 +1002,28 @@ export default class TextFlowPlugin extends Plugin {
           }, 100); // Delay to allow UI to settle
         }
       } else {
-        // Not a flow file, check if it's a source file of ANY flow
+        // Not a flow file, check if it's a source file of an active flow
         let parentFlowName: string | null = null;
         let flowSettings: Types.FlowDef | null = null;
+        let isOfActiveFlow: boolean = false;
 
-        for (const fname in this.settings.flows) {
-          if (this.settings.flows[fname].flowMap[clickedFilePath]) {
-            parentFlowName = fname;
-            flowSettings = this.settings.flows[fname];
-            break;
+        console.log("checking if part of active flow");
+        for (const flowName in activeFlowObjectSnapshot) {
+          if (Object.keys(activeFlowObjectSnapshot[flowName]).length != 0) {
+            console.log(
+              "active leaf number: ",
+              Object.keys(activeFlowObjectSnapshot[flowName]).length
+            );
+            if (this.settings.flows[flowName].flowMap[clickedFilePath]) {
+              parentFlowName = flowName;
+              flowSettings = this.settings.flows[flowName];
+              isOfActiveFlow = true;
+              console.log("is of active flow? ", isOfActiveFlow);
+            }
           }
         }
 
-        if (parentFlowName && flowSettings) {
+        if (parentFlowName && flowSettings && isOfActiveFlow) {
           clickHandled = true;
           this.isNavigatingFlow = true; // Set before any async operations
           /*console.log(
@@ -1183,7 +1209,7 @@ export default class TextFlowPlugin extends Plugin {
           this.setupFlowView(flowName, leaf.view);
           this.app.workspace.setActiveLeaf(leaf, { focus: true }); // Make sure to activate the leaf with focus
         } else {
-          console.log(
+          console.error(
             "TextFlow: View is not MarkdownView after opening flow file"
           );
         }
@@ -1217,29 +1243,23 @@ export default class TextFlowPlugin extends Plugin {
 
   // ------------- Used by flowSwitcherModal -----------
   manageActiveFlowObject = () => {
-    console.log("manageActiveFlowObject: ");
-
     // reset it all
     Object.keys(this.settings.activeFlowObject).forEach((flow) => {
       this.settings.activeFlowObject[flow] = {};
+      this.saveSettings();
     });
 
     // the repopulate
     const allLeaves = this.app.workspace.iterateAllLeaves((leaf) => {
       if (leaf.view instanceof MarkdownView) {
-        console.log("Is markdown");
         const leafID = (leaf as any).id;
-        console.log(leafID);
         const leafPath = leaf.view.file?.path;
         if (leafPath) {
-          console.log(leafPath);
           // check if it's a flow
           const flowName = this.isFlowFile(leafPath);
-          console.log(flowName);
           if (flowName) {
             // check if it has an object already
             if (this.settings.activeFlowObject[flowName]) {
-              console.log("had entry. Updating");
               this.settings.activeFlowObject[flowName][leafID] = true;
               this.saveSettings();
             } else {
@@ -1497,7 +1517,7 @@ export default class TextFlowPlugin extends Plugin {
     }
   };
 
-  private saveAllLeavesManual = async () => {
+  saveAllLeavesManual = async () => {
     const allLeaves = this.app.workspace.getLeavesOfType("markdown");
     const flowLeaves: Record<string, MarkdownView> = {};
 
