@@ -337,7 +337,7 @@ export default class TextFlowPlugin extends Plugin {
           : `
           div[data-path='${escapeSelector(
             cleanPath
-          )}}'] .nav-file-title-content::after,
+          )}'] .nav-file-title-content::after,
           div[data-path='${escapeSelector(
             cleanPath
           )}'] .nav-folder-title-content::after {
@@ -1242,7 +1242,7 @@ export default class TextFlowPlugin extends Plugin {
   };
 
   // ------------- Used by flowSwitcherModal -----------
-  manageActiveFlowObject = () => {
+  manageActiveFlowObject = async () => {
     // reset it all
     Object.keys(this.settings.activeFlowObject).forEach((flow) => {
       this.settings.activeFlowObject[flow] = {};
@@ -1250,6 +1250,7 @@ export default class TextFlowPlugin extends Plugin {
     });
 
     // the repopulate
+    const leafIDArray: string[] = [];
     const allLeaves = this.app.workspace.iterateAllLeaves((leaf) => {
       if (leaf.view instanceof MarkdownView) {
         const leafID = (leaf as any).id;
@@ -1258,6 +1259,7 @@ export default class TextFlowPlugin extends Plugin {
           // check if it's a flow
           const flowName = this.isFlowFile(leafPath);
           if (flowName) {
+            leafIDArray.push(leafID);
             // check if it has an object already
             if (this.settings.activeFlowObject[flowName]) {
               this.settings.activeFlowObject[flowName][leafID] = true;
@@ -1267,9 +1269,53 @@ export default class TextFlowPlugin extends Plugin {
               this.settings.activeFlowObject[flowName][leafID] = true;
               this.saveSettings();
             }
+            if (this.settings.flows[flowName].activeRegions) {
+              if (!this.settings.flows[flowName].activeRegions[leafID]) {
+                this.addRegionTracking(flowName, leafID);
+              }
+            }
           }
         }
       }
+    });
+    this.removeRegionTracking(leafIDArray);
+  };
+
+  // ----- add region tracking for new leafs
+  addRegionTracking = (flowName: string, leafID: string) => {
+    console.log("no active region ", leafID, " for ", flowName);
+    const [path, targetObject] =
+      Object.entries(this.settings.flows[flowName].flowMap).find(
+        ([_, obj]) => obj.flowOrder === 1
+      ) || [];
+    console.log("getting ", path, targetObject);
+    if (targetObject) {
+      console.log("target acquired");
+      const { type, UID, flowOrder, lengthPlusDividers } = targetObject;
+      this.settings.flows[flowName].activeRegions[leafID] = {
+        currentCursorPos: 0,
+        type: targetObject.type,
+        path: path,
+        UID: targetObject.UID,
+        flowOrder: 1,
+        startInFlow: 0,
+        endInFlow: targetObject.lengthPlusDividers,
+      };
+      console.log("saving settings");
+      this.saveSettings();
+    }
+  };
+
+  // ---- remove stale entries
+  removeRegionTracking = (leafIDArray: string[]) => {
+    Object.keys(this.settings.flows).forEach((flow) => {
+      Object.keys(this.settings.flows[flow].activeRegions).forEach((leafID) => {
+        if (!leafIDArray.includes(leafID)) {
+          console.log("removing tracking for ", leafID);
+          delete this.settings.flows[flow].activeRegions[leafID];
+        }
+        this.saveSettings();
+      });
     });
   };
 
@@ -1638,12 +1684,60 @@ export default class TextFlowPlugin extends Plugin {
       }
       this.settings.flows[flow].unsavedRegionsArray = remainingPaths;
       this.settings.flows[flow].timestamp = this.getTimestamp();
+      this.manageCursorPos(flow);
       if (this.settings.explorerDeco) {
         this.decorateSourceFiles();
       }
     }
   };
 
+  // -------------- Functions: Manage persistent cursor position
+  manageCursorPos = (flow: string) => {
+    Object.keys(this.settings.flows[flow].activeRegions).forEach((leafID) => {
+      const currentLeaf = this.settings.flows[flow].activeRegions[leafID];
+      let regionPath = "";
+      if (currentLeaf.path) {
+        regionPath = currentLeaf.path;
+      }
+      const currentCursor = currentLeaf.currentCursorPos;
+
+      // Initialize if doesn't exist
+      if (!this.settings.flows[flow].persistentCursors[leafID]) {
+        this.settings.flows[flow].persistentCursors[leafID] = [
+          [regionPath, [currentCursor]],
+        ];
+        return;
+      }
+
+      // Check if there's an entry for the leaf
+      const existingLeafIndex = this.settings.flows[flow].persistentCursors[
+        leafID
+      ].findIndex(([path, _]) => path === regionPath);
+
+      if (existingLeafIndex !== -1) {
+        // Region exists, add cursor to its array
+        const cursors =
+          this.settings.flows[flow].persistentCursors[leafID][
+            existingLeafIndex
+          ][1];
+        cursors.unshift(currentCursor);
+        // Keep only last 3 cursor positions
+        if (cursors.length > 3) {
+          cursors.pop(); // Remove oldest
+        }
+      } else {
+        // New region, add it to the array
+        this.settings.flows[flow].persistentCursors[leafID].unshift([
+          regionPath,
+          [currentCursor],
+        ]);
+        // Keep only last 3 regions
+        if (this.settings.flows[flow].persistentCursors[leafID].length > 5) {
+          this.settings.flows[flow].persistentCursors[leafID].pop(); // Remove oldest
+        }
+      }
+    });
+  };
   // --------------- Functions: Flow management: Regions -----------------------------------------
   private checkActiveRegionCache = async (
     flow: Types.FlowDef,
@@ -1785,19 +1879,11 @@ export default class TextFlowPlugin extends Plugin {
     }
   };
 
-  // -------- To prevent stale region tracking
-  private cleanUpRegionTracking = () => {
-    Object.keys(this.settings.flows).forEach((flow) => {
-      this.settings.flows[flow].activeRegions = {};
-    });
-  };
-
   // -------------------------------------------------------
   //------------------------- ONLOAD -----------------------
   // -------------------------------------------------------
   async onload() {
     this.settings = await this.loadSettings();
-    this.cleanUpRegionTracking();
 
     // -------------------------------------------------------------------
     // ------------------- ONLOAD: add listeners for cursor and clicks
@@ -1816,7 +1902,7 @@ export default class TextFlowPlugin extends Plugin {
       const statusBarItem = this.addStatusBarItem();
       statusBarItem.addClass("mod-clickable");
       const iconContainer = statusBarItem.createSpan();
-      setIcon(iconContainer, "sheets-in-box");
+      setIcon(iconContainer, "scroll-text");
 
       statusBarItem.addEventListener("click", () => {
         new Modals.FlowSwitcherModal(this.app, this).open();

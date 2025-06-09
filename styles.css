@@ -138,7 +138,7 @@
 .flow-switch-modal-active-header {
   display: grid;
   grid-template-columns: minmax(30px, auto) minmax(200px, 1fr) repeat(
-      4,
+      6,
       minmax(30px, auto)
     );
   gap: 8px;
@@ -173,6 +173,10 @@
   color: var(--text-on-accent);
   align-items: center;
   width: 30px;
+}
+
+.flow-switch-modal-header-button-down {
+  transform: rotate(90deg);
 }
 
 /* ACTIVE REGION */
@@ -218,7 +222,7 @@
 .flow-switch-modal-INactive-header {
   display: grid;
   grid-template-columns: minmax(30px, auto) minmax(200px, 1fr) repeat(
-      4,
+      5,
       minmax(30px, auto)
     );
   gap: 8px;

@@ -28,9 +28,22 @@ export interface FlowDef {
   flaggedForRebuild: boolean;
   conflictArray: string[];
   activeRegions: { [key: number | string]: ActiveRegion };
-  persistentCursors: { [key: number]: number };
+  persistentCursors: { [key: string]: [string, number[]][] };
   unsavedRegionsArray: string[];
   flowMap: { [key: string]: SourceFileObject };
+}
+
+export interface CursorObject {
+  leafTimestamp: string;
+  regions: {
+    regionName: {
+      regionTimestamp: string;
+      cursors: {
+        cursorTimestamp: string;
+        position: number;
+      };
+    };
+  };
 }
 
 export interface ActiveRegion {
