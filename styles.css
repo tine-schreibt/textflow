@@ -237,6 +237,29 @@
   text-align: left;
 }
 
+/* ---------- MENUBAR STUFF ------------- */
+.textflow-menu-bar {
+  .flow-switch-modal-INactive-header {
+    display: grid;
+    grid-template-columns:
+      repeat(2, minmax(30px, auto))
+      minmax(200px, 1fr) repeat(5, minmax(30px, auto));
+    gap: 8px;
+  }
+}
+
+/*1 saveButton download*/
+/*2 rebuildButton cw-blahblah*/
+/*5 navigation dropdown*/
+/*3 cursor history last locate-fixed*/
+/*4 cursor history list text-cursor*/
+/*6 bookmarks bookmark*/
+/*7 search search*/
+/*8 snapshots camera*/
+/**/
+/**/
+/**/
+
 /* ------------ to make read-only visible ----------------*/
 .source-read-only .cm-content {
   background-color: rgba(255, 255, 255, 0.1); /* Light tint */
