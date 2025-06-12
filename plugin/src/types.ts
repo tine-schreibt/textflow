@@ -10,6 +10,12 @@ export interface TextFlowSettings {
   systemFolderHidden: boolean;
   autoSave: boolean;
   explorerDeco: boolean;
+  switcherPos: string;
+  menuBar: {
+    position: [string, string];
+    isCollapsed?: boolean; // Current collapsed state
+    flowName?: string;
+  };
   flowBuildBasket: flowBuildBasket; // For storing preview data
   activeFlowObject: { [key: string]: number | any };
   flows: { [key: string]: FlowDef };
@@ -78,6 +84,11 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
   systemFolderHidden: false,
   autoSave: true,
   explorerDeco: true,
+  switcherPos: "statusBar",
+  menuBar: {
+    position: ["top", "0"],
+    isCollapsed: false, // Current collapsed state
+  },
   flowBuildBasket: {
     createOrEditFlowName: "",
     oldFlowName: "",

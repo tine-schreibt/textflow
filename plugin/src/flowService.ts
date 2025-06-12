@@ -65,22 +65,25 @@ export class FlowService {
 
   // ------ function that checks if flows overlap
   conflictCollector = (flowBuildBasket: Types.flowBuildBasket) => {
+    console.log("flowBuildBasket.finalReceipe: ", flowBuildBasket.finalReceipe);
     const conflicts: string[] = [];
     const key1 = Object.keys(flowBuildBasket.finalReceipe)[0];
-    flowLoop: for (let flowName in this.plugin.settings.flows) {
-      if (flowName != flowBuildBasket.createOrEditFlowName) {
-        const key2 = Object.keys(
-          this.plugin.settings.flows[flowName].flowReceipe
-        )[0];
-        for (let path of flowBuildBasket.finalReceipe[key1]) {
-          if (
-            !path.startsWith("#") &&
-            this.plugin.settings.flows[flowName].flowReceipe[key2].includes(
-              path
-            )
-          ) {
-            conflicts.push(flowName);
-            continue flowLoop;
+    if (Object.keys(this.plugin.settings.flows).length > 1) {
+      flowLoop: for (let flowName in this.plugin.settings.flows) {
+        if (flowName != flowBuildBasket.createOrEditFlowName) {
+          const key2 = Object.keys(
+            this.plugin.settings.flows[flowName].flowReceipe
+          )[0];
+          for (let path of flowBuildBasket.finalReceipe[key1]) {
+            if (
+              !path.startsWith("#") &&
+              this.plugin.settings.flows[flowName].flowReceipe[key2].includes(
+                path
+              )
+            ) {
+              conflicts.push(flowName);
+              continue flowLoop;
+            }
           }
         }
       }
@@ -990,5 +993,70 @@ export class FlowService {
             : "unknown",
       })),
     });
+  };
+
+  rebuildFlow = async (flowName: string) => {
+    const flowReBuildBasket: Types.flowBuildBasket = {
+      createOrEditFlowName: this.plugin.settings.flows[flowName].flowName,
+      oldFlowName: this.plugin.settings.flows[flowName].flowName,
+      createOrEdit: "",
+      depthFirst: this.plugin.settings.flows[flowName].depthFirst,
+      folderTitles: this.plugin.settings.flows[flowName].folderTitles,
+      definitionMode: Object.keys(
+        this.plugin.settings.flows[flowName].flowReceipe
+      )[0],
+      flowCookbook: this.plugin.settings.flows[flowName].flowCookbook,
+      cleanCookbook: {},
+      finalReceipe: {},
+      conflicts: this.plugin.settings.flows[flowName].conflictArray,
+      dataviewSearchPath: "",
+      previewUsed: false,
+      success: false,
+      fresh: false,
+    };
+
+    await this.createFlowDefinition(flowReBuildBasket);
+    if (!flowReBuildBasket.success) {
+      return;
+    }
+    this.writeFlowDef(
+      this.plugin.settings,
+      flowReBuildBasket
+    );
+    // null unsavedRegions
+    this.plugin.settings.flows[flowName].unsavedRegionsArray = [];
+    this.plugin.settings.flows[flowName].flaggedForRebuild = false;
+    this.resetFlowBuildBasket(flowReBuildBasket);
+    this.plugin.saveSettings();
+
+    // Get fresh reference to the flow object after createFlowDefinition
+    const updatedFlow = this.plugin.settings.flows[flowName];
+
+    // ---------- flow creation ----------------
+    // the object that shuttles the values between the functions
+    const mapValueBasket: Types.mapValueBasket = {
+      concatenatedFileContents: "",
+      initialIteration: true,
+      timestamp: 0,
+      flowOrder: 0,
+      UID: "",
+      yamlMini: "",
+      singleFileContent: "",
+      currentEnd: 0,
+      idDivider: "",
+    };
+
+    let key = "";
+    updatedFlow.flowReceipe.bookmarks // Use updatedFlow instead of shownFlow
+      ? (key = "bookmarks")
+      : (key = "foldersTagsProps");
+
+    // Calling the build function
+    await this.flowBuilder(
+      updatedFlow.flowReceipe[key], // Use updatedFlow instead of shownFlow
+      updatedFlow, // Use updatedFlow instead of shownFlow
+      flowName,
+      mapValueBasket
+    );
   };
 }

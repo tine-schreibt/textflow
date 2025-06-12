@@ -33,8 +33,16 @@ import {
 } from "@codemirror/state";
 import * as Types from "./src/types";
 import * as Modals from "./src/modals";
-// import { TextFlow } from "./src/flowMaker";
+import { MenuBar } from "./src/menuBar";
 
+// so the menu bar can be kept within the view
+declare module "obsidian" {
+  interface MarkdownView {
+    menuBar?: MenuBar;
+  }
+}
+
+// needed for scoll into view stuff
 interface ObsidianEditor extends Editor {
   cm?: EditorView;
 }
@@ -45,23 +53,28 @@ interface CodeMirrorCursor {
   ch: number;
 }
 
-// the basket is used to keep all listener data in one accessible place
+// keeps all the listeners in one place
 interface ListenerBasketItem {
   plugin: ViewPlugin<any>;
   extension: StateEffect<any>;
 }
 
+// The plugin class itself
 export default class TextFlowPlugin extends Plugin {
   settings: TextFlowSettings;
   tempFilePath: string;
+  private menuBar: MenuBar;
 
   // ---------------- Global objects and variables -------------------------
   // ---- flag to prevent the leaf-change-listener from interfering with scrolling to yource file in flow
   private isNavigatingFlow: boolean = false;
 
-  // ----------------- tracking read-only ranges (to protect region IDs) --------------------------
+  // -- tracking read-only ranges (to protect region IDs) --------------------------
   // helper stuff and auxiliaries
   private hadTrackingError: boolean = false;
+
+  // -- trying to prevent repeat calls
+  private fileOpenTimeout: NodeJS.Timeout | null = null;
 
   // adds a lock symbol to read-only files
   private readOnlyHighlight = Decoration.mark({
@@ -190,7 +203,16 @@ export default class TextFlowPlugin extends Plugin {
     }
   }
 
-  // ---------------- Functions: Utilities: UI -------------------------
+  // ---------------- Functions: Utilities: UI/UX -------------------------
+
+  // cleanup for the menu bar
+  // creation happens in setupFlowView, using menuBar.ts
+  cleanupFlowLeaf(leaf: WorkspaceLeaf) {
+    if (leaf.view instanceof MarkdownView && leaf.view.menuBar) {
+      leaf.view.menuBar.detach();
+      delete leaf.view.menuBar;
+    }
+  }
 
   registerCommands() {
     // Command for onOffSwitch
@@ -201,6 +223,15 @@ export default class TextFlowPlugin extends Plugin {
         // toggle
         await this.saveAllLeavesManual();
         await this.saveSettings();
+      },
+    });
+
+    this.addCommand({
+      id: "open-flowswitcher",
+      name: "Open flow switcher modal",
+      callback: async () => {
+        // toggle
+        new Modals.FlowSwitcherModal(this.app, this).open();
       },
     });
   }
@@ -410,7 +441,6 @@ export default class TextFlowPlugin extends Plugin {
         await this.saveInactiveLeaves();
       })
     );
-    // console.log("active-leaf-change: save finished");
 
     // -- LEAF CHANGE - Manage editors and warning css on flow, source and vanilla notes ------
     // setup functions take care of the details
@@ -472,6 +502,23 @@ export default class TextFlowPlugin extends Plugin {
         if (!activeView) {
           return;
         }
+
+        if (this.fileOpenTimeout) {
+          clearTimeout(this.fileOpenTimeout);
+        }
+
+        this.fileOpenTimeout = setTimeout(() => {
+          if (activeView && activeView.file) {
+            const activeLeafPath = activeView.file.path;
+            if (activeLeafPath) {
+              const isFlow = this.isFlowFile(activeLeafPath);
+              if (isFlow) {
+                this.setupFlowView(isFlow, activeView);
+              }
+            }
+          }
+        }, 100); // Small delay to let other events settle
+
         const activeLeafPath = activeView.file?.path;
         if (activeLeafPath) {
           // if active leaf is flow, set it up
@@ -1162,12 +1209,37 @@ export default class TextFlowPlugin extends Plugin {
   // ---------------- Functions: Flow management -------------------------
   // The big bundle that centralises flow management
   private setupFlowView(flowName: string, view: MarkdownView) {
+    console.log(
+      `setupFlowView called for flow: ${flowName}, leaf: ${
+        (view.leaf as any).id
+      }`
+    );
+    console.trace("Setup flow view call stack"); // This will show us where the call came from
+
+    // Check if this view already has a properly set up menu bar for this flow
+    if (view.menuBar) {
+      if ((view.menuBar as MenuBar).getFlowName() === flowName) {
+        console.log("Menu bar already exists for this flow, skipping setup");
+        return; // Already set up for this flow
+      }
+      console.log("Replacing menu bar for different flow");
+      view.menuBar.detach();
+      delete view.menuBar;
+    }
+
     const leafID = (view.leaf as any).id;
     const editor = view.editor as any;
+
     this.addProtectDuringSaveExtension(editor);
     this.addIdDividerProtection(view, flowName);
     this.addCursorListener(view);
     this.addTextChangeListener(view);
+
+    console.log("creating menu bar");
+    const menuBar = new MenuBar(this.app, this, flowName, view);
+    menuBar.attach(view.contentEl);
+    view.menuBar = menuBar;
+
     if (view.containerEl.hasClass("source-read-only")) {
       view.containerEl.removeClass("source-read-only");
     }
@@ -1324,6 +1396,7 @@ export default class TextFlowPlugin extends Plugin {
     this.removeCursorListener(view);
     this.removeTextChangeListener(view);
     this.removeIdDividerProtection(view.editor as any);
+    this.cleanupFlowLeaf(view.leaf);
     this.manageActiveFlowObject();
     this.saveSettings();
   };
@@ -1855,7 +1928,7 @@ export default class TextFlowPlugin extends Plugin {
   };
 
   // ------------------
-  private findStartOfRegion = (
+  findStartOfRegion = (
     flow: Types.FlowDef,
     flowOrder: number,
     text: string
@@ -1884,6 +1957,7 @@ export default class TextFlowPlugin extends Plugin {
   // -------------------------------------------------------
   async onload() {
     this.settings = await this.loadSettings();
+    // this.menuBar = new MenuBar(this);
 
     // -------------------------------------------------------------------
     // ------------------- ONLOAD: add listeners for cursor and clicks
@@ -1899,18 +1973,25 @@ export default class TextFlowPlugin extends Plugin {
 
       // ------------------- Flow switcher modal ---------------------
       // Add status bar item
-      const statusBarItem = this.addStatusBarItem();
-      statusBarItem.addClass("mod-clickable");
-      const iconContainer = statusBarItem.createSpan();
-      setIcon(iconContainer, "scroll-text");
+      if (this.settings.switcherPos === "statusBar") {
+        const flowSwitcher = this.addStatusBarItem();
+        flowSwitcher.addClass("mod-clickable");
+        const iconContainer = flowSwitcher.createSpan();
+        setIcon(iconContainer, "scroll-text");
 
-      statusBarItem.addEventListener("click", () => {
-        new Modals.FlowSwitcherModal(this.app, this).open();
-      });
+        flowSwitcher.addEventListener("click", () => {
+          new Modals.FlowSwitcherModal(this.app, this).open();
+        });
+      } else if (this.settings.switcherPos === "ribbon") {
+        this.addRibbonIcon(
+          "scroll-text",
+          "Open flowSwitcher",
+          (evt: MouseEvent) => {
+            new Modals.FlowSwitcherModal(this.app, this).open();
+          }
+        );
+      }
       // Add ribbon icon (optional)
-      this.addRibbonIcon("sheets-in-box", "Open Flow", (evt: MouseEvent) => {
-        new Modals.FlowSwitcherModal(this.app, this).open();
-      });
 
       await this.initialSetup(); //
 
@@ -1987,5 +2068,12 @@ export default class TextFlowPlugin extends Plugin {
     if (fileExplorer && this.boundFileExplorerClick) {
       fileExplorer.removeEventListener("click", this.boundFileExplorerClick);
     }
+
+    // --------------- Remove menu bar ------------------
+    this.app.workspace.iterateAllLeaves((leaf) => {
+      if (leaf.view instanceof MarkdownView && leaf.view.menuBar) {
+        leaf.view.menuBar.detach();
+      }
+    });
   }
 }

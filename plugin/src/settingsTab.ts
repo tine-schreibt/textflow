@@ -212,6 +212,59 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           });
       });
 
+    // -----------   flowSwitcherModal  ---------------
+
+    const switcherModalPosition = new Setting(setUpTextFlow)
+      .setName("How do you want to access the flow switcher modal?")
+      .setDesc("Changes need a vault reload to take effect.")
+      .addDropdown((switcherModalPositionDropdown) => {
+        switcherModalPositionDropdown
+          .setValue(
+            this.plugin.settings.switcherPos
+              ? this.plugin.settings.switcherPos
+              : `statusBar`
+          )
+          .addOption(`statusBar`, `Status bar`)
+          .addOption(`ribbon`, `Ribbon`)
+          .addOption(`command`, `Command palette only`)
+          .onChange((value) => {
+            this.plugin.settings.switcherPos = value;
+            this.plugin.saveSettings();
+          });
+      });
+
+    // -----------   menuBar  ---------------
+
+    const menuBarDiv = setUpTextFlow.createDiv({
+      cls: "textflow-menu-bar-div",
+    });
+    const menuBarPosition = new Setting(menuBarDiv)
+      .setName("Where do you want your menu bar to appear?")
+      .setDesc("Changes need a vault reload to take effect.")
+      .addDropdown((switcherModalPositionDropdown) => {
+        switcherModalPositionDropdown
+          .setValue(this.plugin.settings.menuBar.position[0] ?? `top`)
+          .addOption(`top`, `top`)
+          .addOption(`bottom`, `bottom`)
+          .onChange((value) => {
+            this.plugin.settings.menuBar.position[0] = value;
+            this.plugin.saveSettings();
+          });
+      });
+
+    const menuBarOffsetInput = new Setting(menuBarDiv);
+    menuBarOffsetInput
+      .setDesc("Input a number to add a custom offset to your chosen position.")
+      .setClass("no-border");
+    menuBarOffsetInput.addText((text) =>
+      text
+        .setValue(this.plugin.settings.menuBar.position[1] ?? "0")
+        .onChange((value) => {
+          this.plugin.settings.menuBar.position[1] = value;
+          this.plugin.saveSettings();
+        })
+    );
+
     // --------   CREATE / EDIT FLOWS   ----------------
     const createFlows = containerEl.createDiv({
       cls: "headline-container",
@@ -444,13 +497,19 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       .addText((folderIncludeInput) => {
         if (!this.plugin.settings.flowBuildBasket?.fresh) {
           folderIncludeInput.setValue(
-            this.plugin.settings.flowBuildBasket.flowCookbook.folderIncluded
+            this.plugin.settings.flowBuildBasket.flowCookbook.folderIncluded ===
+              "/"
+              ? "root"
+              : this.plugin.settings.flowBuildBasket.flowCookbook.folderIncluded
           );
         }
         folderIncludeInput.onChange(async (value) => {
           this.plugin.settings.flowBuildBasket.previewUsed = false;
-          this.plugin.settings.flowBuildBasket.flowCookbook.folderIncluded =
-            value;
+          value === "root"
+            ? (this.plugin.settings.flowBuildBasket.flowCookbook.folderIncluded =
+                "")
+            : (this.plugin.settings.flowBuildBasket.flowCookbook.folderIncluded =
+                value);
           this.plugin.settings.flowBuildBasket.fresh = false;
           this.flowService.debouncedSaveSettings();
         });
@@ -878,69 +937,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         .addButton((rebuildButton) =>
           rebuildButton.setButtonText("(Re)build)").onClick(async () => {
             // gather all info for the flowDefinition
-            const flowReBuildBasket: Types.flowBuildBasket = {
-              createOrEditFlowName: this.plugin.settings.flows[flow].flowName,
-              oldFlowName: this.plugin.settings.flows[flow].flowName,
-              createOrEdit: "",
-              depthFirst: this.plugin.settings.flows[flow].depthFirst,
-              folderTitles: this.plugin.settings.flows[flow].folderTitles,
-              definitionMode: Object.keys(
-                this.plugin.settings.flows[flow].flowReceipe
-              )[0],
-              flowCookbook: this.plugin.settings.flows[flow].flowCookbook,
-              cleanCookbook: {},
-              finalReceipe: {},
-              conflicts: this.plugin.settings.flows[flow].conflictArray,
-              dataviewSearchPath: "",
-              previewUsed: false,
-              success: false,
-              fresh: false,
-            };
-
-            await this.flowService.createFlowDefinition(flowReBuildBasket);
-            if (!this.plugin.settings.flowBuildBasket.success) {
-              return;
-            }
-            this.flowService.writeFlowDef(
-              this.plugin.settings,
-              this.plugin.settings.flowBuildBasket
-            );
-            // null unsavedRegions
-            this.plugin.settings.flows[flow].unsavedRegionsArray = [];
-            this.plugin.settings.flows[flow].flaggedForRebuild = false;
-            this.flowService.resetFlowBuildBasket(flowReBuildBasket);
-            this.plugin.saveSettings();
-
-            // Get fresh reference to the flow object after createFlowDefinition
-            const updatedFlow = this.plugin.settings.flows[flow];
-
-            // ---------- flow creation ----------------
-            // the object that shuttles the values between the functions
-            const mapValueBasket: Types.mapValueBasket = {
-              concatenatedFileContents: "",
-              initialIteration: true,
-              timestamp: 0,
-              flowOrder: 0,
-              UID: "",
-              yamlMini: "",
-              singleFileContent: "",
-              currentEnd: 0,
-              idDivider: "",
-            };
-
-            let key = "";
-            updatedFlow.flowReceipe.bookmarks // Use updatedFlow instead of shownFlow
-              ? (key = "bookmarks")
-              : (key = "foldersTagsProps");
-
-            // Calling the build function
-            await this.flowService.flowBuilder(
-              updatedFlow.flowReceipe[key], // Use updatedFlow instead of shownFlow
-              updatedFlow, // Use updatedFlow instead of shownFlow
-              flow,
-              mapValueBasket
-            );
-
+            console.log("rebuild clicked");
+            this.flowService.rebuildFlow(flow);
             await this.plugin.saveSettings();
             this.display();
           })

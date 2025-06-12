@@ -129,70 +129,7 @@ export class FlowSwitcherModal extends Modal {
     // ------------------------------------------------------------
 
     // -------- rebuilding
-    const rebuildFlow = async (activeFlow: string) => {
-      const flowReBuildBasket: Types.flowBuildBasket = {
-        createOrEditFlowName: this.plugin.settings.flows[activeFlow].flowName,
-        oldFlowName: this.plugin.settings.flows[activeFlow].flowName,
-        createOrEdit: "",
-        depthFirst: this.plugin.settings.flows[activeFlow].depthFirst,
-        folderTitles: this.plugin.settings.flows[activeFlow].folderTitles,
-        definitionMode: Object.keys(
-          this.plugin.settings.flows[activeFlow].flowReceipe
-        )[0],
-        flowCookbook: this.plugin.settings.flows[activeFlow].flowCookbook,
-        cleanCookbook: {},
-        finalReceipe: {},
-        conflicts: this.plugin.settings.flows[activeFlow].conflictArray,
-        dataviewSearchPath: "",
-        previewUsed: false,
-        success: false,
-        fresh: false,
-      };
 
-      await this.flowService.createFlowDefinition(flowReBuildBasket);
-      if (!this.plugin.settings.flowBuildBasket.success) {
-        return;
-      }
-      this.flowService.writeFlowDef(
-        this.plugin.settings,
-        this.plugin.settings.flowBuildBasket
-      );
-      // null unsavedRegions
-      this.plugin.settings.flows[activeFlow].unsavedRegionsArray = [];
-      this.plugin.settings.flows[activeFlow].flaggedForRebuild = false;
-      this.flowService.resetFlowBuildBasket(flowReBuildBasket);
-      this.plugin.saveSettings();
-
-      // Get fresh reference to the flow object after createFlowDefinition
-      const updatedFlow = this.plugin.settings.flows[activeFlow];
-
-      // ---------- flow creation ----------------
-      // the object that shuttles the values between the functions
-      const mapValueBasket: Types.mapValueBasket = {
-        concatenatedFileContents: "",
-        initialIteration: true,
-        timestamp: 0,
-        flowOrder: 0,
-        UID: "",
-        yamlMini: "",
-        singleFileContent: "",
-        currentEnd: 0,
-        idDivider: "",
-      };
-
-      let key = "";
-      updatedFlow.flowReceipe.bookmarks // Use updatedFlow instead of shownFlow
-        ? (key = "bookmarks")
-        : (key = "foldersTagsProps");
-
-      // Calling the build function
-      await this.flowService.flowBuilder(
-        updatedFlow.flowReceipe[key], // Use updatedFlow instead of shownFlow
-        updatedFlow, // Use updatedFlow instead of shownFlow
-        activeFlow,
-        mapValueBasket
-      );
-    };
     // ----------------------------------------------------------
     // -------- GATHERING AND PRE-PROCESSING OF FLOW DATA -------
     // ----------------------------------------------------------
@@ -396,7 +333,7 @@ export class FlowSwitcherModal extends Modal {
         .setClass("clickable-icon")
         .onClick(async () => {
           if (goRebuild === "neutral" || goRebuild === "must") {
-            await rebuildFlow(activeFlow);
+            await this.flowService.rebuildFlow(activeFlow);
             await this.plugin.saveSettings();
             this.display();
           } else if (goRebuild === "no-go") {
@@ -647,7 +584,7 @@ export class FlowSwitcherModal extends Modal {
         .setClass("clickable-icon")
         .onClick(async () => {
           if (goRebuild === "neutral" || goRebuild === "must") {
-            await rebuildFlow(inactiveFlow);
+            await this.flowService.rebuildFlow(inactiveFlow);
             await this.plugin.saveSettings();
             this.display();
           } else {

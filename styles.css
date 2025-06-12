@@ -2,6 +2,10 @@
   font-weight: 700;
 }
 
+.textflow-menu-bar-div .setting-item.no-border {
+  border: none !important;
+}
+
 /* --------- RADIO BUTTONS -----------*/
 .settings-radio-button {
   display: flex;
@@ -53,6 +57,12 @@
 
 .input-width-200 .setting-item-control input {
   width: 300px; /* or whatever width you prefer */
+}
+
+/* */
+.textflow-menu-bar-div {
+  border-top: 1px solid var(--background-modifier-border);
+  padding-top: 0.75em;
 }
 
 /*---------------- FILE EXPLORER DECO ---------------*/
@@ -239,13 +249,11 @@
 
 /* ---------- MENUBAR STUFF ------------- */
 .textflow-menu-bar {
-  .flow-switch-modal-INactive-header {
-    display: grid;
-    grid-template-columns:
-      repeat(2, minmax(30px, auto))
-      minmax(200px, 1fr) repeat(5, minmax(30px, auto));
-    gap: 8px;
-  }
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(30px, auto))
+    minmax(200px, 1fr) repeat(5, minmax(30px, auto));
+  gap: 8px;
 }
 
 /*1 saveButton download*/
