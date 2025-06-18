@@ -1,3 +1,5 @@
+import type { FuseResult } from "fuse.js";
+
 //#######################################################################
 //###########################                ############################
 //###########################     types      ############################
@@ -11,12 +13,13 @@ export interface TextFlowSettings {
   autoSave: boolean;
   explorerDeco: boolean;
   switcherPos: string;
-  menuBar: {
+  generalMenuBarSettings: {
     position: [string, string];
     isCollapsed?: boolean; // Current collapsed state
     flowName?: string;
   };
   flowBuildBasket: flowBuildBasket; // For storing preview data
+  usedUIDs: string[];
   activeFlowObject: { [key: string]: number | any };
   flows: { [key: string]: FlowDef };
 }
@@ -60,6 +63,7 @@ export interface ActiveRegion {
   flowOrder: number;
   startInFlow: number;
   endInFlow: number;
+  leafMenuBarSettings: { dropdownState: DropdownState };
 }
 
 export interface ModifiedRegion {
@@ -72,7 +76,7 @@ export interface SourceFileObject {
   path: string;
   itemName: string;
   UID: string;
-  timestamp: number;
+  identifier: string;
   flowOrder: number;
   minLength: number;
   lengthPlusDividers: number;
@@ -85,7 +89,7 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
   autoSave: true,
   explorerDeco: true,
   switcherPos: "statusBar",
-  menuBar: {
+  generalMenuBarSettings: {
     position: ["top", "0"],
     isCollapsed: false, // Current collapsed state
   },
@@ -105,6 +109,7 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
     success: false,
     fresh: true,
   },
+  usedUIDs: [],
   activeFlowObject: {},
   flows: {},
 };
@@ -113,12 +118,13 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
 export interface mapValueBasket {
   concatenatedFileContents: string;
   initialIteration: boolean;
-  timestamp: number;
+  identifier: string;
   flowOrder: number;
   UID: string;
   yamlMini: string;
   singleFileContent: string;
   currentEnd: number;
+  usedUIDs: Set<string>; // Add this
   idDivider: string;
 }
 
@@ -176,3 +182,7 @@ export type DVNote = {
   // Properties: these are dynamic, so use an index signature
   [key: string]: any;
 };
+
+export type DropdownState = "hide" | "show";
+export type SearchItem = { path: string; displayName: string };
+export type SearchResult = SearchItem | FuseResult<SearchItem>;

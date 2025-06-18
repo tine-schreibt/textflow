@@ -63,7 +63,6 @@ interface ListenerBasketItem {
 export default class TextFlowPlugin extends Plugin {
   settings: TextFlowSettings;
   tempFilePath: string;
-  private menuBar: MenuBar;
 
   // ---------------- Global objects and variables -------------------------
   // ---- flag to prevent the leaf-change-listener from interfering with scrolling to yource file in flow
@@ -72,9 +71,6 @@ export default class TextFlowPlugin extends Plugin {
   // -- tracking read-only ranges (to protect region IDs) --------------------------
   // helper stuff and auxiliaries
   private hadTrackingError: boolean = false;
-
-  // -- trying to prevent repeat calls
-  private fileOpenTimeout: NodeJS.Timeout | null = null;
 
   // adds a lock symbol to read-only files
   private readOnlyHighlight = Decoration.mark({
@@ -143,6 +139,17 @@ export default class TextFlowPlugin extends Plugin {
   // Add this new property to track the most recently active flow leaf
   private mostRecentActiveFlowLeaf: WorkspaceLeaf | null = null;
 
+  // for timing of flowSwitcherModal display() calls, we need to access them from setupFlowView()
+  private modalUpdateCallback: (() => void) | null = null;
+
+  registerModalUpdateCallback(callback: () => void) {
+    this.modalUpdateCallback = callback;
+  }
+
+  unregisterModalUpdateCallback() {
+    this.modalUpdateCallback = null;
+  }
+
   // ---------------- Functions ------------------------------------
 
   // ---------------- Functions: Utilities -------------------------
@@ -202,6 +209,28 @@ export default class TextFlowPlugin extends Plugin {
       }
     }
   }
+
+  // ---------- debug UID because I'm too lazy to implement importing stuff from flowService to here
+  debugMarker = (marker: string) => {
+    console.log({
+      fullMarker: marker,
+      length: marker.length,
+      chars: Array.from(marker).map((char) => ({
+        char: char,
+        code: char.charCodeAt(0).toString(16), // hex code
+        name:
+          char === "\u00A0"
+            ? "NBSP"
+            : char === "\u200B"
+            ? "ZWSP"
+            : char === "\u200C"
+            ? "ZWNJ"
+            : char === "\u200D"
+            ? "ZWJ"
+            : "unknown",
+      })),
+    });
+  };
 
   // ---------------- Functions: Utilities: UI/UX -------------------------
 
@@ -445,13 +474,11 @@ export default class TextFlowPlugin extends Plugin {
     // -- LEAF CHANGE - Manage editors and warning css on flow, source and vanilla notes ------
     // setup functions take care of the details
     this.registerEvent(
-      this.app.workspace.on("active-leaf-change", (leaf) => {
+      this.app.workspace.on("active-leaf-change", async (leaf) => {
         if (this.isNavigatingFlow) {
           // console.log("skipping active-leaf setups because isNavigatingFlow");
           return;
         }
-        this.manageActiveFlowObject();
-
         if (leaf?.view instanceof MarkdownView) {
           const view = leaf.view;
           const activeLeafPath = leaf.view.file?.path;
@@ -467,7 +494,9 @@ export default class TextFlowPlugin extends Plugin {
             // if active leaf is flow, set it up
             const isFlow = this.isFlowFile(activeLeafPath);
             if (isFlow) {
-              this.setupFlowView(isFlow, leaf.view);
+              await this.setupFlowView(isFlow, leaf.view);
+              this.mostRecentActiveFlowLeaf = leaf;
+
               return;
             }
             // if active leaf is source, set it up
@@ -488,53 +517,37 @@ export default class TextFlowPlugin extends Plugin {
 
     // -- FILE OPEN - Manage editors and warning css on -------------
     this.registerEvent(
-      this.app.workspace.on("file-open", (file) => {
+      this.app.workspace.on("file-open", async (file) => {
         // console.log("file-open triggered");
         if (this.isNavigatingFlow) {
           //    console.log("skipping file-open setup because isNavigatingFlow");
           return;
         }
-        this.manageActiveFlowObject();
-
         // In case the newly opened file has been loaded into
         // the active leaf, which doesn't trigger active-leaf-change
         const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (!activeView) {
+        if (!activeView || !activeView.file) {
           return;
         }
 
-        if (this.fileOpenTimeout) {
-          clearTimeout(this.fileOpenTimeout);
-        }
-
-        this.fileOpenTimeout = setTimeout(() => {
-          if (activeView && activeView.file) {
-            const activeLeafPath = activeView.file.path;
-            if (activeLeafPath) {
-              const isFlow = this.isFlowFile(activeLeafPath);
-              if (isFlow) {
-                this.setupFlowView(isFlow, activeView);
+        if (activeView && activeView.file) {
+          const activeLeafPath = activeView.file.path;
+          if (activeLeafPath) {
+            // if active leaf is flow, set it up
+            const isFlow = this.isFlowFile(activeLeafPath);
+            if (isFlow) {
+              await this.setupFlowView(isFlow, activeView);
+              return;
+            }
+            // if active leaf is source, set it up
+            for (let flow in this.settings.flows) {
+              if (this.settings.flows[flow].flowMap[activeLeafPath]) {
+                this.setupSourceNote(activeView);
               }
             }
+          } else {
+            this.setupVanillaNote(activeView);
           }
-        }, 100); // Small delay to let other events settle
-
-        const activeLeafPath = activeView.file?.path;
-        if (activeLeafPath) {
-          // if active leaf is flow, set it up
-          const isFlow = this.isFlowFile(activeLeafPath);
-          if (isFlow) {
-            this.setupFlowView(isFlow, activeView);
-            return;
-          }
-          // if active leaf is source, set it up
-          for (let flow in this.settings.flows) {
-            if (this.settings.flows[flow].flowMap[activeLeafPath]) {
-              this.setupSourceNote(activeView);
-            }
-          }
-        } else {
-          this.setupVanillaNote(activeView);
         }
       })
     );
@@ -545,17 +558,6 @@ export default class TextFlowPlugin extends Plugin {
         if (this.app.workspace.getLeavesOfType("markdown").length === 0) {
           // We're definitely in the "empty leaf" state
           this.manageActiveFlowObject();
-        }
-      })
-    );
-    // Add this to track the most recently active flow leaf
-    this.registerEvent(
-      this.app.workspace.on("active-leaf-change", (leaf) => {
-        if (leaf?.view instanceof MarkdownView) {
-          const activeLeafPath = leaf.view.file?.path;
-          if (activeLeafPath && this.isFlowFile(activeLeafPath)) {
-            this.mostRecentActiveFlowLeaf = leaf;
-          }
         }
       })
     );
@@ -592,6 +594,15 @@ export default class TextFlowPlugin extends Plugin {
       const isItFlow = this.isFlowFile(activeLeafPath);
 
       if (cmEditor && isItFlow) {
+        console.log(
+          "Setting up cursor listener for leaf",
+          (view.leaf as any).id,
+          {
+            editor: view.editor,
+            cm: (view.editor as any).cm,
+            state: (view.editor as any).cm?.state,
+          }
+        );
         const plugin = this;
         let lastCursorPosition: number | null = null;
         let debounceTimeout: NodeJS.Timeout | null = null;
@@ -638,9 +649,10 @@ export default class TextFlowPlugin extends Plugin {
                         plugin.checkActiveRegionCache(
                           plugin.settings.flows[isItFlow],
                           leafID,
-                          cursorOffset
+                          cursorOffset,
+                          view
                         );
-                        /* console.log(
+                        /*console.log(
                           "cusor listener calling checkActiveRegionCache"
                         );*/
                         if (plugin.hadTrackingError) {
@@ -804,6 +816,7 @@ export default class TextFlowPlugin extends Plugin {
               try {
                 if (update.docChanged) {
                   const changes = update.changes;
+                  console.log("change listener heard changes: ", changes);
 
                   // return if no actual text change has taken place
                   if (changes.empty) return;
@@ -835,6 +848,9 @@ export default class TextFlowPlugin extends Plugin {
                             activePath
                           );
                           plugin.saveSettings();
+                          if (view.menuBar) {
+                            view.menuBar.refresh(view.contentEl);
+                          }
                           if (shSettings.explorerDeco) {
                             plugin.decorateSourceFiles();
                           }
@@ -1054,18 +1070,12 @@ export default class TextFlowPlugin extends Plugin {
         let flowSettings: Types.FlowDef | null = null;
         let isOfActiveFlow: boolean = false;
 
-        console.log("checking if part of active flow");
         for (const flowName in activeFlowObjectSnapshot) {
           if (Object.keys(activeFlowObjectSnapshot[flowName]).length != 0) {
-            console.log(
-              "active leaf number: ",
-              Object.keys(activeFlowObjectSnapshot[flowName]).length
-            );
             if (this.settings.flows[flowName].flowMap[clickedFilePath]) {
               parentFlowName = flowName;
               flowSettings = this.settings.flows[flowName];
               isOfActiveFlow = true;
-              console.log("is of active flow? ", isOfActiveFlow);
             }
           }
         }
@@ -1202,48 +1212,50 @@ export default class TextFlowPlugin extends Plugin {
           this.app.workspace.openLinkText(clickedFilePath, "", openInNewSplit);
         }
       }
-      this.manageActiveFlowObject();
     };
   }
 
   // ---------------- Functions: Flow management -------------------------
   // The big bundle that centralises flow management
-  private setupFlowView(flowName: string, view: MarkdownView) {
-    console.log(
-      `setupFlowView called for flow: ${flowName}, leaf: ${
-        (view.leaf as any).id
-      }`
-    );
-    console.trace("Setup flow view call stack"); // This will show us where the call came from
-
-    // Check if this view already has a properly set up menu bar for this flow
-    if (view.menuBar) {
-      if ((view.menuBar as MenuBar).getFlowName() === flowName) {
-        console.log("Menu bar already exists for this flow, skipping setup");
-        return; // Already set up for this flow
-      }
-      console.log("Replacing menu bar for different flow");
-      view.menuBar.detach();
-      delete view.menuBar;
-    }
-
+  private async setupFlowView(flowName: string, view: MarkdownView) {
     const leafID = (view.leaf as any).id;
+    const setupKey = `${leafID}-${flowName}`;
     const editor = view.editor as any;
 
-    this.addProtectDuringSaveExtension(editor);
-    this.addIdDividerProtection(view, flowName);
-    this.addCursorListener(view);
-    this.addTextChangeListener(view);
+    try {
+      // this has to happen first so the menuBar can access its leaf specific settings
+      await this.manageActiveFlowObject();
 
-    console.log("creating menu bar");
-    const menuBar = new MenuBar(this.app, this, flowName, view);
-    menuBar.attach(view.contentEl);
-    view.menuBar = menuBar;
+      // check for and cleanup stale menuBar instances
+      if (view.menuBar) {
+        if ((view.menuBar as MenuBar).getFlowName() === flowName) {
+          return;
+        }
+        view.menuBar.detach();
+        delete view.menuBar;
+      }
 
-    if (view.containerEl.hasClass("source-read-only")) {
-      view.containerEl.removeClass("source-read-only");
+      const menuBar = new MenuBar(this.app, this, flowName, view);
+      menuBar.attach(view.contentEl);
+      view.menuBar = menuBar;
+
+      this.addProtectDuringSaveExtension(editor);
+      this.addIdDividerProtection(view, flowName);
+      this.addCursorListener(view);
+      this.addTextChangeListener(view);
+
+      if (view.containerEl.hasClass("source-read-only")) {
+        view.containerEl.removeClass("source-read-only");
+      }
+
+      // Update the modal
+      if (this.modalUpdateCallback) {
+        this.modalUpdateCallback();
+      }
+    } finally {
+      // Always clean up the setup flag
+      //  this.setupInProgress.delete(setupKey);
     }
-    setTimeout(() => this.manageActiveFlowObject(), 500);
   }
 
   // ---- Identity check
@@ -1293,54 +1305,32 @@ export default class TextFlowPlugin extends Plugin {
       }
     }
   }
-
-  // ---- Set up all open flows with their listeners -----------
-  initialSetup = async () => {
-    const allLeaves = this.app.workspace.getLeavesOfType("markdown");
-    // Iterate over all the leavesfileExplorerClickListener
-    for (const leaf of allLeaves) {
-      if (leaf.view instanceof MarkdownView) {
-        const leafPath = leaf.view.file?.path;
-        let flowName = null;
-        if (leafPath !== undefined) {
-          flowName = this.isFlowFile(leafPath);
-          if (flowName) {
-            this.setupFlowView(flowName, leaf.view as MarkdownView);
-          }
-        }
-        await this.saveSettings();
-      }
-    }
-  };
-
   // ------------- Used by flowSwitcherModal -----------
   manageActiveFlowObject = async () => {
-    // reset it all
-    Object.keys(this.settings.activeFlowObject).forEach((flow) => {
-      this.settings.activeFlowObject[flow] = {};
-      this.saveSettings();
-    });
+    // Instead of resetting everything, track what we find
+    const foundFlowLeaves: Record<string, Set<string>> = {};
 
-    // the repopulate
-    const leafIDArray: string[] = [];
-    const allLeaves = this.app.workspace.iterateAllLeaves((leaf) => {
+    // Populate what we find
+    this.app.workspace.iterateAllLeaves((leaf) => {
       if (leaf.view instanceof MarkdownView) {
         const leafID = (leaf as any).id;
         const leafPath = leaf.view.file?.path;
         if (leafPath) {
-          // check if it's a flow
           const flowName = this.isFlowFile(leafPath);
           if (flowName) {
-            leafIDArray.push(leafID);
-            // check if it has an object already
-            if (this.settings.activeFlowObject[flowName]) {
-              this.settings.activeFlowObject[flowName][leafID] = true;
-              this.saveSettings();
-            } else {
-              this.settings.activeFlowObject[flowName] = {};
-              this.settings.activeFlowObject[flowName][leafID] = true;
-              this.saveSettings();
+            // Initialize set if needed
+            if (!foundFlowLeaves[flowName]) {
+              foundFlowLeaves[flowName] = new Set();
             }
+            foundFlowLeaves[flowName].add(leafID);
+
+            // Ensure flow object exists
+            if (!this.settings.activeFlowObject[flowName]) {
+              this.settings.activeFlowObject[flowName] = {};
+            }
+            this.settings.activeFlowObject[flowName][leafID] = true;
+
+            // Handle region tracking
             if (this.settings.flows[flowName].activeRegions) {
               if (!this.settings.flows[flowName].activeRegions[leafID]) {
                 this.addRegionTracking(flowName, leafID);
@@ -1350,19 +1340,43 @@ export default class TextFlowPlugin extends Plugin {
         }
       }
     });
-    this.removeRegionTracking(leafIDArray);
+
+    // Only remove leaves that we didn't find
+    Object.keys(this.settings.flows).forEach((flow) => {
+      if (this.settings.flows[flow].activeRegions) {
+        if (Object.keys(this.settings.flows[flow].activeRegions).length > 0) {
+          Object.keys(this.settings.flows[flow].activeRegions).forEach(
+            (leafID) => {
+              if (!foundFlowLeaves[flow]?.has(leafID)) {
+                delete this.settings.flows[flow].activeRegions[leafID];
+              }
+            }
+          );
+        }
+      }
+      if (this.settings.activeFlowObject[flow]) {
+        if (Object.keys(this.settings.activeFlowObject[flow]).length > 0) {
+          Object.keys(this.settings.activeFlowObject[flow]).forEach(
+            (leafID) => {
+              if (!foundFlowLeaves[flow]?.has(leafID)) {
+                delete this.settings.activeFlowObject[flow][leafID];
+              }
+            }
+          );
+        }
+      }
+    });
+
+    await this.saveSettings();
   };
 
   // ----- add region tracking for new leafs
-  addRegionTracking = (flowName: string, leafID: string) => {
-    console.log("no active region ", leafID, " for ", flowName);
+  addRegionTracking = async (flowName: string, leafID: string) => {
     const [path, targetObject] =
       Object.entries(this.settings.flows[flowName].flowMap).find(
         ([_, obj]) => obj.flowOrder === 1
       ) || [];
-    console.log("getting ", path, targetObject);
     if (targetObject) {
-      console.log("target acquired");
       const { type, UID, flowOrder, lengthPlusDividers } = targetObject;
       this.settings.flows[flowName].activeRegions[leafID] = {
         currentCursorPos: 0,
@@ -1372,23 +1386,10 @@ export default class TextFlowPlugin extends Plugin {
         flowOrder: 1,
         startInFlow: 0,
         endInFlow: targetObject.lengthPlusDividers,
+        leafMenuBarSettings: { dropdownState: "hide" },
       };
-      console.log("saving settings");
-      this.saveSettings();
+      await this.saveSettings();
     }
-  };
-
-  // ---- remove stale entries
-  removeRegionTracking = (leafIDArray: string[]) => {
-    Object.keys(this.settings.flows).forEach((flow) => {
-      Object.keys(this.settings.flows[flow].activeRegions).forEach((leafID) => {
-        if (!leafIDArray.includes(leafID)) {
-          console.log("removing tracking for ", leafID);
-          delete this.settings.flows[flow].activeRegions[leafID];
-        }
-        this.saveSettings();
-      });
-    });
   };
 
   // if a flow is replaced by a non-flow
@@ -1398,6 +1399,10 @@ export default class TextFlowPlugin extends Plugin {
     this.removeIdDividerProtection(view.editor as any);
     this.cleanupFlowLeaf(view.leaf);
     this.manageActiveFlowObject();
+    if (view.menuBar) {
+      view.menuBar.detach();
+    }
+
     this.saveSettings();
   };
 
@@ -1444,7 +1449,8 @@ export default class TextFlowPlugin extends Plugin {
             const windowText = tr.startState.sliceDoc(windowStart, windowEnd);
 
             let match;
-            const regex = /(?:^|\n)[\u200B\u200C\u200D]{26,}(<hr>)(?:\n\n|$)/g;
+            const regex =
+              /(?:^|\n)[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{41}(<hr>)(?:\n\n|$)/g;
 
             while ((match = regex.exec(windowText)) !== null) {
               // Get absolute positions of the protected `***`, including required newlines
@@ -1508,7 +1514,6 @@ export default class TextFlowPlugin extends Plugin {
               this.protectDuringSaveExtension,
             ]),
           });
-        } else {
         }
       } else {
         console.warn("Could not find EditorView instance:", editor);
@@ -1579,6 +1584,9 @@ export default class TextFlowPlugin extends Plugin {
         Object.entries(flowLeaves).map(async ([flowId, view]) => {
           const text = view.editor.getValue();
           await this.saveBackToSource(flowId, text);
+          if (view.menuBar) {
+            view.menuBar.refresh(view.contentEl);
+          }
         })
       );
     } finally {
@@ -1623,6 +1631,9 @@ export default class TextFlowPlugin extends Plugin {
         Object.entries(flowLeaves).map(async ([flowId, view]) => {
           const text = view.editor.getValue();
           await this.saveBackToSource(flowId, text);
+          if (view.menuBar) {
+            view.menuBar.refresh(view.contentEl);
+          }
         })
       );
     } finally {
@@ -1664,6 +1675,9 @@ export default class TextFlowPlugin extends Plugin {
         Object.entries(flowLeaves).map(async ([flowId, view]) => {
           const text = view.editor.getValue();
           await this.saveBackToSource(flowId, text);
+          if (view.menuBar) {
+            view.menuBar.refresh(view.contentEl);
+          }
         })
       );
     } finally {
@@ -1815,7 +1829,8 @@ export default class TextFlowPlugin extends Plugin {
   private checkActiveRegionCache = async (
     flow: Types.FlowDef,
     leafID: number,
-    cursorOffset: number
+    cursorOffset: number,
+    view: MarkdownView
   ) => {
     /* console.log("=== checkActiveRegionCache called ===");
     console.log("Cursor offset:", cursorOffset);*/
@@ -1860,9 +1875,14 @@ export default class TextFlowPlugin extends Plugin {
       // console.log("Cursor in new region, finding active region");
       flow.activeRegions[leafID].currentCursorPos = cursorOffset;
       let activeRegion = await this.findActiveRegion(flow, cursorOffset, text);
+
       if (activeRegion) {
         // console.log("New active region found:", activeRegion.path);
         flow.activeRegions[leafID] = activeRegion;
+        this.saveSettings();
+        if (view.menuBar) {
+          view.menuBar.refresh(view.contentEl);
+        }
       } else {
         console.log("No new active region found");
       }
@@ -1879,8 +1899,8 @@ export default class TextFlowPlugin extends Plugin {
     text: string
   ) => {
     // regEx for proper divider
-    const markerRegex = /[\u200B\u200C\u200D]{26,}<hr>/;
-
+    const markerRegex =
+      /[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{41}<hr>/;
     // regEx for timestamp divider for debugging
     //    const markerRegex = /[0-9]{5,}<hr>/;
 
@@ -1916,6 +1936,7 @@ export default class TextFlowPlugin extends Plugin {
           flowOrder: foundRegionMap.flowOrder,
           startInFlow: newStartInFlow,
           endInFlow: endInFlow,
+          leafMenuBarSettings: { dropdownState: "hide" },
         };
         return activeRegionObject;
       } else {
@@ -1957,7 +1978,7 @@ export default class TextFlowPlugin extends Plugin {
   // -------------------------------------------------------
   async onload() {
     this.settings = await this.loadSettings();
-    // this.menuBar = new MenuBar(this);
+    //this.menuBar = new MenuBar(this);
 
     // -------------------------------------------------------------------
     // ------------------- ONLOAD: add listeners for cursor and clicks
@@ -1991,10 +2012,6 @@ export default class TextFlowPlugin extends Plugin {
           }
         );
       }
-      // Add ribbon icon (optional)
-
-      await this.initialSetup(); //
-
       // Handle temp folder visibility
       if (this.settings.systemFolderHidden) {
         this.discernAndSetSystemFolderState(
@@ -2023,10 +2040,7 @@ export default class TextFlowPlugin extends Plugin {
     // ----------- ONLOAD: add global listeners ------------------------------------
 
     this.addListeners();
-
     this.registerCommands();
-
-    // ----------- ONLOAD: register settingsTab ------------------------------------
     this.addSettingTab(new TextFlowSettingsTab(this.app, this));
   }
 

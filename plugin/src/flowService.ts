@@ -65,7 +65,6 @@ export class FlowService {
 
   // ------ function that checks if flows overlap
   conflictCollector = (flowBuildBasket: Types.flowBuildBasket) => {
-    console.log("flowBuildBasket.finalReceipe: ", flowBuildBasket.finalReceipe);
     const conflicts: string[] = [];
     const key1 = Object.keys(flowBuildBasket.finalReceipe)[0];
     if (Object.keys(this.plugin.settings.flows).length > 1) {
@@ -727,13 +726,12 @@ export class FlowService {
 
     const progressBar = new ProgressNotice(flowName);
     let counter = 0;
+
     const total = receipeArray.length;
 
     for (let ingredient of receipeArray) {
       counter++;
       progressBar.updateProgress(counter, total);
-
-      // Your existing loop logic here
 
       if (ingredient.startsWith("#")) {
         // if it's a folder name
@@ -742,7 +740,7 @@ export class FlowService {
         // make the proper divider
         const divider = `\r${mapValueBasket.UID}<hr>\r\r`;
         // make unencoded divider for debugging
-        // const divider = `\r${mapValueBasket.timestamp}<hr>\r\r`;
+        // const divider = `\r${mapValueBasket.identifier}<hr>\r\r`;
         mapValueBasket.idDivider = divider.replace(/\\r/g, "\r");
 
         const ingredientName = ingredient.replace("#", "");
@@ -752,7 +750,7 @@ export class FlowService {
           path: ingredient,
           itemName: ingredientName,
           UID: mapValueBasket.UID,
-          timestamp: mapValueBasket.timestamp,
+          identifier: mapValueBasket.identifier,
           flowOrder: mapValueBasket.flowOrder,
           minLength: ingredientName.length,
           lengthPlusDividers:
@@ -792,18 +790,12 @@ export class FlowService {
           const normalizedTitleLine = normalize(titleLine);
           const normalizedFileContent = normalize(fileContent);
 
-          if (normalizedFileContent.startsWith(normalizedTitleLine)) {
-            fileContent = fileContent
-              .substring(normalizedTitleLine.length + 1)
-              .trimStart();
-          }
-
           flow.flowMap[ingredient] = {
             type: "file",
             path: ingredient,
             itemName: note.name,
             UID: mapValueBasket.UID,
-            timestamp: mapValueBasket.timestamp,
+            identifier: mapValueBasket.identifier,
             flowOrder: mapValueBasket.flowOrder,
             minLength: fileContent.length,
             lengthPlusDividers:
@@ -824,10 +816,6 @@ export class FlowService {
 
           // Add content with marker before divider
           mapValueBasket.concatenatedFileContents += `${fileContent}${mapValueBasket.idDivider}`;
-          /*mapValueBasket.currentEnd =
-            mapValueBasket.concatenatedFileContents.length;
-          flow.flowMap[ingredient].startEndInFlow.end =
-            mapValueBasket.currentEnd;*/
         } else {
           console.error("Invalid file.");
         }
@@ -840,6 +828,7 @@ export class FlowService {
         mapValueBasket.concatenatedFileContents
       );
       flow.isFreshBuild = false;
+      this.plugin.settings.usedUIDs = Array.from(mapValueBasket.usedUIDs);
       this.plugin.saveSettings();
     }
     if (counter === total) {
@@ -862,38 +851,43 @@ export class FlowService {
           modifiedFrontmatter = { ...frontmatter };
 
           if (frontmatter?.TextFlowUID) {
-            const timestampMatch =
-              frontmatter.TextFlowUID.match(/【(\d{13,})】/);
+            console.log("Reading existing UID for file:", file.name);
+            this.debugUID(frontmatter.TextFlowUID);
+            const identifierMatch =
+              frontmatter.TextFlowUID.match(/【([a-f0-9-]{36})】/i);
 
-            if (timestampMatch) {
-              const [_, timestampString] = timestampMatch;
-              const timestampNumber = Number(timestampString);
-              mapValueBasket.timestamp = timestampNumber;
+            if (identifierMatch) {
+              const [_, identifierString] = identifierMatch;
+              const identifierNumber = identifierString;
+              mapValueBasket.identifier = identifierNumber;
 
-              const invisibleUidRegex = /⟦([\u200B\u200C\u200D]{26,})⟧/;
+              const invisibleUidRegex =
+                /⟦([\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{41})⟧/;
               const invisibleUidMatchResult =
                 frontmatter.TextFlowUID.match(invisibleUidRegex);
 
               if (invisibleUidMatchResult && invisibleUidMatchResult[1]) {
                 // Invisible UID part found and captured
                 mapValueBasket.UID = invisibleUidMatchResult[1];
-                modifiedFrontmatter.TextFlowUID = `【${timestampNumber}】⟦${mapValueBasket.UID}⟧`;
+                modifiedFrontmatter.TextFlowUID = `【${identifierNumber}】⟦${mapValueBasket.UID}⟧`;
               } else {
                 // Timestamp part was found, but the invisible UID part is missing or malformed.
                 // Recreate the invisible UID.
                 const newInvisibleUID = this.reCreateInvisibleUID(
-                  timestampNumber,
+                  identifierNumber,
                   mapValueBasket
                 );
                 mapValueBasket.UID = newInvisibleUID;
 
                 // Update frontmatter to store the newly created/recreated complete UID
-                modifiedFrontmatter.TextFlowUID = `【${timestampNumber}】⟦${newInvisibleUID}⟧`;
+                modifiedFrontmatter.TextFlowUID = `【${String(
+                  identifierNumber
+                ).padStart(13, "0")}】⟦${mapValueBasket.UID}⟧`;
               }
             } else {
               // if (!timestampMatch) - TextFlowUID exists but is incomplete (no timestamp)
               throw new Error(
-                "TextFlow: Invalid UID format in properties.\n" +
+                `TextFlow: Invalid UID format in properties of ${file.name}.\n` +
                   "This file seems to be part of a flow but its UID is corrupted.\n" +
                   "Please restore from backup or remove TextFlowUID from properties to treat as new file."
               );
@@ -902,12 +896,15 @@ export class FlowService {
             // if (!frontmatter?.TextFlowUID) - No TextFlowUID found
             // Create one
             await this.createInvisibleUID(mapValueBasket); // This sets mapValueBasket.UID and .timestamp
-            modifiedFrontmatter.TextFlowUID = `【${mapValueBasket.timestamp}】⟦${mapValueBasket.UID}⟧`;
+            modifiedFrontmatter.TextFlowUID = `【${mapValueBasket.identifier}】⟦${mapValueBasket.UID}⟧`;
           }
         }
       );
 
       // After processing, write the modified frontmatter back to the file
+      console.log("Final UID for file:", file.name);
+      this.debugUID(modifiedFrontmatter.TextFlowUID);
+
       await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
         Object.assign(frontmatter, modifiedFrontmatter);
       });
@@ -928,51 +925,94 @@ export class FlowService {
 
   // ----------- translate timestamp into invisible base2 UID and make YAML entry
   createInvisibleUID = (mapValueBasket: Types.mapValueBasket) => {
-    const INVISIBLE_CHARS = [
-      "\u200B", // Zero-width space (0)
-      "\u200C", // Zero-width non-joiner (1)
-      "\u200D", // Zero-width joiner (2)
+    const invisibleChars = [
+      "\u200B", // Zero-width space 0
+      "\u200C", // Zero-width non-joiner 1
+      "\u200D", // Zero-width joiner 2
+      "\u2060", // Word joiner 3
+      "\u2061", // Function application 4
+      "\u2062", // Invisible times 5
+      "\u2063", // Invisible separator 6
+      "\u2064", // Invisible plus 7
+      "\uFEFF", // Zero-width no-break space 8
+      "\u00A0", // No-Break Space 9
     ];
 
-    let timestamp = Date.now();
-    if (timestamp === mapValueBasket.timestamp) {
-      timestamp += 1;
-    }
-    //console.log(`createInvisibleUID timestamp ${timestamp}`);
-    const base3 = timestamp.toString(3);
-    const encodedTimestamp = [...base3]
-      .map((digit) => INVISIBLE_CHARS[parseInt(digit)])
-      .join("");
-    //console.log(`base3 timestamp: ${base3}`);
-    // debugMarker(encodedTimestamp);
+    const getNewUUID = () => {
+      return crypto.randomUUID();
+    };
 
-    mapValueBasket.timestamp = timestamp;
-    mapValueBasket.UID = encodedTimestamp;
-    mapValueBasket.yamlMini = `\nTextFlowUID: 【${timestamp}】⟦${encodedTimestamp}⟧`;
+    // turn the UUID into base9 piecemeal, then join and pad
+    const base9Transform = (identifier: string) => {
+      const initialIdentifierArray = identifier.split("-");
+      const base9IdentifierArray: string[] = [];
+
+      for (let hexNumber of initialIdentifierArray) {
+        const numberIdentifier = parseInt(hexNumber, 16);
+        const base9 = numberIdentifier.toString(9);
+        const transformedIdentifier = [...base9]
+          .map((digit) => invisibleChars[parseInt(digit)])
+          .join("");
+        base9IdentifierArray.push(transformedIdentifier);
+      }
+      const finalIdentifier = base9IdentifierArray.join("");
+      const paddedTransformedIdentifier = finalIdentifier.padStart(
+        46,
+        invisibleChars[0]
+      );
+
+      return paddedTransformedIdentifier;
+    };
+
+    let UUID = getNewUUID();
+    const paddedBase9Identifier = base9Transform(UUID);
+
+    mapValueBasket.identifier = UUID;
+    //console.log(`base3 timestamp: ${base3Identifier}`);
+    // debugMarker(base3Identifier);
+    mapValueBasket.UID = paddedBase9Identifier;
+    mapValueBasket.yamlMini = `\nTextFlowUID: 【${mapValueBasket.identifier}】⟦${paddedBase9Identifier}⟧`;
   };
 
   // ----------------- If invisible UID got eaten by external editor -----------
   reCreateInvisibleUID = (
-    timestamp: number,
+    identifier: string,
     mapValueBasket: Types.mapValueBasket
   ) => {
     // Define our invisible characters
-    const INVISIBLE_CHARS = [
-      "\u200B", // Zero-width space (0)
-      "\u200C", // Zero-width non-joiner (1)
-      "\u200D", // Zero-width joiner (2)
+    const invisibleChars = [
+      "\u200B", // Zero-width space 0
+      "\u200C", // Zero-width non-joiner 1
+      "\u200D", // Zero-width joiner 2
+      "\u2060", // Word joiner 3
+      "\u2061", // Function application 4
+      "\u2062", // Invisible times 5
+      "\u2063", // Invisible separator 6
+      "\u2064", // Invisible plus 7
+      "\uFEFF", // Zero-width no-break space 8
+      "\u00A0", // No-Break Space 9
     ];
 
-    // Convert to base-3 string
-    const base3 = timestamp.toString(3);
+    const initialIdentifierArray = identifier.split("-");
+    const base10IdentifierArray: string[] = [];
 
-    // Convert each base-3 digit to the corresponding invisible character
-    const reCreatedUID = [...base3]
-      .map((digit) => INVISIBLE_CHARS[parseInt(digit)])
-      .join("");
+    for (let hexNumber of initialIdentifierArray) {
+      const numberIdentifier = parseInt(hexNumber, 16);
+      const base10 = numberIdentifier.toString(10);
+      const transformedIdentifier = [...base10]
+        .map((digit) => invisibleChars[parseInt(digit)])
+        .join("");
+      base10IdentifierArray.push(transformedIdentifier);
+    }
+    const finalIdentifier = base10IdentifierArray.join("");
+    const paddedTransformedIdentifier = finalIdentifier.padStart(
+      41,
+      invisibleChars[0]
+    );
 
-    return reCreatedUID;
+    return paddedTransformedIdentifier;
   };
+
   // --------------- debug the UID
   debugMarker = (marker: string) => {
     console.log({
@@ -980,7 +1020,7 @@ export class FlowService {
       length: marker.length,
       chars: Array.from(marker).map((char) => ({
         char: char,
-        code: char.charCodeAt(0).toString(16), // hex code
+        code: char.charCodeAt(0).toString(10),
         name:
           char === "\u00A0"
             ? "NBSP"
@@ -990,8 +1030,56 @@ export class FlowService {
             ? "ZWNJ"
             : char === "\u200D"
             ? "ZWJ"
+            : char === "\u2060"
+            ? "WJ"
+            : char === "\u2061"
+            ? "FA"
+            : char === "\u2062"
+            ? "*"
+            : char === "\u2063"
+            ? "IS"
+            : char === "\u2064"
+            ? "+"
+            : char === "\uFEFF"
+            ? "NBZWS"
             : "unknown",
       })),
+    });
+  };
+
+  debugUID = (uid: string) => {
+    console.log({
+      originalNumber: uid.match(/【(\d+)】/)?.[1],
+      invisiblePart: uid.match(/⟦([\u200B\u200C\u200D]+)⟧/)?.[1],
+      invisiblePartLength: uid.match(/⟦([\u200B\u200C\u200D]+)⟧/)?.[1]?.length,
+      chars: Array.from(uid.match(/⟦([\u200B\u200C\u200D]+)⟧/)?.[1] || "").map(
+        (char) => ({
+          char,
+          code: char.charCodeAt(0).toString(10),
+          type:
+            char === "\u00A0"
+              ? "NBSP"
+              : char === "\u200B"
+              ? "ZWSP"
+              : char === "\u200C"
+              ? "ZWNJ"
+              : char === "\u200D"
+              ? "ZWJ"
+              : char === "\u2060"
+              ? "WJ"
+              : char === "\u2061"
+              ? "FA"
+              : char === "\u2062"
+              ? "*"
+              : char === "\u2063"
+              ? "IS"
+              : char === "\u2064"
+              ? "+"
+              : char === "\uFEFF"
+              ? "NBZWS"
+              : "unknown",
+        })
+      ),
     });
   };
 
@@ -1019,10 +1107,7 @@ export class FlowService {
     if (!flowReBuildBasket.success) {
       return;
     }
-    this.writeFlowDef(
-      this.plugin.settings,
-      flowReBuildBasket
-    );
+    this.writeFlowDef(this.plugin.settings, flowReBuildBasket);
     // null unsavedRegions
     this.plugin.settings.flows[flowName].unsavedRegionsArray = [];
     this.plugin.settings.flows[flowName].flaggedForRebuild = false;
@@ -1037,12 +1122,13 @@ export class FlowService {
     const mapValueBasket: Types.mapValueBasket = {
       concatenatedFileContents: "",
       initialIteration: true,
-      timestamp: 0,
+      identifier: "0",
       flowOrder: 0,
       UID: "",
       yamlMini: "",
       singleFileContent: "",
       currentEnd: 0,
+      usedUIDs: new Set(this.plugin.settings.usedUIDs),
       idDivider: "",
     };
 

@@ -243,11 +243,13 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       .setDesc("Changes need a vault reload to take effect.")
       .addDropdown((switcherModalPositionDropdown) => {
         switcherModalPositionDropdown
-          .setValue(this.plugin.settings.menuBar.position[0] ?? `top`)
+          .setValue(
+            this.plugin.settings.generalMenuBarSettings.position[0] ?? `top`
+          )
           .addOption(`top`, `top`)
           .addOption(`bottom`, `bottom`)
           .onChange((value) => {
-            this.plugin.settings.menuBar.position[0] = value;
+            this.plugin.settings.generalMenuBarSettings.position[0] = value;
             this.plugin.saveSettings();
           });
       });
@@ -258,9 +260,11 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       .setClass("no-border");
     menuBarOffsetInput.addText((text) =>
       text
-        .setValue(this.plugin.settings.menuBar.position[1] ?? "0")
+        .setValue(
+          this.plugin.settings.generalMenuBarSettings.position[1] ?? "0"
+        )
         .onChange((value) => {
-          this.plugin.settings.menuBar.position[1] = value;
+          this.plugin.settings.generalMenuBarSettings.position[1] = value;
           this.plugin.saveSettings();
         })
     );
@@ -499,7 +503,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           folderIncludeInput.setValue(
             this.plugin.settings.flowBuildBasket.flowCookbook.folderIncluded ===
               "/"
-              ? "root"
+              ? " "
               : this.plugin.settings.flowBuildBasket.flowCookbook.folderIncluded
           );
         }
@@ -937,7 +941,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         .addButton((rebuildButton) =>
           rebuildButton.setButtonText("(Re)build)").onClick(async () => {
             // gather all info for the flowDefinition
-            console.log("rebuild clicked");
             this.flowService.rebuildFlow(flow);
             await this.plugin.saveSettings();
             this.display();

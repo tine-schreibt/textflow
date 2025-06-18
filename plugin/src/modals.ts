@@ -118,6 +118,7 @@ export class FlowSwitcherModal extends Modal {
 
   onOpen() {
     this.display();
+    this.plugin.registerModalUpdateCallback(() => this.display());
   }
 
   display() {
@@ -261,8 +262,6 @@ export class FlowSwitcherModal extends Modal {
               await leaf.openFile(file);
               leaf.setPinned(true);
               this.app.workspace.setActiveLeaf(leaf, { focus: true });
-              await this.plugin.manageActiveFlowObject();
-              this.display();
             }
           }
         });
@@ -281,8 +280,6 @@ export class FlowSwitcherModal extends Modal {
               await leaf.openFile(file);
               leaf.setPinned(true);
               this.app.workspace.setActiveLeaf(leaf, { focus: true });
-              await this.plugin.manageActiveFlowObject();
-              this.display();
             }
           }
         });
@@ -302,8 +299,6 @@ export class FlowSwitcherModal extends Modal {
               await leaf.openFile(file);
               leaf.setPinned(true);
               this.app.workspace.setActiveLeaf(leaf, { focus: true });
-              await this.plugin.manageActiveFlowObject();
-              this.display();
             }
           }
         });
@@ -354,8 +349,7 @@ export class FlowSwitcherModal extends Modal {
               );
               if (targetLeaf) {
                 await targetLeaf.detach();
-                await this.plugin.manageActiveFlowObject();
-                this.plugin.settings.flows[activeFlow].activeRegions = {};
+                this.plugin.manageActiveFlowObject();
                 await this.plugin.saveSettings();
                 this.display();
               }
@@ -409,26 +403,15 @@ export class FlowSwitcherModal extends Modal {
           .setClass(`flow-switch-modal-header-button-neutral`)
           .setClass("clickable-icon")
           .onClick(async () => {
-            console.log("close button clicked for ", leafID);
             const leaves = this.app.workspace.getLeavesOfType("markdown");
-            const currentLeafID = leafID;
             const targetLeaf = leaves.find(
               (leaf) => (leaf as any).id === leafID
             );
             if (targetLeaf) {
               await targetLeaf.detach();
-              if (
-                this.plugin.settings.flows[activeFlow].activeRegions[
-                  currentLeafID
-                ]
-              ) {
-                delete this.plugin.settings.flows[activeFlow].activeRegions[
-                  currentLeafID
-                ];
-                await this.plugin.manageActiveFlowObject();
-                await this.plugin.saveSettings();
-                this.display();
-              }
+              this.plugin.manageActiveFlowObject();
+              await this.plugin.saveSettings();
+              this.display();
             }
           });
       });
@@ -471,7 +454,7 @@ export class FlowSwitcherModal extends Modal {
       if (
         this.plugin.settings.flows[inactiveFlow].unsavedRegionsArray.length > 0
       ) {
-        goOpen = "no-go"; // don't open
+        goOpen = "neutral"; // don't open
         goRebuild = "no-go";
         goSave = "must"; // must save
       }
@@ -510,9 +493,6 @@ export class FlowSwitcherModal extends Modal {
               await leaf.openFile(file);
               leaf.setPinned(true);
               this.app.workspace.setActiveLeaf(leaf, { focus: true });
-              console.log("calling manage active flow object");
-              await this.plugin.manageActiveFlowObject();
-              this.display();
             }
           }
         });
@@ -531,8 +511,6 @@ export class FlowSwitcherModal extends Modal {
               await leaf.openFile(file);
               leaf.setPinned(true);
               this.app.workspace.setActiveLeaf(leaf, { focus: true });
-              await this.plugin.manageActiveFlowObject();
-              this.display();
             }
           }
         });
@@ -552,8 +530,6 @@ export class FlowSwitcherModal extends Modal {
               await leaf.openFile(file);
               leaf.setPinned(true);
               this.app.workspace.setActiveLeaf(leaf, { focus: true });
-              await this.plugin.manageActiveFlowObject();
-              this.display();
             }
           }
         });
@@ -595,6 +571,7 @@ export class FlowSwitcherModal extends Modal {
   }
 
   onClose() {
+    this.plugin.unregisterModalUpdateCallback();
     const { contentEl } = this;
     contentEl.empty();
   }

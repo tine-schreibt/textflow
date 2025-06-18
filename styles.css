@@ -2,6 +2,14 @@
   font-weight: 700;
 }
 
+.hide {
+  display: none;
+}
+
+.align-off-center {
+  padding-left: 7px
+}
+
 .textflow-menu-bar-div .setting-item.no-border {
   border: none !important;
 }
@@ -249,11 +257,69 @@
 
 /* ---------- MENUBAR STUFF ------------- */
 .textflow-menu-bar {
+  position: relative;
+  padding: 5px;
+  margin: 5px;
   display: grid;
   grid-template-columns:
     repeat(2, minmax(30px, auto))
-    minmax(200px, 1fr) repeat(5, minmax(30px, auto));
+    minmax(100px, 1fr) repeat(5, minmax(30px, auto));
   gap: 8px;
+  box-shadow: var(--input-shadow);
+  border-radius: 4px;
+  font-size: var(--font-ui-small);
+  font-weight: var(--input-font-weight);
+  color: var(--text-normal);
+}
+
+.menu-bar-navigation-dropdown {
+  width: 300px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+}
+
+.menu-bar-navigation-dropdown-headline {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  padding: 3px;
+  box-shadow: var(--input-shadow);
+  border-radius: 4px;
+}
+
+/* The text span inside the headline */
+.menu-bar-navigation-dropdown-headline span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+/* The icon span */
+.menu-bar-navigation-dropdown-headline span:last-child {
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+
+.menu-bar-navigation-dropdown-contents {
+  padding-left: 5px;
+  padding-right: 5px;
+  position: absolute;
+  top: 100%; /* Position it below the headline */
+  left: 0;
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  background: var(--background-primary);
+  box-shadow: var(--input-shadow);
+  border-radius: 4px;
+  z-index: 1000;
 }
 
 /*1 saveButton download*/
