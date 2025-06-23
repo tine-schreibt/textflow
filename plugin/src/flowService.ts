@@ -67,7 +67,7 @@ export class FlowService {
   conflictCollector = (flowBuildBasket: Types.flowBuildBasket) => {
     const conflicts: string[] = [];
     const key1 = Object.keys(flowBuildBasket.finalReceipe)[0];
-    if (Object.keys(this.plugin.settings.flows).length > 1) {
+    if (Object.keys(this.plugin.settings.flows).length >= 1) {
       flowLoop: for (let flowName in this.plugin.settings.flows) {
         if (flowName != flowBuildBasket.createOrEditFlowName) {
           const key2 = Object.keys(
@@ -186,8 +186,8 @@ export class FlowService {
       // ----------- FINAL RECEIPE FOR BOOKMARKS ---------------------
       if (flowBuildBasket.definitionMode === "bookmarks") {
         if (
-          flowBuildBasket.flowCookbook.bookmarkGroup === undefined ||
-          flowBuildBasket.flowCookbook.bookmarkGroup === ""
+          flowBuildBasket.flowCookbook.bookmarks === undefined ||
+          flowBuildBasket.flowCookbook.bookmarks === ""
         ) {
           new Notice("Please enter at least one bookmark group.");
           flowBuildBasket.success = false;
@@ -248,11 +248,25 @@ export class FlowService {
     return `${weekday}, ${year}.${month}.${day}, ${hours}:${minutes}`;
   };
 
-  writeFlowDef = (
+  writeFlowDef = async (
     settings: Types.TextFlowSettings,
     flowBuildBasket: Types.flowBuildBasket
   ) => {
     const conflicts = this.conflictCollector(flowBuildBasket);
+    let activeRegionHandlerVariable = {};
+    if (
+      settings.flows[flowBuildBasket.createOrEditFlowName]?.activeRegions &&
+      Object.keys(
+        settings.flows[flowBuildBasket.createOrEditFlowName].activeRegions
+      ).length > 0
+    ) {
+      // Deep copy the active regions
+      activeRegionHandlerVariable = JSON.parse(
+        JSON.stringify(
+          settings.flows[flowBuildBasket.createOrEditFlowName].activeRegions
+        )
+      );
+    }
     // -------- CREATE THE FLOW OBJECT -------------------------------
     settings.flows[flowBuildBasket.createOrEditFlowName] = {
       timestamp: this.getTimestamp(),
@@ -266,12 +280,12 @@ export class FlowService {
       flowBuilt: false,
       flaggedForRebuild: false,
       conflictArray: conflicts,
-      activeRegions: {},
+      activeRegions: activeRegionHandlerVariable,
       persistentCursors: {},
       unsavedRegionsArray: [],
       flowMap: {},
     };
-    this.plugin.saveSettings;
+    await this.plugin.saveSettings();
   };
 
   // --- Reset flowBuildBasket
@@ -296,7 +310,7 @@ export class FlowService {
   getBookmarkPathsByGroupName = async (
     flowBuildBasket: Types.flowBuildBasket
   ) => {
-    let groupName = flowBuildBasket.flowCookbook.bookmarkGroup;
+    let groupName = flowBuildBasket.flowCookbook.bookmarks;
     // prepare path for further processing:
     const cleanPath = groupName.replace(/\/+/g, "/");
     flowBuildBasket.cleanCookbook.bookmarks = cleanPath;
@@ -851,8 +865,7 @@ export class FlowService {
           modifiedFrontmatter = { ...frontmatter };
 
           if (frontmatter?.TextFlowUID) {
-            console.log("Reading existing UID for file:", file.name);
-            this.debugUID(frontmatter.TextFlowUID);
+            //this.debugUID(frontmatter.TextFlowUID);
             const identifierMatch =
               frontmatter.TextFlowUID.match(/【([a-f0-9-]{36})】/i);
 
@@ -900,10 +913,6 @@ export class FlowService {
           }
         }
       );
-
-      // After processing, write the modified frontmatter back to the file
-      console.log("Final UID for file:", file.name);
-      this.debugUID(modifiedFrontmatter.TextFlowUID);
 
       await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
         Object.assign(frontmatter, modifiedFrontmatter);

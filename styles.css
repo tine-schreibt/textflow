@@ -7,7 +7,7 @@
 }
 
 .align-off-center {
-  padding-left: 7px
+  padding-left: 7px;
 }
 
 .textflow-menu-bar-div .setting-item.no-border {
@@ -68,10 +68,6 @@
 }
 
 /* */
-.textflow-menu-bar-div {
-  border-top: 1px solid var(--background-modifier-border);
-  padding-top: 0.75em;
-}
 
 /*---------------- FILE EXPLORER DECO ---------------*/
 
@@ -256,14 +252,23 @@
 }
 
 /* ---------- MENUBAR STUFF ------------- */
+
+.textflow-menu-bar .clickable-icon,
+.textflow-menu-bar .button-component,
+.textflow-menu-bar .menu-bar-navigation-dropdown-headline {
+  height: var(--input-height); /* Use Obsidian's input height variable */
+  line-height: var(--input-height);
+  display: flex;
+  align-items: center;
+}
+
 .textflow-menu-bar {
   position: relative;
   padding: 5px;
   margin: 5px;
+  justify-content: start; /* Add this line */
   display: grid;
-  grid-template-columns:
-    repeat(2, minmax(30px, auto))
-    minmax(100px, 1fr) repeat(5, minmax(30px, auto));
+  grid-template-columns: repeat(6, auto);
   gap: 8px;
   box-shadow: var(--input-shadow);
   border-radius: 4px;
@@ -272,12 +277,23 @@
   color: var(--text-normal);
 }
 
+.spacing {
+  padding-right: 5px;
+}
+
+.button-shadow {
+  box-shadow: var(--input-shadow);
+  padding: 4px;
+}
+
 .menu-bar-navigation-dropdown {
-  width: 300px;
+  width: 200px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   position: relative;
+  margin: 0;
+  padding: 0;
 }
 
 .menu-bar-navigation-dropdown-headline {
@@ -298,28 +314,85 @@
   overflow: hidden;
   text-overflow: ellipsis;
   flex: 1;
+  height: var(--input-height);
+  line-height: var(--input-height);
+  display: flex; /* Add this */
+  align-items: center; /* Add this */
 }
 
 /* The icon span */
 .menu-bar-navigation-dropdown-headline span:last-child {
   margin-left: 4px;
   flex-shrink: 0;
+  height: var(--input-height);
+  line-height: var(--input-height);
+  display: flex; /* Add this */
+  align-items: center; /* Add this */
 }
 
 .menu-bar-navigation-dropdown-contents {
   padding-left: 5px;
   padding-right: 5px;
   position: absolute;
-  top: 100%; /* Position it below the headline */
+  top: 100%;
   left: 0;
   width: 100%;
-  overflow: hidden;
+  overflow-x: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
   background: var(--background-primary);
   box-shadow: var(--input-shadow);
   border-radius: 4px;
   z-index: 1000;
+}
+
+.menu-bar-navigation-dropdown-scrollable {
+  padding-left: 5px;
+  padding-right: 5px;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: scroll; /* Changed from auto to scroll to force scrollbar */
+  overflow-x: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  background: var(--background-primary);
+  box-shadow: var(--input-shadow);
+  border-radius: 4px;
+  z-index: 1000;
+
+  /* Make sure scrollbar is visible */
+  scrollbar-width: thin; /* For Firefox */
+  scrollbar-color: var(--scrollbar-thumb-bg) var(--scrollbar-bg); /* For Firefox */
+}
+
+/* For Webkit browsers (Chrome, Safari) */
+.menu-bar-navigation-dropdown-contents::-webkit-scrollbar {
+  width: 8px;
+}
+
+.menu-bar-navigation-dropdown-contents::-webkit-scrollbar-track {
+  background: var(--scrollbar-bg);
+}
+
+.menu-bar-navigation-dropdown-contents::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb-bg);
+  border-radius: 4px;
+}
+
+.menu-bar-cursor-container {
+  display: grid; /* Add this line */
+  grid-template-columns:
+    minmax(100px, 1fr) /*cursorDropdown*/
+    minmax(30px, auto) /*cursorButton*/;
+  gap: 0px;
+}
+
+.cursor-target-button {
+  padding: 4px;
+  width: 30px;
 }
 
 /*1 saveButton download*/
@@ -345,13 +418,33 @@
 
 /* Add a "LOCKED" overlay */
 .source-read-only .cm-content::after {
-  content: "!! This note is the source of a flow. Please only edit its properties. !!";
+  content: "This note is the source of a flow. Please only edit its properties.";
   position: absolute;
   white-space: normal;
   max-width: 90%;
   word-wrap: break-word;
   top: 10px;
-  right: 10px;
+  left: 10px;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 4px;
+}
+
+.save-rebuild-protection {
+  color: var(--text-muted);
+  position: relative; /* Needed for the lock icon */
+}
+
+.save-rebuild-protection .cm-content::after {
+  content: "Save or rebuild in progress...";
+  position: absolute;
+  white-space: normal;
+  max-width: 90%;
+  word-wrap: break-word;
+  top: 10px;
+  right: 100px;
   background: var(--interactive-accent);
   color: var(--text-on-accent);
   padding: 4px 8px;

@@ -190,6 +190,40 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .setValue(this.plugin.settings.autoSave)
           .onChange(async (value) => {
             this.plugin.settings.autoSave = value;
+            this.display();
+            await this.plugin.saveSettings();
+          });
+      });
+
+    // ----------- Auto-rebuild ----------------
+    const autoRebuild = new Setting(setUpTextFlow)
+      .setName("Automatically rebuild active flows")
+      .setClass(this.plugin.settings.autoSave ? "show" : "hide")
+      .setDesc(
+        createFragment((desc) => {
+          desc.createSpan({
+            cls: "text-emphasis",
+            text: "Use this feature wisely: ",
+          });
+          desc.createEl("br");
+          desc.createSpan({
+            text: "It allows you to open and edit conflicting flows in parallel.",
+          });
+          desc.createEl("br");
+          desc.createSpan({
+            cls: "text-emphasis",
+            text: "But ",
+          });
+          desc.createSpan({
+            text: " if you edit their overlapping regions, it can lead to a lot of disk writes and large flows take a few seconds to rebuild.",
+          });
+        })
+      )
+      .addToggle((activateAutoRebuild) => {
+        activateAutoRebuild
+          .setValue(this.plugin.settings.autoRebuild)
+          .onChange(async (value) => {
+            this.plugin.settings.autoRebuild = value;
             await this.plugin.saveSettings();
           });
       });
@@ -217,57 +251,45 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     const switcherModalPosition = new Setting(setUpTextFlow)
       .setName("How do you want to access the flow switcher modal?")
       .setDesc("Changes need a vault reload to take effect.")
-      .addDropdown((switcherModalPositionDropdown) => {
-        switcherModalPositionDropdown
-          .setValue(
-            this.plugin.settings.switcherPos
-              ? this.plugin.settings.switcherPos
-              : `statusBar`
-          )
-          .addOption(`statusBar`, `Status bar`)
-          .addOption(`ribbon`, `Ribbon`)
-          .addOption(`command`, `Command palette only`)
-          .onChange((value) => {
-            this.plugin.settings.switcherPos = value;
-            this.plugin.saveSettings();
-          });
+      .addDropdown((dropdown) => {
+        dropdown
+          .addOption("statusBar", "Status bar")
+          .addOption("ribbon", "Ribbon")
+          .addOption("command", "Command palette only");
+        dropdown.setValue(this.plugin.settings.switcherPos);
+        dropdown.onChange((value) => {
+          console.log("Changed to:", value);
+          this.plugin.settings.switcherPos = value;
+          this.plugin.saveSettings();
+        });
       });
 
     // -----------   menuBar  ---------------
-
-    const menuBarDiv = setUpTextFlow.createDiv({
-      cls: "textflow-menu-bar-div",
-    });
-    const menuBarPosition = new Setting(menuBarDiv)
-      .setName("Where do you want your menu bar to appear?")
-      .setDesc("Changes need a vault reload to take effect.")
-      .addDropdown((switcherModalPositionDropdown) => {
-        switcherModalPositionDropdown
+    const menuBarPosition = new Setting(setUpTextFlow)
+      .setName("Choose your type of menu bar")
+      .setDesc(
+        createFragment((desc) => {
+          desc.createSpan({
+            text: "Fixed:  Always displayed at the top of your leaf.",
+          });
+          desc.createEl("br");
+          desc.createSpan({
+            text: "Modal: Callable via command palette or a hotkey.",
+          });
+        })
+      )
+      .addDropdown((menuBarPosition) => {
+        menuBarPosition
+          .addOption(`fixed`, `Fixed`)
+          .addOption(`modal`, `Modal`)
           .setValue(
-            this.plugin.settings.generalMenuBarSettings.position[0] ?? `top`
+            this.plugin.settings.generalMenuBarSettings.position ?? `fixed`
           )
-          .addOption(`top`, `top`)
-          .addOption(`bottom`, `bottom`)
           .onChange((value) => {
-            this.plugin.settings.generalMenuBarSettings.position[0] = value;
+            this.plugin.settings.generalMenuBarSettings.position = value;
             this.plugin.saveSettings();
           });
       });
-
-    const menuBarOffsetInput = new Setting(menuBarDiv);
-    menuBarOffsetInput
-      .setDesc("Input a number to add a custom offset to your chosen position.")
-      .setClass("no-border");
-    menuBarOffsetInput.addText((text) =>
-      text
-        .setValue(
-          this.plugin.settings.generalMenuBarSettings.position[1] ?? "0"
-        )
-        .onChange((value) => {
-          this.plugin.settings.generalMenuBarSettings.position[1] = value;
-          this.plugin.saveSettings();
-        })
-    );
 
     // --------   CREATE / EDIT FLOWS   ----------------
     const createFlows = containerEl.createDiv({
@@ -425,12 +447,12 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     chooseBookmarks.addText((setBookmarksGroup) => {
       if (!this.plugin.settings.flowBuildBasket?.fresh) {
         setBookmarksGroup.setValue(
-          this.plugin.settings.flowBuildBasket.flowCookbook.bookmarkGroup
+          this.plugin.settings.flowBuildBasket.flowCookbook.bookmarks
         );
       }
       setBookmarksGroup.onChange(async (value) => {
         this.plugin.settings.flowBuildBasket.previewUsed = false;
-        this.plugin.settings.flowBuildBasket.flowCookbook.bookmarkGroup =
+        this.plugin.settings.flowBuildBasket.flowCookbook.bookmarks =
           value.trim();
         this.plugin.settings.flowBuildBasket.fresh = false;
         this.flowService.debouncedSaveSettings();
@@ -482,42 +504,49 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     folderIncludeInput.settingEl.hide();
     folderIncludeInput.settingEl.addClass("border-top-none");
     folderIncludeInput.settingEl.addClass("input-width-400");
-    folderIncludeInput
-      .setDesc(
-        createFragment((desc) => {
-          desc.createSpan({
-            text: "Choose a source folder.",
-          });
-          desc.createEl("br"); // Add line break
-          desc.createSpan({
-            text: "Default is root.",
-          });
-          desc.createEl("br"); // Add line break
-          desc.createSpan({
-            text: "End path with / to not include subfolders.",
-          });
-        })
-      )
-      .addText((folderIncludeInput) => {
-        if (!this.plugin.settings.flowBuildBasket?.fresh) {
-          folderIncludeInput.setValue(
-            this.plugin.settings.flowBuildBasket.flowCookbook.folderIncluded ===
-              "/"
-              ? " "
-              : this.plugin.settings.flowBuildBasket.flowCookbook.folderIncluded
-          );
-        }
-        folderIncludeInput.onChange(async (value) => {
-          this.plugin.settings.flowBuildBasket.previewUsed = false;
-          value === "root"
-            ? (this.plugin.settings.flowBuildBasket.flowCookbook.folderIncluded =
-                "")
-            : (this.plugin.settings.flowBuildBasket.flowCookbook.folderIncluded =
-                value);
-          this.plugin.settings.flowBuildBasket.fresh = false;
-          this.flowService.debouncedSaveSettings();
+    folderIncludeInput.setDesc(
+      createFragment((desc) => {
+        desc.createSpan({
+          text: "Choose a source folder.",
         });
+        desc.createEl("br"); // Add line break
+        desc.createSpan({
+          text: "Default is root.",
+        });
+        desc.createEl("br"); // Add line break
+        desc.createSpan({
+          text: "End path with / to not include subfolders.",
+        });
+      })
+    );
+
+    folderIncludeInput.addText((folderIncludeInput) => {
+      const storedValue =
+        this.plugin.settings.flowBuildBasket.flowCookbook.folderIncluded;
+
+      if (!this.plugin.settings.flowBuildBasket?.fresh) {
+        // this is so setValue is either a filled string or undefined;
+        // with an empty string for some reason not all folders get included on editing
+        if (!storedValue || storedValue === "/" || storedValue === "") {
+          delete this.plugin.settings.flowBuildBasket.flowCookbook
+            .folderIncluded;
+        }
+        // When displaying the value
+        folderIncludeInput.setValue(
+          this.plugin.settings.flowBuildBasket.flowCookbook.folderIncluded
+        );
+      }
+      folderIncludeInput.onChange(async (value) => {
+        this.plugin.settings.flowBuildBasket.previewUsed = false;
+        // When storing the value
+        this.plugin.settings.flowBuildBasket.flowCookbook.folderIncluded =
+          !value || value === "" || value === "root" || value === "/"
+            ? ""
+            : value;
+        this.plugin.settings.flowBuildBasket.fresh = false;
+        this.flowService.debouncedSaveSettings();
       });
+    });
 
     // ----- Folder exclude
     const folderExcludeInput = new Setting(createFlows);
@@ -859,13 +888,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
       // --- DISPLAY PREPARATIONS ----------------------------------
       // Set up strings to display flow criteria
-      let source = "";
-      const included: string[] = [];
-      let inclusionString = "";
-      const excluded: string[] = [];
-      let exclusionString = "";
 
       // SOURCE
+      let source = "";
       if (shownFlow.flowCookbook.bookmarks) {
         source += `Bookmark group "${shownFlow.flowCookbook.bookmarks}"`;
       } else if (shownFlow.flowCookbook.folderIncluded === "") {
@@ -873,35 +898,32 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       } else {
         source += `Folder ${shownFlow.flowCookbook.folderIncluded}`;
       }
+
       // INCLUSION
-      // if flow is based on folderTagProp
-      if (shownFlow.flowCookbook.tagsIncluded != "") {
+      const included: string[] = [];
+      if (shownFlow.flowCookbook.tagsIncluded?.trim()) {
         included.push(`Tags: ${shownFlow.flowCookbook.tagsIncluded}`);
       }
-
-      if (shownFlow.flowCookbook.propsIncluded != "") {
+      if (shownFlow.flowCookbook.propsIncluded?.trim()) {
         included.push(`Props: ${shownFlow.flowCookbook.propsIncluded}`);
       }
-      const inclusionsJoined = included.join(" / ");
-      inclusionString += inclusionsJoined;
-      // Put it all together
+      const inclusionString = included.length > 0 ? included.join(" / ") : "";
 
       // EXCLUSION
-      // if flow is based on folderTagProp
+      const excluded: string[] = [];
       if (
-        shownFlow.flowCookbook.folderExcluded != "" &&
-        shownFlow.flowCookbook.folderExcluded != undefined
+        !shownFlow.flowCookbook.bookmarks &&
+        shownFlow.flowCookbook.folderExcluded?.trim()
       ) {
         excluded.push(`Folders: ${shownFlow.flowCookbook.folderExcluded}`);
       }
-
-      if (shownFlow.flowCookbook.tagsExcluded != "")
+      if (shownFlow.flowCookbook.tagsExcluded?.trim()) {
         excluded.push(`Tags: ${shownFlow.flowCookbook.tagsExcluded}`);
-      if (shownFlow.flowCookbook.propsExcluded != "") {
+      }
+      if (shownFlow.flowCookbook.propsExcluded?.trim()) {
         excluded.push(`Props: ${shownFlow.flowCookbook.propsExcluded}`);
       }
-      const exclusionsJoined = excluded.join(" / ");
-      exclusionString += exclusionsJoined;
+      const exclusionString = excluded.length > 0 ? excluded.join(" / ") : "";
 
       // --- THE DISPLAY ITSELF -------------------------------
       const flowShow = new Setting(flowDisplay);
@@ -959,7 +981,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               folderTitles: shownFlow.folderTitles,
               definitionMode: Object.keys(shownFlow.flowReceipe)[0],
               flowCookbook: shownFlow.flowCookbook,
-              cleanCookbook: shownFlow.flowCookbook,
+              cleanCookbook: {},
               finalReceipe: shownFlow.flowReceipe,
               conflicts: shownFlow.conflictArray,
               dataviewSearchPath: "",

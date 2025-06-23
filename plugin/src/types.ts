@@ -11,10 +11,11 @@ export interface TextFlowSettings {
   systemFolderPath?: string;
   systemFolderHidden: boolean;
   autoSave: boolean;
+  autoRebuild: boolean;
   explorerDeco: boolean;
   switcherPos: string;
   generalMenuBarSettings: {
-    position: [string, string];
+    position: string;
     isCollapsed?: boolean; // Current collapsed state
     flowName?: string;
   };
@@ -37,21 +38,17 @@ export interface FlowDef {
   flaggedForRebuild: boolean;
   conflictArray: string[];
   activeRegions: { [key: number | string]: ActiveRegion };
-  persistentCursors: { [key: string]: [string, number[]][] };
+  persistentCursors: CursorData;
   unsavedRegionsArray: string[];
   flowMap: { [key: string]: SourceFileObject };
 }
 
-export interface CursorObject {
-  leafTimestamp: string;
-  regions: {
-    regionName: {
-      regionTimestamp: string;
-      cursors: {
-        cursorTimestamp: string;
-        position: number;
-      };
-    };
+export interface CursorData {
+  [leafID: string]: {
+    creationDate: number;
+    creationDateString: string;
+    update: number;
+    cursors: [string, number][]; // path, cursorPos
   };
 }
 
@@ -63,13 +60,15 @@ export interface ActiveRegion {
   flowOrder: number;
   startInFlow: number;
   endInFlow: number;
-  leafMenuBarSettings: { dropdownState: DropdownState };
+  leafMenuBarSettings: {
+    menuBarDisplayState: MenuBarDisplayState;
+    navDropdownState: DropdownState;
+    cursorDropdownState: DropdownState;
+  };
 }
 
-export interface ModifiedRegion {
-  UID: string;
-  modTime: number;
-}
+export type DropdownState = "hide" | "show";
+export type MenuBarDisplayState = "show" | "hide";
 
 export interface SourceFileObject {
   type: "file" | "folder";
@@ -87,10 +86,11 @@ export interface SourceFileObject {
 export const DEFAULT_SETTINGS: TextFlowSettings = {
   systemFolderHidden: false,
   autoSave: true,
+  autoRebuild: false,
   explorerDeco: true,
   switcherPos: "statusBar",
   generalMenuBarSettings: {
-    position: ["top", "0"],
+    position: "fixed",
     isCollapsed: false, // Current collapsed state
   },
   flowBuildBasket: {
@@ -183,6 +183,5 @@ export type DVNote = {
   [key: string]: any;
 };
 
-export type DropdownState = "hide" | "show";
 export type SearchItem = { path: string; displayName: string };
 export type SearchResult = SearchItem | FuseResult<SearchItem>;

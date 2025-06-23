@@ -32,7 +32,6 @@ export class previewModal extends Modal {
     const modalTitle = contentEl.createEl("h2", {
       text: `Preview for flow ${this.flowBuildBasket.createOrEditFlowName}.`,
     });
-
     if (this.flowBuildBasket.conflicts.length > 0) {
       const conflictText = new Setting(contentEl).setDesc(
         createFragment((desc) => {
@@ -248,11 +247,15 @@ export class FlowSwitcherModal extends Modal {
         goOpen = "neutral";
       }
 
-      const openTabButton = new ButtonComponent(flowHeader)
+      const openActiveTabButton = new ButtonComponent(flowHeader)
         .setIcon("play")
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
         .setClass("clickable-icon")
         .onClick(async () => {
+          console.log(
+            "this.plugin.settings.autoRebuild: ",
+            this.plugin.settings.autoRebuild
+          );
           if (goOpen === "neutral" || goOpen === "must") {
             const file = this.app.vault.getAbstractFileByPath(
               this.plugin.settings.flows[activeFlow].flowFilePath
@@ -266,7 +269,7 @@ export class FlowSwitcherModal extends Modal {
           }
         });
 
-      const openRightButton = new ButtonComponent(flowHeader)
+      const openActiveRightButton = new ButtonComponent(flowHeader)
         .setIcon("step-forward")
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
         .setClass("clickable-icon")
@@ -284,7 +287,7 @@ export class FlowSwitcherModal extends Modal {
           }
         });
 
-      const openDownButton = new ButtonComponent(flowHeader)
+      const openActiveDownButton = new ButtonComponent(flowHeader)
         .setIcon("step-forward")
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
         .setClass("flow-switch-modal-header-button-down")
@@ -467,27 +470,34 @@ export class FlowSwitcherModal extends Modal {
         goRebuild = "must";
         goSave = "no-go";
       }
-      // check for conflicts
-      const conflictsWithActive: string[] = [];
-      Object.keys(activeFlowInfoObject).forEach((flow) => {
-        if (
-          this.plugin.settings.flows[inactiveFlow].conflictArray.includes(flow)
-        ) {
-          goOpen = "no-go";
-          conflictsWithActive.push(flow);
-        }
-      });
+      // check for conflicts, if no autoRebuild
+      if (!this.plugin.settings.autoRebuild) {
+        Object.keys(activeFlowInfoObject).forEach((flow) => {
+          if (
+            this.plugin.settings.flows[inactiveFlow].conflictArray.includes(
+              flow
+            )
+          ) {
+            goOpen = "no-go";
+          }
+        });
+      }
 
       // ----------- OPEN BUTTON ------------
-      const openTabButton = new ButtonComponent(inactiveFlowHeader)
+      const openInactiveTabButton = new ButtonComponent(inactiveFlowHeader)
         .setIcon("play")
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
         .setClass("clickable-icon")
         .onClick(async () => {
-          if (goOpen === "neutral" || goOpen === "must") {
+          if (
+            this.plugin.settings.autoRebuild ||
+            goOpen === "neutral" ||
+            goOpen === "must"
+          ) {
             const file = this.app.vault.getAbstractFileByPath(
               this.plugin.settings.flows[inactiveFlow].flowFilePath
             );
+
             if (file instanceof TFile) {
               const leaf = this.app.workspace.getLeaf("tab");
               await leaf.openFile(file);
@@ -497,12 +507,16 @@ export class FlowSwitcherModal extends Modal {
           }
         });
 
-      const openRightButton = new ButtonComponent(inactiveFlowHeader)
+      const openInactiveRightButton = new ButtonComponent(inactiveFlowHeader)
         .setIcon("step-forward")
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
         .setClass("clickable-icon")
         .onClick(async () => {
-          if (goOpen === "neutral" || goOpen === "must") {
+          if (
+            this.plugin.settings.autoRebuild ||
+            goOpen === "neutral" ||
+            goOpen === "must"
+          ) {
             const file = this.app.vault.getAbstractFileByPath(
               this.plugin.settings.flows[inactiveFlow].flowFilePath
             );
@@ -515,13 +529,17 @@ export class FlowSwitcherModal extends Modal {
           }
         });
 
-      const openDownButton = new ButtonComponent(inactiveFlowHeader)
+      const openInactiveDownButton = new ButtonComponent(inactiveFlowHeader)
         .setIcon("step-forward")
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
         .setClass("flow-switch-modal-header-button-down")
         .setClass("clickable-icon")
         .onClick(async () => {
-          if (goOpen === "neutral" || goOpen === "must") {
+          if (
+            this.plugin.settings.autoRebuild ||
+            goOpen === "neutral" ||
+            goOpen === "must"
+          ) {
             const file = this.app.vault.getAbstractFileByPath(
               this.plugin.settings.flows[inactiveFlow].flowFilePath
             );

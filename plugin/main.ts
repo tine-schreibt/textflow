@@ -34,6 +34,7 @@ import {
 import * as Types from "./src/types";
 import * as Modals from "./src/modals";
 import { MenuBar } from "./src/menuBar";
+import { FlowService } from "./src/flowService";
 
 // so the menu bar can be kept within the view
 declare module "obsidian" {
@@ -63,8 +64,10 @@ interface ListenerBasketItem {
 export default class TextFlowPlugin extends Plugin {
   settings: TextFlowSettings;
   tempFilePath: string;
+  flowService: FlowService;
 
   // ---------------- Global objects and variables -------------------------
+
   // ---- flag to prevent the leaf-change-listener from interfering with scrolling to yource file in flow
   private isNavigatingFlow: boolean = false;
 
@@ -594,15 +597,6 @@ export default class TextFlowPlugin extends Plugin {
       const isItFlow = this.isFlowFile(activeLeafPath);
 
       if (cmEditor && isItFlow) {
-        console.log(
-          "Setting up cursor listener for leaf",
-          (view.leaf as any).id,
-          {
-            editor: view.editor,
-            cm: (view.editor as any).cm,
-            state: (view.editor as any).cm?.state,
-          }
-        );
         const plugin = this;
         let lastCursorPosition: number | null = null;
         let debounceTimeout: NodeJS.Timeout | null = null;
@@ -864,10 +858,6 @@ export default class TextFlowPlugin extends Plugin {
                             ) {
                               shSettings.flows[otherFlow].flaggedForRebuild =
                                 true;
-                              // Optionally notify user
-                              new Notice(
-                                `Flow "${otherFlow}" marked for rebuild due to changes in shared file`
-                              );
                             }
                           });
                         }
@@ -1248,6 +1238,8 @@ export default class TextFlowPlugin extends Plugin {
         view.containerEl.removeClass("source-read-only");
       }
 
+      this.restoreCursorPos(flowName, view, leafID);
+
       // Update the modal
       if (this.modalUpdateCallback) {
         this.modalUpdateCallback();
@@ -1386,7 +1378,11 @@ export default class TextFlowPlugin extends Plugin {
         flowOrder: 1,
         startInFlow: 0,
         endInFlow: targetObject.lengthPlusDividers,
-        leafMenuBarSettings: { dropdownState: "hide" },
+        leafMenuBarSettings: {
+          menuBarDisplayState: "show",
+          navDropdownState: "hide",
+          cursorDropdownState: "hide",
+        },
       };
       await this.saveSettings();
     }
@@ -1533,10 +1529,17 @@ export default class TextFlowPlugin extends Plugin {
   }
 
   // Toggle protection state
-  private toggleProtectionDuringSave(editor: EditorView, protect: boolean) {
+  private toggleProtectionDuringSave(
+    editorView: EditorView,
+    isProtected: boolean
+  ) {
     try {
-      editor.dispatch({
-        effects: this.toggleProtectionEffect.of(protect),
+      const container = editorView.dom.closest(".cm-editor")?.parentElement;
+      if (container) {
+        container.classList.toggle("save-rebuild-protection", isProtected);
+      }
+      editorView.dispatch({
+        effects: this.toggleProtectionEffect.of(isProtected),
       });
     } catch (error) {
       console.error("Failed to toggle protection:", error);
@@ -1581,15 +1584,17 @@ export default class TextFlowPlugin extends Plugin {
       }
       // Perform saves
       await Promise.all(
-        Object.entries(flowLeaves).map(async ([flowId, view]) => {
+        Object.entries(flowLeaves).map(async ([flowName, view]) => {
           const text = view.editor.getValue();
-          await this.saveBackToSource(flowId, text);
+          const leafID = (view.leaf as any).id;
+          await this.saveBackToSource(flowName, text, leafID);
           if (view.menuBar) {
             view.menuBar.refresh(view.contentEl);
           }
         })
       );
     } finally {
+      await this.autoRebuild();
       // Remove protection
       for (const [_, view] of Object.entries(flowLeaves)) {
         const editor = view.editor as ObsidianEditor;
@@ -1628,15 +1633,17 @@ export default class TextFlowPlugin extends Plugin {
       }
       // Perform saves
       await Promise.all(
-        Object.entries(flowLeaves).map(async ([flowId, view]) => {
+        Object.entries(flowLeaves).map(async ([flowName, view]) => {
           const text = view.editor.getValue();
-          await this.saveBackToSource(flowId, text);
+          const leafID = (view.leaf as any).id;
+          await this.saveBackToSource(flowName, text, leafID);
           if (view.menuBar) {
             view.menuBar.refresh(view.contentEl);
           }
         })
       );
     } finally {
+      await this.autoRebuild();
       // Remove protection
       for (const [_, view] of Object.entries(flowLeaves)) {
         const editor = view.editor as ObsidianEditor;
@@ -1672,15 +1679,17 @@ export default class TextFlowPlugin extends Plugin {
       }
       // Perform saves
       await Promise.all(
-        Object.entries(flowLeaves).map(async ([flowId, view]) => {
+        Object.entries(flowLeaves).map(async ([flowName, view]) => {
           const text = view.editor.getValue();
-          await this.saveBackToSource(flowId, text);
+          const leafID = (view.leaf as any).id;
+          await this.saveBackToSource(flowName, text, leafID);
           if (view.menuBar) {
             view.menuBar.refresh(view.contentEl);
           }
         })
       );
     } finally {
+      await this.autoRebuild();
       // Remove protection
       for (const [_, view] of Object.entries(flowLeaves)) {
         const editor = view.editor as ObsidianEditor;
@@ -1704,7 +1713,11 @@ export default class TextFlowPlugin extends Plugin {
   };
 
   //---- The actual save function -------------
-  private saveBackToSource = async (flow: string, text: string) => {
+  private saveBackToSource = async (
+    flow: string,
+    text: string,
+    leafID: number
+  ) => {
     // console.log("saveBackToSource responding");
     if (this.settings.flows[flow].unsavedRegionsArray) {
       /*console.log(
@@ -1771,60 +1784,151 @@ export default class TextFlowPlugin extends Plugin {
       }
       this.settings.flows[flow].unsavedRegionsArray = remainingPaths;
       this.settings.flows[flow].timestamp = this.getTimestamp();
-      this.manageCursorPos(flow);
+      this.manageCursorPos(flow, leafID);
       if (this.settings.explorerDeco) {
         this.decorateSourceFiles();
       }
     }
   };
 
-  // -------------- Functions: Manage persistent cursor position
-  manageCursorPos = (flow: string) => {
-    Object.keys(this.settings.flows[flow].activeRegions).forEach((leafID) => {
-      const currentLeaf = this.settings.flows[flow].activeRegions[leafID];
-      let regionPath = "";
-      if (currentLeaf.path) {
-        regionPath = currentLeaf.path;
-      }
-      const currentCursor = currentLeaf.currentCursorPos;
-
-      // Initialize if doesn't exist
-      if (!this.settings.flows[flow].persistentCursors[leafID]) {
-        this.settings.flows[flow].persistentCursors[leafID] = [
-          [regionPath, [currentCursor]],
-        ];
-        return;
-      }
-
-      // Check if there's an entry for the leaf
-      const existingLeafIndex = this.settings.flows[flow].persistentCursors[
-        leafID
-      ].findIndex(([path, _]) => path === regionPath);
-
-      if (existingLeafIndex !== -1) {
-        // Region exists, add cursor to its array
-        const cursors =
-          this.settings.flows[flow].persistentCursors[leafID][
-            existingLeafIndex
-          ][1];
-        cursors.unshift(currentCursor);
-        // Keep only last 3 cursor positions
-        if (cursors.length > 3) {
-          cursors.pop(); // Remove oldest
-        }
-      } else {
-        // New region, add it to the array
-        this.settings.flows[flow].persistentCursors[leafID].unshift([
-          regionPath,
-          [currentCursor],
-        ]);
-        // Keep only last 3 regions
-        if (this.settings.flows[flow].persistentCursors[leafID].length > 5) {
-          this.settings.flows[flow].persistentCursors[leafID].pop(); // Remove oldest
-        }
+  autoRebuild = async () => {
+    Object.keys(this.settings.activeFlowObject).forEach((flowName) => {
+      if (this.settings.flows[flowName].flaggedForRebuild) {
+        this.flowService.rebuildFlow(flowName);
       }
     });
   };
+
+  formatTimestamp = (timestamp: number, allTimestamps: number[]): string => {
+    // Create date formatter for the date part
+    const dateFormatter = new Intl.DateTimeFormat(undefined, {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+
+    // Create time formatter - will automatically use 24h format based on locale
+    const timeFormatter = new Intl.DateTimeFormat(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+
+    const date = new Date(timestamp);
+    const dateStr = dateFormatter.format(date).replace(/\//g, "-");
+    const timeStr = timeFormatter.format(date);
+
+    // Find duplicates (timestamps that match when rounded to seconds)
+    const timestampSec = Math.floor(timestamp / 1000);
+    const duplicates = allTimestamps
+      .filter((t) => Math.floor(t / 1000) === timestampSec)
+      .sort();
+
+    // If this timestamp has duplicates, add the index
+    const index = duplicates.indexOf(timestamp);
+    const suffix = duplicates.length > 1 ? ` (${index + 1})` : "";
+
+    return `${dateStr} / ${timeStr}${suffix}`;
+  };
+
+  // -------------- Functions: Manage persistent cursor position
+  manageCursorPos = (flowName: string, leafID: number) => {
+    // get timestamps so string can get numbered if necessary
+    const allTimestamps: number[] = [];
+    Object.keys(this.settings.flows[flowName].activeRegions).forEach((leaf) => {
+      if (this.settings.flows[flowName].persistentCursors[leaf]?.creationDate) {
+        const timestamp =
+          this.settings.flows[flowName].persistentCursors[leaf].creationDate;
+        allTimestamps.push(timestamp);
+      }
+    });
+
+    const currentLeaf = this.settings.flows[flowName].activeRegions[leafID];
+
+    // check because of possible undefined
+    let regionPath = "";
+    if (currentLeaf.path) {
+      regionPath = currentLeaf.path;
+    }
+
+    const currentCursor = currentLeaf.currentCursorPos;
+    // Initialize if doesn't exist
+    if (!this.settings.flows[flowName].persistentCursors[leafID]) {
+      const creationDateString = this.formatTimestamp(
+        Date.now(),
+        allTimestamps
+      );
+      this.settings.flows[flowName].persistentCursors[leafID] = {
+        creationDate: Date.now(),
+        creationDateString: creationDateString,
+        update: Date.now(),
+        cursors: [[regionPath, currentCursor]],
+      };
+      const leaves = Object.entries(
+        this.settings.flows[flowName].persistentCursors
+      );
+      if (leaves.length > 5) {
+        // Find the leaf with the oldest timestamp
+        const [oldestLeafId] = leaves.reduce((oldest, current) => {
+          return current[1].update < oldest[1].update ? current : oldest;
+        });
+        delete this.settings.flows[flowName].persistentCursors[oldestLeafId];
+      }
+      return;
+    }
+
+    // Check if there's an entry for the leaf and path and delete if present
+    this.settings.flows[flowName].persistentCursors[leafID].cursors =
+      this.settings.flows[flowName].persistentCursors[leafID].cursors.filter(
+        (tuple) => tuple[0] !== regionPath
+      );
+
+    // Then add the new cursor
+    this.settings.flows[flowName].persistentCursors[leafID].cursors.unshift([
+      regionPath,
+      currentCursor,
+    ]);
+    // update the timestamp
+    this.settings.flows[flowName].persistentCursors[leafID].update = Date.now();
+
+    // Romove stale entries
+    if (
+      this.settings.flows[flowName].persistentCursors[leafID].cursors.length > 5
+    ) {
+      this.settings.flows[flowName].persistentCursors[leafID].cursors.pop();
+    }
+  };
+
+  // -------- Restore cursorPos for known leaves
+  restoreCursorPos = (flowName: string, view: MarkdownView, leafID: string) => {
+    if (
+      this.settings.flows[flowName].persistentCursors &&
+      this.settings.flows[flowName].persistentCursors[leafID]
+    ) {
+      const editor = view.editor as ObsidianEditor;
+      const cmEditor = editor.cm;
+      if (cmEditor) {
+        const cursorPos =
+          this.settings.flows[flowName].persistentCursors[leafID].cursors[0][1];
+
+        if (cursorPos !== undefined && cursorPos >= 0) {
+          console.log("restoring cursor pos to: ", cursorPos);
+          const line = cmEditor.state.doc.lineAt(Math.max(0, cursorPos)); // Ensure position is not negative
+          const targetPos = line.from; // Scroll to the beginning of the line
+          cmEditor.dispatch({
+            selection: { anchor: targetPos, head: targetPos },
+            effects: EditorView.scrollIntoView(targetPos, {
+              y: "center", // Center in viewport
+              yMargin: 10, // Small margin
+            }),
+            userEvent: "select.pointer",
+          });
+          cmEditor.focus();
+        }
+      }
+    }
+  };
+
   // --------------- Functions: Flow management: Regions -----------------------------------------
   private checkActiveRegionCache = async (
     flow: Types.FlowDef,
@@ -1853,7 +1957,12 @@ export default class TextFlowPlugin extends Plugin {
 
     // if this is the initial
     if (!flow.activeRegions[leafID]) {
-      let activeRegionObject = this.findActiveRegion(flow, cursorOffset, text);
+      let activeRegionObject = this.findActiveRegion(
+        flow,
+        leafID,
+        cursorOffset,
+        text
+      );
 
       if (activeRegionObject) {
         flow.activeRegions[leafID] = activeRegionObject;
@@ -1874,7 +1983,12 @@ export default class TextFlowPlugin extends Plugin {
     } else {
       // console.log("Cursor in new region, finding active region");
       flow.activeRegions[leafID].currentCursorPos = cursorOffset;
-      let activeRegion = await this.findActiveRegion(flow, cursorOffset, text);
+      let activeRegion = await this.findActiveRegion(
+        flow,
+        leafID,
+        cursorOffset,
+        text
+      );
 
       if (activeRegion) {
         // console.log("New active region found:", activeRegion.path);
@@ -1884,7 +1998,7 @@ export default class TextFlowPlugin extends Plugin {
           view.menuBar.refresh(view.contentEl);
         }
       } else {
-        console.log("No new active region found");
+        console.error("No new active region found");
       }
       // console.log("checkActiveRegionCache: ", flow.activeRegions);
       await this.saveSettings();
@@ -1895,6 +2009,7 @@ export default class TextFlowPlugin extends Plugin {
   // ------------- region tracking utilities ----------------------
   private findActiveRegion = (
     flow: Types.FlowDef,
+    leafID: number,
     cursorOffset: number,
     text: string
   ) => {
@@ -1936,14 +2051,23 @@ export default class TextFlowPlugin extends Plugin {
           flowOrder: foundRegionMap.flowOrder,
           startInFlow: newStartInFlow,
           endInFlow: endInFlow,
-          leafMenuBarSettings: { dropdownState: "hide" },
+          leafMenuBarSettings: {
+            menuBarDisplayState:
+              flow.activeRegions[leafID].leafMenuBarSettings
+                .menuBarDisplayState,
+            navDropdownState:
+              flow.activeRegions[leafID].leafMenuBarSettings.navDropdownState,
+            cursorDropdownState:
+              flow.activeRegions[leafID].leafMenuBarSettings
+                .cursorDropdownState,
+          },
         };
         return activeRegionObject;
       } else {
-        console.log("No matching region found for UID");
+        console.error("No matching region found for UID");
       }
     } else {
-      console.log("No marker found in text after cursor");
+      console.error("No marker found in text after cursor");
     }
     return undefined;
   };
@@ -1979,6 +2103,7 @@ export default class TextFlowPlugin extends Plugin {
   async onload() {
     this.settings = await this.loadSettings();
     //this.menuBar = new MenuBar(this);
+    this.flowService = new FlowService(this, this.app);
 
     // -------------------------------------------------------------------
     // ------------------- ONLOAD: add listeners for cursor and clicks

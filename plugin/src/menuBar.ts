@@ -17,10 +17,9 @@ import {
   ViewPlugin,
 } from "@codemirror/view";
 import { FlowService } from "./flowService";
-import Fuse from "fuse.js";
+import Fuse, { FuseResult } from "fuse.js";
 import type TextFlowPlugin from "../main";
 import * as Types from "./types";
-import type { FuseResult } from "fuse.js";
 
 interface ObsidianEditor extends Editor {
   cm?: EditorView;
@@ -33,7 +32,7 @@ export class MenuBar {
   private flowName: string;
   private associatedView: MarkdownView; // Store reference to our specific view
   private listeners: Array<{
-    element: HTMLElement;
+    element: HTMLElement | Document;
     type: string;
     handler: EventListener;
   }> = [];
@@ -83,7 +82,7 @@ export class MenuBar {
   }
 
   private addManagedListener(
-    element: HTMLElement,
+    element: HTMLElement | Document,
     type: string,
     handler: EventListener
   ) {
@@ -132,20 +131,42 @@ export class MenuBar {
   }
 
   // functions to set/get dropdown state, because the address is so fucking long
-  private getDropdownState(): "show" | "hide" {
-    const leafID = (this.associatedView.leaf as any).id;
-    return (
-      this.plugin.settings.flows[this.flowName].activeRegions[leafID]
-        .leafMenuBarSettings.dropdownState ?? "show"
-    );
+  private getDropdownState(dropdown: string) {
+    const stateLeafID = (this.associatedView.leaf as any).id;
+
+    if (dropdown === "nav") {
+      return (
+        this.plugin.settings.flows[this.flowName].activeRegions[stateLeafID]
+          .leafMenuBarSettings.navDropdownState ?? "show"
+      );
+    }
+    if (dropdown === "cursor")
+      return (
+        this.plugin.settings.flows[this.flowName].activeRegions[stateLeafID]
+          .leafMenuBarSettings.cursorDropdownState ?? "show"
+      );
   }
 
-  private setDropdownState(state: "show" | "hide") {
-    const leafID = (this.associatedView.leaf as any).id;
-    if (this.plugin.settings.flows[this.flowName].activeRegions[leafID]) {
+  private setDropdownState(dropdown: string, state: "show" | "hide") {
+    const stateLeafID = (this.associatedView.leaf as any).id;
+    if (
+      dropdown === "nav" &&
+      this.plugin.settings.flows[this.flowName].activeRegions[stateLeafID]
+    ) {
       this.plugin.settings.flows[this.flowName].activeRegions[
-        leafID
-      ].leafMenuBarSettings.dropdownState = state;
+        stateLeafID
+      ].leafMenuBarSettings.navDropdownState = state;
+
+      this.plugin.saveSettings();
+    }
+    if (
+      dropdown === "cursor" &&
+      this.plugin.settings.flows[this.flowName].activeRegions[stateLeafID]
+    ) {
+      this.plugin.settings.flows[this.flowName].activeRegions[
+        stateLeafID
+      ].leafMenuBarSettings.cursorDropdownState = state;
+
       this.plugin.saveSettings();
     }
   }
@@ -156,16 +177,38 @@ export class MenuBar {
     let noteName = "";
     if (!path.startsWith("#")) {
       const pathArray = path.split("/");
-      noteName = `- ${pathArray[pathArray.length - 1].replace(".md", "")}`;
+      noteName = `${pathArray[pathArray.length - 1].replace(".md", "")}`;
     } else {
       noteName = `${path.replace("#", "")}`;
     }
     return noteName;
   };
 
+  private scrollToPos(cursorPos: number) {
+    const editor = this.associatedView.editor as ObsidianEditor;
+    const cmEditor = editor.cm;
+    let text = "";
+    if (cmEditor) {
+      text = cmEditor.state.doc.toString();
+    }
+    if (cursorPos !== undefined && cursorPos >= 0 && cmEditor) {
+      const line = cmEditor.state.doc.lineAt(Math.max(0, cursorPos)); // Ensure position is not negative
+      const targetPos = line.from; // Scroll to the beginning of the line
+      cmEditor.dispatch({
+        selection: { anchor: targetPos, head: targetPos },
+        effects: EditorView.scrollIntoView(targetPos, {
+          y: "center", // Center in viewport
+          yMargin: 10, // Small margin
+        }),
+        userEvent: "select.pointer",
+      });
+      cmEditor.focus(); // Explicitly focus the editor
+    }
+  }
+
   private filterList: string[] = [];
 
-  private createDropdownEntry(path: string, dropdownEntries: HTMLElement) {
+  private createNavDropdownEntry(path: string, dropdownEntries: HTMLElement) {
     // get flowOrder (also to search for start of region)
 
     if (path === "No results") {
@@ -183,7 +226,7 @@ export class MenuBar {
       if (this.filterList.length === 0 || this.filterList.includes(path)) {
         const dropdownEntry = dropdownEntries.createDiv({
           cls: path.startsWith("#") ? `text-emphasis align-off-center` : "",
-          text: navPath,
+          text: `- ${navPath}`,
         });
 
         this.addManagedListener(dropdownEntry, "click", (event) => {
@@ -202,25 +245,19 @@ export class MenuBar {
             text
           );
 
-          if (startPosInFlow !== undefined && startPosInFlow >= 0 && cmEditor) {
-            const line = cmEditor.state.doc.lineAt(Math.max(0, startPosInFlow)); // Ensure position is not negative
-            const targetPos = line.from; // Scroll to the beginning of the line
-            cmEditor.dispatch({
-              selection: { anchor: targetPos, head: targetPos },
-              effects: EditorView.scrollIntoView(targetPos, {
-                y: "center", // Center in viewport
-                yMargin: 10, // Small margin
-              }),
-              userEvent: "select.pointer",
-            });
-            cmEditor.focus(); // Explicitly focus the editor
+          if (startPosInFlow) {
+            this.scrollToPos(startPosInFlow);
           }
+
+          this.filterList = [];
+          this.setDropdownState("nav", "hide");
+          this.refresh(this.associatedView.contentEl);
         });
       }
     }
   }
 
-  private refreshDropdownEntries(
+  private refreshNavDropdownEntries(
     dropdownEntries: HTMLElement,
     emptyResults: boolean
   ) {
@@ -228,7 +265,7 @@ export class MenuBar {
     dropdownEntries.empty();
 
     if (emptyResults) {
-      this.createDropdownEntry("No results", dropdownEntries);
+      this.createNavDropdownEntry("No results", dropdownEntries);
     } else {
       // Re-create filtered entries
       const key = this.plugin.settings.flows[this.flowName].flowReceipe
@@ -239,7 +276,7 @@ export class MenuBar {
       for (let path of this.plugin.settings.flows[this.flowName].flowReceipe[
         key
       ]) {
-        this.createDropdownEntry(path, dropdownEntries);
+        this.createNavDropdownEntry(path, dropdownEntries);
       }
     }
   }
@@ -269,23 +306,21 @@ export class MenuBar {
     }
 
     const menuBarEl = this.associatedView.contentEl.createDiv({
-      cls: "textflow-menu-bar",
+      cls: `textflow-menu-bar`,
     });
 
     // ----- SAVE BUTTON -----------
     const saveButton = new ButtonComponent(menuBarEl)
       .setIcon("download")
       .setClass(`flow-switch-modal-header-button-${goSave}`)
+      .setClass("spacing")
+      .setClass("button-shadow")
       .setClass("clickable-icon")
       .onClick(async () => {
         if (goSave === "neutral" || goSave === "must") {
-          if (goSave === "neutral" || goSave === "must") {
-            await this.plugin.saveAllLeavesManual();
-            await this.plugin.saveSettings();
-            this.refresh(this.associatedView.contentEl);
-          } else {
-            return;
-          }
+          await this.plugin.saveAllLeavesManual();
+          await this.plugin.saveSettings();
+          this.refresh(this.associatedView.contentEl);
         } else {
           return;
         }
@@ -294,6 +329,8 @@ export class MenuBar {
     const rebuildButton = new ButtonComponent(menuBarEl)
       .setIcon("rotate-cw")
       .setClass(`flow-switch-modal-header-button-${goRebuild}`)
+      .setClass("spacing")
+      .setClass("button-shadow")
       .setClass("clickable-icon")
       .onClick(async () => {
         if (goRebuild === "neutral" || goRebuild === "must") {
@@ -311,15 +348,15 @@ export class MenuBar {
       Object.keys(this.plugin.settings.flows[this.flowName].activeRegions)
         .length > 0;
     // get the path of the currently active region
-    const leafID = (this.associatedView.leaf as any).id;
+    const navLeafID = (this.associatedView.leaf as any).id;
     let activeRegion: string | undefined = ""; // It's the only way to pacify the Red Squiggle Demon's wrath at path being explicitly typed as string | undefined
     if (
       hasActiveRegions &&
-      leafID &&
-      this.plugin.settings.flows[this.flowName].activeRegions[leafID].path
+      navLeafID &&
+      this.plugin.settings.flows[this.flowName].activeRegions[navLeafID].path
     ) {
       activeRegion =
-        this.plugin.settings.flows[this.flowName].activeRegions[leafID].path;
+        this.plugin.settings.flows[this.flowName].activeRegions[navLeafID].path;
     }
     let activeRegionNoteName = "";
     if (activeRegion) {
@@ -334,31 +371,26 @@ export class MenuBar {
     const firstThingNoteName = this.makeNavPath(firstThing);
 
     // --------- The actual dropdown component ----------
-    const navigationDopdown = menuBarEl.createDiv({
-      cls: "menu-bar-navigation-dropdown",
+    const navigationDropdown = menuBarEl.createDiv({
+      cls: `menu-bar-navigation-dropdown spacing`,
     });
 
-    const headline = navigationDopdown.createDiv({
+    const navHeadline = navigationDropdown.createDiv({
       cls: "menu-bar-navigation-dropdown-headline",
     });
 
     // headline text and icon
-    headline.createSpan({
-      cls: "menu-bar-navigation-dropdown-headline",
+    navHeadline.createSpan({
+      cls: "align-off-center",
       text:
         activeRegionNoteName === "" ? firstThingNoteName : activeRegionNoteName,
     });
-    const iconSpan = headline.createSpan();
+    const iconSpan = navHeadline.createSpan();
     setIcon(iconSpan, "chevrons-down-up");
 
-    const dropdownContents = navigationDopdown.createDiv({
-      cls: `menu-bar-navigation-dropdown-contents ${this.getDropdownState()}`,
-    });
-
-    // Filter entry
-    this.addManagedListener(headline, "click", (event) => {
-      if (this.getDropdownState() === "hide") {
-        this.setDropdownState("show");
+    this.addManagedListener(navHeadline, "click", (event) => {
+      if (this.getDropdownState("nav") === "hide") {
+        this.setDropdownState("nav", "show");
         this.refresh(this.associatedView.contentEl);
         const filterCriterion = this.element?.querySelector(
           ".menu-bar-navigation-dropdown-search-input"
@@ -366,13 +398,29 @@ export class MenuBar {
         if (filterCriterion) {
           (filterCriterion as HTMLInputElement).focus();
         }
+
+        // Listener that will close dropdown if we click outside it
+        this.addManagedListener(document, "click", (e: MouseEvent) => {
+          const target = e.target as HTMLElement;
+          // Check if click is outside the navigation dropdown
+          if (!navigationDropdown.contains(target)) {
+            this.filterList = [];
+            this.setDropdownState("nav", "hide");
+            this.refresh(this.associatedView.contentEl);
+          }
+        });
       } else {
-        this.setDropdownState("hide");
+        this.setDropdownState("nav", "hide");
         this.refresh(this.associatedView.contentEl);
       }
     });
 
-    const searchContainer = dropdownContents.createDiv({
+    const dropdownGeneral = navigationDropdown.createDiv({
+      cls: `menu-bar-navigation-dropdown-general ${this.getDropdownState(
+        "nav"
+      )}`,
+    });
+    const searchContainer = dropdownGeneral.createDiv({
       cls: "menu-bar-navigation-dropdown-search",
     });
     const searchInput = searchContainer.createEl("input", {
@@ -385,7 +433,7 @@ export class MenuBar {
       key
     ].map((path) => ({
       path: path,
-      displayName: this.makeNavPath(path),
+      displayName: `${this.makeNavPath(path)}`,
     }));
 
     const fuse = new Fuse(searchItems, {
@@ -420,28 +468,242 @@ export class MenuBar {
 
       if (this.filterList.length === 0 && query != "") {
         // no entries because of failed filter
-        this.refreshDropdownEntries(dropdownEntries, true);
+        this.refreshNavDropdownEntries(dropdownEntries, true);
       } else if (this.filterList.length > 0) {
         // entries because of successful filter
-        this.refreshDropdownEntries(dropdownEntries, false);
+        this.refreshNavDropdownEntries(dropdownEntries, false);
       } else {
         // no entries because query has been deleted
         this.filterList =
           this.plugin.settings.flows[this.flowName].flowReceipe[key];
-        this.refreshDropdownEntries(dropdownEntries, false);
+        this.refreshNavDropdownEntries(dropdownEntries, false);
       }
     });
 
+    const navDropdownScrollable = dropdownGeneral.createDiv({
+      cls: "menu-bar-navigation-dropdown-scrollable",
+    });
     // the initial clickable list of entries
-    const dropdownEntries = dropdownContents.createDiv({
+    const dropdownEntries = navDropdownScrollable.createDiv({
       cls: "menu-bar-navigation-dropdown-entries",
     });
 
     for (let path of this.plugin.settings.flows[this.flowName].flowReceipe[
       key
     ]) {
-      this.createDropdownEntry(path, dropdownEntries);
+      this.createNavDropdownEntry(path, dropdownEntries);
     }
+
+    // ------ The cursor stuff -----------------------------------
+
+    const cursorContainer = menuBarEl.createDiv({
+      cls: `menu-bar-cursor-container spacing`,
+    });
+
+    const cursorDropdown = cursorContainer.createDiv({
+      cls: "menu-bar-navigation-dropdown",
+    });
+
+    const cursorHeadline = cursorDropdown.createDiv({
+      cls: "menu-bar-navigation-dropdown-headline",
+    });
+
+    // headline text and icon
+    cursorHeadline.createSpan({
+      cls: "align-off-center",
+      text:
+        Object.keys(this.plugin.settings.flows[this.flowName].persistentCursors)
+          .length > 0
+          ? `Recent cursor history`
+          : `No cursor history found`,
+    });
+    const cursorIconSpan = cursorHeadline.createSpan();
+    setIcon(cursorIconSpan, "chevrons-down-up");
+
+    // headline click opens dropdown
+    this.addManagedListener(cursorHeadline, "click", (event) => {
+      if (this.getDropdownState("cursor") === "hide") {
+        this.setDropdownState("cursor", "show");
+        this.refresh(this.associatedView.contentEl);
+        const filterCriterion = this.element?.querySelector(
+          ".menu-bar-navigation-dropdown-search-input"
+        );
+        if (filterCriterion) {
+          (filterCriterion as HTMLInputElement).focus();
+        }
+
+        // Listener that will close dropdown if we click outside it
+        this.addManagedListener(document, "click", (e: MouseEvent) => {
+          const target = e.target as HTMLElement;
+          // Check if click is outside the navigation dropdown
+          if (!cursorDropdown.contains(target)) {
+            this.filterList = [];
+            this.setDropdownState("cursor", "hide");
+            this.refresh(this.associatedView.contentEl);
+          }
+        });
+      } else {
+        this.setDropdownState("cursor", "hide");
+        this.refresh(this.associatedView.contentEl);
+      }
+    });
+    const cursorDropdownGeneral = cursorDropdown.createDiv({
+      cls: `menu-bar-navigation-dropdown-general ${this.getDropdownState(
+        "cursor"
+      )}`,
+    });
+
+    // make scrollable container for the entries
+    const cursorDropdownScrollable = cursorDropdownGeneral.createDiv({
+      cls: `menu-bar-navigation-dropdown-scrollable`,
+    });
+
+    // Get all the timestamps to use a sorted array as ordering device
+    const timestampArray: number[] = [];
+
+    if (
+      Object.keys(this.plugin.settings.flows[this.flowName].persistentCursors)
+        .length > 0
+    ) {
+      Object.keys(
+        this.plugin.settings.flows[this.flowName].persistentCursors
+      ).forEach((leafID) => {
+        timestampArray.push(
+          this.plugin.settings.flows[this.flowName].persistentCursors[leafID]
+            .update
+        );
+      });
+      // sort the timestamps in reverse order so youngest timestamp comes first
+      timestampArray.sort((a, b) => b - a);
+
+      // Find out if we have data for the active leaf so we can show it at the top
+      const cursorLeafID = (this.associatedView.leaf as any).id;
+
+      if (
+        this.plugin.settings.flows[this.flowName].persistentCursors[
+          cursorLeafID
+        ]
+      ) {
+        // create headline entry that's not clickable
+        const cursorDropdownEntryDate = cursorDropdownScrollable.createDiv({
+          cls: `text-emphasis align-off-center`,
+          text: `${
+            this.plugin.settings.flows[this.flowName].persistentCursors[
+              cursorLeafID
+            ].creationDateString
+          }`,
+        });
+
+        // now iterate through the cursor positions that belong to the leaf
+        const cursorArray =
+          this.plugin.settings.flows[this.flowName].persistentCursors[
+            cursorLeafID
+          ].cursors;
+
+        // create a div for each
+        for (const [index, data] of cursorArray.entries()) {
+          const textTimestamp =
+            this.plugin.settings.flows[this.flowName].persistentCursors[
+              cursorLeafID
+            ].update;
+
+          const cursorDropdownEntryPos = cursorDropdownScrollable.createDiv({
+            cls: "blah",
+            text: `${cursorArray[index][1]} - ${this.makeNavPath(data[0])}`,
+          });
+          const cursorPos = cursorArray[index][1];
+
+          this.addManagedListener(cursorDropdownEntryPos, "click", (event) => {
+            this.scrollToPos(cursorPos);
+          });
+        }
+      }
+
+      // get leaves by timestamp again, but exclude the current leaf
+      for (let timestamp of timestampArray) {
+        Object.keys(
+          this.plugin.settings.flows[this.flowName].persistentCursors
+        ).forEach((leafID) => {
+          // skip the active leaf if present
+          if (leafID != cursorLeafID) {
+            if (
+              this.plugin.settings.flows[this.flowName].persistentCursors[
+                leafID
+              ].update === timestamp
+            ) {
+              // create headline entry that's not clickable
+              const cursorDropdownEntryDate =
+                cursorDropdownScrollable.createDiv({
+                  cls: `text-emphasis align-off-center`,
+                  text: `${
+                    this.plugin.settings.flows[this.flowName].persistentCursors[
+                      leafID
+                    ].creationDateString
+                  }`,
+                });
+
+              // divs for the cursors
+              const cursorArray =
+                this.plugin.settings.flows[this.flowName].persistentCursors[
+                  leafID
+                ].cursors;
+
+              for (const [index, data] of cursorArray.entries()) {
+                const cursorDropdownEntryPos =
+                  cursorDropdownScrollable.createDiv({
+                    cls: `blah`,
+                    text: `${cursorArray[index][1]} - ${this.makeNavPath(
+                      data[0]
+                    )}`,
+                  });
+
+                const cursorPos = cursorArray[index][1];
+
+                // get cursor pos for target icon
+                this.addManagedListener(
+                  cursorDropdownEntryPos,
+                  "click",
+                  (event) => {
+                    this.scrollToPos(cursorPos);
+                  }
+                );
+              }
+            }
+          }
+        });
+      }
+
+      // get the most recent cursor position for the cursor button
+      const mostRecentTimestamp: number = timestampArray[0];
+      let mostRecentCursor: number = 0;
+      Object.keys(
+        this.plugin.settings.flows[this.flowName].persistentCursors
+      ).forEach((leafID) => {
+        if (
+          this.plugin.settings.flows[this.flowName].persistentCursors[leafID]
+            .update === mostRecentTimestamp
+        ) {
+          mostRecentCursor =
+            this.plugin.settings.flows[this.flowName].persistentCursors[leafID]
+              .cursors[0][1];
+        }
+      });
+      const cursorIconTarget = new ButtonComponent(cursorContainer);
+      cursorIconTarget
+        .setIcon("target")
+        .setClass("cursor-target-button") // Add a specific class we can target
+        .setTooltip(
+          mostRecentCursor
+            ? `Scroll to ${mostRecentCursor}`
+            : "No cursor positions stored"
+        )
+        .onClick(() =>
+          mostRecentCursor ? this.scrollToPos(mostRecentCursor) : ""
+        );
+    }
+
+    // most recent cursor button
+    // mostRecentCursor
 
     // there we go.
     return menuBarEl;
