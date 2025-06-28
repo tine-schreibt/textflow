@@ -184,28 +184,6 @@ export class MenuBar {
     return noteName;
   };
 
-  private scrollToPos(cursorPos: number) {
-    const editor = this.associatedView.editor as ObsidianEditor;
-    const cmEditor = editor.cm;
-    let text = "";
-    if (cmEditor) {
-      text = cmEditor.state.doc.toString();
-    }
-    if (cursorPos !== undefined && cursorPos >= 0 && cmEditor) {
-      const line = cmEditor.state.doc.lineAt(Math.max(0, cursorPos)); // Ensure position is not negative
-      const targetPos = line.from; // Scroll to the beginning of the line
-      cmEditor.dispatch({
-        selection: { anchor: targetPos, head: targetPos },
-        effects: EditorView.scrollIntoView(targetPos, {
-          y: "center", // Center in viewport
-          yMargin: 10, // Small margin
-        }),
-        userEvent: "select.pointer",
-      });
-      cmEditor.focus(); // Explicitly focus the editor
-    }
-  }
-
   private filterList: string[] = [];
 
   private createNavDropdownEntry(path: string, dropdownEntries: HTMLElement) {
@@ -246,7 +224,7 @@ export class MenuBar {
           );
 
           if (startPosInFlow) {
-            this.scrollToPos(startPosInFlow);
+            this.flowService.scrollToPos(editor, startPosInFlow);
           }
 
           this.filterList = [];
@@ -312,13 +290,17 @@ export class MenuBar {
     // ----- SAVE BUTTON -----------
     const saveButton = new ButtonComponent(menuBarEl)
       .setIcon("download")
-      .setClass(`flow-switch-modal-header-button-${goSave}`)
+      .setClass(`menu-bar-button-save-${goSave}`)
       .setClass("spacing")
-      .setClass("button-shadow")
       .setClass("clickable-icon")
       .onClick(async () => {
         if (goSave === "neutral" || goSave === "must") {
-          await this.plugin.saveAllLeavesManual();
+          const syncLeafID = (this.associatedView.leaf as any).id;
+          await this.plugin.saveBackToSource(
+            this.flowName,
+            this.associatedView.editor.getValue(),
+            syncLeafID
+          );
           await this.plugin.saveSettings();
           this.refresh(this.associatedView.contentEl);
         } else {
@@ -328,9 +310,8 @@ export class MenuBar {
     // ----------- REBUILD BUTTON ------------
     const rebuildButton = new ButtonComponent(menuBarEl)
       .setIcon("rotate-cw")
-      .setClass(`flow-switch-modal-header-button-${goRebuild}`)
+      .setClass(`menu-bar-button-rebuild-${goRebuild}`)
       .setClass("spacing")
-      .setClass("button-shadow")
       .setClass("clickable-icon")
       .onClick(async () => {
         if (goRebuild === "neutral" || goRebuild === "must") {
@@ -380,11 +361,74 @@ export class MenuBar {
     });
 
     // headline text and icon
-    navHeadline.createSpan({
-      cls: "align-off-center",
-      text:
-        activeRegionNoteName === "" ? firstThingNoteName : activeRegionNoteName,
-    });
+    // show either current region
+    if (this.getDropdownState("nav") === "hide") {
+      navHeadline.createSpan({
+        cls: "align-off-center",
+        text:
+          activeRegionNoteName === ""
+            ? firstThingNoteName
+            : activeRegionNoteName,
+      });
+    } else {
+      // or the search plus
+      const searchInput = navHeadline.createEl("input", {
+        cls: "menu-bar-navigation-dropdown-search-input",
+        type: "text",
+        placeholder: "Filter...",
+      });
+      const searchItems = this.plugin.settings.flows[this.flowName].flowReceipe[
+        key
+      ].map((path) => ({
+        path: path,
+        displayName: `${this.makeNavPath(path)}`,
+      }));
+
+      const fuse = new Fuse(searchItems, {
+        keys: ["displayName"],
+        threshold: 0.4,
+        // We can tune these options
+        includeScore: true,
+        includeMatches: true,
+      });
+
+      this.addManagedListener(searchInput, "input", (event) => {
+        const query = (event.target as HTMLInputElement).value;
+        console.log(
+          "Query value:",
+          query,
+          "Length:",
+          query.length,
+          "Type:",
+          typeof query
+        );
+
+        // If no query (yet), return all paths
+        if (!query) {
+          this.filterList =
+            this.plugin.settings.flows[this.flowName].flowReceipe[key];
+        }
+
+        // Otherwise return filtered paths
+        this.filterList = fuse
+          .search(query)
+          .map((result) => (result as FuseResult<{ path: string }>).item.path);
+
+        if (this.filterList.length === 0 && query != "") {
+          // no entries because of failed filter
+          this.refreshNavDropdownEntries(dropdownEntries, true);
+        } else if (this.filterList.length > 0) {
+          // entries because of successful filter
+          this.refreshNavDropdownEntries(dropdownEntries, false);
+        } else {
+          // no entries because query has been deleted
+          this.filterList =
+            this.plugin.settings.flows[this.flowName].flowReceipe[key];
+          this.refreshNavDropdownEntries(dropdownEntries, false);
+        }
+      });
+    }
+
     const iconSpan = navHeadline.createSpan();
     setIcon(iconSpan, "chevrons-down-up");
 
@@ -420,66 +464,6 @@ export class MenuBar {
         "nav"
       )}`,
     });
-    const searchContainer = dropdownGeneral.createDiv({
-      cls: "menu-bar-navigation-dropdown-search",
-    });
-    const searchInput = searchContainer.createEl("input", {
-      cls: "menu-bar-navigation-dropdown-search-input",
-      type: "text",
-      placeholder: "Filter...",
-    });
-
-    const searchItems = this.plugin.settings.flows[this.flowName].flowReceipe[
-      key
-    ].map((path) => ({
-      path: path,
-      displayName: `${this.makeNavPath(path)}`,
-    }));
-
-    const fuse = new Fuse(searchItems, {
-      keys: ["displayName"],
-      threshold: 0.4,
-      // We can tune these options
-      includeScore: true,
-      includeMatches: true,
-    });
-
-    this.addManagedListener(searchInput, "input", (event) => {
-      const query = (event.target as HTMLInputElement).value;
-      console.log(
-        "Query value:",
-        query,
-        "Length:",
-        query.length,
-        "Type:",
-        typeof query
-      );
-
-      // If no query (yet), return all paths
-      if (!query) {
-        this.filterList =
-          this.plugin.settings.flows[this.flowName].flowReceipe[key];
-      }
-
-      // Otherwise return filtered paths
-      this.filterList = fuse
-        .search(query)
-        .map((result) => (result as FuseResult<{ path: string }>).item.path);
-
-      if (this.filterList.length === 0 && query != "") {
-        // no entries because of failed filter
-        this.refreshNavDropdownEntries(dropdownEntries, true);
-      } else if (this.filterList.length > 0) {
-        // entries because of successful filter
-        this.refreshNavDropdownEntries(dropdownEntries, false);
-      } else {
-        // no entries because query has been deleted
-        this.filterList =
-          this.plugin.settings.flows[this.flowName].flowReceipe[key];
-        this.refreshNavDropdownEntries(dropdownEntries, false);
-      }
-    });
-
     const navDropdownScrollable = dropdownGeneral.createDiv({
       cls: "menu-bar-navigation-dropdown-scrollable",
     });
@@ -514,8 +498,8 @@ export class MenuBar {
       text:
         Object.keys(this.plugin.settings.flows[this.flowName].persistentCursors)
           .length > 0
-          ? `Recent cursor history`
-          : `No cursor history found`,
+          ? `Stored cursor positions`
+          : `No stored cursors found`,
     });
     const cursorIconSpan = cursorHeadline.createSpan();
     setIcon(cursorIconSpan, "chevrons-down-up");
@@ -612,9 +596,9 @@ export class MenuBar {
             text: `${cursorArray[index][1]} - ${this.makeNavPath(data[0])}`,
           });
           const cursorPos = cursorArray[index][1];
-
+          const editor = this.associatedView.editor as ObsidianEditor;
           this.addManagedListener(cursorDropdownEntryPos, "click", (event) => {
-            this.scrollToPos(cursorPos);
+            this.flowService.scrollToPos(editor, cursorPos);
           });
         }
       }
@@ -664,7 +648,8 @@ export class MenuBar {
                   cursorDropdownEntryPos,
                   "click",
                   (event) => {
-                    this.scrollToPos(cursorPos);
+                    const editor = this.associatedView.editor as ObsidianEditor;
+                    this.flowService.scrollToPos(editor, cursorPos);
                   }
                 );
               }
@@ -676,6 +661,7 @@ export class MenuBar {
       // get the most recent cursor position for the cursor button
       const mostRecentTimestamp: number = timestampArray[0];
       let mostRecentCursor: number = 0;
+      let mostRecentRegion: string = "";
       Object.keys(
         this.plugin.settings.flows[this.flowName].persistentCursors
       ).forEach((leafID) => {
@@ -686,6 +672,10 @@ export class MenuBar {
           mostRecentCursor =
             this.plugin.settings.flows[this.flowName].persistentCursors[leafID]
               .cursors[0][1];
+          mostRecentRegion = this.makeNavPath(
+            this.plugin.settings.flows[this.flowName].persistentCursors[leafID]
+              .cursors[0][0]
+          );
         }
       });
       const cursorIconTarget = new ButtonComponent(cursorContainer);
@@ -694,12 +684,15 @@ export class MenuBar {
         .setClass("cursor-target-button") // Add a specific class we can target
         .setTooltip(
           mostRecentCursor
-            ? `Scroll to ${mostRecentCursor}`
+            ? `${mostRecentCursor} - ${mostRecentRegion}`
             : "No cursor positions stored"
         )
-        .onClick(() =>
-          mostRecentCursor ? this.scrollToPos(mostRecentCursor) : ""
-        );
+        .onClick(() => {
+          const editor = this.associatedView.editor as ObsidianEditor;
+          mostRecentCursor
+            ? this.flowService.scrollToPos(editor, mostRecentCursor)
+            : "";
+        });
     }
 
     // most recent cursor button

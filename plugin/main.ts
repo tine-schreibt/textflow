@@ -65,6 +65,7 @@ export default class TextFlowPlugin extends Plugin {
   settings: TextFlowSettings;
   tempFilePath: string;
   flowService: FlowService;
+  isRebuilding: boolean = false;
 
   // ---------------- Global objects and variables -------------------------
 
@@ -123,7 +124,7 @@ export default class TextFlowPlugin extends Plugin {
   // ----- protect the editor from changes while a save is going on ----------------
   private toggleProtectionEffect = StateEffect.define<boolean>();
 
-  private protectDuringSaveExtension = StateField.define<boolean>({
+  protectDuringSaveExtension = StateField.define<boolean>({
     create: () => false,
     update: (value, tr) => {
       for (let effect of tr.effects) {
@@ -204,12 +205,23 @@ export default class TextFlowPlugin extends Plugin {
             `${this.settings.systemFolderPath}/${flow}.md`
           );
         }
-
-        new Notice(
-          `The TextFlow_SystemFolder seems to have been moved manually from ${oldPlace} to ${this.settings.systemFolderPlace}. TextFlow's settings have been updated accordingly.`
-        );
-        await this.saveSettings();
       }
+      // ---- check version number; for some reason, Obsidian sometimes forgets about
+      // what's in the systemFolder, and making it rename it causes it to remember
+      if (!this.settings.activeVersion) {
+        this.settings.activeVersion = this.manifest.version;
+        return;
+      } else {
+        if (this.settings.activeVersion != this.manifest.version) {
+          const systemFolder = this.flowService.checkSystemFolder();
+          const path = this.settings.systemFolderPath;
+          if (systemFolder && path) {
+            this.app.vault.rename(systemFolder, path);
+          }
+          this.settings.activeVersion = this.manifest.version;
+        }
+      }
+      await this.saveSettings();
     }
   }
 
@@ -264,6 +276,18 @@ export default class TextFlowPlugin extends Plugin {
       callback: async () => {
         // toggle
         new Modals.FlowSwitcherModal(this.app, this).open();
+      },
+    });
+
+    const navStatus = this.settings.explorerListener ? "OFF" : "ON";
+    this.addCommand({
+      id: "toggle-explorer-listener",
+      name: `Toggle explorer navigation ${navStatus}`,
+      callback: () => {
+        this.settings.explorerListener
+          ? (this.settings.explorerListener = false)
+          : (this.settings.explorerListener = true);
+        this.saveSettings();
       },
     });
   }
@@ -640,6 +664,7 @@ export default class TextFlowPlugin extends Plugin {
                             `Flow ${isItFlow} not found in settings`
                           );
                         }
+                        console.log("cursorOffset: ", cursorOffset);
                         plugin.checkActiveRegionCache(
                           plugin.settings.flows[isItFlow],
                           leafID,
@@ -789,6 +814,10 @@ export default class TextFlowPlugin extends Plugin {
         const plugin = this;
         let debounceTimeout: NodeJS.Timeout | null = null;
         const shSettings = this.settings;
+        const modeSettings =
+          this.settings.mode === "flow"
+            ? this.settings.flowMode
+            : this.settings.sourceMode;
 
         const changeListener = ViewPlugin.fromClass(
           class {
@@ -810,7 +839,6 @@ export default class TextFlowPlugin extends Plugin {
               try {
                 if (update.docChanged) {
                   const changes = update.changes;
-                  console.log("change listener heard changes: ", changes);
 
                   // return if no actual text change has taken place
                   if (changes.empty) return;
@@ -845,7 +873,7 @@ export default class TextFlowPlugin extends Plugin {
                           if (view.menuBar) {
                             view.menuBar.refresh(view.contentEl);
                           }
-                          if (shSettings.explorerDeco) {
+                          if (modeSettings.explorerDeco) {
                             plugin.decorateSourceFiles();
                           }
 
@@ -987,6 +1015,10 @@ export default class TextFlowPlugin extends Plugin {
   // it checks, if left-clicked files are flows or constituents of open flows and handles the behaviour
   fileExplorerOpenClickListener() {
     this.boundFileExplorerClick = async (event: MouseEvent) => {
+      if (!this.settings.explorerListener) {
+        return;
+      }
+
       if (!this.isFileExplorerClick(event)) {
         return;
       }
@@ -1017,7 +1049,14 @@ export default class TextFlowPlugin extends Plugin {
         return;
       }
 
+      // I don't remember why I did this; I guess to prevent some bug?
+      // Should have commented right away -.-
       const activeFlowObjectSnapshot = this.settings.activeFlowObject;
+
+      // check if the user likely isn't trying to open a file with their click
+      if (event.shiftKey || event.ctrlKey || event.metaKey) {
+        return;
+      }
       // Prevent Obsidian's default click action immediately.
       event.preventDefault();
       event.stopPropagation();
@@ -1234,8 +1273,17 @@ export default class TextFlowPlugin extends Plugin {
       this.addCursorListener(view);
       this.addTextChangeListener(view);
 
+      // remove protecitve CSS
       if (view.containerEl.hasClass("source-read-only")) {
         view.containerEl.removeClass("source-read-only");
+      }
+
+      // hide scrollbar
+      if (
+        this.settings.hideScrollbar &&
+        !view.containerEl.hasClass("hide-scrollbar")
+      ) {
+        view.containerEl.addClass("hide-scrollbar");
       }
 
       this.restoreCursorPos(flowName, view, leafID);
@@ -1297,6 +1345,7 @@ export default class TextFlowPlugin extends Plugin {
       }
     }
   }
+
   // ------------- Used by flowSwitcherModal -----------
   manageActiveFlowObject = async () => {
     // Instead of resetting everything, track what we find
@@ -1398,6 +1447,13 @@ export default class TextFlowPlugin extends Plugin {
     if (view.menuBar) {
       view.menuBar.detach();
     }
+    // reveal scrollbar
+    if (
+      this.settings.hideScrollbar &&
+      view.containerEl.hasClass("hide-scrollbar")
+    ) {
+      view.containerEl.removeClass("hide-scrollbar");
+    }
 
     this.saveSettings();
   };
@@ -1427,7 +1483,7 @@ export default class TextFlowPlugin extends Plugin {
   // ---- Functions: Data safety ----------------------------
 
   // ---- Functions: Data safety: Read-only for UIDs and dividers
-  private addIdDividerProtection = (view: MarkdownView, flowName: string) => {
+  addIdDividerProtection = (view: MarkdownView, flowName: string) => {
     const flow = this.settings.flows[flowName];
     if (!flow) return;
 
@@ -1436,6 +1492,10 @@ export default class TextFlowPlugin extends Plugin {
 
     if (!this.hasIdDividerProtection(editor)) {
       const preventEdit = EditorState.transactionFilter.of((tr) => {
+        if (this.isRebuilding) {
+          return tr;
+        }
+
         if (!tr.changes.empty) {
           let shouldReject = false;
 
@@ -1476,7 +1536,7 @@ export default class TextFlowPlugin extends Plugin {
   };
 
   // ----------------------------------------------------------
-  private hasIdDividerProtection = (editor: any) => {
+  hasIdDividerProtection = (editor: any) => {
     if (!editor.cm) return false;
     const hasField =
       editor.cm.state.field(this.readOnlyRanges, false) !== undefined;
@@ -1484,7 +1544,7 @@ export default class TextFlowPlugin extends Plugin {
   };
 
   // -----------------------------------------------------------
-  private removeIdDividerProtection = (editor: any) => {
+  removeIdDividerProtection = (editor: any) => {
     if (!editor.cm) return;
 
     if (this.hasIdDividerProtection(editor)) {
@@ -1529,10 +1589,7 @@ export default class TextFlowPlugin extends Plugin {
   }
 
   // Toggle protection state
-  private toggleProtectionDuringSave(
-    editorView: EditorView,
-    isProtected: boolean
-  ) {
+  toggleProtectionDuringSave(editorView: EditorView, isProtected: boolean) {
     try {
       const container = editorView.dom.closest(".cm-editor")?.parentElement;
       if (container) {
@@ -1546,6 +1603,27 @@ export default class TextFlowPlugin extends Plugin {
     }
   }
   // ---- Functions: Data safety: Save changes to source files
+  // --- but first, a little helper function, just in case the UI is sluggish:
+
+  private async pollForEditor(
+    view: MarkdownView,
+    retries = 5,
+    delay = 200
+  ): Promise<ObsidianEditor | null> {
+    for (let i = 0; i < retries; i++) {
+      const editor = view.editor as ObsidianEditor;
+      if (editor?.cm) {
+        return editor; // Success!
+      }
+      // Wait for the delay before the next attempt
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+    new Notice(
+      `TextFlow: Editor in view '${view.file?.path}' did not become available after ${retries} retries. Sync has been aborted. Please try again.`
+    );
+    return null; // Failure
+  }
+
   // For window/leaf changes - only save inactive flows
   private saveInactiveLeaves = async () => {
     if (!this.settings.autoSave) return;
@@ -1577,8 +1655,14 @@ export default class TextFlowPlugin extends Plugin {
     try {
       // Enable protection
       for (const [_, view] of Object.entries(flowLeaves)) {
-        const editor = view.editor as ObsidianEditor;
-        if (editor.cm) {
+        let editor = view.editor as ObsidianEditor;
+        if (!editor) {
+          const newEditor = await this.pollForEditor(view);
+          if (newEditor) {
+            editor = newEditor;
+          }
+        }
+        if (editor?.cm) {
           this.toggleProtectionDuringSave(editor.cm, true);
         }
       }
@@ -1594,7 +1678,6 @@ export default class TextFlowPlugin extends Plugin {
         })
       );
     } finally {
-      await this.autoRebuild();
       // Remove protection
       for (const [_, view] of Object.entries(flowLeaves)) {
         const editor = view.editor as ObsidianEditor;
@@ -1602,6 +1685,7 @@ export default class TextFlowPlugin extends Plugin {
           this.toggleProtectionDuringSave(editor.cm, false);
         }
       }
+      await this.autoRebuild();
     }
   };
 
@@ -1626,7 +1710,13 @@ export default class TextFlowPlugin extends Plugin {
     try {
       // Enable protection
       for (const [_, view] of Object.entries(flowLeaves)) {
-        const editor = view.editor as ObsidianEditor;
+        let editor = view.editor as ObsidianEditor;
+        if (!editor) {
+          const newEditor = await this.pollForEditor(view);
+          if (newEditor) {
+            editor = newEditor;
+          }
+        }
         if (editor.cm) {
           this.toggleProtectionDuringSave(editor.cm, true);
         }
@@ -1643,7 +1733,6 @@ export default class TextFlowPlugin extends Plugin {
         })
       );
     } finally {
-      await this.autoRebuild();
       // Remove protection
       for (const [_, view] of Object.entries(flowLeaves)) {
         const editor = view.editor as ObsidianEditor;
@@ -1651,6 +1740,7 @@ export default class TextFlowPlugin extends Plugin {
           this.toggleProtectionDuringSave(editor.cm, false);
         }
       }
+      await this.autoRebuild();
     }
   };
 
@@ -1669,10 +1759,17 @@ export default class TextFlowPlugin extends Plugin {
         }
       }
     }
+
     try {
       // Enable protection
       for (const [_, view] of Object.entries(flowLeaves)) {
-        const editor = view.editor as ObsidianEditor;
+        let editor = view.editor as ObsidianEditor;
+        if (!editor) {
+          const newEditor = await this.pollForEditor(view);
+          if (newEditor) {
+            editor = newEditor;
+          }
+        }
         if (editor.cm) {
           await this.toggleProtectionDuringSave(editor.cm, true);
         }
@@ -1689,7 +1786,6 @@ export default class TextFlowPlugin extends Plugin {
         })
       );
     } finally {
-      await this.autoRebuild();
       // Remove protection
       for (const [_, view] of Object.entries(flowLeaves)) {
         const editor = view.editor as ObsidianEditor;
@@ -1697,6 +1793,7 @@ export default class TextFlowPlugin extends Plugin {
           this.toggleProtectionDuringSave(editor.cm, false);
         }
       }
+      await this.autoRebuild();
     }
   };
 
@@ -1713,11 +1810,7 @@ export default class TextFlowPlugin extends Plugin {
   };
 
   //---- The actual save function -------------
-  private saveBackToSource = async (
-    flow: string,
-    text: string,
-    leafID: number
-  ) => {
+  saveBackToSource = async (flow: string, text: string, leafID: number) => {
     // console.log("saveBackToSource responding");
     if (this.settings.flows[flow].unsavedRegionsArray) {
       /*console.log(
@@ -1754,38 +1847,39 @@ export default class TextFlowPlugin extends Plugin {
           new Notice(`File not found at path: ${path}`);
           return;
         } else if (sourceFile instanceof TFile && startOfRegion) {
-          const flowContent = await this.app.vault.read(flowFile);
-          {
-            const regionSlice = flowContent.slice(
-              startOfRegion + 1,
-              endOfRegion
+          const regionSlice = text.slice(startOfRegion + 1, endOfRegion);
+          try {
+            // Read existing content
+            const existingContent = await this.app.vault.read(sourceFile);
+
+            // Replace content portion while keeping YAML
+            const yamlMatch = existingContent.match(/^---\n[\s\S]*?\n---\n/);
+            const newContent = yamlMatch
+              ? `${yamlMatch[0]}${regionSlice}`
+              : regionSlice;
+
+            // Save modified content
+            await this.app.vault.modify(sourceFile, newContent);
+            // console.log("saveBackToSource is done saving");
+          } catch (error) {
+            remainingPaths.push(path);
+            new Notice(
+              `An error occurred while trying to sync to ${path}. Please try again in a second. If the error persists, consult the 'Fixing problems' section of the readme.`
             );
-            try {
-              // Read existing content
-              const existingContent = await this.app.vault.read(sourceFile);
 
-              // Replace content portion while keeping YAML
-              const yamlMatch = existingContent.match(/^---\n[\s\S]*?\n---\n/);
-              const newContent = yamlMatch
-                ? `${yamlMatch[0]}${regionSlice}`
-                : regionSlice;
-
-              // Save modified content
-              await this.app.vault.modify(sourceFile, newContent);
-              // console.log("saveBackToSource is done saving");
-            } catch (error) {
-              remainingPaths.push(path);
-
-              // console.error(`Failed to save changes to ${file.path}:`, error);
-              throw error;
-            }
+            // console.error(`Failed to save changes to ${file.path}:`, error);
+            throw error;
           }
         }
       }
       this.settings.flows[flow].unsavedRegionsArray = remainingPaths;
       this.settings.flows[flow].timestamp = this.getTimestamp();
       this.manageCursorPos(flow, leafID);
-      if (this.settings.explorerDeco) {
+      const modeSettings =
+        this.settings.mode === "flow"
+          ? this.settings.flowMode
+          : this.settings.sourceMode;
+      if (modeSettings.explorerDeco) {
         this.decorateSourceFiles();
       }
     }
@@ -1959,6 +2053,7 @@ export default class TextFlowPlugin extends Plugin {
     if (!flow.activeRegions[leafID]) {
       let activeRegionObject = this.findActiveRegion(
         flow,
+        editor,
         leafID,
         cursorOffset,
         text
@@ -1985,6 +2080,7 @@ export default class TextFlowPlugin extends Plugin {
       flow.activeRegions[leafID].currentCursorPos = cursorOffset;
       let activeRegion = await this.findActiveRegion(
         flow,
+        editor,
         leafID,
         cursorOffset,
         text
@@ -2009,22 +2105,74 @@ export default class TextFlowPlugin extends Plugin {
   // ------------- region tracking utilities ----------------------
   private findActiveRegion = (
     flow: Types.FlowDef,
+    editor: ObsidianEditor,
     leafID: number,
     cursorOffset: number,
     text: string
   ) => {
-    // regEx for proper divider
     const markerRegex =
       /[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{41}<hr>/;
-    // regEx for timestamp divider for debugging
-    //    const markerRegex = /[0-9]{5,}<hr>/;
+
+    // Handle boundary conditions first
+    if (cursorOffset === 0) {
+      // Get first region from flow map
+      const firstRegion = Object.entries(flow.flowMap).find(
+        ([_, regionMap]) => regionMap.flowOrder === 1
+      );
+
+      if (firstRegion) {
+        const [path, regionMap] = firstRegion;
+        // Move cursor to safe position in first region
+        const safePos = text.indexOf(regionMap.UID) + 51;
+        this.flowService.scrollToPos(editor, safePos);
+        console.log("First region: ", path);
+        return {
+          currentCursorPos: safePos,
+          type: regionMap.type,
+          path: path,
+          UID: regionMap.UID,
+          flowOrder: 1,
+          startInFlow: 0,
+          endInFlow: text.indexOf(regionMap.UID) + regionMap.UID.length + 4,
+          leafMenuBarSettings: flow.activeRegions[leafID].leafMenuBarSettings,
+        };
+      }
+    }
+
+    if (cursorOffset >= text.length - 41) {
+      // Get last region from flow map
+      const lastRegion = Object.entries(flow.flowMap).find(
+        ([_, regionMap]) =>
+          regionMap.flowOrder === Object.keys(flow.flowMap).length
+      );
+
+      if (lastRegion) {
+        const [path, regionMap] = lastRegion;
+        // Move cursor to safe position in last region
+        const safePos = text.lastIndexOf(regionMap.UID) - 1;
+        this.flowService.scrollToPos(editor, safePos);
+        console.log("last region: ", path);
+        return {
+          currentCursorPos: safePos,
+          type: regionMap.type,
+          path: path,
+          UID: regionMap.UID,
+          flowOrder: regionMap.flowOrder,
+          startInFlow:
+            this.findStartOfRegion(flow, regionMap.flowOrder, text) || 0,
+          endInFlow: text.lastIndexOf(regionMap.UID) + regionMap.UID.length + 4,
+          leafMenuBarSettings: flow.activeRegions[leafID].leafMenuBarSettings,
+        };
+      }
+    }
 
     const searchStart = text.slice(cursorOffset);
 
     const matches = searchStart.match(markerRegex);
 
+    let UIDLength = 0;
     if (matches) {
-      const UIDLength = matches[0].length - 4;
+      UIDLength = matches[0].length - 4;
       const UID = matches[0].slice(0, UIDLength);
 
       const foundRegion = Object.entries(flow.flowMap).find(
@@ -2062,6 +2210,7 @@ export default class TextFlowPlugin extends Plugin {
                 .cursorDropdownState,
           },
         };
+        console.log("new active region: ", foundRegionPath);
         return activeRegionObject;
       } else {
         console.error("No matching region found for UID");
@@ -2111,7 +2260,11 @@ export default class TextFlowPlugin extends Plugin {
     this.app.workspace.onLayoutReady(async () => {
       // ---------- Look for TextFlow_SystemFolder
       this.ensureSystemFolder();
-      if (this.settings.explorerDeco) {
+      const modeSettings =
+        this.settings.mode === "flow"
+          ? this.settings.flowMode
+          : this.settings.sourceMode;
+      if (modeSettings.explorerDeco) {
         this.decorateSourceFiles();
       }
 

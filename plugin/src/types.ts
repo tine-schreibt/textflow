@@ -1,4 +1,6 @@
 import type { FuseResult } from "fuse.js";
+import { Editor } from "obsidian";
+import { EditorView } from "@codemirror/view";
 
 //#######################################################################
 //###########################                ############################
@@ -7,15 +9,18 @@ import type { FuseResult } from "fuse.js";
 //#######################################################################
 
 export interface TextFlowSettings {
+  activeVersion?: string;
   systemFolderPlace?: string;
   systemFolderPath?: string;
+  advancedToggle: boolean;
   systemFolderHidden: boolean;
-  autoSave: boolean;
-  autoRebuild: boolean;
-  explorerDeco: boolean;
+  mode: string;
+  flowMode: FlowModeSettings;
+  sourceMode: SourceModeSettings;
+  explorerListener: boolean;
+  hideScrollbar: boolean;
   switcherPos: string;
   generalMenuBarSettings: {
-    position: string;
     isCollapsed?: boolean; // Current collapsed state
     flowName?: string;
   };
@@ -23,6 +28,20 @@ export interface TextFlowSettings {
   usedUIDs: string[];
   activeFlowObject: { [key: string]: number | any };
   flows: { [key: string]: FlowDef };
+}
+
+export interface FlowModeSettings {
+  explorerDeco: boolean;
+  flowDeco: boolean;
+  sourceDeco: boolean;
+  autoSave: boolean;
+  context: boolean;
+}
+
+export interface SourceModeSettings {
+  explorerDeco: boolean;
+  flowDeco: boolean;
+  sourceDeco: boolean;
 }
 
 export interface FlowDef {
@@ -36,20 +55,15 @@ export interface FlowDef {
   isFreshBuild: boolean;
   flowBuilt: boolean;
   flaggedForRebuild: boolean;
-  conflictArray: string[];
+  conflictObject: ConflictObject;
   activeRegions: { [key: number | string]: ActiveRegion };
   persistentCursors: CursorData;
   unsavedRegionsArray: string[];
   flowMap: { [key: string]: SourceFileObject };
 }
 
-export interface CursorData {
-  [leafID: string]: {
-    creationDate: number;
-    creationDateString: string;
-    update: number;
-    cursors: [string, number][]; // path, cursorPos
-  };
+export interface ConflictObject {
+  [key: string]: { [key: string]: boolean };
 }
 
 export interface ActiveRegion {
@@ -64,6 +78,15 @@ export interface ActiveRegion {
     menuBarDisplayState: MenuBarDisplayState;
     navDropdownState: DropdownState;
     cursorDropdownState: DropdownState;
+  };
+}
+
+export interface CursorData {
+  [leafID: string]: {
+    creationDate: number;
+    creationDateString: string;
+    update: number;
+    cursors: [string, number][]; // path, cursorPos
   };
 }
 
@@ -84,13 +107,25 @@ export interface SourceFileObject {
 
 // --------- them defaults --------------------
 export const DEFAULT_SETTINGS: TextFlowSettings = {
+  advancedToggle: false,
   systemFolderHidden: false,
-  autoSave: true,
-  autoRebuild: false,
-  explorerDeco: true,
+  mode: "flow",
+  flowMode: {
+    explorerDeco: true,
+    flowDeco: false,
+    sourceDeco: true,
+    autoSave: false,
+    context: false,
+  },
+  sourceMode: {
+    explorerDeco: true,
+    flowDeco: true,
+    sourceDeco: false,
+  },
+  explorerListener: true,
+  hideScrollbar: false,
   switcherPos: "statusBar",
   generalMenuBarSettings: {
-    position: "fixed",
     isCollapsed: false, // Current collapsed state
   },
   flowBuildBasket: {
@@ -101,7 +136,7 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
     flowCookbook: {},
     cleanCookbook: {},
     finalReceipe: {},
-    conflicts: [],
+    conflictObject: {},
     depthFirst: true,
     folderTitles: true,
     dataviewSearchPath: "",
@@ -135,7 +170,7 @@ export interface flowBuildBasket {
   flowCookbook: { [key: string]: string };
   cleanCookbook: { [key: string]: string };
   finalReceipe: { [key: string]: string[] };
-  conflicts: string[];
+  conflictObject: ConflictObject;
   dataviewSearchPath: string;
   definitionMode: string;
   depthFirst: boolean;
@@ -185,3 +220,8 @@ export type DVNote = {
 
 export type SearchItem = { path: string; displayName: string };
 export type SearchResult = SearchItem | FuseResult<SearchItem>;
+
+// needed for scoll into view stuff    // needed for scoll into view stuff
+export interface ObsidianEditor extends Editor {
+  cm?: EditorView;
+}

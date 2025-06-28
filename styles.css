@@ -6,6 +6,10 @@
   display: none;
 }
 
+.hide-scrollbar ::-webkit-scrollbar {
+  display: none;
+}
+
 .align-off-center {
   padding-left: 7px;
 }
@@ -65,6 +69,40 @@
 
 .input-width-200 .setting-item-control input {
   width: 300px; /* or whatever width you prefer */
+}
+
+.advancedSettings-container {
+  border: none;
+  padding: 0;
+  margin-top: 1em;
+}
+
+.advancedSettings-headline {
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 12px;
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-medium);
+  color: var(--text-normal);
+  display: flex;
+  align-items: center;
+}
+
+/* Add the chevron */
+.advancedSettings-headline::before {
+  content: "";
+  width: 24px;
+  height: 24px;
+  background-color: var(--text-muted);
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24'%3E%3Cpath fill='none' d='M0 0h24v24H0z'/%3E%3Cpath d='M12 13.172l4.95-4.95 1.414 1.414L12 16 5.636 9.636 7.05 8.222z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24'%3E%3Cpath fill='none' d='M0 0h24v24H0z'/%3E%3Cpath d='M12 13.172l4.95-4.95 1.414 1.414L12 16 5.636 9.636 7.05 8.222z'/%3E%3C/svg%3E");
+  transform: rotate(-90deg);
+  transition: transform 100ms ease-in-out;
+}
+
+/* Rotate chevron when open */
+.advancedSettings-container[open] > .advancedSettings-headline::before {
+  transform: rotate(0deg);
 }
 
 /* */
@@ -252,7 +290,7 @@
 }
 
 /* ---------- MENUBAR STUFF ------------- */
-
+/* height and alignment unification*/
 .textflow-menu-bar .clickable-icon,
 .textflow-menu-bar .button-component,
 .textflow-menu-bar .menu-bar-navigation-dropdown-headline {
@@ -281,9 +319,59 @@
   padding-right: 5px;
 }
 
-.button-shadow {
+/*subtle highlight for saves*/
+
+.menu-bar-button-save-neutral {
+  background-color: var(--background-primary);
+  color: var(--text-normal);
   box-shadow: var(--input-shadow);
+
+  align-items: center;
+  width: 30px;
+}
+
+.menu-bar-button-save-no-go {
+  background-color: var(--background-primary);
+  color: var(--text-faint);
+  box-shadow: var(--input-shadow);
+
+  align-items: center;
+  width: 30px;
+}
+
+.menu-bar-button-save-must {
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+  box-shadow: 0 0 4px 1px var(--text-accent);
   padding: 4px;
+  align-items: center;
+  width: 30px;
+}
+
+/*insistant highlight for rebuild*/
+
+.menu-bar-button-rebuild-neutral {
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+  box-shadow: var(--input-shadow);
+  align-items: center;
+  width: 30px;
+}
+
+.menu-bar-button-rebuild-no-go {
+  background-color: var(--background-primary);
+  color: var(--text-faint);
+  box-shadow: var(--input-shadow);
+  align-items: center;
+  width: 30px;
+}
+
+.menu-bar-button-rebuild-must {
+  background-color: var(--text-accent);
+  color: var(--text-on-accent);
+  box-shadow: 0 0 4px 1px var(--text-accent);
+  align-items: center;
+  width: 30px;
 }
 
 .menu-bar-navigation-dropdown {
@@ -318,6 +406,11 @@
   line-height: var(--input-height);
   display: flex; /* Add this */
   align-items: center; /* Add this */
+  border: none;
+}
+
+.menu-bar-navigation-dropdown-search-input .input {
+  border: none;
 }
 
 /* The icon span */

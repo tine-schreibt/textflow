@@ -13,6 +13,7 @@ import {
   TFile,
   TAbstractFile,
   TextComponent,
+  ToggleComponent,
 } from "obsidian";
 import TextFlow from "../main";
 import * as Types from "./types";
@@ -139,117 +140,11 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           });
       });
 
-    // -----------   hide system folder  ---------------
-    const hidesystemFolder = new Setting(setUpTextFlow)
-      .setName("Hide TextFlow_SystemFolder")
-      .setDesc(
-        createFragment((desc) => {
-          desc.createSpan({
-            text: "Hiding this folder is strongly recommended (messing with it can lose you data).",
-          });
-          desc.createEl("br"); // Add line break
-          desc.createSpan({
-            text: "Unhiding the folder requires a reload of the vault.",
-          });
-        })
-      )
-      .addToggle((hideSystemFolderToggle) => {
-        hideSystemFolderToggle
-          .setValue(this.plugin.settings.systemFolderHidden)
-          .onChange(async (value) => {
-            this.plugin.settings.systemFolderHidden = value;
-            this.plugin.discernAndSetSystemFolderState(
-              value,
-              this.plugin.settings.systemFolderPlace
-            );
-            await this.plugin.saveSettings();
-          });
-      });
-
-    // -----------   Auto-save  ---------------
-    const autoSave = new Setting(setUpTextFlow)
-      .setName("Automatically save back to source")
-      .setDesc(
-        createFragment((desc) => {
-          desc.createSpan({
-            text: "Saves on active-leaf-change and blur.",
-          });
-          desc.createEl("br"); // Add line break
-          desc.createSpan({
-            text: "!! Auto-save does NOT trigger when you close or open your vault / Obsidan !!",
-            cls: "text-emphasis",
-          });
-          desc.createEl("br"); // Add line break
-          desc.createSpan({
-            text: "You can always save manually via command palette / hotkey.",
-          });
-        })
-      )
-      .addToggle((activateAutoSave) => {
-        activateAutoSave
-          .setValue(this.plugin.settings.autoSave)
-          .onChange(async (value) => {
-            this.plugin.settings.autoSave = value;
-            this.display();
-            await this.plugin.saveSettings();
-          });
-      });
-
-    // ----------- Auto-rebuild ----------------
-    const autoRebuild = new Setting(setUpTextFlow)
-      .setName("Automatically rebuild active flows")
-      .setClass(this.plugin.settings.autoSave ? "show" : "hide")
-      .setDesc(
-        createFragment((desc) => {
-          desc.createSpan({
-            cls: "text-emphasis",
-            text: "Use this feature wisely: ",
-          });
-          desc.createEl("br");
-          desc.createSpan({
-            text: "It allows you to open and edit conflicting flows in parallel.",
-          });
-          desc.createEl("br");
-          desc.createSpan({
-            cls: "text-emphasis",
-            text: "But ",
-          });
-          desc.createSpan({
-            text: " if you edit their overlapping regions, it can lead to a lot of disk writes and large flows take a few seconds to rebuild.",
-          });
-        })
-      )
-      .addToggle((activateAutoRebuild) => {
-        activateAutoRebuild
-          .setValue(this.plugin.settings.autoRebuild)
-          .onChange(async (value) => {
-            this.plugin.settings.autoRebuild = value;
-            await this.plugin.saveSettings();
-          });
-      });
-
-    const explorerDeco = new Setting(setUpTextFlow)
-      .setName("Mark unsaved notes in file explorer")
-      .setDesc(
-        createFragment((desc) => {
-          desc.createSpan({
-            text: "Turning this off requires a vault reload to take effect.",
-          });
-        })
-      )
-      .addToggle((explorerDeco) => {
-        explorerDeco
-          .setValue(this.plugin.settings.explorerDeco)
-          .onChange(async (value) => {
-            this.plugin.settings.explorerDeco = value;
-            await this.plugin.saveSettings();
-          });
-      });
-
+    // --------------------- UI settings
     // -----------   flowSwitcherModal  ---------------
 
     const switcherModalPosition = new Setting(setUpTextFlow)
-      .setName("How do you want to access the flow switcher modal?")
+      .setName("Access to the flow switcher modal via...")
       .setDesc("Changes need a vault reload to take effect.")
       .addDropdown((dropdown) => {
         dropdown
@@ -258,36 +153,54 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .addOption("command", "Command palette only");
         dropdown.setValue(this.plugin.settings.switcherPos);
         dropdown.onChange((value) => {
-          console.log("Changed to:", value);
           this.plugin.settings.switcherPos = value;
           this.plugin.saveSettings();
         });
       });
 
-    // -----------   menuBar  ---------------
-    const menuBarPosition = new Setting(setUpTextFlow)
-      .setName("Choose your type of menu bar")
+    // ------------- scrollbar ------------
+    const scrollbar = new Setting(setUpTextFlow)
+      .setName("Hide scrollbar on flows")
       .setDesc(
         createFragment((desc) => {
           desc.createSpan({
-            text: "Fixed:  Always displayed at the top of your leaf.",
+            text: "If your scroll bar twitches, just hide it.",
           });
-          desc.createEl("br");
+          desc.createEl("br"); // Add line break
           desc.createSpan({
-            text: "Modal: Callable via command palette or a hotkey.",
+            text: "Needs a reload to take effect.",
           });
         })
       )
-      .addDropdown((menuBarPosition) => {
-        menuBarPosition
-          .addOption(`fixed`, `Fixed`)
-          .addOption(`modal`, `Modal`)
-          .setValue(
-            this.plugin.settings.generalMenuBarSettings.position ?? `fixed`
-          )
-          .onChange((value) => {
-            this.plugin.settings.generalMenuBarSettings.position = value;
-            this.plugin.saveSettings();
+      .addToggle((explorerDeco) => {
+        explorerDeco
+          .setValue(this.plugin.settings.hideScrollbar)
+          .onChange(async (value) => {
+            this.plugin.settings.hideScrollbar = value;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    // -------------- Multi-select -----------------
+    const navListener = new Setting(setUpTextFlow)
+      .setName("Enable navigation via file explorer")
+      .setDesc(
+        createFragment((desc) => {
+          desc.createSpan({
+            text: "Toggle this off, if you need multi-select to work correctly.",
+          });
+          desc.createEl("br"); // Add line break
+          desc.createSpan({
+            text: "There's also a command for this.",
+          });
+        })
+      )
+      .addToggle((explorerDeco) => {
+        explorerDeco
+          .setValue(this.plugin.settings.explorerListener)
+          .onChange(async (value) => {
+            this.plugin.settings.explorerListener = value;
+            await this.plugin.saveSettings();
           });
       });
 
@@ -296,13 +209,13 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       cls: "headline-container",
     });
     createFlows.createEl("h3", {
-      text: "Create a new Flow",
+      text: "Create a new flow",
       cls: "headline-text",
     });
 
     //--------- FLOW NAME -----------------
     const chooseFlowName = new Setting(createFlows)
-      .setName("Name your Flow")
+      .setName("Name your flow")
       .setDesc(
         createFragment((desc) => {
           desc.createSpan({
@@ -785,7 +698,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           flowCookbook: this.plugin.settings.flowBuildBasket.flowCookbook,
           cleanCookbook: {},
           finalReceipe: this.plugin.settings.flowBuildBasket.finalReceipe,
-          conflicts: this.plugin.settings.flowBuildBasket.conflicts,
+          conflictObject: this.plugin.settings.flowBuildBasket.conflictObject,
           dataviewSearchPath: "",
           previewUsed: true,
           success: false,
@@ -807,7 +720,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
     const saveButton = new ButtonComponent(containerEl);
     saveButton
-      .setButtonText("Save Flow definition")
+      .setButtonText("Save flow definition")
       .onClick(async (buttonEl: MouseEvent) => {
         // if no flow name is given
 
@@ -879,7 +792,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       cls: "headline-container",
     });
     flowDisplay.createEl("h3", {
-      text: "Your Flow definitions",
+      text: "Your flow definitions",
       cls: "headline-text",
     });
 
@@ -950,8 +863,12 @@ export class TextFlowSettingsTab extends PluginSettingTab {
                 text: `Exclusion criteria: ${exclusionString}`,
               });
             }
-            if (shownFlow.conflictArray.length > 0) {
-              const conflictString = shownFlow.conflictArray.join(", ");
+            if (Object.keys(shownFlow.conflictObject).length > 0) {
+              const conflictArray: string[] = [];
+              Object.keys(shownFlow.conflictObject).forEach((flow) => {
+                conflictArray.push(flow);
+              });
+              const conflictString = conflictArray.join(" ,");
               desc.createEl("br"); // Add line break
               desc.createSpan({
                 text: `Overlaps with: ${conflictString}`,
@@ -959,7 +876,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             }
           })
         )
-
         .addButton((rebuildButton) =>
           rebuildButton.setButtonText("(Re)build)").onClick(async () => {
             // gather all info for the flowDefinition
@@ -983,7 +899,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               flowCookbook: shownFlow.flowCookbook,
               cleanCookbook: {},
               finalReceipe: shownFlow.flowReceipe,
-              conflicts: shownFlow.conflictArray,
+              conflictObject: shownFlow.conflictObject,
               dataviewSearchPath: "",
               previewUsed: false,
               success: true,
@@ -1006,5 +922,135 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           });
         });
     });
+
+    const advancedSettings = containerEl.createEl("details", {
+      cls: "advancedSettings-container",
+    });
+
+    advancedSettings
+      .createEl("summary", {
+        cls: "advancedSettings-headline",
+      })
+      .createSpan({ text: "Advanced settings" });
+
+    // The content div where your advanced settings will go
+    const advancedContent = advancedSettings.createDiv();
+
+    // -----------   hide system folder  ---------------
+    const hidesystemFolder = new Setting(advancedContent)
+      .setName("Hide TextFlow_SystemFolder")
+      .setDesc(
+        createFragment((desc) => {
+          desc.createSpan({
+            text: "Hiding this folder is strongly recommended (messing with it can lose you data).",
+          });
+          desc.createEl("br"); // Add line break
+          desc.createSpan({
+            text: "Unhiding the folder requires a reload of the vault.",
+          });
+        })
+      )
+      .addToggle((hideSystemFolderToggle) => {
+        hideSystemFolderToggle
+          .setValue(this.plugin.settings.systemFolderHidden)
+          .onChange(async (value) => {
+            this.plugin.settings.systemFolderHidden = value;
+            this.plugin.discernAndSetSystemFolderState(
+              value,
+              this.plugin.settings.systemFolderPlace
+            );
+            await this.plugin.saveSettings();
+          });
+      });
+
+    // -----------   Auto-save  ---------------
+    const autoSave = new Setting(advancedContent)
+      .setName("Automatically sync back to source")
+      .setDesc(
+        createFragment((desc) => {
+          desc.createSpan({
+            text: "Syncs to source all inactive leaves when you change the active leaf or click outside of the editor.",
+          });
+          desc.createEl("br"); // Add line break
+
+          desc.createSpan({
+            text: "!! Auto-sync does NOT trigger when you close or open your vault / Obsidan !!",
+            cls: "text-emphasis",
+          });
+          desc.createEl("br"); // Add line break
+          desc.createSpan({
+            text: "You can always save manually via command palette / hotkey.",
+          });
+        })
+      )
+      .addToggle((activateAutoSave) => {
+        activateAutoSave
+          .setValue(this.plugin.settings.flowMode.autoSave)
+          .onChange(async (value) => {
+            this.plugin.settings.flowMode.autoSave = value;
+            await this.plugin.saveSettings();
+          });
+      });
+    let setAutoRebuildToggle: ToggleComponent;
+
+    // ----------- Auto-rebuild ----------------
+
+    const contextAware = new Setting(advancedContent)
+      .setName("Context aware auto-sync and auto-rebuild")
+      .setDesc(
+        createFragment((desc) => {
+          desc.createSpan({
+            cls: "text-emphasis",
+            text: "Use this feature wisely: ",
+          });
+          desc.createEl("br");
+          desc.createSpan({
+            text: "It allows you to open and edit conflicting flows in parallel.",
+          });
+          desc.createEl("br");
+          desc.createSpan({
+            cls: "text-emphasis",
+            text: "But ",
+          });
+          desc.createSpan({
+            text: "rebuilds destroy your undo-history and may take a few moments. Overlapping regions will be marked in the flows.",
+          });
+        })
+      )
+      .addToggle((toggle) => {
+        setAutoRebuildToggle = toggle; // Store reference
+        toggle
+          .setValue(this.plugin.settings.flowMode.context)
+          .onChange(async (value) => {
+            this.plugin.settings.flowMode.context = value;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    // ------------ explorer Deco
+    const explorerDeco = new Setting(advancedContent)
+      .setName("Mark (unsynced) source notes in file explorer")
+      .setDesc(
+        createFragment((desc) => {
+          desc.createSpan({
+            text: "Turning this off requires a vault reload to take effect.",
+          });
+        })
+      )
+      .addToggle((explorerDeco) => {
+        const modeSettings =
+          this.plugin.settings.mode === "flow"
+            ? this.plugin.settings.flowMode
+            : this.plugin.settings.sourceMode;
+        explorerDeco
+          .setValue(modeSettings.explorerDeco)
+          .onChange(async (value) => {
+            const modeSettings =
+              this.plugin.settings.mode === "flow"
+                ? (this.plugin.settings.flowMode.explorerDeco = value)
+                : (this.plugin.settings.sourceMode.explorerDeco = value);
+            await this.plugin.saveSettings();
+          });
+      });
   }
 }

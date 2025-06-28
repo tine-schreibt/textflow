@@ -3,6 +3,7 @@ import * as Modals from "./modals";
 import {
   App,
   ButtonComponent,
+  Editor,
   setIcon,
   MarkdownView,
   normalizePath,
@@ -13,7 +14,9 @@ import {
   TFile,
   TAbstractFile,
   TextComponent,
+  WorkspaceLeaf,
 } from "obsidian";
+import { EditorView } from "@codemirror/view";
 import TextFlow from "../main";
 import * as Types from "./types";
 import Pickr from "@simonwep/pickr";
@@ -31,6 +34,7 @@ class ProgressNotice {
       0
     ); // 0 duration makes it persistent
   }
+
   updateProgress(current: number, total: number) {
     const percent = Math.floor((current / total) * 100);
     const filled = Math.floor(percent / 10);
@@ -65,7 +69,7 @@ export class FlowService {
 
   // ------ function that checks if flows overlap
   conflictCollector = (flowBuildBasket: Types.flowBuildBasket) => {
-    const conflicts: string[] = [];
+    const conflictObject: Types.ConflictObject = {};
     const key1 = Object.keys(flowBuildBasket.finalReceipe)[0];
     if (Object.keys(this.plugin.settings.flows).length >= 1) {
       flowLoop: for (let flowName in this.plugin.settings.flows) {
@@ -80,14 +84,17 @@ export class FlowService {
                 path
               )
             ) {
-              conflicts.push(flowName);
+              if (!conflictObject[flowName]) {
+                conflictObject[flowName] = {};
+              }
+              conflictObject[flowName][path] = true;
               continue flowLoop;
             }
           }
         }
       }
     }
-    return conflicts;
+    return conflictObject;
   };
 
   // ----------------- sync conflicts
@@ -98,26 +105,20 @@ export class FlowService {
     Object.keys(this.plugin.settings.flows).forEach((syncFlowName) => {
       // Case 1: Flow is in reference conflicts but not in sync flow's conflicts
       if (
-        referenceFlow.conflicts.includes(syncFlowName) &&
-        !this.plugin.settings.flows[syncFlowName].conflictArray.includes(
-          refFlowName
-        )
+        referenceFlow.conflictObject[syncFlowName] &&
+        !this.plugin.settings.flows[syncFlowName].conflictObject[refFlowName]
       ) {
-        this.plugin.settings.flows[syncFlowName].conflictArray.push(
-          refFlowName
-        );
+        this.plugin.settings.flows[syncFlowName].conflictObject[refFlowName] =
+          referenceFlow.conflictObject[syncFlowName];
       }
       // Case 2: Flow is not in reference conflicts but is in sync flow's conflicts
       if (
-        !referenceFlow.conflicts.includes(syncFlowName) &&
-        this.plugin.settings.flows[syncFlowName].conflictArray.includes(
-          refFlowName
-        )
+        !referenceFlow.conflictObject[syncFlowName] &&
+        this.plugin.settings.flows[syncFlowName].conflictObject[refFlowName]
       ) {
-        this.plugin.settings.flows[syncFlowName].conflictArray =
-          this.plugin.settings.flows[syncFlowName].conflictArray.filter(
-            (name) => name !== refFlowName
-          );
+        delete this.plugin.settings.flows[syncFlowName].conflictObject[
+          refFlowName
+        ];
       }
     });
   };
@@ -197,7 +198,8 @@ export class FlowService {
             flowBuildBasket
           );
           flowBuildBasket.finalReceipe = { bookmarks: bookmarkPathArray };
-          flowBuildBasket.conflicts = this.conflictCollector(flowBuildBasket);
+          flowBuildBasket.conflictObject =
+            this.conflictCollector(flowBuildBasket);
         }
 
         // ------ FINAL RECEIPE FOR PATH TAG PROPERTY -----------------------
@@ -209,7 +211,8 @@ export class FlowService {
         flowBuildBasket.finalReceipe = {
           foldersTagsProps: foldersTagsPropsPathArray,
         };
-        flowBuildBasket.conflicts = this.conflictCollector(flowBuildBasket);
+        flowBuildBasket.conflictObject =
+          this.conflictCollector(flowBuildBasket);
       }
       // ---- Pre-flight check 02 - finalReceipe array
       if (
@@ -271,7 +274,9 @@ export class FlowService {
     settings.flows[flowBuildBasket.createOrEditFlowName] = {
       timestamp: this.getTimestamp(),
       flowName: flowBuildBasket.createOrEditFlowName,
-      flowFilePath: `${this.plugin.settings.systemFolderPlace}TextFlow_SystemFolder/${flowBuildBasket.createOrEditFlowName}.md`,
+      flowFilePath: normalizePath(
+        `${this.plugin.settings.systemFolderPlace}TextFlow_SystemFolder/${flowBuildBasket.createOrEditFlowName}.md`
+      ),
       flowCookbook: flowBuildBasket.cleanCookbook, // cleaned up user input
       flowReceipe: flowBuildBasket.finalReceipe, // { defMode: pathArray }
       depthFirst: flowBuildBasket.depthFirst,
@@ -279,7 +284,7 @@ export class FlowService {
       isFreshBuild: true,
       flowBuilt: false,
       flaggedForRebuild: false,
-      conflictArray: conflicts,
+      conflictObject: conflicts,
       activeRegions: activeRegionHandlerVariable,
       persistentCursors: {},
       unsavedRegionsArray: [],
@@ -298,7 +303,7 @@ export class FlowService {
     flowBuildBasket.flowCookbook = {};
     flowBuildBasket.cleanCookbook = {};
     flowBuildBasket.finalReceipe = {};
-    flowBuildBasket.conflicts = [];
+    flowBuildBasket.conflictObject = {};
     flowBuildBasket.dataviewSearchPath = "";
     flowBuildBasket.success = false;
     flowBuildBasket.fresh = true;
@@ -797,12 +802,14 @@ export class FlowService {
 
           fileContent = mapValueBasket.singleFileContent;
 
-          // find and remove the title line; normalize
-          const titleLine = `${note.name.replace(/\.md$/, "")}`;
-          const normalize = (fileContent: string) =>
-            fileContent.replace(/\uFEFF|\s+$/g, "").trim();
-          const normalizedTitleLine = normalize(titleLine);
-          const normalizedFileContent = normalize(fileContent);
+          // check for new, empty files, because empty files trip textFlow up
+          const trimmedContent = fileContent.trim();
+          if (
+            !trimmedContent ||
+            /^[\s\u0000-\u001F\u007F-\u009F\uFEFF]+$/.test(trimmedContent)
+          ) {
+            //fileContent = "new file who dis?";
+          }
 
           flow.flowMap[ingredient] = {
             type: "file",
@@ -836,16 +843,30 @@ export class FlowService {
       }
     }
     if (systemFolder && systemFolder instanceof TFolder) {
-      const flowFilePath = `${this.plugin.settings.systemFolderPlace}TextFlow_SystemFolder/${flow.flowName}.md`;
-      this.app.vault.adapter.write(
-        flowFilePath,
-        mapValueBasket.concatenatedFileContents
+      const flowFilePath = normalizePath(
+        `${this.plugin.settings.systemFolderPlace}TextFlow_SystemFolder/${flow.flowName}.md`
       );
+
+      // Check if the file already exists
+      const existingFile = this.app.vault.getAbstractFileByPath(flowFilePath);
+
+      if (existingFile instanceof TFile) {
+        // If file exists, modify it
+        await this.app.vault.modify(
+          existingFile,
+          mapValueBasket.concatenatedFileContents
+        );
+      } else {
+        // If file doesn't exist, create it
+        await this.app.vault.create(
+          flowFilePath,
+          mapValueBasket.concatenatedFileContents
+        );
+      }
+
       flow.isFreshBuild = false;
       this.plugin.settings.usedUIDs = Array.from(mapValueBasket.usedUIDs);
       this.plugin.saveSettings();
-    }
-    if (counter === total) {
       progressBar.close();
     }
   };
@@ -1092,66 +1113,102 @@ export class FlowService {
     });
   };
 
-  rebuildFlow = async (flowName: string) => {
-    const flowReBuildBasket: Types.flowBuildBasket = {
-      createOrEditFlowName: this.plugin.settings.flows[flowName].flowName,
-      oldFlowName: this.plugin.settings.flows[flowName].flowName,
-      createOrEdit: "",
-      depthFirst: this.plugin.settings.flows[flowName].depthFirst,
-      folderTitles: this.plugin.settings.flows[flowName].folderTitles,
-      definitionMode: Object.keys(
-        this.plugin.settings.flows[flowName].flowReceipe
-      )[0],
-      flowCookbook: this.plugin.settings.flows[flowName].flowCookbook,
-      cleanCookbook: {},
-      finalReceipe: {},
-      conflicts: this.plugin.settings.flows[flowName].conflictArray,
-      dataviewSearchPath: "",
-      previewUsed: false,
-      success: false,
-      fresh: false,
-    };
-
-    await this.createFlowDefinition(flowReBuildBasket);
-    if (!flowReBuildBasket.success) {
-      return;
+  // ---- Identity check / this is a duplicate from main.ts, but it's so small and I'm lazy. Sue me.
+  isFlowFile = (activeLeafPath: string) => {
+    const flowName = activeLeafPath.match(/([^/]+)(?=\.md$)/)?.[0]; // gets the flow name out of the path
+    if (flowName && this.plugin.settings.flows[flowName]) {
+      return flowName;
+    } else {
+      return null;
     }
-    this.writeFlowDef(this.plugin.settings, flowReBuildBasket);
-    // null unsavedRegions
-    this.plugin.settings.flows[flowName].unsavedRegionsArray = [];
-    this.plugin.settings.flows[flowName].flaggedForRebuild = false;
-    this.resetFlowBuildBasket(flowReBuildBasket);
-    this.plugin.saveSettings();
-
-    // Get fresh reference to the flow object after createFlowDefinition
-    const updatedFlow = this.plugin.settings.flows[flowName];
-
-    // ---------- flow creation ----------------
-    // the object that shuttles the values between the functions
-    const mapValueBasket: Types.mapValueBasket = {
-      concatenatedFileContents: "",
-      initialIteration: true,
-      identifier: "0",
-      flowOrder: 0,
-      UID: "",
-      yamlMini: "",
-      singleFileContent: "",
-      currentEnd: 0,
-      usedUIDs: new Set(this.plugin.settings.usedUIDs),
-      idDivider: "",
-    };
-
-    let key = "";
-    updatedFlow.flowReceipe.bookmarks // Use updatedFlow instead of shownFlow
-      ? (key = "bookmarks")
-      : (key = "foldersTagsProps");
-
-    // Calling the build function
-    await this.flowBuilder(
-      updatedFlow.flowReceipe[key], // Use updatedFlow instead of shownFlow
-      updatedFlow, // Use updatedFlow instead of shownFlow
-      flowName,
-      mapValueBasket
-    );
   };
+
+  rebuildFlow = async (flowName: string) => {
+    this.plugin.isRebuilding = true;
+    try {
+      const flowReBuildBasket: Types.flowBuildBasket = {
+        createOrEditFlowName: this.plugin.settings.flows[flowName].flowName,
+        oldFlowName: this.plugin.settings.flows[flowName].flowName,
+        createOrEdit: "",
+        depthFirst: this.plugin.settings.flows[flowName].depthFirst,
+        folderTitles: this.plugin.settings.flows[flowName].folderTitles,
+        definitionMode: Object.keys(
+          this.plugin.settings.flows[flowName].flowReceipe
+        )[0],
+        flowCookbook: this.plugin.settings.flows[flowName].flowCookbook,
+        cleanCookbook: {},
+        finalReceipe: {},
+        conflictObject: this.plugin.settings.flows[flowName].conflictObject,
+        dataviewSearchPath: "",
+        previewUsed: false,
+        success: false,
+        fresh: false,
+      };
+
+      await this.createFlowDefinition(flowReBuildBasket);
+      if (!flowReBuildBasket.success) {
+        return; // The 'finally' block will still run
+      }
+      this.writeFlowDef(this.plugin.settings, flowReBuildBasket);
+      // null unsavedRegions
+      this.plugin.settings.flows[flowName].unsavedRegionsArray = [];
+      this.plugin.settings.flows[flowName].flaggedForRebuild = false;
+      this.resetFlowBuildBasket(flowReBuildBasket);
+      this.plugin.saveSettings();
+
+      // Get fresh reference to the flow object after createFlowDefinition
+      const updatedFlow = this.plugin.settings.flows[flowName];
+
+      // ---------- flow creation ----------------
+      // the object that shuttles the values between the functions
+      const mapValueBasket: Types.mapValueBasket = {
+        concatenatedFileContents: "",
+        initialIteration: true,
+        identifier: "0",
+        flowOrder: 0,
+        UID: "",
+        yamlMini: "",
+        singleFileContent: "",
+        currentEnd: 0,
+        usedUIDs: new Set(this.plugin.settings.usedUIDs),
+        idDivider: "",
+      };
+
+      let key = "";
+      updatedFlow.flowReceipe.bookmarks // Use updatedFlow instead of shownFlow
+        ? (key = "bookmarks")
+        : (key = "foldersTagsProps");
+
+      // Calling the build function
+      await this.flowBuilder(
+        updatedFlow.flowReceipe[key],
+        updatedFlow,
+        flowName,
+        mapValueBasket
+      );
+    } finally {
+      this.plugin.isRebuilding = false;
+    }
+  };
+
+  scrollToPos(editor: Types.ObsidianEditor, cursorPos: number) {
+    const cmEditor = editor.cm;
+    let text = "";
+    if (cmEditor) {
+      text = cmEditor.state.doc.toString();
+    }
+    if (cursorPos !== undefined && cursorPos >= 0 && cmEditor) {
+      const line = cmEditor.state.doc.lineAt(Math.max(0, cursorPos)); // Ensure position is not negative
+      const targetPos = line.from; // Scroll to the beginning of the line
+      cmEditor.dispatch({
+        selection: { anchor: targetPos, head: targetPos },
+        effects: EditorView.scrollIntoView(targetPos, {
+          y: "center", // Center in viewport
+          yMargin: 10, // Small margin
+        }),
+        userEvent: "select.pointer",
+      });
+      cmEditor.focus(); // Explicitly focus the editor
+    }
+  }
 }

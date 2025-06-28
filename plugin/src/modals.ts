@@ -15,6 +15,7 @@ import {
 } from "obsidian";
 import * as Types from "./types";
 import { FlowService } from "./flowService";
+import { MenuBar } from "./menuBar";
 
 export class previewModal extends Modal {
   constructor(
@@ -308,7 +309,7 @@ export class FlowSwitcherModal extends Modal {
 
       const saveButton = new ButtonComponent(flowHeader)
         .setIcon("download")
-        .setClass(`flow-switch-modal-header-button-${goSave}`)
+        .setClass(`menu-bar-button-save-${goSave}`)
         .setClass("clickable-icon")
         .onClick(async () => {
           if (goSave === "neutral" || goSave === "must") {
@@ -322,7 +323,7 @@ export class FlowSwitcherModal extends Modal {
 
       const rebuildButton = new ButtonComponent(flowHeader)
         .setIcon("rotate-cw")
-        .setClass(`flow-switch-modal-header-button-${goRebuild}`)
+        .setClass(`menu-bar-button-rebuild-${goRebuild}`)
         .setTooltip(
           goRebuild === "no-go"
             ? `To overwrite unsaved changes, please use the settings tab.`
@@ -555,7 +556,7 @@ export class FlowSwitcherModal extends Modal {
       // ----------- SAVE BUTTON ------------
       const saveButton = new ButtonComponent(inactiveFlowHeader)
         .setIcon("download")
-        .setClass(`flow-switch-modal-header-button-${goSave}`)
+        .setClass(`menu-bar-button-save-${goSave}`)
         .setClass("clickable-icon")
         .onClick(async () => {
           if (goSave === "neutral" || goSave === "must") {
