@@ -23,8 +23,13 @@ import { FlowService } from "./flowService";
 // --- The class that defines the settings tab
 export class TextFlowSettingsTab extends PluginSettingTab {
   plugin: TextFlow;
-  private pickrInstance: Pickr;
   flowService: FlowService;
+  private listeners: Array<{
+    // listener for the explorer deco items
+    element: HTMLElement | Document;
+    type: string;
+    handler: EventListener;
+  }> = [];
 
   constructor(app: App, plugin: TextFlow) {
     super(app, plugin);
@@ -38,6 +43,15 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     await this.plugin.saveSettings();
     this.display(); // Refresh the UI after saving
   };
+
+  private addManagedListener(
+    element: HTMLElement | Document,
+    type: string,
+    handler: EventListener
+  ) {
+    this.listeners.push({ element, type, handler });
+    element.addEventListener(type, handler);
+  }
 
   display(): void {
     const { containerEl } = this;
@@ -158,48 +172,188 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         });
       });
 
-    // ------------- scrollbar ------------
-    const scrollbar = new Setting(setUpTextFlow)
-      .setName("Hide scrollbar on flows")
+    // ------------ explorer Deco
+    // A robot wrote this, which is why it looks much more refined than my usual stuff
+    const explorerDeco = new Setting(setUpTextFlow)
+      .setName("Choose file explorer decoration")
       .setDesc(
         createFragment((desc) => {
           desc.createSpan({
-            text: "If your scroll bar twitches, just hide it.",
+            text: "Marks the source notes of all currently active (opened) flows.",
           });
           desc.createEl("br"); // Add line break
           desc.createSpan({
-            text: "Needs a reload to take effect.",
+            text: "First symbol: up to date; second symbol: waiting for sync.",
+          });
+          desc.createEl("br"); // Add line break
+          desc.createSpan({
+            text: "Color may be overridden by your theme settings.",
+          });
+        })
+      );
+
+    const dropdownContainer = explorerDeco.controlEl.createDiv({
+      cls: "explorer-deco-system",
+    });
+
+    const flowModeExplorerDecoHeadline = dropdownContainer.createDiv({
+      cls: "explorer-deco-dropdown-trigger",
+    });
+
+    const flowModeExplorerDecoContainer = dropdownContainer.createDiv({
+      cls: "explorer-deco-dropdown-container",
+    });
+
+    const updateHeadlineDisplay = (decoration: any[]) => {
+      flowModeExplorerDecoHeadline.empty();
+      flowModeExplorerDecoHeadline.createSpan({
+        text: decoration[0],
+        cls: decoration[2],
+      });
+      flowModeExplorerDecoHeadline.createSpan({
+        text: decoration[1],
+        cls: decoration[3],
+      });
+      const iconSpan = flowModeExplorerDecoHeadline.createSpan();
+      setIcon(iconSpan, "chevrons-up-down");
+    };
+
+    updateHeadlineDisplay(this.plugin.settings.explorerDecoStyle);
+
+    // Handle dropdown toggle
+    const toggleDropdown = async (event: MouseEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const isOpen = flowModeExplorerDecoContainer.classList.contains("show");
+      flowModeExplorerDecoContainer.classList.toggle("show");
+      this.plugin.settings.explorerDecoDropdownOpen = !isOpen;
+      await this.plugin.saveSettings();
+    };
+
+    flowModeExplorerDecoHeadline.addEventListener("click", toggleDropdown);
+
+    // Create entries
+    const allEntries = [
+      ...this.flowService.flowModeInitalEntryArray,
+      ...this.flowService.flowModeExtendedEntryArray,
+    ];
+    allEntries.forEach((entry) => {
+      const explorerDecoEntry = flowModeExplorerDecoContainer.createDiv({
+        cls: "explorer-deco-dropdown-entry",
+      });
+      explorerDecoEntry.createSpan({
+        text: entry[0],
+        cls: entry[2],
+      });
+      explorerDecoEntry.createSpan({
+        text: entry[1],
+        cls: entry[3],
+      });
+
+      explorerDecoEntry.addEventListener("click", async (event: MouseEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        this.plugin.settings.explorerDecoStyle = entry;
+        this.plugin.settings.explorerDecoDropdownOpen = false;
+        flowModeExplorerDecoContainer.classList.remove("show");
+        updateHeadlineDisplay(entry);
+        this.plugin.decorateSourceFiles();
+        await this.plugin.saveSettings();
+      });
+    });
+
+    // Handle outside clicks
+    const handleOutsideClick = async (event: MouseEvent) => {
+      if (!dropdownContainer.contains(event.target as HTMLElement)) {
+        flowModeExplorerDecoContainer.classList.remove("show");
+        this.plugin.settings.explorerDecoDropdownOpen = false;
+        await this.plugin.saveSettings();
+      }
+    };
+
+    document.addEventListener("click", handleOutsideClick);
+
+    // Clean up event listeners when the tab is closed
+    this.plugin.register(() => {
+      document.removeEventListener("click", handleOutsideClick);
+      flowModeExplorerDecoHeadline.removeEventListener("click", toggleDropdown);
+    });
+
+    // The Quality of Life stuff
+    const qol = setUpTextFlow.createEl("details", {
+      cls: "advancedSettings-container",
+    });
+
+    qol
+      .createEl("summary", {
+        cls: "advancedSettings-headline",
+      })
+      .createSpan({ text: "Some quality of life settings" });
+
+    const qolSettings = qol.createDiv();
+
+    // hide explorer deco
+    const hideExplorerDeco = new Setting(qol)
+      .setName("Hide explorer deco")
+      .setDesc(
+        createFragment((desc) => {
+          desc.createSpan({
+            text: "For when you don't want to see it right now. There's a command, too. ",
           });
         })
       )
-      .addToggle((explorerDeco) => {
-        explorerDeco
-          .setValue(this.plugin.settings.hideScrollbar)
+      .addToggle((decoToggle) => {
+        decoToggle
+          .setValue(!this.plugin.settings.showExplorerDeco)
           .onChange(async (value) => {
-            this.plugin.settings.hideScrollbar = value;
+            this.plugin.settings.showExplorerDeco = !value;
+            if (value) {
+              this.plugin.undecorateSourceFiles();
+            } else {
+              this.plugin.decorateSourceFiles();
+            }
             await this.plugin.saveSettings();
           });
       });
 
     // -------------- Multi-select -----------------
-    const navListener = new Setting(setUpTextFlow)
-      .setName("Enable navigation via file explorer")
+    const navListener = new Setting(qol)
+      .setName("Disable navigation via file explorer")
       .setDesc(
         createFragment((desc) => {
           desc.createSpan({
-            text: "Toggle this off, if you need multi-select to work correctly.",
-          });
-          desc.createEl("br"); // Add line break
-          desc.createSpan({
-            text: "There's also a command for this.",
+            text: "Toggle this on if you need multi-select to work correctly. There's command, too.",
           });
         })
       )
-      .addToggle((explorerDeco) => {
-        explorerDeco
-          .setValue(this.plugin.settings.explorerListener)
+      .addToggle((navListenerToggle) => {
+        navListenerToggle
+          .setValue(!this.plugin.settings.explorerListener)
           .onChange(async (value) => {
-            this.plugin.settings.explorerListener = value;
+            this.plugin.settings.explorerListener = !value;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    // ------------- scrollbar ------------
+    const scrollbar = new Setting(qol)
+      .setName("Hide scrollbar on flows")
+      .setDesc(
+        createFragment((desc) => {
+          desc.createSpan({
+            text: "If the twitchy scrollbar handle annoys you but you don't want to hide it via your theme, toggle this on to hide it just for flows.",
+          });
+          desc.createEl("br"); // Add line break
+          desc.createSpan({
+            text: "Needs a vault reload to take effect.",
+          });
+        })
+      )
+      .addToggle((scollbarToggle) => {
+        scollbarToggle
+          .setValue(this.plugin.settings.hideScrollbar)
+          .onChange(async (value) => {
+            this.plugin.settings.hideScrollbar = value;
             await this.plugin.saveSettings();
           });
       });
@@ -768,8 +922,14 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           this.plugin.settings,
           this.plugin.settings.flowBuildBasket
         );
+        this.flowService.syncConflictObjects(
+          this.plugin.settings.flowBuildBasket
+        );
+        // flag the flow for rebuild, since it has been edited.
+        this.plugin.settings.flows[
+          this.plugin.settings.flowBuildBasket.createOrEditFlowName
+        ].flaggedForRebuild = true;
         // reset all values
-        this.flowService.syncConflicts(this.plugin.settings.flowBuildBasket);
         this.flowService.resetFlowBuildBasket(
           this.plugin.settings.flowBuildBasket
         );
@@ -914,6 +1074,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           deleteDef.setButtonText("Delete definition").onClick(async () => {
             const DeleteFlowDefModal = new Modals.DeleteFlowDefModal(
               this.app,
+              this.plugin,
               this.plugin.settings,
               shownFlow.flowName,
               this.modalSaveAndReload
@@ -931,7 +1092,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       .createEl("summary", {
         cls: "advancedSettings-headline",
       })
-      .createSpan({ text: "Advanced settings" });
+      .createSpan({ text: "A hidden setting" });
 
     // The content div where your advanced settings will go
     const advancedContent = advancedSettings.createDiv();
@@ -946,7 +1107,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           });
           desc.createEl("br"); // Add line break
           desc.createSpan({
-            text: "Unhiding the folder requires a reload of the vault.",
+            text: "Unhiding the folder needs a vault reload to take effect.",
           });
         })
       )
@@ -959,96 +1120,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               value,
               this.plugin.settings.systemFolderPlace
             );
-            await this.plugin.saveSettings();
-          });
-      });
-
-    // -----------   Auto-save  ---------------
-    const autoSave = new Setting(advancedContent)
-      .setName("Automatically sync back to source")
-      .setDesc(
-        createFragment((desc) => {
-          desc.createSpan({
-            text: "Syncs to source all inactive leaves when you change the active leaf or click outside of the editor.",
-          });
-          desc.createEl("br"); // Add line break
-
-          desc.createSpan({
-            text: "!! Auto-sync does NOT trigger when you close or open your vault / Obsidan !!",
-            cls: "text-emphasis",
-          });
-          desc.createEl("br"); // Add line break
-          desc.createSpan({
-            text: "You can always save manually via command palette / hotkey.",
-          });
-        })
-      )
-      .addToggle((activateAutoSave) => {
-        activateAutoSave
-          .setValue(this.plugin.settings.flowMode.autoSave)
-          .onChange(async (value) => {
-            this.plugin.settings.flowMode.autoSave = value;
-            await this.plugin.saveSettings();
-          });
-      });
-    let setAutoRebuildToggle: ToggleComponent;
-
-    // ----------- Auto-rebuild ----------------
-
-    const contextAware = new Setting(advancedContent)
-      .setName("Context aware auto-sync and auto-rebuild")
-      .setDesc(
-        createFragment((desc) => {
-          desc.createSpan({
-            cls: "text-emphasis",
-            text: "Use this feature wisely: ",
-          });
-          desc.createEl("br");
-          desc.createSpan({
-            text: "It allows you to open and edit conflicting flows in parallel.",
-          });
-          desc.createEl("br");
-          desc.createSpan({
-            cls: "text-emphasis",
-            text: "But ",
-          });
-          desc.createSpan({
-            text: "rebuilds destroy your undo-history and may take a few moments. Overlapping regions will be marked in the flows.",
-          });
-        })
-      )
-      .addToggle((toggle) => {
-        setAutoRebuildToggle = toggle; // Store reference
-        toggle
-          .setValue(this.plugin.settings.flowMode.context)
-          .onChange(async (value) => {
-            this.plugin.settings.flowMode.context = value;
-            await this.plugin.saveSettings();
-          });
-      });
-
-    // ------------ explorer Deco
-    const explorerDeco = new Setting(advancedContent)
-      .setName("Mark (unsynced) source notes in file explorer")
-      .setDesc(
-        createFragment((desc) => {
-          desc.createSpan({
-            text: "Turning this off requires a vault reload to take effect.",
-          });
-        })
-      )
-      .addToggle((explorerDeco) => {
-        const modeSettings =
-          this.plugin.settings.mode === "flow"
-            ? this.plugin.settings.flowMode
-            : this.plugin.settings.sourceMode;
-        explorerDeco
-          .setValue(modeSettings.explorerDeco)
-          .onChange(async (value) => {
-            const modeSettings =
-              this.plugin.settings.mode === "flow"
-                ? (this.plugin.settings.flowMode.explorerDeco = value)
-                : (this.plugin.settings.sourceMode.explorerDeco = value);
             await this.plugin.saveSettings();
           });
       });

@@ -7,6 +7,7 @@ import {
   DropdownComponent,
   MarkdownView,
   Modal,
+  normalizePath,
   TextComponent,
   Setting,
   TFolder,
@@ -33,17 +34,19 @@ export class previewModal extends Modal {
     const modalTitle = contentEl.createEl("h2", {
       text: `Preview for flow ${this.flowBuildBasket.createOrEditFlowName}.`,
     });
-    if (this.flowBuildBasket.conflicts.length > 0) {
+    if (Object.keys(this.flowBuildBasket.conflictObject).length > 0) {
       const conflictText = new Setting(contentEl).setDesc(
         createFragment((desc) => {
           desc.createSpan({
             text: `The following flows overlap with ${this.flowBuildBasket.createOrEditFlowName}:`,
           });
-          this.flowBuildBasket.conflicts.forEach((flow) => {
-            desc.createEl("br");
-            desc.createSpan({
-              text: `- ${flow}`,
-            });
+          Object.keys(this.flowBuildBasket.conflictObject).forEach((flow) => {
+            if (flow != this.flowBuildBasket.oldFlowName) {
+              desc.createEl("br");
+              desc.createSpan({
+                text: `- ${flow}`,
+              });
+            }
           });
         })
       );
@@ -253,10 +256,6 @@ export class FlowSwitcherModal extends Modal {
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
         .setClass("clickable-icon")
         .onClick(async () => {
-          console.log(
-            "this.plugin.settings.autoRebuild: ",
-            this.plugin.settings.autoRebuild
-          );
           if (goOpen === "neutral" || goOpen === "must") {
             const file = this.app.vault.getAbstractFileByPath(
               this.plugin.settings.flows[activeFlow].flowFilePath
@@ -265,7 +264,13 @@ export class FlowSwitcherModal extends Modal {
               const leaf = this.app.workspace.getLeaf("tab");
               await leaf.openFile(file);
               leaf.setPinned(true);
-              this.app.workspace.setActiveLeaf(leaf, { focus: true });
+              await this.app.workspace.setActiveLeaf(leaf, { focus: true });
+              // make absolutely sure the active flow stuff is up to date
+              // before we check for conflicts and do the initial save
+              await this.plugin.manageActiveFlowObject();
+              if (this.flowService.checkForActiveFlowConflicts()) {
+                this.plugin.syncAllLeaves();
+              }
             }
           }
         });
@@ -284,6 +289,10 @@ export class FlowSwitcherModal extends Modal {
               await leaf.openFile(file);
               leaf.setPinned(true);
               this.app.workspace.setActiveLeaf(leaf, { focus: true });
+              await this.plugin.manageActiveFlowObject();
+              if (this.flowService.checkForActiveFlowConflicts()) {
+                this.plugin.syncAllLeaves();
+              }
             }
           }
         });
@@ -303,6 +312,10 @@ export class FlowSwitcherModal extends Modal {
               await leaf.openFile(file);
               leaf.setPinned(true);
               this.app.workspace.setActiveLeaf(leaf, { focus: true });
+              await this.plugin.manageActiveFlowObject();
+              if (this.flowService.checkForActiveFlowConflicts()) {
+                this.plugin.syncAllLeaves();
+              }
             }
           }
         });
@@ -313,7 +326,7 @@ export class FlowSwitcherModal extends Modal {
         .setClass("clickable-icon")
         .onClick(async () => {
           if (goSave === "neutral" || goSave === "must") {
-            await this.plugin.saveAllLeavesManual();
+            await this.plugin.syncAllLeaves();
             await this.plugin.saveSettings();
             this.display();
           } else {
@@ -471,18 +484,6 @@ export class FlowSwitcherModal extends Modal {
         goRebuild = "must";
         goSave = "no-go";
       }
-      // check for conflicts, if no autoRebuild
-      if (!this.plugin.settings.autoRebuild) {
-        Object.keys(activeFlowInfoObject).forEach((flow) => {
-          if (
-            this.plugin.settings.flows[inactiveFlow].conflictArray.includes(
-              flow
-            )
-          ) {
-            goOpen = "no-go";
-          }
-        });
-      }
 
       // ----------- OPEN BUTTON ------------
       const openInactiveTabButton = new ButtonComponent(inactiveFlowHeader)
@@ -490,11 +491,7 @@ export class FlowSwitcherModal extends Modal {
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
         .setClass("clickable-icon")
         .onClick(async () => {
-          if (
-            this.plugin.settings.autoRebuild ||
-            goOpen === "neutral" ||
-            goOpen === "must"
-          ) {
+          if (goOpen === "neutral" || goOpen === "must") {
             const file = this.app.vault.getAbstractFileByPath(
               this.plugin.settings.flows[inactiveFlow].flowFilePath
             );
@@ -513,11 +510,7 @@ export class FlowSwitcherModal extends Modal {
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
         .setClass("clickable-icon")
         .onClick(async () => {
-          if (
-            this.plugin.settings.autoRebuild ||
-            goOpen === "neutral" ||
-            goOpen === "must"
-          ) {
+          if (goOpen === "neutral" || goOpen === "must") {
             const file = this.app.vault.getAbstractFileByPath(
               this.plugin.settings.flows[inactiveFlow].flowFilePath
             );
@@ -536,11 +529,7 @@ export class FlowSwitcherModal extends Modal {
         .setClass("flow-switch-modal-header-button-down")
         .setClass("clickable-icon")
         .onClick(async () => {
-          if (
-            this.plugin.settings.autoRebuild ||
-            goOpen === "neutral" ||
-            goOpen === "must"
-          ) {
+          if (goOpen === "neutral" || goOpen === "must") {
             const file = this.app.vault.getAbstractFileByPath(
               this.plugin.settings.flows[inactiveFlow].flowFilePath
             );
@@ -561,7 +550,7 @@ export class FlowSwitcherModal extends Modal {
         .onClick(async () => {
           if (goSave === "neutral" || goSave === "must") {
             if (goSave === "neutral" || goSave === "must") {
-              await this.plugin.saveAllLeavesManual();
+              await this.plugin.syncAllLeaves();
               await this.plugin.saveSettings();
               this.display();
             } else {
@@ -600,6 +589,7 @@ export class FlowSwitcherModal extends Modal {
 export class DeleteFlowDefModal extends Modal {
   constructor(
     app: App,
+    private plugin: TextFlowPlugin,
     private settings: Types.TextFlowSettings,
     private flowName: string,
     private modalSaveAndReload: () => Promise<void>
@@ -628,8 +618,13 @@ export class DeleteFlowDefModal extends Modal {
     deleteButton.onClick(async () => {
       await this.modalSaveAndReload();
 
-      const flowFilePath = `${this.settings.systemFolderPlace}TextFlow_SystemFolder/${this.flowName}.md`;
+      const flowFilePath = normalizePath(
+        `${this.settings.systemFolderPlace}TextFlow_SystemFolder/${this.flowName}.md`
+      );
       const flowFile = this.app.vault.getAbstractFileByPath(flowFilePath);
+      if (flowFile instanceof TFile) {
+        await this.app.vault.delete(flowFile);
+      }
 
       try {
         delete this.settings.flows[this.flowName];

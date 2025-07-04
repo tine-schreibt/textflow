@@ -14,9 +14,9 @@ export interface TextFlowSettings {
   systemFolderPath?: string;
   advancedToggle: boolean;
   systemFolderHidden: boolean;
-  mode: string;
-  flowMode: FlowModeSettings;
-  sourceMode: SourceModeSettings;
+  explorerDecoStyle: string[];
+  showExplorerDeco: boolean;
+  explorerDecoDropdownOpen: boolean;
   explorerListener: boolean;
   hideScrollbar: boolean;
   switcherPos: string;
@@ -25,28 +25,20 @@ export interface TextFlowSettings {
     flowName?: string;
   };
   flowBuildBasket: flowBuildBasket; // For storing preview data
-  usedUIDs: string[];
   activeFlowObject: { [key: string]: number | any };
   flows: { [key: string]: FlowDef };
 }
 
-export interface FlowModeSettings {
-  explorerDeco: boolean;
-  flowDeco: boolean;
-  sourceDeco: boolean;
-  autoSave: boolean;
-  context: boolean;
-}
+export type Mode = "flow" | "source";
 
-export interface SourceModeSettings {
-  explorerDeco: boolean;
-  flowDeco: boolean;
-  sourceDeco: boolean;
+export interface ModeSettings {
+  explorerDeco: string[];
 }
 
 export interface FlowDef {
   timestamp: string;
   flowName: string;
+  oldFlowName: string;
   flowFilePath: string;
   flowCookbook: { [key: string]: string }; // user input
   flowReceipe: { [key: string]: string[] };
@@ -109,19 +101,14 @@ export interface SourceFileObject {
 export const DEFAULT_SETTINGS: TextFlowSettings = {
   advancedToggle: false,
   systemFolderHidden: false,
-  mode: "flow",
-  flowMode: {
-    explorerDeco: true,
-    flowDeco: false,
-    sourceDeco: true,
-    autoSave: false,
-    context: false,
-  },
-  sourceMode: {
-    explorerDeco: true,
-    flowDeco: true,
-    sourceDeco: false,
-  },
+  explorerDecoStyle: [
+    "○",
+    "●",
+    "font-size: 1.2em; color: var(--text-normal); font-family: monospace;",
+    "font-size: 1.2em; color: var(--text-accent); font-family: monospace;",
+  ],
+  showExplorerDeco: true,
+  explorerDecoDropdownOpen: false,
   explorerListener: true,
   hideScrollbar: false,
   switcherPos: "statusBar",
@@ -144,7 +131,6 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
     success: false,
     fresh: true,
   },
-  usedUIDs: [],
   activeFlowObject: {},
   flows: {},
 };
@@ -159,7 +145,6 @@ export interface mapValueBasket {
   yamlMini: string;
   singleFileContent: string;
   currentEnd: number;
-  usedUIDs: Set<string>; // Add this
   idDivider: string;
 }
 
@@ -182,6 +167,8 @@ export interface flowBuildBasket {
 
 // ---------- Flow management
 export type ModalFlowStatus = "on" | "off" | "incompatible";
+
+export type DecorationEntry = [string, string, string, string]; // if each inner array always has 3 elements
 
 // ------- Dataview stuff
 export interface DataviewFolder {

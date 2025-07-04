@@ -288,7 +288,8 @@ export class MenuBar {
     });
 
     // ----- SAVE BUTTON -----------
-    const saveButton = new ButtonComponent(menuBarEl)
+    const saveButton = new ButtonComponent(menuBarEl);
+    saveButton
       .setIcon("download")
       .setClass(`menu-bar-button-save-${goSave}`)
       .setClass("spacing")
@@ -361,7 +362,7 @@ export class MenuBar {
     });
 
     // headline text and icon
-    // show either current region
+    // show either current region; click listener is added further down
     if (this.getDropdownState("nav") === "hide") {
       navHeadline.createSpan({
         cls: "align-off-center",

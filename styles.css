@@ -109,6 +109,147 @@
 
 /*---------------- FILE EXPLORER DECO ---------------*/
 
+.explorer-deco-dropdown {
+  /* This should be for the trigger/header element */
+  position: relative; /* Add this to make it a positioning context */
+  display: flex;
+  flex-direction: row; /* Change to row for horizontal layout */
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.explorer-deco-system {
+  position: relative;
+  width: 70px;
+}
+
+.explorer-deco-dropdown-trigger {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px;
+  background: var(--background-modifier-form-field);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+}
+
+/* The text span inside the headline */
+.explorer-deco-trigger span:first-child {
+  width: 100%;
+  padding: 8px;
+  background: var(--background-modifier-form-field);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* The icon span */
+.explorer-deco-trigger span:last-child {
+  margin-left: 4px;
+  flex-shrink: 0;
+  height: var(--input-height);
+  line-height: var(--input-height);
+  display: flex; /* Add this */
+  align-items: center; /* Add this */
+}
+
+.explorer-deco-dropdown-container {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 70px;
+  max-height: 200px; /* Set maximum height */
+  overflow-y: auto; /* Enable vertical scrolling */
+  align-items: center; /* Add this */
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  margin-top: 4px;
+  z-index: 100;
+  box-shadow: var(--shadow-s);
+}
+
+.explorer-deco-dropdown-container.show {
+  display: block; /* Show when .show class is applied */
+}
+
+.explorer-deco-dropdown-entry {
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.explorer-deco-dropdown-entry:hover {
+  background: var(--background-modifier-hover);
+}
+
+/* Style the scrollbar to match Obsidian's theme */
+.explorer-deco-dropdown-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.explorer-deco-dropdown-container::-webkit-scrollbar-track {
+  background: var(--scrollbar-bg);
+}
+
+.explorer-deco-dropdown-container::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb-bg);
+  border-radius: 4px;
+}
+
+/*The styles for the dropdown entries*/
+.large-high-contrast-neutral {
+  font-size: 1.2em;
+  color: var(--text-muted);
+  font-family: monospace;
+}
+.large-high-contrast-unsynced {
+  font-size: 1.2em;
+  color: var(--color-accent);
+  font-family: monospace;
+}
+.large-low-contrast-neutral {
+  font-size: 1.2em;
+  color: var(--text-faint);
+  font-family: monospace;
+}
+.large-low-contrast-unsynced {
+  font-size: 1.2em;
+  color: var(--color-accent);
+  opacity: 0.6;
+  font-family: monospace;
+}
+.small-high-contrast-neutral {
+  font-size: 1em;
+  color: var(--text-muted);
+  font-family: monospace;
+}
+.small-high-contrast-unsynced {
+  font-size: 1em;
+  color: var(--color-accent);
+  font-family: monospace;
+}
+.small-low-contrast-neutral {
+  font-size: 1em;
+  color: var(--text-faint);
+  font-family: monospace;
+}
+.small-low-contrast-unsynced {
+  font-size: 1em;
+  color: var(--color-accent);
+  opacity: 0.6;
+  font-family: monospace;
+}
+
 /* --------------- PREVIEW MODAL ---------------*/
 .preview-container {
   max-height: 400px; /* or any height that works for your use case */
@@ -133,23 +274,41 @@
   color: var(--text-normal);
 }
 
-/*----------- PROTECT SOURCE FILE MODAL ----------*/
-.modal-container {
+/*----------- PROTECT during rebuild ----------*/
+.textflow-loading-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--background-primary);
+  opacity: 0.9;
+  z-index: 100;
   display: flex;
   flex-direction: column;
-  gap: 12px; /* This adds space between all child elements */
+  justify-content: center;
+  align-items: center;
 }
 
-/* If you still want the text padding as well */
-.modal-desc-text .setting-item-description {
-  font-size: var(--font-text-size);
-  font-weight: normal;
-  color: black;
+.textflow-loading-spinner {
+  margin-bottom: 1rem;
 }
-.modal-toggle-text-size .setting-item-description {
-  font-size: var(--font-text-size);
-  font-weight: normal;
-  color: black;
+
+.textflow-loading-spinner svg {
+  width: 2em;
+  height: 2em;
+  animation: textflow-spin 2s linear infinite;
+}
+
+.textflow-loading-text {
+  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+}
+
+@keyframes textflow-spin {
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /*----------- SWITCHER MODAL --------------*/

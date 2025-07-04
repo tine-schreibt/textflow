@@ -21,7 +21,7 @@ import TextFlow from "../main";
 import * as Types from "./types";
 import Pickr from "@simonwep/pickr";
 
-// --- A class for the flowBuilder progress bar
+// --- A class for the build progress notice (shown when rebuilding from settings tab)
 class ProgressNotice {
   private notice: Notice;
   private progress: number = 0;
@@ -46,6 +46,44 @@ class ProgressNotice {
 
   close() {
     this.notice.hide();
+  }
+}
+
+// the overlay for active flows
+class LoadingOverlay {
+  private container: HTMLElement;
+  private progressEl: HTMLElement;
+  private progressText: HTMLElement;
+  private flowName: string;
+
+  constructor(leaf: WorkspaceLeaf, flowName: string) {
+    this.flowName = flowName;
+    // Create overlay container
+    this.container = (leaf.view as MarkdownView).contentEl.createDiv({
+      cls: "textflow-loading-container",
+    });
+
+    //const symbol = this.plugin.settings.flowMode.explorerDeco.symbol
+    this.progressText = this.container.createDiv({
+      cls: "textflow-loading-text",
+      text: `Building ${this.flowName}: ${"▰".repeat(
+        10
+      )} 0% \nFirst build might take longer.`,
+    });
+  }
+
+  updateProgress(current: number, total: number) {
+    const percent = Math.floor((current / total) * 100);
+    const filled = Math.floor(percent / 10);
+    // SYMBOL
+    const bar = "[" + "▰".repeat(filled) + "-".repeat(10 - filled) + "]";
+    this.progressText.setText(
+      `Building ${this.flowName}: ${bar} ${percent}% \nFirst build might take longer.`
+    );
+  }
+
+  remove() {
+    this.container.remove();
   }
 }
 
@@ -99,12 +137,13 @@ export class FlowService {
 
   // ----------------- sync conflicts
 
-  syncConflicts = (referenceFlow: Types.flowBuildBasket) => {
+  syncConflictObjects = (referenceFlow: Types.flowBuildBasket) => {
     const refFlowName = referenceFlow.createOrEditFlowName;
 
     Object.keys(this.plugin.settings.flows).forEach((syncFlowName) => {
       // Case 1: Flow is in reference conflicts but not in sync flow's conflicts
       if (
+        syncFlowName != referenceFlow.oldFlowName &&
         referenceFlow.conflictObject[syncFlowName] &&
         !this.plugin.settings.flows[syncFlowName].conflictObject[refFlowName]
       ) {
@@ -120,8 +159,35 @@ export class FlowService {
           refFlowName
         ];
       }
+      // Also: Delete stale entries in case of flow rename
+      if (
+        this.plugin.settings.flows[syncFlowName].conflictObject[
+          referenceFlow.oldFlowName
+        ]
+      ) {
+        delete this.plugin.settings.flows[syncFlowName].conflictObject[
+          referenceFlow.oldFlowName
+        ];
+      }
     });
   };
+
+  checkForActiveFlowConflicts(): boolean {
+    const ids = Object.keys(this.plugin.settings.activeFlowObject);
+    for (let i = 0; i < ids.length; i++) {
+      const flowA = this.plugin.settings.activeFlowObject[ids[i]];
+      for (let j = i + 1; j < ids.length; j++) {
+        const flowB = this.plugin.settings.activeFlowObject[ids[j]];
+        if (flowA.conflicts?.[flowB.id] || flowB.conflicts?.[flowA.id]) {
+          this.plugin.saveSettings();
+          console.log("open conflicts found");
+          return true;
+        }
+      }
+    }
+    this.plugin.saveSettings();
+    return false;
+  }
 
   createSystemFolder = async (newSystemFolderPath: string) => {
     try {
@@ -274,6 +340,7 @@ export class FlowService {
     settings.flows[flowBuildBasket.createOrEditFlowName] = {
       timestamp: this.getTimestamp(),
       flowName: flowBuildBasket.createOrEditFlowName,
+      oldFlowName: flowBuildBasket.oldFlowName,
       flowFilePath: normalizePath(
         `${this.plugin.settings.systemFolderPlace}TextFlow_SystemFolder/${flowBuildBasket.createOrEditFlowName}.md`
       ),
@@ -734,8 +801,11 @@ export class FlowService {
     receipeArray: string[],
     flow: Types.FlowDef,
     flowName: string,
-    mapValueBasket: Types.mapValueBasket
+    mapValueBasket: Types.mapValueBasket,
+    caller: string
   ): Promise<void> => {
+    // setting this to disable IDDiverder protection, so it doesn't block the editor refresh
+    this.plugin.isRebuilding = true;
     // pre-flight check for SystemFolder
     let systemFolder = this.checkSystemFolder();
     if (!systemFolder) {
@@ -743,131 +813,169 @@ export class FlowService {
       return;
     }
 
-    const progressBar = new ProgressNotice(flowName);
-    let counter = 0;
+    // Progress visualisation
+    type ProgressVisualizer = ProgressNotice;
+    // if the call comes from the settingsTab, show a toast
+    let progressBar: ProgressVisualizer = new ProgressNotice(flowName);
 
-    const total = receipeArray.length;
-
-    for (let ingredient of receipeArray) {
-      counter++;
-      progressBar.updateProgress(counter, total);
-
-      if (ingredient.startsWith("#")) {
-        // if it's a folder name
-        mapValueBasket.flowOrder++;
-        await this.createInvisibleUID(mapValueBasket);
-        // make the proper divider
-        const divider = `\r${mapValueBasket.UID}<hr>\r\r`;
-        // make unencoded divider for debugging
-        // const divider = `\r${mapValueBasket.identifier}<hr>\r\r`;
-        mapValueBasket.idDivider = divider.replace(/\\r/g, "\r");
-
-        const ingredientName = ingredient.replace("#", "");
-
-        flow.flowMap[ingredient] = {
-          type: "folder",
-          path: ingredient,
-          itemName: ingredientName,
-          UID: mapValueBasket.UID,
-          identifier: mapValueBasket.identifier,
-          flowOrder: mapValueBasket.flowOrder,
-          minLength: ingredientName.length,
-          lengthPlusDividers:
-            ingredientName.length + mapValueBasket.idDivider.length,
-        } as Types.SourceFileObject;
-        mapValueBasket.initialIteration = false;
-
-        // Add content with marker before divider
-        mapValueBasket.concatenatedFileContents += `<center><b>${ingredientName}</b></center>${mapValueBasket.idDivider}`;
+    // Also get an object started in case the call came from inside the...
+    // flow switcher modal
+    let progressBars: { [key: string]: LoadingOverlay } = {};
+    // else make an overlay
+    if (caller === "") {
+      if (this.plugin.settings.activeFlowObject[flowName]) {
+        Object.keys(this.plugin.settings.flows[flowName].activeRegions).forEach(
+          (leafID) => {
+            const leaves = this.app.workspace.getLeavesOfType("markdown");
+            const leaf = leaves.find(
+              (newLeaf) => (newLeaf as any).id === leafID
+            );
+            if (leaf) {
+              progressBars[leafID] = new LoadingOverlay(leaf, flowName);
+            }
+          }
+        );
       }
-      // it ingredient is a path
-      else {
-        mapValueBasket.flowOrder++;
-        const note = this.app.vault.getAbstractFileByPath(ingredient);
-        if (!note) {
-          new Notice(`The note at ${ingredient} couldn't be found.`);
+      let counter = 0;
+      const total = receipeArray.length;
+      for (let ingredient of receipeArray) {
+        // create update the progress bar
+        counter++;
+        if (caller != "") {
+          progressBar.updateProgress(counter, total);
+        } else {
+          Object.keys(progressBars).forEach((leafID) => {
+            progressBars[leafID].updateProgress(counter, total);
+            if (counter === total) {
+              progressBars[leafID].remove();
+            }
+          });
         }
-        if (note instanceof TFile) {
-          const modificationTimestamp = Date.now();
-          let fileContent: string = await this.app.vault.read(note);
 
-          // Extract, fix or create YAML and separate it from other content
-          // this also calls UID creation
-          await this.manageYaml(note, mapValueBasket);
+        if (ingredient.startsWith("#")) {
+          // if it's a folder name
+          mapValueBasket.flowOrder++;
+          await this.createInvisibleUID(mapValueBasket);
           // make the proper divider
-          //const divider = `\r${mapValueBasket.UID}<hr>\r\r`;
-
           const divider = `\r${mapValueBasket.UID}<hr>\r\r`;
+          // make unencoded divider for debugging
+          // const divider = `\r${mapValueBasket.identifier}<hr>\r\r`;
           mapValueBasket.idDivider = divider.replace(/\\r/g, "\r");
 
-          fileContent = mapValueBasket.singleFileContent;
-
-          // check for new, empty files, because empty files trip textFlow up
-          const trimmedContent = fileContent.trim();
-          if (
-            !trimmedContent ||
-            /^[\s\u0000-\u001F\u007F-\u009F\uFEFF]+$/.test(trimmedContent)
-          ) {
-            //fileContent = "new file who dis?";
-          }
+          const ingredientName = ingredient.replace("#", "");
 
           flow.flowMap[ingredient] = {
-            type: "file",
+            type: "folder",
             path: ingredient,
-            itemName: note.name,
+            itemName: ingredientName,
             UID: mapValueBasket.UID,
             identifier: mapValueBasket.identifier,
             flowOrder: mapValueBasket.flowOrder,
-            minLength: fileContent.length,
+            minLength: ingredientName.length,
             lengthPlusDividers:
-              fileContent.length + mapValueBasket.idDivider.length,
-            startEndInFlow: {
-              start: mapValueBasket.initialIteration
-                ? 0
-                : mapValueBasket.concatenatedFileContents.length,
-              end:
-                mapValueBasket.concatenatedFileContents.length +
-                fileContent.length +
-                mapValueBasket.idDivider.length,
-            },
-            yamlMini: mapValueBasket.yamlMini,
+              ingredientName.length + mapValueBasket.idDivider.length,
           } as Types.SourceFileObject;
-
           mapValueBasket.initialIteration = false;
 
           // Add content with marker before divider
-          mapValueBasket.concatenatedFileContents += `${fileContent}${mapValueBasket.idDivider}`;
-        } else {
-          console.error("Invalid file.");
+          mapValueBasket.concatenatedFileContents += `<center><b>${ingredientName}</b></center>${mapValueBasket.idDivider}`;
+        }
+        // it ingredient is a path
+        else {
+          mapValueBasket.flowOrder++;
+          const note = this.app.vault.getAbstractFileByPath(ingredient);
+          if (!note) {
+            new Notice(`The note at ${ingredient} couldn't be found.`);
+          }
+          if (note instanceof TFile) {
+            const modificationTimestamp = Date.now();
+            let fileContent: string = await this.app.vault.read(note);
+
+            // Extract, fix or create YAML and separate it from other content
+            // this also calls UID creation
+            await this.manageYaml(note, mapValueBasket);
+            // make the proper divider
+            //const divider = `\r${mapValueBasket.UID}<hr>\r\r`;
+
+            const divider = `\r${mapValueBasket.UID}<hr>\r\r`;
+            mapValueBasket.idDivider = divider.replace(/\\r/g, "\r");
+
+            fileContent = mapValueBasket.singleFileContent;
+
+            // check for new, empty files, because empty files trip textFlow up
+            const trimmedContent = fileContent.trim();
+            if (
+              !trimmedContent ||
+              /^[\s\u0000-\u001F\u007F-\u009F\uFEFF]+$/.test(trimmedContent)
+            ) {
+              //fileContent = "new file who dis?";
+            }
+
+            flow.flowMap[ingredient] = {
+              type: "file",
+              path: ingredient,
+              itemName: note.name,
+              UID: mapValueBasket.UID,
+              identifier: mapValueBasket.identifier,
+              flowOrder: mapValueBasket.flowOrder,
+              minLength: fileContent.length,
+              lengthPlusDividers:
+                fileContent.length + mapValueBasket.idDivider.length,
+              startEndInFlow: {
+                start: mapValueBasket.initialIteration
+                  ? 0
+                  : mapValueBasket.concatenatedFileContents.length,
+                end:
+                  mapValueBasket.concatenatedFileContents.length +
+                  fileContent.length +
+                  mapValueBasket.idDivider.length,
+              },
+              yamlMini: mapValueBasket.yamlMini,
+            } as Types.SourceFileObject;
+
+            mapValueBasket.initialIteration = false;
+
+            // Add content with marker before divider
+            mapValueBasket.concatenatedFileContents += `${fileContent}${mapValueBasket.idDivider}`;
+          } else {
+            console.error("Invalid file.");
+          }
         }
       }
-    }
-    if (systemFolder && systemFolder instanceof TFolder) {
-      const flowFilePath = normalizePath(
-        `${this.plugin.settings.systemFolderPlace}TextFlow_SystemFolder/${flow.flowName}.md`
-      );
-
-      // Check if the file already exists
-      const existingFile = this.app.vault.getAbstractFileByPath(flowFilePath);
-
-      if (existingFile instanceof TFile) {
-        // If file exists, modify it
-        await this.app.vault.modify(
-          existingFile,
-          mapValueBasket.concatenatedFileContents
+      if (systemFolder && systemFolder instanceof TFolder) {
+        const flowFilePath = normalizePath(
+          `${this.plugin.settings.systemFolderPlace}TextFlow_SystemFolder/${flowName}.md`
         );
-      } else {
-        // If file doesn't exist, create it
-        await this.app.vault.create(
-          flowFilePath,
-          mapValueBasket.concatenatedFileContents
-        );
+        // Check if there's a file for the old name, delete it
+        if (flowName != this.plugin.settings.flows[flowName].oldFlowName) {
+          const path = normalizePath(
+            `${this.plugin.settings.systemFolderPlace}TextFlow_SystemFolder/${this.plugin.settings.flows[flowName].oldFlowName}.md`
+          );
+          const file = this.app.vault.getAbstractFileByPath(path);
+          if (file instanceof TFile) {
+            await this.app.vault.delete(file);
+          }
+        }
+
+        // then check, if there's one for the current name
+        const existingFile = this.app.vault.getAbstractFileByPath(flowFilePath);
+        if (existingFile instanceof TFile) {
+          // If file exists, modify it
+          await this.app.vault.modify(
+            existingFile,
+            mapValueBasket.concatenatedFileContents
+          );
+        } else {
+          // If file doesn't exist, create it
+          await this.app.vault.create(
+            flowFilePath,
+            mapValueBasket.concatenatedFileContents
+          );
+        }
+        this.plugin.isRebuilding = false;
+        this.plugin.saveSettings();
+        progressBar.close();
       }
-
-      flow.isFreshBuild = false;
-      this.plugin.settings.usedUIDs = Array.from(mapValueBasket.usedUIDs);
-      this.plugin.saveSettings();
-      progressBar.close();
     }
   };
 
@@ -1124,11 +1232,15 @@ export class FlowService {
   };
 
   rebuildFlow = async (flowName: string) => {
-    this.plugin.isRebuilding = true;
     try {
+      console.log(
+        "Starting rebuild. Current unsavedRegionsArray:",
+        this.plugin.settings.flows[flowName].unsavedRegionsArray
+      );
+
       const flowReBuildBasket: Types.flowBuildBasket = {
         createOrEditFlowName: this.plugin.settings.flows[flowName].flowName,
-        oldFlowName: this.plugin.settings.flows[flowName].flowName,
+        oldFlowName: this.plugin.settings.flows[flowName].oldFlowName,
         createOrEdit: "",
         depthFirst: this.plugin.settings.flows[flowName].depthFirst,
         folderTitles: this.plugin.settings.flows[flowName].folderTitles,
@@ -1146,15 +1258,35 @@ export class FlowService {
       };
 
       await this.createFlowDefinition(flowReBuildBasket);
+      console.log(
+        "After createFlowDefinition. unsavedRegionsArray:",
+        this.plugin.settings.flows[flowName].unsavedRegionsArray
+      );
+
       if (!flowReBuildBasket.success) {
         return; // The 'finally' block will still run
       }
       this.writeFlowDef(this.plugin.settings, flowReBuildBasket);
+      console.log(
+        "After writeFlowDef. unsavedRegionsArray:",
+        this.plugin.settings.flows[flowName].unsavedRegionsArray
+      );
+
+      this.syncConflictObjects(flowReBuildBasket);
       // null unsavedRegions
       this.plugin.settings.flows[flowName].unsavedRegionsArray = [];
+      console.log(
+        "After clearing array. unsavedRegionsArray:",
+        this.plugin.settings.flows[flowName].unsavedRegionsArray
+      );
+
       this.plugin.settings.flows[flowName].flaggedForRebuild = false;
       this.resetFlowBuildBasket(flowReBuildBasket);
       this.plugin.saveSettings();
+      console.log(
+        "After saving settings. unsavedRegionsArray:",
+        this.plugin.settings.flows[flowName].unsavedRegionsArray
+      );
 
       // Get fresh reference to the flow object after createFlowDefinition
       const updatedFlow = this.plugin.settings.flows[flowName];
@@ -1170,7 +1302,6 @@ export class FlowService {
         yamlMini: "",
         singleFileContent: "",
         currentEnd: 0,
-        usedUIDs: new Set(this.plugin.settings.usedUIDs),
         idDivider: "",
       };
 
@@ -1179,15 +1310,36 @@ export class FlowService {
         ? (key = "bookmarks")
         : (key = "foldersTagsProps");
 
+      // check if any of the rebuilt flow's conflict partners are active
+      const foundConflicts: string[] = [];
+      if (updatedFlow.conflictObject) {
+        const allLeaves = this.app.workspace.getLeavesOfType("markdown");
+        for (const leaf of allLeaves) {
+          const view = leaf.view as MarkdownView;
+          const filePath = view.file?.path;
+          if (!filePath) continue;
+          const checkingFlowName = this.isFlowFile(filePath);
+          if (!checkingFlowName) continue;
+          if (!updatedFlow.conflictObject[checkingFlowName]) continue;
+          foundConflicts.push(checkingFlowName);
+        }
+      }
+      if (foundConflicts.length > 0) {
+        await this.plugin.syncAllLeaves();
+      }
+
       // Calling the build function
+      const caller = "";
       await this.flowBuilder(
         updatedFlow.flowReceipe[key],
         updatedFlow,
         flowName,
-        mapValueBasket
+        mapValueBasket,
+        caller
       );
     } finally {
-      this.plugin.isRebuilding = false;
+      this.plugin.settings.flows[flowName].unsavedRegionsArray = [];
+      this.plugin.saveSettings();
     }
   };
 
@@ -1211,4 +1363,165 @@ export class FlowService {
       cmEditor.focus(); // Explicitly focus the editor
     }
   }
+
+  // The arrays with the deco stuff
+
+  flowModeInitalEntryArray: Types.DecorationEntry[] = [
+    ["○", "●", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["○", "●", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["○", "●", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["○", "●", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["☆", "★", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["☆", "★", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["☆", "★", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["☆", "★", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["◇", "◆", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["◇", "◆", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["◇", "◆", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["◇", "◆", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+  ];
+
+  flowModeExtendedEntryArray: Types.DecorationEntry[] = [
+    ["✿", "❀", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["✿", "❀", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["✿", "❀", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["✿", "❀", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["❄", "❆", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["❄", "❆", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["❄", "❆", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["❄", "❆", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["❝", "❞", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["❝", "❞", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["❝", "❞", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["❝", "❞", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["❤", "❤", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["❤", "❤", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["❤", "❤", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["❤", "❤", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["☯", "☯", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["☯", "☯", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["☯", "☯", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["☯", "☯", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["☮", "☮", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["☮", "☮", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["☮", "☮", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["☮", "☮", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["✈", "✈", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["✈", "✈", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["✈", "✈", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["✈", "✈", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["♪", "♫", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["♪", "♫", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["♪", "♫", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["♪", "♫", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["☠", "☠", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["☠", "☠", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["☠", "☠", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["☠", "☠", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["⚐", "⚑", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["⚐", "⚑", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["⚐", "⚑", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["⚐", "⚑", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["⚕", "⚕", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["⚕", "⚕", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["⚕", "⚕", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["⚕", "⚕", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["⚖", "⚖", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["⚖", "⚖", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["⚖", "⚖", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["⚖", "⚖", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["⚝", "⚝", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["⚝", "⚝", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["⚝", "⚝", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["⚝", "⚝", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["⚓", "⚓", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["⚓", "⚓", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["⚓", "⚓", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["⚓", "⚓", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["⚔", "⚔", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["⚔", "⚔", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["⚔", "⚔", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["⚔", "⚔", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["⚛", "⚛", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["⚛", "⚛", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["⚛", "⚛", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["⚛", "⚛", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["☣", "☣", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["☣", "☣", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["☣", "☣", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["☣", "☣", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["▒", "▓", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["▒", "▓", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["▒", "▓", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["▒", "▓", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["∈", "∈", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["∈", "∈", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["∈", "∈", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["∈", "∈", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["∑", "∑", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["∑", "∑", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["∑", "∑", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["∑", "∑", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["∧", "∨", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["∧", "∨", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["∧", "∨", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["∧", "∨", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["∫", "∫", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["∫", "∫", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["∫", "∫", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["∫", "∫", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["=", "≠", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["=", "≠", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["=", "≠", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["=", "≠", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["!", "?", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["!", "?", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["!", "?", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["!", "?", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["#", "#", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["#", "#", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["#", "#", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["#", "#", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["*", "*", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["*", "*", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["*", "*", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["*", "*", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["→", "←", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["→", "←", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["→", "←", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["→", "←", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    ["←", "→", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["←", "→", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["←", "→", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["←", "→", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+  ];
 }

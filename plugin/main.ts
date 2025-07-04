@@ -12,6 +12,7 @@ import {
   setIcon,
   Setting,
   TFolder,
+  TAbstractFile,
   WorkspaceLeaf,
   TFile,
 } from "obsidian";
@@ -35,6 +36,7 @@ import * as Types from "./src/types";
 import * as Modals from "./src/modals";
 import { MenuBar } from "./src/menuBar";
 import { FlowService } from "./src/flowService";
+import { dirname } from "path";
 
 // so the menu bar can be kept within the view
 declare module "obsidian" {
@@ -69,8 +71,11 @@ export default class TextFlowPlugin extends Plugin {
 
   // ---------------- Global objects and variables -------------------------
 
-  // ---- flag to prevent the leaf-change-listener from interfering with scrolling to yource file in flow
+  // ---- flag to prevent the leaf-change-listener from interfering with scrolling to source file in flow
   private isNavigatingFlow: boolean = false;
+
+  // ---- flag to keep textFlow from spiraling when its syncs trigger vault.modify()
+  private isSyncing: boolean = false;
 
   // -- tracking read-only ranges (to protect region IDs) --------------------------
   // helper stuff and auxiliaries
@@ -251,7 +256,7 @@ export default class TextFlowPlugin extends Plugin {
 
   // cleanup for the menu bar
   // creation happens in setupFlowView, using menuBar.ts
-  cleanupFlowLeaf(leaf: WorkspaceLeaf) {
+  cleanupMenuBar(leaf: WorkspaceLeaf) {
     if (leaf.view instanceof MarkdownView && leaf.view.menuBar) {
       leaf.view.menuBar.detach();
       delete leaf.view.menuBar;
@@ -265,11 +270,12 @@ export default class TextFlowPlugin extends Plugin {
       name: `Save all modified regions.`,
       callback: async () => {
         // toggle
-        await this.saveAllLeavesManual();
+        await this.syncAllLeaves();
         await this.saveSettings();
       },
     });
 
+    // Open the switcher modal
     this.addCommand({
       id: "open-flowswitcher",
       name: "Open flow switcher modal",
@@ -279,6 +285,7 @@ export default class TextFlowPlugin extends Plugin {
       },
     });
 
+    // turn off explorer navigation so multi-select works as expected
     const navStatus = this.settings.explorerListener ? "OFF" : "ON";
     this.addCommand({
       id: "toggle-explorer-listener",
@@ -287,6 +294,19 @@ export default class TextFlowPlugin extends Plugin {
         this.settings.explorerListener
           ? (this.settings.explorerListener = false)
           : (this.settings.explorerListener = true);
+        this.saveSettings();
+      },
+    });
+
+    // hide explorer deco
+    const explorerDeco = this.settings.showExplorerDeco ? "OFF" : "ON";
+    this.addCommand({
+      id: "toggle-explorer-listener",
+      name: `Toggle explorer decoration ${explorerDeco}`,
+      callback: () => {
+        this.settings.showExplorerDeco
+          ? (this.settings.showExplorerDeco = false)
+          : (this.settings.showExplorerDeco = true);
         this.saveSettings();
       },
     });
@@ -340,14 +360,162 @@ export default class TextFlowPlugin extends Plugin {
 
   // ----- DECORATE SOURCE NOTES IN FILE EXPLORER -----------
   decorateSourceFiles = (): void => {
-    // Remove any existing style
+    let path = "";
+    let handledPathsArray: string[] = [];
+    const unsavedPathsArray: string[] = [];
+    let isUnsaved = false;
+    // ------ all the helper functions used -------
+    const handlePath = (path: string, isUnsaved: boolean) => {
+      let successivePath = "";
+      for (let fragment of path.split("/")) {
+        if (!fragment.endsWith(".md")) {
+          successivePath += `${fragment}/`;
+        } else {
+          successivePath += fragment;
+        }
+        if (!handledPathsArray.includes(successivePath)) {
+          handledPathsArray.push(successivePath);
+          updateStyles(successivePath, isUnsaved);
+        }
+      }
+    };
+
+    const updateStyles = (path: string, isUnsaved: boolean) => {
+      // Add console log to check the path being used
+
+      // Remove opposite style if exists
+      const oppositeStyle = document.head.querySelector(
+        `style[data-textflow-source-${isUnsaved ? "general" : "unsaved"}]`
+      );
+      if (oppositeStyle) oppositeStyle.remove();
+
+      // Add or update correct style
+      addStyle(path, isUnsaved ? "unsaved" : "general");
+    };
+
+    // Create and append style with the correct selector
+    const addStyle = (path: string, isUnsaved: string) => {
+      // Remove trailing slash for files (if it exists)
+      const cleanPath = path.endsWith("/") ? path.slice(0, -1) : path;
+
+      // Log both file and folder elements for this path
+      function escapeSelector(str: string): string {
+        // Escape special characters that have meaning in CSS selectors
+        return (
+          str
+            .replace(/["'&,.*+?^${}()|[\]\\]/g, "\\$&")
+            // Handle spaces
+            .replace(/\s/g, "\\ ")
+        );
+      }
+
+      const fileElement = document.querySelector(
+        `div[data-path='${escapeSelector(cleanPath)}']`
+      );
+      const folderElement = document.querySelector(
+        `div[data-path='${escapeSelector(cleanPath)}'] .nav-folder-title`
+      );
+
+      let style = document.createElement("style");
+      style.setAttribute(`data-textflow-${isUnsaved}`, "true");
+
+      // Update selector to target both files and folders
+      const neutralSymbol = this.settings.explorerDecoStyle[0];
+      const unsyncedSymbol = this.settings.explorerDecoStyle[1];
+      const neutralStyle = this.settings.explorerDecoStyle[2];
+      const unsyncedStyle = this.settings.explorerDecoStyle[3];
+      const styleContent =
+        isUnsaved === "unsaved"
+          ? `
+          div[data-path='${escapeSelector(
+            cleanPath
+          )}'] .nav-file-title-content::after,
+          div[data-path='${escapeSelector(
+            cleanPath
+          )}'] .nav-folder-title-content::after {
+              content: " ${unsyncedSymbol}" !important; 
+              --nav-item-color: var(--color-accent) !important; 
+              color: var(--color-accent) !important;
+              opacity: ${
+                unsyncedStyle.includes("high") ? "1" : "0.6"
+              } !important;
+              font-size: ${
+                unsyncedStyle.includes("large") ? "1.2em" : "1em"
+              } !important;
+              font-family: monospace !important;  // prevents emojis
+              vertical-align: middle !important;
+          }
+      `
+          : `
+          div[data-path='${escapeSelector(
+            cleanPath
+          )}'] .nav-file-title-content::after,
+          div[data-path='${escapeSelector(
+            cleanPath
+          )}'] .nav-folder-title-content::after {
+              content: " ${neutralSymbol}" !important; 
+              --nav-item-color: ${
+                neutralStyle.includes("high")
+                  ? "var(--text-muted"
+                  : "var(--text-faint)"
+              } !important;
+              color: ${
+                neutralStyle.includes("high")
+                  ? "var(--text-muted"
+                  : "var(--text-faint)"
+              } !important;
+              opacity: 1;
+              font-size: ${
+                neutralStyle.includes("large") ? "1.2em" : "1em"
+              } !important;
+              font-family: monospace !important; 
+              vertical-align: middle !important;
+          }
+      `;
+
+      style.textContent = styleContent;
+      document.head.appendChild(style);
+    };
+
+    // -------- THE LOGIC -----------------
+    // handle general paths
+    Object.keys(this.settings.activeFlowObject).forEach((flow) => {
+      // get the file list
+      let key = this.settings.flows[flow].flowReceipe.bookmarks
+        ? "bookmarks"
+        : "foldersTagsProps";
+
+      for (path of this.settings.flows[flow].flowReceipe[key]) {
+        // exclude folder titles
+        if (!path.startsWith("#")) {
+          if (!this.settings.flows[flow].unsavedRegionsArray.includes(path)) {
+            isUnsaved = false;
+            handlePath(path, isUnsaved);
+          } else {
+            unsavedPathsArray.push(path);
+          }
+        }
+      }
+    });
+
+    // handle unsaved paths - null handled paths array
+    // because we may need to override some general styles
+    handledPathsArray = [];
+    for (path of unsavedPathsArray) {
+      isUnsaved = true;
+      handlePath(path, isUnsaved);
+    }
+  };
+
+  // --------- So that toggling deco off doesn't require a reload ------
+  undecorateSourceFiles = (): void => {
     let path = "";
     let handledPathsArray: string[] = [];
     const unsavedPathsArray: string[] = [];
     let isUnsaved = false;
 
     const accentColor = getComputedStyle(document.body)
-      .getPropertyValue("--text-accent")
+      .getPropertyValue("--interactive-accent")
       .trim();
 
     // ------ all the helper functions used -------
@@ -406,34 +574,51 @@ export default class TextFlowPlugin extends Plugin {
       style.setAttribute(`data-textflow-${isUnsaved}`, "true");
 
       // Update selector to target both files and folders
+      const neutralSymbol = this.settings.explorerDecoStyle[0];
+      const unsyncedSymbol = this.settings.explorerDecoStyle[1];
+      const neutralStyle = this.settings.explorerDecoStyle[2];
+      const unsyncedStyle = this.settings.explorerDecoStyle[3];
       const styleContent =
         isUnsaved === "unsaved"
           ? `
-          div[data-path='${escapeSelector(
-            cleanPath
-          )}'] .nav-file-title-content::after,
-          div[data-path='${escapeSelector(
-            cleanPath
-          )}'] .nav-folder-title-content::after {
-              content: " ●" !important;
-              color: ${accentColor} !important;
-              font-size: 0.5em !important;
-              vertical-align: middle !important
-          }
-      `
+            div[data-path='${escapeSelector(
+              cleanPath
+            )}'] .nav-file-title-content::after,
+            div[data-path='${escapeSelector(
+              cleanPath
+            )}'] .nav-folder-title-content::after {
+                content: "" !important;  
+                color: ${accentColor} !important;
+                opacity: ${
+                  unsyncedStyle.includes("high") ? "1" : "0.6"
+                } !important;
+                font-size: ${
+                  unsyncedStyle.includes("large") ? "1.2em" : "1em"
+                } !important;
+                font-family: monospace !important;  // Add this to prevent emoji rendering
+                vertical-align: middle !important;
+            }
+        `
           : `
-          div[data-path='${escapeSelector(
-            cleanPath
-          )}'] .nav-file-title-content::after,
-          div[data-path='${escapeSelector(
-            cleanPath
-          )}'] .nav-folder-title-content::after {
-              content: " ○" !important;
-              color: var(--text-faint) !important;
-              font-size: 0.5em !important;
-              vertical-align: middle !important
-          }
-      `;
+            div[data-path='${escapeSelector(
+              cleanPath
+            )}'] .nav-file-title-content::after,
+            div[data-path='${escapeSelector(
+              cleanPath
+            )}'] .nav-folder-title-content::after {
+                content: " " !important;  
+                color: ${
+                  neutralStyle.includes("high")
+                    ? "var(--text-muted)"
+                    : "var(--text-faint)"
+                } !important;
+                font-size: ${
+                  neutralStyle.includes("large") ? "1.2em" : "1em"
+                } !important;
+                font-family: monospace !important;  // Add this to prevent emoji rendering
+                vertical-align: middle !important;
+            }
+        `;
 
       style.textContent = styleContent;
       document.head.appendChild(style);
@@ -441,7 +626,7 @@ export default class TextFlowPlugin extends Plugin {
 
     // -------- THE LOGIC -----------------
     // handle general paths
-    Object.keys(this.settings.flows).forEach((flow) => {
+    Object.keys(this.settings.activeFlowObject).forEach((flow) => {
       // get the file list
       let key = this.settings.flows[flow].flowReceipe.bookmarks
         ? "bookmarks"
@@ -459,14 +644,6 @@ export default class TextFlowPlugin extends Plugin {
         }
       }
     });
-
-    // handle unsaved paths - null handled paths array
-    // because we may need to override some general styles
-    handledPathsArray = [];
-    for (path of unsavedPathsArray) {
-      isUnsaved = true;
-      handlePath(path, isUnsaved);
-    }
   };
 
   // ---------------- Functions: Listeners -------------------------
@@ -474,27 +651,119 @@ export default class TextFlowPlugin extends Plugin {
   // ---------------- Functions: Listeners: Global -----------------
   addListeners() {
     // ---------------- File modification -------------------------------
+    // This event fires whenever any file in the vault is modified
+    // the isSyncing flag prevents a doom spiral
     this.registerEvent(
-      this.app.vault.on("modify", (file) => {
-        //console.log(`File modified: ${file.path}`);
+      this.app.vault.on("modify", (file: TAbstractFile) => {
+        if (!this.isSyncing) {
+          if (file instanceof TFile) {
+            Object.keys(this.settings.flows).forEach((flowName) => {
+              if (
+                !this.settings.flows[flowName].flaggedForRebuild &&
+                this.settings.flows[flowName].flowMap[file.path]
+              ) {
+                this.settings.flows[flowName].flaggedForRebuild = true;
+              }
+            });
+          }
+        }
+      })
+    );
+
+    // Rename events
+    this.registerEvent(
+      this.app.vault.on("rename", (file: TAbstractFile, oldPath: string) => {
+        if (file instanceof TFile) {
+          const breakableCheckPaths = Object.keys(this.settings.flows);
+          for (let flowName of breakableCheckPaths) {
+            if (
+              !this.settings.flows[flowName].flaggedForRebuild &&
+              this.settings.flows[flowName].flowMap[oldPath]
+            ) {
+              this.settings.flows[flowName].flaggedForRebuild = true;
+              break;
+            }
+          }
+        }
+        if (file instanceof TFolder) {
+          // make an array so we can break the iteration
+          const breakableCheckFlows = Object.keys(this.settings.flows);
+          for (let flowName of breakableCheckFlows) {
+            if (!this.settings.flows[flowName].flaggedForRebuild) {
+              // make an array so we can break the iteration
+              const breakableCheckPaths = Object.keys(
+                this.settings.flows[flowName].flowMap
+              );
+              for (let path of breakableCheckPaths) {
+                if (path.includes(oldPath)) {
+                  this.settings.flows[flowName].flaggedForRebuild = true;
+                  break;
+                }
+              }
+            }
+          }
+        }
+      })
+    );
+
+    // Create events
+    this.registerEvent(
+      this.app.vault.on("create", (file: TAbstractFile) => {
+        // check if the folder the new file is in already contributes to a flow
+        // It will create false positives, so I might implement something better some time.
+        if (file instanceof TFile) {
+          const parentPath = dirname(file.path);
+          const breakableCheckFlows = Object.keys(this.settings.flows);
+          for (let flowName of breakableCheckFlows) {
+            if (!this.settings.flows[flowName].flaggedForRebuild) {
+              const breakableCheckPaths = Object.keys(
+                this.settings.flows[flowName].flowMap
+              );
+              for (let path of breakableCheckPaths) {
+                if (path.includes(parentPath)) {
+                  this.settings.flows[flowName].flaggedForRebuild = true;
+                  break;
+                }
+              }
+            }
+          }
+        }
+        if (file instanceof TFolder) {
+          new Notice(
+            `textFlow: Remember to rebuild all flows that should include contents of this new folder.`,
+            5000
+          );
+        }
+      })
+    );
+
+    // Delete events
+    this.registerEvent(
+      this.app.vault.on("delete", (file: TAbstractFile) => {
+        if (file instanceof TFile) {
+          const breakableCheckPaths = Object.keys(this.settings.flows);
+          for (let flowName of breakableCheckPaths) {
+            if (
+              !this.settings.flows[flowName].flaggedForRebuild &&
+              this.settings.flows[flowName].flowMap[file.path]
+            ) {
+              this.settings.flows[flowName].flaggedForRebuild = true;
+              break;
+            }
+          }
+        }
       })
     );
 
     // ----------------- Auto-save on blur  -------------------------------
     this.registerDomEvent(window, "blur", async () => {
-      if (!this.settings.autoSave) {
-        return;
-      }
-      await this.saveAllLeavesAuto();
+      await this.syncAllLeaves();
     });
 
     // ---------------- Auto-save on focus change -------------------------------
     this.registerEvent(
       this.app.workspace.on("active-leaf-change", async () => {
-        if (!this.settings.autoSave) {
-          return;
-        }
-        await this.saveInactiveLeaves();
+        await this.syncAllLeaves();
       })
     );
 
@@ -664,7 +933,6 @@ export default class TextFlowPlugin extends Plugin {
                             `Flow ${isItFlow} not found in settings`
                           );
                         }
-                        console.log("cursorOffset: ", cursorOffset);
                         plugin.checkActiveRegionCache(
                           plugin.settings.flows[isItFlow],
                           leafID,
@@ -813,12 +1081,6 @@ export default class TextFlowPlugin extends Plugin {
       if (cmEditor && isItFlow) {
         const plugin = this;
         let debounceTimeout: NodeJS.Timeout | null = null;
-        const shSettings = this.settings;
-        const modeSettings =
-          this.settings.mode === "flow"
-            ? this.settings.flowMode
-            : this.settings.sourceMode;
-
         const changeListener = ViewPlugin.fromClass(
           class {
             constructor(view: EditorView) {
@@ -851,43 +1113,57 @@ export default class TextFlowPlugin extends Plugin {
                     try {
                       // If leaf region is a file
                       if (
-                        shSettings.flows[isItFlow].activeRegions[leafID] &&
-                        shSettings.flows[isItFlow].activeRegions[leafID]
+                        plugin.settings.flows[isItFlow].activeRegions[leafID] &&
+                        plugin.settings.flows[isItFlow].activeRegions[leafID]
                           .type === "file"
                       ) {
                         const activePath =
-                          shSettings.flows[isItFlow].activeRegions[leafID].path;
+                          plugin.settings.flows[isItFlow].activeRegions[leafID]
+                            .path;
+
+                        // This check is here because else a rebuild will put the currently active region in
+                        // the unsavedRegionsArray, and I don't want to fudge with more complicated state management
+                        if (plugin.settings.flows[isItFlow].isFreshBuild) {
+                          plugin.settings.flows[isItFlow].isFreshBuild = false;
+                          return;
+                        }
 
                         // if the active region isn't registered as modified
                         if (
                           activePath &&
-                          !shSettings.flows[
+                          !plugin.settings.flows[
                             isItFlow
                           ].unsavedRegionsArray.includes(activePath)
                         ) {
                           // Add to unsaved array
-                          shSettings.flows[isItFlow].unsavedRegionsArray.push(
-                            activePath
-                          );
+                          plugin.settings.flows[
+                            isItFlow
+                          ].unsavedRegionsArray.push(activePath);
                           plugin.saveSettings();
                           if (view.menuBar) {
                             view.menuBar.refresh(view.contentEl);
                           }
-                          if (modeSettings.explorerDeco) {
+                          if (plugin.settings.showExplorerDeco) {
                             plugin.decorateSourceFiles();
                           }
 
                           // Check other flows that might need rebuilding
-                          Object.keys(shSettings.flows).forEach((otherFlow) => {
-                            if (
-                              otherFlow !== isItFlow && // Different flow
-                              !shSettings.flows[otherFlow].flaggedForRebuild && // Not already flagged
-                              shSettings.flows[otherFlow].flowMap[activePath] // Contains this file
-                            ) {
-                              shSettings.flows[otherFlow].flaggedForRebuild =
-                                true;
+                          Object.keys(plugin.settings.flows).forEach(
+                            (otherFlow) => {
+                              if (
+                                otherFlow !== isItFlow && // Different flow
+                                !plugin.settings.flows[otherFlow]
+                                  .flaggedForRebuild && // Not already flagged
+                                plugin.settings.flows[otherFlow].flowMap[
+                                  activePath
+                                ] // Contains this file
+                              ) {
+                                plugin.settings.flows[
+                                  otherFlow
+                                ].flaggedForRebuild = true;
+                              }
                             }
-                          });
+                          );
                         }
                       }
                     } catch (error) {
@@ -1348,10 +1624,8 @@ export default class TextFlowPlugin extends Plugin {
 
   // ------------- Used by flowSwitcherModal -----------
   manageActiveFlowObject = async () => {
-    // Instead of resetting everything, track what we find
+    // track all leaves
     const foundFlowLeaves: Record<string, Set<string>> = {};
-
-    // Populate what we find
     this.app.workspace.iterateAllLeaves((leaf) => {
       if (leaf.view instanceof MarkdownView) {
         const leafID = (leaf as any).id;
@@ -1359,19 +1633,19 @@ export default class TextFlowPlugin extends Plugin {
         if (leafPath) {
           const flowName = this.isFlowFile(leafPath);
           if (flowName) {
-            // Initialize set if needed
+            // get leaves per flow
             if (!foundFlowLeaves[flowName]) {
               foundFlowLeaves[flowName] = new Set();
             }
             foundFlowLeaves[flowName].add(leafID);
 
-            // Ensure flow object exists
+            // Ensure the acviveFlowObject exists
             if (!this.settings.activeFlowObject[flowName]) {
               this.settings.activeFlowObject[flowName] = {};
             }
             this.settings.activeFlowObject[flowName][leafID] = true;
 
-            // Handle region tracking
+            // Then add region tracking for newly opened leaves
             if (this.settings.flows[flowName].activeRegions) {
               if (!this.settings.flows[flowName].activeRegions[leafID]) {
                 this.addRegionTracking(flowName, leafID);
@@ -1382,32 +1656,66 @@ export default class TextFlowPlugin extends Plugin {
       }
     });
 
-    // Only remove leaves that we didn't find
-    Object.keys(this.settings.flows).forEach((flow) => {
-      if (this.settings.flows[flow].activeRegions) {
-        if (Object.keys(this.settings.flows[flow].activeRegions).length > 0) {
-          Object.keys(this.settings.flows[flow].activeRegions).forEach(
-            (leafID) => {
-              if (!foundFlowLeaves[flow]?.has(leafID)) {
-                delete this.settings.flows[flow].activeRegions[leafID];
+    // Clean up region tracking for closed leaves
+    Object.keys(this.settings.flows).forEach((flowName) => {
+      if (this.settings.flows[flowName].activeRegions) {
+        if (
+          Object.keys(this.settings.flows[flowName].activeRegions).length > 0
+        ) {
+          Object.keys(this.settings.flows[flowName].activeRegions).forEach(
+            async (leafID) => {
+              if (!foundFlowLeaves[flowName]?.has(leafID)) {
+                delete this.settings.flows[flowName].activeRegions[leafID];
+              }
+              // then, if a flow is all closed, we sync it, because all other syncs
+              // only care for active leaves
+              if (
+                Object.keys(this.settings.flows[flowName].activeRegions)
+                  .length === 0
+              ) {
+                if (
+                  this.settings.flows[flowName].unsavedRegionsArray.length > 0
+                ) {
+                  const path = this.settings.flows[flowName].flowFilePath;
+                  const note = this.app.vault.getAbstractFileByPath(path);
+                  if (!note) {
+                    new Notice(`The note at ${path} couldn't be found.`);
+                  }
+                  if (note instanceof TFile) {
+                    // get the text from the file
+                    const text: string = await this.app.vault.read(note);
+
+                    this.saveBackToSource(flowName, text);
+                  }
+                }
               }
             }
           );
         }
       }
-      if (this.settings.activeFlowObject[flow]) {
-        if (Object.keys(this.settings.activeFlowObject[flow]).length > 0) {
-          Object.keys(this.settings.activeFlowObject[flow]).forEach(
+      // finally, also clean up the activeFlowObject
+      if (this.settings.activeFlowObject[flowName]) {
+        if (
+          Object.keys(this.settings.activeFlowObject[flowName]).length === 0
+        ) {
+          delete this.settings.activeFlowObject[flowName];
+        }
+        if (Object.keys(this.settings.activeFlowObject[flowName]).length > 0) {
+          Object.keys(this.settings.activeFlowObject[flowName]).forEach(
             (leafID) => {
-              if (!foundFlowLeaves[flow]?.has(leafID)) {
-                delete this.settings.activeFlowObject[flow][leafID];
+              if (!foundFlowLeaves[flowName]?.has(leafID)) {
+                delete this.settings.activeFlowObject[flowName][leafID];
               }
             }
           );
         }
       }
     });
-
+    // finally: update the conflict setting
+    if (Object.keys(this.settings.activeFlowObject).length === 0) {
+      this.undecorateSourceFiles();
+    }
+    await this.flowService.checkForActiveFlowConflicts();
     await this.saveSettings();
   };
 
@@ -1439,10 +1747,11 @@ export default class TextFlowPlugin extends Plugin {
 
   // if a flow is replaced by a non-flow
   closeFlow = (view: MarkdownView) => {
+    this.syncAllLeaves();
     this.removeCursorListener(view);
     this.removeTextChangeListener(view);
     this.removeIdDividerProtection(view.editor as any);
-    this.cleanupFlowLeaf(view.leaf);
+    this.cleanupMenuBar(view.leaf);
     this.manageActiveFlowObject();
     if (view.menuBar) {
       view.menuBar.detach();
@@ -1454,7 +1763,6 @@ export default class TextFlowPlugin extends Plugin {
     ) {
       view.containerEl.removeClass("hide-scrollbar");
     }
-
     this.saveSettings();
   };
 
@@ -1624,127 +1932,10 @@ export default class TextFlowPlugin extends Plugin {
     return null; // Failure
   }
 
-  // For window/leaf changes - only save inactive flows
-  private saveInactiveLeaves = async () => {
-    if (!this.settings.autoSave) return;
+  // Sync all leaves
 
-    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-    const inactiveLeaves = this.app.workspace
-      .getLeavesOfType("markdown")
-      .filter(
-        (leaf) =>
-          leaf.view instanceof MarkdownView &&
-          activeView &&
-          leaf.view !== activeView
-      );
-
-    // Create a map of flowId to leaf
-    const flowLeaves: Record<string, MarkdownView> = {};
-
-    // Populate flowLeaves
-    for (const leaf of inactiveLeaves) {
-      const view = leaf.view as MarkdownView;
-      const filePath = view.file?.path;
-      if (filePath) {
-        const flowName = this.isFlowFile(filePath);
-        if (flowName && !flowLeaves[flowName]) {
-          flowLeaves[flowName] = view;
-        }
-      }
-    }
-    try {
-      // Enable protection
-      for (const [_, view] of Object.entries(flowLeaves)) {
-        let editor = view.editor as ObsidianEditor;
-        if (!editor) {
-          const newEditor = await this.pollForEditor(view);
-          if (newEditor) {
-            editor = newEditor;
-          }
-        }
-        if (editor?.cm) {
-          this.toggleProtectionDuringSave(editor.cm, true);
-        }
-      }
-      // Perform saves
-      await Promise.all(
-        Object.entries(flowLeaves).map(async ([flowName, view]) => {
-          const text = view.editor.getValue();
-          const leafID = (view.leaf as any).id;
-          await this.saveBackToSource(flowName, text, leafID);
-          if (view.menuBar) {
-            view.menuBar.refresh(view.contentEl);
-          }
-        })
-      );
-    } finally {
-      // Remove protection
-      for (const [_, view] of Object.entries(flowLeaves)) {
-        const editor = view.editor as ObsidianEditor;
-        if (editor.cm) {
-          this.toggleProtectionDuringSave(editor.cm, false);
-        }
-      }
-      await this.autoRebuild();
-    }
-  };
-
-  // For app blur and manual save - save everything
-  private saveAllLeavesAuto = async () => {
-    if (!this.settings.autoSave) return;
-
-    const allLeaves = this.app.workspace.getLeavesOfType("markdown");
-    const flowLeaves: Record<string, MarkdownView> = {};
-
-    // Populate flowLeaves
-    for (const leaf of allLeaves) {
-      const view = leaf.view as MarkdownView;
-      const filePath = view.file?.path;
-      if (filePath) {
-        const flowId = this.isFlowFile(filePath);
-        if (flowId && !flowLeaves[flowId]) {
-          flowLeaves[flowId] = view;
-        }
-      }
-    }
-    try {
-      // Enable protection
-      for (const [_, view] of Object.entries(flowLeaves)) {
-        let editor = view.editor as ObsidianEditor;
-        if (!editor) {
-          const newEditor = await this.pollForEditor(view);
-          if (newEditor) {
-            editor = newEditor;
-          }
-        }
-        if (editor.cm) {
-          this.toggleProtectionDuringSave(editor.cm, true);
-        }
-      }
-      // Perform saves
-      await Promise.all(
-        Object.entries(flowLeaves).map(async ([flowName, view]) => {
-          const text = view.editor.getValue();
-          const leafID = (view.leaf as any).id;
-          await this.saveBackToSource(flowName, text, leafID);
-          if (view.menuBar) {
-            view.menuBar.refresh(view.contentEl);
-          }
-        })
-      );
-    } finally {
-      // Remove protection
-      for (const [_, view] of Object.entries(flowLeaves)) {
-        const editor = view.editor as ObsidianEditor;
-        if (editor.cm) {
-          this.toggleProtectionDuringSave(editor.cm, false);
-        }
-      }
-      await this.autoRebuild();
-    }
-  };
-
-  saveAllLeavesManual = async () => {
+  syncAllLeaves = async () => {
+    this.isSyncing = true;
     const allLeaves = this.app.workspace.getLeavesOfType("markdown");
     const flowLeaves: Record<string, MarkdownView> = {};
 
@@ -1793,7 +1984,7 @@ export default class TextFlowPlugin extends Plugin {
           this.toggleProtectionDuringSave(editor.cm, false);
         }
       }
-      await this.autoRebuild();
+      this.isSyncing = false;
     }
   };
 
@@ -1810,7 +2001,7 @@ export default class TextFlowPlugin extends Plugin {
   };
 
   //---- The actual save function -------------
-  saveBackToSource = async (flow: string, text: string, leafID: number) => {
+  saveBackToSource = async (flow: string, text: string, leafID?: number) => {
     // console.log("saveBackToSource responding");
     if (this.settings.flows[flow].unsavedRegionsArray) {
       /*console.log(
@@ -1873,13 +2064,12 @@ export default class TextFlowPlugin extends Plugin {
         }
       }
       this.settings.flows[flow].unsavedRegionsArray = remainingPaths;
+      this.saveSettings();
       this.settings.flows[flow].timestamp = this.getTimestamp();
-      this.manageCursorPos(flow, leafID);
-      const modeSettings =
-        this.settings.mode === "flow"
-          ? this.settings.flowMode
-          : this.settings.sourceMode;
-      if (modeSettings.explorerDeco) {
+      if (leafID) {
+        this.manageCursorPos(flow, leafID);
+      }
+      if (this.settings.showExplorerDeco) {
         this.decorateSourceFiles();
       }
     }
@@ -2006,7 +2196,6 @@ export default class TextFlowPlugin extends Plugin {
           this.settings.flows[flowName].persistentCursors[leafID].cursors[0][1];
 
         if (cursorPos !== undefined && cursorPos >= 0) {
-          console.log("restoring cursor pos to: ", cursorPos);
           const line = cmEditor.state.doc.lineAt(Math.max(0, cursorPos)); // Ensure position is not negative
           const targetPos = line.from; // Scroll to the beginning of the line
           cmEditor.dispatch({
@@ -2030,9 +2219,6 @@ export default class TextFlowPlugin extends Plugin {
     cursorOffset: number,
     view: MarkdownView
   ) => {
-    /* console.log("=== checkActiveRegionCache called ===");
-    console.log("Cursor offset:", cursorOffset);*/
-
     const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (!activeView) {
       console.log("No  found");
@@ -2210,7 +2396,6 @@ export default class TextFlowPlugin extends Plugin {
                 .cursorDropdownState,
           },
         };
-        console.log("new active region: ", foundRegionPath);
         return activeRegionObject;
       } else {
         console.error("No matching region found for UID");
@@ -2245,6 +2430,25 @@ export default class TextFlowPlugin extends Plugin {
       }
     }
   };
+  setupArrayTracker(flowName: string) {
+    const flow = this.settings.flows[flowName];
+    let unsavedArray = flow.unsavedRegionsArray;
+
+    Object.defineProperty(flow, "unsavedRegionsArray", {
+      get: function () {
+        return unsavedArray;
+      },
+      set: function (newValue) {
+        console.log("unsavedRegionsArray modified:", {
+          flowName: flowName,
+          oldValue: [...unsavedArray],
+          newValue: [...newValue],
+          stackTrace: new Error().stack,
+        });
+        unsavedArray = newValue;
+      },
+    });
+  }
 
   // -------------------------------------------------------
   //------------------------- ONLOAD -----------------------
@@ -2254,17 +2458,17 @@ export default class TextFlowPlugin extends Plugin {
     //this.menuBar = new MenuBar(this);
     this.flowService = new FlowService(this, this.app);
 
+    Object.keys(this.settings.flows).forEach((flowName) => {
+      this.setupArrayTracker(flowName);
+    });
+
     // -------------------------------------------------------------------
     // ------------------- ONLOAD: add listeners for cursor and clicks
     // Wait for the file explorer to be available in the DOM
     this.app.workspace.onLayoutReady(async () => {
       // ---------- Look for TextFlow_SystemFolder
       this.ensureSystemFolder();
-      const modeSettings =
-        this.settings.mode === "flow"
-          ? this.settings.flowMode
-          : this.settings.sourceMode;
-      if (modeSettings.explorerDeco) {
+      if (this.settings.showExplorerDeco) {
         this.decorateSourceFiles();
       }
 
