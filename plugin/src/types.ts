@@ -10,7 +10,6 @@ import { EditorView } from "@codemirror/view";
 
 export interface TextFlowSettings {
   activeVersion?: string;
-  systemFolderPlace?: string;
   systemFolderPath?: string;
   advancedToggle: boolean;
   systemFolderHidden: boolean;
@@ -38,8 +37,7 @@ export interface ModeSettings {
 export interface FlowDef {
   timestamp: string;
   flowName: string;
-  oldFlowName: string;
-  flowFilePath: string;
+  flowFilePath: string; // REMOVE!?!?
   flowCookbook: { [key: string]: string }; // user input
   flowReceipe: { [key: string]: string[] };
   depthFirst: boolean;
@@ -119,17 +117,19 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
     createOrEditFlowName: "",
     oldFlowName: "",
     createOrEdit: "create",
+    previewUsed: false,
+    dataviewSearchPath: "",
     definitionMode: "",
-    flowCookbook: {},
-    cleanCookbook: {},
-    finalReceipe: {},
-    conflictObject: {},
     depthFirst: true,
     folderTitles: true,
-    dataviewSearchPath: "",
-    previewUsed: false,
     success: false,
     fresh: true,
+    cleanCookbook: {},
+    flowCookbook: {},
+    finalReceipe: {},
+    conflictObject: {},
+    activeRegions: {},
+    persistentCursors: {},
   },
   activeFlowObject: {},
   flows: {},
@@ -152,17 +152,19 @@ export interface flowBuildBasket {
   createOrEditFlowName: string;
   oldFlowName: string;
   createOrEdit: string;
+  previewUsed: boolean;
+  dataviewSearchPath: string;
+  definitionMode: string;
+  success: boolean;
+  fresh: boolean;
   flowCookbook: { [key: string]: string };
   cleanCookbook: { [key: string]: string };
   finalReceipe: { [key: string]: string[] };
-  conflictObject: ConflictObject;
-  dataviewSearchPath: string;
-  definitionMode: string;
   depthFirst: boolean;
   folderTitles: boolean;
-  success: boolean;
-  previewUsed: boolean;
-  fresh: boolean;
+  conflictObject: ConflictObject;
+  activeRegions: { [key: number | string]: ActiveRegion };
+  persistentCursors: CursorData;
 }
 
 // ---------- Flow management

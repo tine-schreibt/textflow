@@ -619,7 +619,7 @@ export class DeleteFlowDefModal extends Modal {
       await this.modalSaveAndReload();
 
       const flowFilePath = normalizePath(
-        `${this.settings.systemFolderPlace}TextFlow_SystemFolder/${this.flowName}.md`
+        `${this.settings.systemFolderPath}/${this.flowName}.md`
       );
       const flowFile = this.app.vault.getAbstractFileByPath(flowFilePath);
       if (flowFile instanceof TFile) {

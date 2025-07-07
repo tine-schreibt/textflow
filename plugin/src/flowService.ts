@@ -20,6 +20,7 @@ import { EditorView } from "@codemirror/view";
 import TextFlow from "../main";
 import * as Types from "./types";
 import Pickr from "@simonwep/pickr";
+import { basename, dirname, join } from "path";
 
 // --- A class for the build progress notice (shown when rebuilding from settings tab)
 class ProgressNotice {
@@ -322,27 +323,13 @@ export class FlowService {
     flowBuildBasket: Types.flowBuildBasket
   ) => {
     const conflicts = this.conflictCollector(flowBuildBasket);
-    let activeRegionHandlerVariable = {};
-    if (
-      settings.flows[flowBuildBasket.createOrEditFlowName]?.activeRegions &&
-      Object.keys(
-        settings.flows[flowBuildBasket.createOrEditFlowName].activeRegions
-      ).length > 0
-    ) {
-      // Deep copy the active regions
-      activeRegionHandlerVariable = JSON.parse(
-        JSON.stringify(
-          settings.flows[flowBuildBasket.createOrEditFlowName].activeRegions
-        )
-      );
-    }
+
     // -------- CREATE THE FLOW OBJECT -------------------------------
     settings.flows[flowBuildBasket.createOrEditFlowName] = {
       timestamp: this.getTimestamp(),
       flowName: flowBuildBasket.createOrEditFlowName,
-      oldFlowName: flowBuildBasket.oldFlowName,
       flowFilePath: normalizePath(
-        `${this.plugin.settings.systemFolderPlace}TextFlow_SystemFolder/${flowBuildBasket.createOrEditFlowName}.md`
+        `${this.plugin.settings.systemFolderPath}/${flowBuildBasket.createOrEditFlowName}.md`
       ),
       flowCookbook: flowBuildBasket.cleanCookbook, // cleaned up user input
       flowReceipe: flowBuildBasket.finalReceipe, // { defMode: pathArray }
@@ -352,8 +339,8 @@ export class FlowService {
       flowBuilt: false,
       flaggedForRebuild: false,
       conflictObject: conflicts,
-      activeRegions: activeRegionHandlerVariable,
-      persistentCursors: {},
+      activeRegions: flowBuildBasket.activeRegions,
+      persistentCursors: flowBuildBasket.persistentCursors,
       unsavedRegionsArray: [],
       flowMap: {},
     };
@@ -813,15 +800,15 @@ export class FlowService {
       return;
     }
 
-    // Progress visualisation
+    // ---- Progress stuff.
     type ProgressVisualizer = ProgressNotice;
     // if the call comes from the settingsTab, show a toast
     let progressBar: ProgressVisualizer = new ProgressNotice(flowName);
 
-    // Also get an object started in case the call came from inside the...
-    // flow switcher modal
+    // Get an object started in case the call came from inside the...
+    // flow  or switcher modal
     let progressBars: { [key: string]: LoadingOverlay } = {};
-    // else make an overlay
+    // Check if we even need it:
     if (caller === "") {
       if (this.plugin.settings.activeFlowObject[flowName]) {
         Object.keys(this.plugin.settings.flows[flowName].activeRegions).forEach(
@@ -836,146 +823,147 @@ export class FlowService {
           }
         );
       }
-      let counter = 0;
-      const total = receipeArray.length;
-      for (let ingredient of receipeArray) {
-        // create update the progress bar
-        counter++;
-        if (caller != "") {
-          progressBar.updateProgress(counter, total);
-        } else {
-          Object.keys(progressBars).forEach((leafID) => {
-            progressBars[leafID].updateProgress(counter, total);
-            if (counter === total) {
-              progressBars[leafID].remove();
-            }
-          });
-        }
+    }
 
-        if (ingredient.startsWith("#")) {
-          // if it's a folder name
-          mapValueBasket.flowOrder++;
-          await this.createInvisibleUID(mapValueBasket);
+    // the part that persists flow frontmatter
+    // fetch frontmatter if there is any
+    let flowFilePath = this.plugin.settings.flows[flowName].flowFilePath;
+    // get the file to extract its frontmatter
+    console.log("flowFilePath: ", flowFilePath);
+    const flowFile = this.app.vault.getAbstractFileByPath(flowFilePath);
+    if (flowFile instanceof TFile) {
+      const cache = this.app.metadataCache.getFileCache(flowFile);
+      const frontmatterPosition = cache?.frontmatterPosition;
+      if (frontmatterPosition) {
+        const fileContent = await this.app.vault.read(flowFile);
+        const frontmatter = fileContent.slice(
+          0,
+          frontmatterPosition.end.offset + 1
+        );
+        console.log("Extracted frontmatter:", frontmatter);
+        // put it in the basket
+        mapValueBasket.concatenatedFileContents = frontmatter + "\n";
+      }
+    }
+
+    let counter = 0;
+    const total = receipeArray.length;
+    for (let ingredient of receipeArray) {
+      // create update the progress bar
+      counter++;
+      if (caller != "") {
+        progressBar.updateProgress(counter, total);
+      } else {
+        Object.keys(progressBars).forEach((leafID) => {
+          progressBars[leafID].updateProgress(counter, total);
+          if (counter === total) {
+            progressBars[leafID].remove();
+          }
+        });
+      }
+
+      if (ingredient.startsWith("#")) {
+        // if it's a folder name
+        mapValueBasket.flowOrder++;
+        await this.createInvisibleUID(mapValueBasket);
+        // make the proper divider
+        const divider = `\r${mapValueBasket.UID}<hr>\r\r`;
+        // make unencoded divider for debugging
+        // const divider = `\r${mapValueBasket.identifier}<hr>\r\r`;
+        mapValueBasket.idDivider = divider.replace(/\\r/g, "\r");
+
+        const ingredientName = ingredient.replace("#", "");
+
+        flow.flowMap[ingredient] = {
+          type: "folder",
+          path: ingredient,
+          itemName: ingredientName,
+          UID: mapValueBasket.UID,
+          identifier: mapValueBasket.identifier,
+          flowOrder: mapValueBasket.flowOrder,
+          minLength: ingredientName.length,
+          lengthPlusDividers:
+            ingredientName.length + mapValueBasket.idDivider.length,
+        } as Types.SourceFileObject;
+        mapValueBasket.initialIteration = false;
+
+        // Add content with marker before divider
+        mapValueBasket.concatenatedFileContents += `<center><b>${ingredientName}</b></center>${mapValueBasket.idDivider}`;
+      }
+      // it ingredient is a path
+      else {
+        mapValueBasket.flowOrder++;
+        const note = this.app.vault.getAbstractFileByPath(ingredient);
+        if (!note) {
+          new Notice(`The note at ${ingredient} couldn't be found.`);
+        }
+        if (note instanceof TFile) {
+          const modificationTimestamp = Date.now();
+          let fileContent: string = await this.app.vault.read(note);
+
+          // Extract, fix or create YAML and separate it from other content
+          // this also calls UID creation
+          await this.manageYaml(note, mapValueBasket);
           // make the proper divider
+          //const divider = `\r${mapValueBasket.UID}<hr>\r\r`;
+
           const divider = `\r${mapValueBasket.UID}<hr>\r\r`;
-          // make unencoded divider for debugging
-          // const divider = `\r${mapValueBasket.identifier}<hr>\r\r`;
           mapValueBasket.idDivider = divider.replace(/\\r/g, "\r");
 
-          const ingredientName = ingredient.replace("#", "");
-
           flow.flowMap[ingredient] = {
-            type: "folder",
+            type: "file",
             path: ingredient,
-            itemName: ingredientName,
+            itemName: note.name,
             UID: mapValueBasket.UID,
             identifier: mapValueBasket.identifier,
             flowOrder: mapValueBasket.flowOrder,
-            minLength: ingredientName.length,
+            minLength: fileContent.length,
             lengthPlusDividers:
-              ingredientName.length + mapValueBasket.idDivider.length,
+              fileContent.length + mapValueBasket.idDivider.length,
+            startEndInFlow: {
+              start: mapValueBasket.initialIteration
+                ? 0
+                : mapValueBasket.concatenatedFileContents.length,
+              end:
+                mapValueBasket.concatenatedFileContents.length +
+                fileContent.length +
+                mapValueBasket.idDivider.length,
+            },
+            yamlMini: mapValueBasket.yamlMini,
           } as Types.SourceFileObject;
+
           mapValueBasket.initialIteration = false;
 
           // Add content with marker before divider
-          mapValueBasket.concatenatedFileContents += `<center><b>${ingredientName}</b></center>${mapValueBasket.idDivider}`;
-        }
-        // it ingredient is a path
-        else {
-          mapValueBasket.flowOrder++;
-          const note = this.app.vault.getAbstractFileByPath(ingredient);
-          if (!note) {
-            new Notice(`The note at ${ingredient} couldn't be found.`);
-          }
-          if (note instanceof TFile) {
-            const modificationTimestamp = Date.now();
-            let fileContent: string = await this.app.vault.read(note);
-
-            // Extract, fix or create YAML and separate it from other content
-            // this also calls UID creation
-            await this.manageYaml(note, mapValueBasket);
-            // make the proper divider
-            //const divider = `\r${mapValueBasket.UID}<hr>\r\r`;
-
-            const divider = `\r${mapValueBasket.UID}<hr>\r\r`;
-            mapValueBasket.idDivider = divider.replace(/\\r/g, "\r");
-
-            fileContent = mapValueBasket.singleFileContent;
-
-            // check for new, empty files, because empty files trip textFlow up
-            const trimmedContent = fileContent.trim();
-            if (
-              !trimmedContent ||
-              /^[\s\u0000-\u001F\u007F-\u009F\uFEFF]+$/.test(trimmedContent)
-            ) {
-              //fileContent = "new file who dis?";
-            }
-
-            flow.flowMap[ingredient] = {
-              type: "file",
-              path: ingredient,
-              itemName: note.name,
-              UID: mapValueBasket.UID,
-              identifier: mapValueBasket.identifier,
-              flowOrder: mapValueBasket.flowOrder,
-              minLength: fileContent.length,
-              lengthPlusDividers:
-                fileContent.length + mapValueBasket.idDivider.length,
-              startEndInFlow: {
-                start: mapValueBasket.initialIteration
-                  ? 0
-                  : mapValueBasket.concatenatedFileContents.length,
-                end:
-                  mapValueBasket.concatenatedFileContents.length +
-                  fileContent.length +
-                  mapValueBasket.idDivider.length,
-              },
-              yamlMini: mapValueBasket.yamlMini,
-            } as Types.SourceFileObject;
-
-            mapValueBasket.initialIteration = false;
-
-            // Add content with marker before divider
-            mapValueBasket.concatenatedFileContents += `${fileContent}${mapValueBasket.idDivider}`;
-          } else {
-            console.error("Invalid file.");
-          }
-        }
-      }
-      if (systemFolder && systemFolder instanceof TFolder) {
-        const flowFilePath = normalizePath(
-          `${this.plugin.settings.systemFolderPlace}TextFlow_SystemFolder/${flowName}.md`
-        );
-        // Check if there's a file for the old name, delete it
-        if (flowName != this.plugin.settings.flows[flowName].oldFlowName) {
-          const path = normalizePath(
-            `${this.plugin.settings.systemFolderPlace}TextFlow_SystemFolder/${this.plugin.settings.flows[flowName].oldFlowName}.md`
-          );
-          const file = this.app.vault.getAbstractFileByPath(path);
-          if (file instanceof TFile) {
-            await this.app.vault.delete(file);
-          }
-        }
-
-        // then check, if there's one for the current name
-        const existingFile = this.app.vault.getAbstractFileByPath(flowFilePath);
-        if (existingFile instanceof TFile) {
-          // If file exists, modify it
-          await this.app.vault.modify(
-            existingFile,
-            mapValueBasket.concatenatedFileContents
-          );
+          mapValueBasket.concatenatedFileContents += `${mapValueBasket.singleFileContent}${mapValueBasket.idDivider}`;
         } else {
-          // If file doesn't exist, create it
-          await this.app.vault.create(
-            flowFilePath,
-            mapValueBasket.concatenatedFileContents
-          );
+          console.error("Invalid file.");
         }
-        this.plugin.isRebuilding = false;
-        this.plugin.saveSettings();
-        progressBar.close();
       }
+    }
+    if (systemFolder && systemFolder instanceof TFolder) {
+      const flowFilePath = normalizePath(
+        `${this.plugin.settings.systemFolderPath}/${flowName}.md`
+      );
+
+      // then check, if there's already a file there
+      const existingFile = this.app.vault.getAbstractFileByPath(flowFilePath);
+      if (existingFile instanceof TFile) {
+        // If file exists, modify it
+        await this.app.vault.modify(
+          existingFile,
+          mapValueBasket.concatenatedFileContents
+        );
+      } else {
+        // If file doesn't exist, create it
+        await this.app.vault.create(
+          flowFilePath,
+          mapValueBasket.concatenatedFileContents
+        );
+      }
+      this.plugin.isRebuilding = false;
+      this.plugin.saveSettings();
+      progressBar.close();
     }
   };
 
@@ -1004,7 +992,7 @@ export class FlowService {
               mapValueBasket.identifier = identifierNumber;
 
               const invisibleUidRegex =
-                /⟦([\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{41})⟧/;
+                /⟦([\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46})⟧/;
               const invisibleUidMatchResult =
                 frontmatter.TextFlowUID.match(invisibleUidRegex);
 
@@ -1104,7 +1092,6 @@ export class FlowService {
 
     let UUID = getNewUUID();
     const paddedBase9Identifier = base9Transform(UUID);
-
     mapValueBasket.identifier = UUID;
     //console.log(`base3 timestamp: ${base3Identifier}`);
     // debugMarker(base3Identifier);
@@ -1144,7 +1131,7 @@ export class FlowService {
     }
     const finalIdentifier = base10IdentifierArray.join("");
     const paddedTransformedIdentifier = finalIdentifier.padStart(
-      41,
+      46,
       invisibleChars[0]
     );
 
@@ -1233,60 +1220,41 @@ export class FlowService {
 
   rebuildFlow = async (flowName: string) => {
     try {
-      console.log(
-        "Starting rebuild. Current unsavedRegionsArray:",
-        this.plugin.settings.flows[flowName].unsavedRegionsArray
-      );
-
       const flowReBuildBasket: Types.flowBuildBasket = {
+        // rebuild specific properties
         createOrEditFlowName: this.plugin.settings.flows[flowName].flowName,
-        oldFlowName: this.plugin.settings.flows[flowName].oldFlowName,
+        oldFlowName: this.plugin.settings.flows[flowName].flowName,
         createOrEdit: "",
-        depthFirst: this.plugin.settings.flows[flowName].depthFirst,
-        folderTitles: this.plugin.settings.flows[flowName].folderTitles,
-        definitionMode: Object.keys(
-          this.plugin.settings.flows[flowName].flowReceipe
-        )[0],
-        flowCookbook: this.plugin.settings.flows[flowName].flowCookbook,
-        cleanCookbook: {},
-        finalReceipe: {},
-        conflictObject: this.plugin.settings.flows[flowName].conflictObject,
         dataviewSearchPath: "",
         previewUsed: false,
         success: false,
         fresh: false,
+        // properties that will be transferred to the actual flow object
+        // plus createOrEditFlowName
+        definitionMode: Object.keys(
+          this.plugin.settings.flows[flowName].flowReceipe
+        )[0],
+        depthFirst: this.plugin.settings.flows[flowName].depthFirst,
+        folderTitles: this.plugin.settings.flows[flowName].folderTitles,
+        cleanCookbook: {},
+        flowCookbook: this.plugin.settings.flows[flowName].flowCookbook,
+        finalReceipe: {},
+        conflictObject: this.plugin.settings.flows[flowName].conflictObject,
+        activeRegions: this.plugin.settings.flows[flowName].activeRegions,
+        persistentCursors:
+          this.plugin.settings.flows[flowName].persistentCursors,
       };
 
       await this.createFlowDefinition(flowReBuildBasket);
-      console.log(
-        "After createFlowDefinition. unsavedRegionsArray:",
-        this.plugin.settings.flows[flowName].unsavedRegionsArray
-      );
 
       if (!flowReBuildBasket.success) {
         return; // The 'finally' block will still run
       }
       this.writeFlowDef(this.plugin.settings, flowReBuildBasket);
-      console.log(
-        "After writeFlowDef. unsavedRegionsArray:",
-        this.plugin.settings.flows[flowName].unsavedRegionsArray
-      );
-
-      this.syncConflictObjects(flowReBuildBasket);
-      // null unsavedRegions
-      this.plugin.settings.flows[flowName].unsavedRegionsArray = [];
-      console.log(
-        "After clearing array. unsavedRegionsArray:",
-        this.plugin.settings.flows[flowName].unsavedRegionsArray
-      );
-
+      this.syncConflictObjects(flowReBuildBasket); // null unsavedRegions
       this.plugin.settings.flows[flowName].flaggedForRebuild = false;
       this.resetFlowBuildBasket(flowReBuildBasket);
       this.plugin.saveSettings();
-      console.log(
-        "After saving settings. unsavedRegionsArray:",
-        this.plugin.settings.flows[flowName].unsavedRegionsArray
-      );
 
       // Get fresh reference to the flow object after createFlowDefinition
       const updatedFlow = this.plugin.settings.flows[flowName];
@@ -1338,7 +1306,6 @@ export class FlowService {
         caller
       );
     } finally {
-      this.plugin.settings.flows[flowName].unsavedRegionsArray = [];
       this.plugin.saveSettings();
     }
   };

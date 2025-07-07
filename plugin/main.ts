@@ -65,9 +65,9 @@ interface ListenerBasketItem {
 // The plugin class itself
 export default class TextFlowPlugin extends Plugin {
   settings: TextFlowSettings;
-  tempFilePath: string;
   flowService: FlowService;
-  isRebuilding: boolean = false;
+  isRebuilding: boolean = false; // to prevent a doom spiral of the modify listener
+  isLoading: boolean = true; // to prevent the create listener from spamming notices onload
 
   // ---------------- Global objects and variables -------------------------
 
@@ -185,25 +185,25 @@ export default class TextFlowPlugin extends Plugin {
     if (!systemFolder) {
       // if there is no system folder
       if (
-        // but place/path are defined
-        this.settings.systemFolderPlace != undefined &&
+        // but path is defined
         this.settings.systemFolderPath != undefined
       ) {
         new Notice(
-          `The TextFlow_SystemFolder could not be found. Please return it to ${this.settings.systemFolderPlace} or create a new one via the TextFlow settings.`
+          `The TextFlow_SystemFolder could not be found. Please return it to ${dirname(
+            this.settings.systemFolderPath
+          )} or create a new one via the TextFlow settings.`
         );
       }
     }
     if (systemFolder) {
       // if there is a systemFolder
       if (
-        // but expected place/path don't agree with actual place/path
-        this.settings.systemFolderPlace != (systemFolder.parent?.path ?? "") || // if parent is null, use "" as the path
+        // but expected path don't agree with actual place/path
         this.settings.systemFolderPath != systemFolder.path
       ) {
         // defer to reality and update settings
-        const oldPlace = this.settings.systemFolderPlace;
-        this.settings.systemFolderPlace = systemFolder.parent?.path ?? "";
+        const oldPath = this.settings.systemFolderPath;
+        this.settings.systemFolderPath = systemFolder.parent?.path ?? "";
         this.settings.systemFolderPath = systemFolder.path;
         for (let flow in this.settings.flows) {
           this.settings.flows[flow].flowFilePath = normalizePath(
@@ -315,7 +315,7 @@ export default class TextFlowPlugin extends Plugin {
   // ----- is called onload
   discernAndSetSystemFolderState = (
     systemFolderState?: boolean,
-    systemFolderPlace?: string
+    systemFolderPath?: string
   ): void => {
     // Remove any existing style
     const existingStyle = document.head.querySelector(
@@ -326,17 +326,8 @@ export default class TextFlowPlugin extends Plugin {
     }
 
     // If we're not hiding or don't have a place defined, just return after removing style
-    if (!systemFolderState || systemFolderPlace === undefined) {
+    if (!systemFolderState || systemFolderPath === undefined) {
       return;
-    }
-
-    let sysFolderPath = "";
-    if (systemFolderPlace === "/") {
-      sysFolderPath = normalizePath(`/TextFlow_SystemFolder`);
-    } else {
-      sysFolderPath = normalizePath(
-        `${systemFolderPlace}/TextFlow_SystemFolder`
-      );
     }
 
     // Create and append style with the correct selector
@@ -345,8 +336,8 @@ export default class TextFlowPlugin extends Plugin {
       hiddenStyle.setAttribute("data-textflow-temp", "true");
 
       hiddenStyle.textContent = `
-            div[data-path='${sysFolderPath}'],
-            div[data-path^='${sysFolderPath}'] {
+            div[data-path='${systemFolderPath}'],
+            div[data-path^='${systemFolderPath}'] {
                 display: none !important;
             }
         `;
@@ -711,7 +702,7 @@ export default class TextFlowPlugin extends Plugin {
       this.app.vault.on("create", (file: TAbstractFile) => {
         // check if the folder the new file is in already contributes to a flow
         // It will create false positives, so I might implement something better some time.
-        if (file instanceof TFile) {
+        if (!this.isLoading && file instanceof TFile) {
           const parentPath = dirname(file.path);
           const breakableCheckFlows = Object.keys(this.settings.flows);
           for (let flowName of breakableCheckFlows) {
@@ -728,7 +719,7 @@ export default class TextFlowPlugin extends Plugin {
             }
           }
         }
-        if (file instanceof TFolder) {
+        if (!this.isLoading && file instanceof TFolder) {
           new Notice(
             `textFlow: Remember to rebuild all flows that should include contents of this new folder.`,
             5000
@@ -959,11 +950,7 @@ export default class TextFlowPlugin extends Plugin {
                         new Notice(
                           "TextFlow Plugin warning:\n " +
                             "Flow region tracking failed!\n\n" +
-                            "To prevent data loss:\n" +
-                            "1. Stop editing immediately\n" +
-                            "2. Close the flow\n" +
-                            "3. Close and reopen your vault\n" +
-                            "4. Verify your flow\n\n" +
+                            "Please close and reopen your flow.\n\n" +
                             "If this error persists, please report it on github.",
                           20000 // Show for 5 seconds
                         );
@@ -974,11 +961,9 @@ export default class TextFlowPlugin extends Plugin {
               } catch (error) {
                 console.error("Error in navigation update:", error);
                 new Notice(
-                  "TextFlow Plugin Critical Error:\n " +
-                    "Flow tracking system failed.\n" +
-                    "1. Close the flow immediately\n" +
-                    "2. Close and reopen your vault\n" +
-                    "3. Verify your flow\n\n" +
+                  "TextFlow Plugin warning:\n " +
+                    "Flow region tracking failed!\n\n" +
+                    "Please close and reopen your flow.\n\n" +
                     "If this error persists, please report it on github.",
                   20000
                 );
@@ -1009,7 +994,7 @@ export default class TextFlowPlugin extends Plugin {
           const extension = StateEffect.appendConfig.of([navigationListener]);
 
           if (!activeLeafPath) {
-            throw new Error("TExtFlow plugin: No active leaf path available.");
+            throw new Error("TextFlow plugin: No active leaf path available.");
           }
 
           this.listenerBasket[leafID] = {
@@ -1522,7 +1507,7 @@ export default class TextFlowPlugin extends Plugin {
 
   // ---------------- Functions: Flow management -------------------------
   // The big bundle that centralises flow management
-  private async setupFlowView(flowName: string, view: MarkdownView) {
+  async setupFlowView(flowName: string, view: MarkdownView) {
     const leafID = (view.leaf as any).id;
     const setupKey = `${leafID}-${flowName}`;
     const editor = view.editor as any;
@@ -1695,10 +1680,12 @@ export default class TextFlowPlugin extends Plugin {
       }
       // finally, also clean up the activeFlowObject
       if (this.settings.activeFlowObject[flowName]) {
-        if (
-          Object.keys(this.settings.activeFlowObject[flowName]).length === 0
-        ) {
-          delete this.settings.activeFlowObject[flowName];
+        if (Object.keys(this.settings.activeFlowObject[flowName])) {
+          if (
+            Object.keys(this.settings.activeFlowObject[flowName]).length === 0
+          ) {
+            delete this.settings.activeFlowObject[flowName];
+          }
         }
         if (Object.keys(this.settings.activeFlowObject[flowName]).length > 0) {
           Object.keys(this.settings.activeFlowObject[flowName]).forEach(
@@ -1715,7 +1702,6 @@ export default class TextFlowPlugin extends Plugin {
     if (Object.keys(this.settings.activeFlowObject).length === 0) {
       this.undecorateSourceFiles();
     }
-    await this.flowService.checkForActiveFlowConflicts();
     await this.saveSettings();
   };
 
@@ -1808,22 +1794,26 @@ export default class TextFlowPlugin extends Plugin {
           let shouldReject = false;
 
           tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
-            const windowStart = Math.max(0, fromA - 50);
-            const windowEnd = Math.min(tr.startState.doc.length, toA + 50);
+            const windowStart = Math.max(0, fromA - 60);
+            const windowEnd = Math.min(tr.startState.doc.length, toA + 60);
             const windowText = tr.startState.sliceDoc(windowStart, windowEnd);
 
             let match;
             const regex =
-              /(?:^|\n)[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{41}(<hr>)(?:\n\n|$)/g;
+              /\n[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46}<hr>\n\n/g;
 
             while ((match = regex.exec(windowText)) !== null) {
-              // Get absolute positions of the protected `***`, including required newlines
-              const absoluteDividerStart = windowStart + match.index;
-              const absoluteDividerEnd = absoluteDividerStart + match[0].length;
+              const absoluteDividerStart = windowStart + match.index + 1;
+              const absoluteDividerEnd =
+                absoluteDividerStart + match[0].length - 2;
 
               if (
                 (fromA < absoluteDividerEnd && toA > absoluteDividerStart) ||
-                (fromA <= absoluteDividerStart && toA >= absoluteDividerEnd)
+                (fromA <= absoluteDividerStart && toA >= absoluteDividerEnd) ||
+                // Protect against edits that would affect the newlines
+                (fromA >= absoluteDividerStart &&
+                  fromA <= absoluteDividerEnd) ||
+                (toA >= absoluteDividerStart && toA <= absoluteDividerEnd)
               ) {
                 shouldReject = true;
               }
@@ -2004,10 +1994,6 @@ export default class TextFlowPlugin extends Plugin {
   saveBackToSource = async (flow: string, text: string, leafID?: number) => {
     // console.log("saveBackToSource responding");
     if (this.settings.flows[flow].unsavedRegionsArray) {
-      /*console.log(
-        "saveBackToSource iterating trough modifiedRegions: ",
-        this.settings.flows[flow].unsavedRegionsArray
-      );*/
       const map = this.settings.flows[flow].flowMap;
       const remainingPaths: string[] = [];
       for (const path of this.settings.flows[flow].unsavedRegionsArray) {
@@ -2016,20 +2002,15 @@ export default class TextFlowPlugin extends Plugin {
           console.error(`File not found at path: ${path}`);
           return;
         }
-        /* console.log(
-          "saveBackToSource calling findStartOfRegion for path: ",
-          path
-        );*/
-        const startOfRegion = await this.findStartOfRegion(
+
+        let startOfRegion = await this.findStartOfRegion(
           this.settings.flows[flow],
           map[path].flowOrder,
           text
         );
-        // console.log("saveBackToSource found startOfRegion: ", startOfRegion);
 
-        // console.log("saveBackToSource searching for endOfRegion: ", path);
         const endOfRegion = text.indexOf(map[path].UID) - 1; // subtract 1 for the \r before the UID
-        // console.log("endOfRegion found: ", endOfRegion);
+
         const flowFile = await this.app.vault.getFileByPath(
           this.settings.flows[flow].flowFilePath
         );
@@ -2042,7 +2023,6 @@ export default class TextFlowPlugin extends Plugin {
           try {
             // Read existing content
             const existingContent = await this.app.vault.read(sourceFile);
-
             // Replace content portion while keeping YAML
             const yamlMatch = existingContent.match(/^---\n[\s\S]*?\n---\n/);
             const newContent = yamlMatch
@@ -2051,7 +2031,8 @@ export default class TextFlowPlugin extends Plugin {
 
             // Save modified content
             await this.app.vault.modify(sourceFile, newContent);
-            // console.log("saveBackToSource is done saving");
+
+            console.log("saveBackToSource is done saving");
           } catch (error) {
             remainingPaths.push(path);
             new Notice(
@@ -2297,8 +2278,7 @@ export default class TextFlowPlugin extends Plugin {
     text: string
   ) => {
     const markerRegex =
-      /[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{41}<hr>/;
-
+      /[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46}<hr>/;
     // Handle boundary conditions first
     if (cursorOffset === 0) {
       // Get first region from flow map
@@ -2309,7 +2289,7 @@ export default class TextFlowPlugin extends Plugin {
       if (firstRegion) {
         const [path, regionMap] = firstRegion;
         // Move cursor to safe position in first region
-        const safePos = text.indexOf(regionMap.UID) + 51;
+        const safePos = 1;
         this.flowService.scrollToPos(editor, safePos);
         console.log("First region: ", path);
         return {
@@ -2325,7 +2305,7 @@ export default class TextFlowPlugin extends Plugin {
       }
     }
 
-    if (cursorOffset >= text.length - 41) {
+    if (cursorOffset >= text.length - 46) {
       // Get last region from flow map
       const lastRegion = Object.entries(flow.flowMap).find(
         ([_, regionMap]) =>
@@ -2358,6 +2338,11 @@ export default class TextFlowPlugin extends Plugin {
 
     let UIDLength = 0;
     if (matches) {
+      UIDLength = matches[0].length - 4;
+      const UUID = matches[0].slice(0, UIDLength);
+
+      // Log all regions and their UIDs
+      Object.entries(flow.flowMap).forEach(([path, region]) => {});
       UIDLength = matches[0].length - 4;
       const UID = matches[0].slice(0, UIDLength);
 
@@ -2419,48 +2404,22 @@ export default class TextFlowPlugin extends Plugin {
 
     if (previousRegion) {
       const [previousRegionPath, previousRegionMap] = previousRegion;
-
-      if (flowOrder - 1 !== 0) {
-        const invisibleUID = previousRegionMap.UID;
-        const index = text.indexOf(invisibleUID);
-        const startPos = index + (invisibleUID + "<hr>").length + 1;
-        return startPos;
-      } else {
-        return 0;
-      }
+      const invisibleUID = previousRegionMap.UID;
+      const index = text.indexOf(invisibleUID);
+      const startPos = index + (invisibleUID + "<hr>").length + 1;
+      return startPos;
+    } else {
+      return 1;
     }
   };
-  setupArrayTracker(flowName: string) {
-    const flow = this.settings.flows[flowName];
-    let unsavedArray = flow.unsavedRegionsArray;
-
-    Object.defineProperty(flow, "unsavedRegionsArray", {
-      get: function () {
-        return unsavedArray;
-      },
-      set: function (newValue) {
-        console.log("unsavedRegionsArray modified:", {
-          flowName: flowName,
-          oldValue: [...unsavedArray],
-          newValue: [...newValue],
-          stackTrace: new Error().stack,
-        });
-        unsavedArray = newValue;
-      },
-    });
-  }
 
   // -------------------------------------------------------
   //------------------------- ONLOAD -----------------------
   // -------------------------------------------------------
   async onload() {
     this.settings = await this.loadSettings();
-    //this.menuBar = new MenuBar(this);
-    this.flowService = new FlowService(this, this.app);
 
-    Object.keys(this.settings.flows).forEach((flowName) => {
-      this.setupArrayTracker(flowName);
-    });
+    this.flowService = new FlowService(this, this.app);
 
     // -------------------------------------------------------------------
     // ------------------- ONLOAD: add listeners for cursor and clicks
@@ -2471,7 +2430,6 @@ export default class TextFlowPlugin extends Plugin {
       if (this.settings.showExplorerDeco) {
         this.decorateSourceFiles();
       }
-
       // ----- ONLOAD: set up UI -------------------------
 
       // ------------------- Flow switcher modal ---------------------
@@ -2498,7 +2456,7 @@ export default class TextFlowPlugin extends Plugin {
       if (this.settings.systemFolderHidden) {
         this.discernAndSetSystemFolderState(
           true,
-          this.settings.systemFolderPlace
+          this.settings.systemFolderPath
         );
       }
       // -------------------------------
@@ -2512,7 +2470,7 @@ export default class TextFlowPlugin extends Plugin {
           setTimeout(() => {
             this.discernAndSetSystemFolderState(
               true,
-              this.settings.systemFolderPlace
+              this.settings.systemFolderPath
             );
           }, 100);
         }
@@ -2524,6 +2482,11 @@ export default class TextFlowPlugin extends Plugin {
     this.addListeners();
     this.registerCommands();
     this.addSettingTab(new TextFlowSettingsTab(this.app, this));
+    this.app.metadataCache.on("resolved", () => {
+      setTimeout(() => {
+        this.isLoading = false;
+      }, 1000); // Add a small delay to ensure all initial events have fired
+    });
   }
 
   // -------------------------------------------------------

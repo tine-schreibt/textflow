@@ -19,6 +19,7 @@ import TextFlow from "../main";
 import * as Types from "./types";
 import Pickr from "@simonwep/pickr";
 import { FlowService } from "./flowService";
+import { dirname } from "path";
 
 // --- The class that defines the settings tab
 export class TextFlowSettingsTab extends PluginSettingTab {
@@ -84,16 +85,12 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       );
 
     if (!systemFolder) {
-      this.plugin.settings.systemFolderPlace = "";
-      this.plugin.settings.systemFolderPath = "TextFlow_SystemFolder";
+      this.plugin.settings.systemFolderPath = normalizePath(
+        "/TextFlow_SystemFolder"
+      );
       this.plugin.saveSettings();
-    } else if (
-      this.plugin.settings.systemFolderPath != systemFolder.path ||
-      this.plugin.settings.systemFolderPlace !=
-        (systemFolder.parent?.path ?? "") // if parent is null, use "" as the path
-    ) {
+    } else if (this.plugin.settings.systemFolderPath != systemFolder.path) {
       this.plugin.settings.systemFolderPath = systemFolder.path;
-      this.plugin.settings.systemFolderPlace = systemFolder.parent?.path ?? "";
       this.plugin.saveSettings();
     }
 
@@ -101,9 +98,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       .addText((newSystemFolderInput) =>
         newSystemFolderInput
           .setValue(
-            this.plugin.settings.systemFolderPlace
-              ? this.plugin.settings.systemFolderPlace
-              : ""
+            this.plugin.settings.systemFolderPath
+              ? normalizePath(dirname(this.plugin.settings.systemFolderPath))
+              : "/"
           )
           .onChange(async (value) => {
             newSystemFolderPlace = normalizePath(value);
@@ -137,12 +134,11 @@ export class TextFlowSettingsTab extends PluginSettingTab {
                 );
                 // Update settings with new location
                 this.plugin.settings.systemFolderPath = newPath;
-                this.plugin.settings.systemFolderPlace = newSystemFolderPlace;
-
-                Object.keys(this.plugin.settings.flows).forEach((flow) => {
-                  this.plugin.settings.flows[flow].flowFilePath = normalizePath(
-                    `${this.plugin.settings.systemFolderPath}/${flow}.md`
-                  );
+                Object.keys(this.plugin.settings.flows).forEach((flowName) => {
+                  this.plugin.settings.flows[flowName].flowFilePath =
+                    normalizePath(
+                      `${this.plugin.settings.systemFolderPath}/${flowName}.md`
+                    );
                 });
                 await this.plugin.saveSettings();
 
@@ -377,14 +373,16 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           });
         })
       )
-      .addText((flowName) => {
-        flowName.setPlaceholder("Enter a unique name");
+      .addText((setFlowName) => {
+        setFlowName.setPlaceholder("Enter a unique name");
         if (!this.plugin.settings.flowBuildBasket?.fresh) {
-          flowName.setValue(this.plugin.settings.flowBuildBasket.oldFlowName);
+          setFlowName.setValue(
+            this.plugin.settings.flowBuildBasket.oldFlowName
+          );
           this.plugin.settings.flowBuildBasket.createOrEditFlowName =
             this.plugin.settings.flowBuildBasket.oldFlowName;
         }
-        flowName.onChange(async (value) => {
+        setFlowName.onChange(async (value) => {
           this.plugin.settings.flowBuildBasket.createOrEditFlowName =
             value.trim();
           this.plugin.settings.flowBuildBasket.fresh = false;
@@ -846,17 +844,20 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             this.plugin.settings.flowBuildBasket.createOrEditFlowName,
           oldFlowName: this.plugin.settings.flowBuildBasket.oldFlowName,
           createOrEdit: this.plugin.settings.flowBuildBasket.createOrEdit,
+          previewUsed: true,
+          dataviewSearchPath: "",
+          definitionMode: this.plugin.settings.flowBuildBasket.definitionMode,
           depthFirst: this.plugin.settings.flowBuildBasket.depthFirst,
           folderTitles: this.plugin.settings.flowBuildBasket.folderTitles,
-          definitionMode: this.plugin.settings.flowBuildBasket.definitionMode,
+          success: false,
+          fresh: false,
           flowCookbook: this.plugin.settings.flowBuildBasket.flowCookbook,
           cleanCookbook: {},
           finalReceipe: this.plugin.settings.flowBuildBasket.finalReceipe,
           conflictObject: this.plugin.settings.flowBuildBasket.conflictObject,
-          dataviewSearchPath: "",
-          previewUsed: true,
-          success: false,
-          fresh: false,
+          activeRegions: this.plugin.settings.flowBuildBasket.activeRegions,
+          persistentCursors:
+            this.plugin.settings.flowBuildBasket.persistentCursors,
         };
         await this.flowService.createFlowDefinition(
           this.plugin.settings.flowBuildBasket
@@ -906,6 +907,28 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         ) {
           // delete the old flow object
           delete this.plugin.settings.flows[oldFlowName];
+
+          // if there's an entry in the activeFlowObject, rename it
+          if (this.plugin.settings.activeFlowObject[oldFlowName]) {
+            this.plugin.settings.activeFlowObject[
+              this.plugin.settings.flowBuildBasket.createOrEditFlowName
+            ] = this.plugin.settings.activeFlowObject[oldFlowName];
+            delete this.plugin.settings.activeFlowObject[oldFlowName];
+          }
+
+          // rename the flow file if it exists
+          const oldFlowFilePath = normalizePath(
+            `${this.plugin.settings.systemFolderPath}/${this.plugin.settings.flowBuildBasket.oldFlowName}.md`
+          );
+          const newFlowFilePath = normalizePath(
+            `${this.plugin.settings.systemFolderPath}/${this.plugin.settings.flowBuildBasket.createOrEditFlowName}.md`
+          );
+
+          const oldfFlowFile =
+            this.app.vault.getAbstractFileByPath(oldFlowFilePath);
+          if (oldfFlowFile instanceof TFile) {
+            this.app.vault.rename(oldfFlowFile, newFlowFilePath);
+          }
         }
 
         // Build a flow definition if preview hasn't done that yet
@@ -925,10 +948,10 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         this.flowService.syncConflictObjects(
           this.plugin.settings.flowBuildBasket
         );
-        // flag the flow for rebuild, since it has been edited.
-        this.plugin.settings.flows[
-          this.plugin.settings.flowBuildBasket.createOrEditFlowName
-        ].flaggedForRebuild = true;
+
+        if (currentFlowName != oldFlowName) {
+          new Notice("TextFlow: Please reload your vault.");
+        }
         // reset all values
         this.flowService.resetFlowBuildBasket(
           this.plugin.settings.flowBuildBasket
@@ -1053,17 +1076,19 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               createOrEditFlowName: "",
               oldFlowName: shownFlow.flowName,
               createOrEdit: "edit",
+              definitionMode: Object.keys(shownFlow.flowReceipe)[0],
               depthFirst: shownFlow.depthFirst,
               folderTitles: shownFlow.folderTitles,
-              definitionMode: Object.keys(shownFlow.flowReceipe)[0],
-              flowCookbook: shownFlow.flowCookbook,
-              cleanCookbook: {},
-              finalReceipe: shownFlow.flowReceipe,
-              conflictObject: shownFlow.conflictObject,
-              dataviewSearchPath: "",
               previewUsed: false,
+              dataviewSearchPath: "",
               success: true,
               fresh: false,
+              cleanCookbook: {},
+              flowCookbook: shownFlow.flowCookbook,
+              finalReceipe: shownFlow.flowReceipe,
+              conflictObject: shownFlow.conflictObject,
+              activeRegions: shownFlow.activeRegions,
+              persistentCursors: shownFlow.persistentCursors,
             };
 
             this.plugin.saveSettings();
@@ -1116,10 +1141,12 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .setValue(this.plugin.settings.systemFolderHidden)
           .onChange(async (value) => {
             this.plugin.settings.systemFolderHidden = value;
-            this.plugin.discernAndSetSystemFolderState(
-              value,
-              this.plugin.settings.systemFolderPlace
-            );
+            if (this.plugin.settings.systemFolderPath) {
+              this.plugin.discernAndSetSystemFolderState(
+                value,
+                normalizePath(this.plugin.settings.systemFolderPath)
+              );
+            }
             await this.plugin.saveSettings();
           });
       });
