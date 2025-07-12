@@ -32,21 +32,19 @@ export class previewModal extends Modal {
     const { contentEl } = this;
 
     const modalTitle = contentEl.createEl("h2", {
-      text: `Preview for flow ${this.flowBuildBasket.createOrEditFlowName}.`,
+      text: `Preview for flow ${this.flowBuildBasket.flowName}.`,
     });
     if (Object.keys(this.flowBuildBasket.conflictObject).length > 0) {
       const conflictText = new Setting(contentEl).setDesc(
         createFragment((desc) => {
           desc.createSpan({
-            text: `The following flows overlap with ${this.flowBuildBasket.createOrEditFlowName}:`,
+            text: `The following flows overlap with ${this.flowBuildBasket.flowName}:`,
           });
           Object.keys(this.flowBuildBasket.conflictObject).forEach((flow) => {
-            if (flow != this.flowBuildBasket.oldFlowName) {
-              desc.createEl("br");
-              desc.createSpan({
-                text: `- ${flow}`,
-              });
-            }
+            desc.createEl("br");
+            desc.createSpan({
+              text: `- ${flow}`,
+            });
           });
         })
       );
@@ -127,12 +125,6 @@ export class FlowSwitcherModal extends Modal {
   display() {
     const { contentEl, modalEl } = this;
     contentEl.empty();
-
-    // ------------------------------------------------------------
-    // ------------ FUNCTIONS ------------
-    // ------------------------------------------------------------
-
-    // -------- rebuilding
 
     // ----------------------------------------------------------
     // -------- GATHERING AND PRE-PROCESSING OF FLOW DATA -------
@@ -346,6 +338,15 @@ export class FlowSwitcherModal extends Modal {
         .onClick(async () => {
           if (goRebuild === "neutral" || goRebuild === "must") {
             await this.flowService.rebuildFlow(activeFlow);
+            const allLeaves = this.app.workspace.getLeavesOfType("markdown");
+            for (const leaf of allLeaves) {
+              const view = leaf.view as MarkdownView;
+              const filePath = view.file?.path;
+              if (!filePath) continue;
+              const flowName = this.plugin.isFlowFile(filePath);
+              if (flowName === activeFlow)
+                await this.plugin.setupFlowView(activeFlow, view);
+            }
             await this.plugin.saveSettings();
             this.display();
           } else if (goRebuild === "no-go") {
@@ -635,12 +636,12 @@ export class DeleteFlowDefModal extends Modal {
         }
         await this.modalSaveAndReload();
         new Notice(
-          `The definition and flowFile of "${this.flowName}" were deleted!`
+          `textFlow: The definition and flowFile of "${this.flowName}" were deleted!`
         );
         this.close();
       } catch (error) {
         new Notice(
-          `FAILED to delete definition and flowFile for "${this.flowName}": ` +
+          `textFlow: FAILED to delete definition and flowFile for "${this.flowName}": ` +
             error
         );
       }

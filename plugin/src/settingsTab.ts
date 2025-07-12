@@ -142,9 +142,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
                 });
                 await this.plugin.saveSettings();
 
-                new Notice(`SystemFolder moved to ${newSystemFolderPlace}`);
+                new Notice(`textFlow: SystemFolder moved to ${newSystemFolderPlace}`);
               } catch (error) {
-                new Notice(`Failed to move folder: ${error.message}`);
+                new Notice(`textFlow: Failed to move folder: ${error.message}`);
               }
             }
           });
@@ -369,27 +369,25 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       .setDesc(
         createFragment((desc) => {
           desc.createSpan({
-            text: "Please enter a unique name for your flow.",
+            text:
+              this.plugin.settings.flowBuildBasket.createOrEdit != "edit"
+                ? "Please enter a unique name for your flow. This name can NOT be changed later."
+                : `Your flow is called "${this.plugin.settings.flowBuildBasket.flowName}"`,
           });
         })
-      )
-      .addText((setFlowName) => {
+      );
+    if (this.plugin.settings.flowBuildBasket.createOrEdit != "edit") {
+      chooseFlowName.addText((setFlowName) => {
         setFlowName.setPlaceholder("Enter a unique name");
-        if (!this.plugin.settings.flowBuildBasket?.fresh) {
-          setFlowName.setValue(
-            this.plugin.settings.flowBuildBasket.oldFlowName
-          );
-          this.plugin.settings.flowBuildBasket.createOrEditFlowName =
-            this.plugin.settings.flowBuildBasket.oldFlowName;
-        }
+        setFlowName.setValue("");
+
         setFlowName.onChange(async (value) => {
-          this.plugin.settings.flowBuildBasket.createOrEditFlowName =
-            value.trim();
+          this.plugin.settings.flowBuildBasket.flowName = value.trim();
           this.plugin.settings.flowBuildBasket.fresh = false;
           this.flowService.debouncedSaveSettings();
         });
       });
-
+    }
     // ---- SORT FLOW ---------
     const sortFlow = new Setting(createFlows)
       .setName("Follow note order in file explorer (ignored for bookmarks)")
@@ -840,9 +838,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       .setButtonText("Preview your flow structure")
       .onClick(async (buttonEl: MouseEvent) => {
         this.plugin.settings.flowBuildBasket = {
-          createOrEditFlowName:
-            this.plugin.settings.flowBuildBasket.createOrEditFlowName,
-          oldFlowName: this.plugin.settings.flowBuildBasket.oldFlowName,
+          flowName: this.plugin.settings.flowBuildBasket.flowName,
           createOrEdit: this.plugin.settings.flowBuildBasket.createOrEdit,
           previewUsed: true,
           dataviewSearchPath: "",
@@ -879,56 +875,21 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       .onClick(async (buttonEl: MouseEvent) => {
         // if no flow name is given
 
-        if (!this.plugin.settings.flowBuildBasket.createOrEditFlowName) {
-          new Notice("Please give your flow a name first.");
+        if (!this.plugin.settings.flowBuildBasket.flowName) {
+          new Notice("textFlow: Please give your flow a name first.");
           return;
         }
         // if we're creating and a flow with the given name already exists
         if (
           this.plugin.settings.flowBuildBasket.createOrEdit === "create" &&
           this.plugin.settings.flows[
-            this.plugin.settings.flowBuildBasket.createOrEditFlowName
+            this.plugin.settings.flowBuildBasket.flowName
           ]
         ) {
           new Notice(
-            "A flow by this name already exists. Rename your new flow or delete the old one."
+            "textFlow: A flow by this name already exists. Rename your new flow or delete the old one."
           );
           return;
-        }
-
-        // If we're editing the flow and changing its name
-        let currentFlowName =
-          this.plugin.settings.flowBuildBasket.createOrEditFlowName;
-        let oldFlowName = this.plugin.settings.flowBuildBasket.oldFlowName;
-
-        if (
-          this.plugin.settings.flowBuildBasket.createOrEdit === "edit" &&
-          currentFlowName != oldFlowName
-        ) {
-          // delete the old flow object
-          delete this.plugin.settings.flows[oldFlowName];
-
-          // if there's an entry in the activeFlowObject, rename it
-          if (this.plugin.settings.activeFlowObject[oldFlowName]) {
-            this.plugin.settings.activeFlowObject[
-              this.plugin.settings.flowBuildBasket.createOrEditFlowName
-            ] = this.plugin.settings.activeFlowObject[oldFlowName];
-            delete this.plugin.settings.activeFlowObject[oldFlowName];
-          }
-
-          // rename the flow file if it exists
-          const oldFlowFilePath = normalizePath(
-            `${this.plugin.settings.systemFolderPath}/${this.plugin.settings.flowBuildBasket.oldFlowName}.md`
-          );
-          const newFlowFilePath = normalizePath(
-            `${this.plugin.settings.systemFolderPath}/${this.plugin.settings.flowBuildBasket.createOrEditFlowName}.md`
-          );
-
-          const oldfFlowFile =
-            this.app.vault.getAbstractFileByPath(oldFlowFilePath);
-          if (oldfFlowFile instanceof TFile) {
-            this.app.vault.rename(oldfFlowFile, newFlowFilePath);
-          }
         }
 
         // Build a flow definition if preview hasn't done that yet
@@ -945,17 +906,15 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           this.plugin.settings,
           this.plugin.settings.flowBuildBasket
         );
-        this.flowService.syncConflictObjects(
+
+        await this.flowService.syncConflictObjects(
           this.plugin.settings.flowBuildBasket
         );
 
-        if (currentFlowName != oldFlowName) {
-          new Notice("TextFlow: Please reload your vault.");
-        }
-        // reset all values
-        this.flowService.resetFlowBuildBasket(
+        await this.flowService.resetFlowBuildBasket(
           this.plugin.settings.flowBuildBasket
         );
+
         this.plugin.saveSettings();
         this.display();
       });
@@ -979,8 +938,15 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       cls: "headline-text",
     });
 
-    Object.keys(this.plugin.settings.flows).forEach((flow) => {
-      const shownFlow = this.plugin.settings.flows[flow];
+    const flowSorted: string[] = [];
+    Object.keys(this.plugin.settings.flows).forEach((flowName) => {
+      flowSorted.push(flowName);
+    });
+
+    flowSorted.sort();
+
+    for (let flowName of flowSorted) {
+      const shownFlow = this.plugin.settings.flows[flowName];
 
       // --- DISPLAY PREPARATIONS ----------------------------------
       // Set up strings to display flow criteria
@@ -1062,7 +1028,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         .addButton((rebuildButton) =>
           rebuildButton.setButtonText("(Re)build)").onClick(async () => {
             // gather all info for the flowDefinition
-            this.flowService.rebuildFlow(flow);
+            this.flowService.rebuildFlow(flowName);
             await this.plugin.saveSettings();
             this.display();
           })
@@ -1073,8 +1039,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             // state check creating vs editing
 
             this.plugin.settings.flowBuildBasket = {
-              createOrEditFlowName: "",
-              oldFlowName: shownFlow.flowName,
+              flowName: shownFlow.flowName,
               createOrEdit: "edit",
               definitionMode: Object.keys(shownFlow.flowReceipe)[0],
               depthFirst: shownFlow.depthFirst,
@@ -1107,7 +1072,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             DeleteFlowDefModal.open();
           });
         });
-    });
+    }
 
     const advancedSettings = containerEl.createEl("details", {
       cls: "advancedSettings-container",

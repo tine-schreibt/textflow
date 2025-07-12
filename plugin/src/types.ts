@@ -19,10 +19,8 @@ export interface TextFlowSettings {
   explorerListener: boolean;
   hideScrollbar: boolean;
   switcherPos: string;
-  generalMenuBarSettings: {
-    isCollapsed?: boolean; // Current collapsed state
-    flowName?: string;
-  };
+  showMenuBar: boolean;
+  maxMenuBar: boolean;
   flowBuildBasket: flowBuildBasket; // For storing preview data
   activeFlowObject: { [key: string]: number | any };
   flows: { [key: string]: FlowDef };
@@ -53,6 +51,7 @@ export interface FlowDef {
 }
 
 export interface ConflictObject {
+  //conflictObject[flowName][path] = true;
   [key: string]: { [key: string]: boolean };
 }
 
@@ -110,12 +109,10 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
   explorerListener: true,
   hideScrollbar: false,
   switcherPos: "statusBar",
-  generalMenuBarSettings: {
-    isCollapsed: false, // Current collapsed state
-  },
+  showMenuBar: true,
+  maxMenuBar: true,
   flowBuildBasket: {
-    createOrEditFlowName: "",
-    oldFlowName: "",
+    flowName: "",
     createOrEdit: "create",
     previewUsed: false,
     dataviewSearchPath: "",
@@ -149,8 +146,7 @@ export interface mapValueBasket {
 }
 
 export interface flowBuildBasket {
-  createOrEditFlowName: string;
-  oldFlowName: string;
+  flowName: string;
   createOrEdit: string;
   previewUsed: boolean;
   dataviewSearchPath: string;

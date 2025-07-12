@@ -4,10 +4,13 @@ import {
   DropdownComponent,
   Editor,
   MarkdownView,
+  Menu,
+  normalizePath,
   Notice,
   Plugin,
   setIcon,
   Setting,
+  TFile,
 } from "obsidian";
 import {
   EditorView,
@@ -172,6 +175,7 @@ export class MenuBar {
   }
 
   // -------- FUNCTIONS AND VARIABLES TO MANAGE THE MENU BAR INTERNALLY
+
   // construct text for the dropdown option
   private makeNavPath = (path: string) => {
     let noteName = "";
@@ -182,6 +186,35 @@ export class MenuBar {
       noteName = `${path.replace("#", "")}`;
     }
     return noteName;
+  };
+
+  private getOverlap = () => {
+    const overlap: string[][] = [[], []];
+    if (this.plugin.settings.activeFlowObject) {
+      if (Object.keys(this.plugin.settings.activeFlowObject).length > 0) {
+        Object.keys(this.plugin.settings.activeFlowObject).forEach(
+          (flowName) => {
+            if (this.plugin.settings.flows[this.flowName].conflictObject) {
+              if (
+                this.plugin.settings.flows[this.flowName].conflictObject[
+                  flowName
+                ]
+              ) {
+                overlap[0].push(flowName);
+                Object.keys(
+                  this.plugin.settings.flows[this.flowName].conflictObject[
+                    flowName
+                  ]
+                ).forEach((path) => {
+                  overlap[1].push(path);
+                });
+              }
+            }
+          }
+        );
+      }
+    }
+    return overlap;
   };
 
   private filterList: string[] = [];
@@ -195,16 +228,33 @@ export class MenuBar {
         text: "No results",
       });
     } else {
-      const flowOrder =
-        this.plugin.settings.flows[this.flowName].flowMap[path].flowOrder;
+      let flowOrder = 0;
+      if (this.plugin.settings.flows[this.flowName].flowMap[path]) {
+        flowOrder =
+          this.plugin.settings.flows[this.flowName].flowMap[path].flowOrder;
+      }
 
-      // construct text for the dropdown entries
+      // construct text and class for the dropdown entries
+      let titleClass = "";
+      if (path.startsWith("#")) {
+        titleClass = `text-emphasis align-off-center`;
+      }
+
       let navPath = this.makeNavPath(path);
+      const overlap = this.getOverlap();
+      if (overlap[1].includes(path)) {
+        navPath = `${navPath} ⚭`;
+        titleClass = `highlighted`;
+      }
 
       if (this.filterList.length === 0 || this.filterList.includes(path)) {
         const dropdownEntry = dropdownEntries.createDiv({
-          cls: path.startsWith("#") ? `text-emphasis align-off-center` : "",
+          cls: titleClass,
           text: `- ${navPath}`,
+          attr: {
+            "aria-label": `Flow overlaps with ${overlap[0].join(", ")}`,
+            title: "Your tooltip text here", // this is for non-screen-reader tooltip
+          },
         });
 
         this.addManagedListener(dropdownEntry, "click", (event) => {
@@ -262,444 +312,549 @@ export class MenuBar {
   // ----------- THE MENU BAR ITSELF
 
   createMenuBarElement(): HTMLElement {
-    // ---------- FUNCTIONS -----------------
-    // ----------- Preparatory checks
-    let goSave = "neutral";
-    let goRebuild = "neutral";
-
-    // check if there is unsaved stuff for the flow
-    if (
-      this.plugin.settings.flows[this.flowName].unsavedRegionsArray.length > 0
-    ) {
-      goRebuild = "no-go";
-      goSave = "must"; // must save
-    }
-    // check if flow is flagged for rebuild
-    if (
-      goSave === "neutral" &&
-      this.plugin.settings.flows[this.flowName].flaggedForRebuild
-    ) {
-      goRebuild = "must";
-      goSave = "no-go";
-    }
-
-    const menuBarEl = this.associatedView.contentEl.createDiv({
-      cls: `textflow-menu-bar`,
-    });
-
-    // ----- SAVE BUTTON -----------
-    const saveButton = new ButtonComponent(menuBarEl);
-    saveButton
-      .setIcon("download")
-      .setClass(`menu-bar-button-save-${goSave}`)
-      .setClass("spacing")
-      .setClass("clickable-icon")
-      .onClick(async () => {
-        if (goSave === "neutral" || goSave === "must") {
-          const syncLeafID = (this.associatedView.leaf as any).id;
-          await this.plugin.saveBackToSource(
-            this.flowName,
-            this.associatedView.editor.getValue(),
-            syncLeafID
-          );
-          await this.plugin.saveSettings();
-          this.refresh(this.associatedView.contentEl);
-        } else {
-          return;
-        }
+    // If the menuBar is completely HIDDEN
+    if (!this.plugin.settings.showMenuBar) {
+      const menuBarEl = this.associatedView.contentEl.createDiv({
+        cls: `hide`,
       });
-    // ----------- REBUILD BUTTON ------------
-    const rebuildButton = new ButtonComponent(menuBarEl)
-      .setIcon("rotate-cw")
-      .setClass(`menu-bar-button-rebuild-${goRebuild}`)
-      .setClass("spacing")
-      .setClass("clickable-icon")
-      .onClick(async () => {
-        if (goRebuild === "neutral" || goRebuild === "must") {
-          await this.flowService.rebuildFlow(this.flowName);
-          await this.plugin.saveSettings();
-          this.refresh(this.associatedView.contentEl);
-        } else {
-          return;
-        }
+      return menuBarEl;
+      // if the menuBar is MINIMISED
+    } else if (!this.plugin.settings.maxMenuBar) {
+      const menuBarEl = this.associatedView.contentEl.createDiv({
+        cls: "textflow-menu-bar-min",
       });
-
-    // ----------- NAVIGATION DROPDOWN ------
-    // get text for initial dropdown headline
-    const hasActiveRegions =
-      Object.keys(this.plugin.settings.flows[this.flowName].activeRegions)
-        .length > 0;
-    // get the path of the currently active region
-    const navLeafID = (this.associatedView.leaf as any).id;
-    let activeRegion: string | undefined = ""; // It's the only way to pacify the Red Squiggle Demon's wrath at path being explicitly typed as string | undefined
-    if (
-      hasActiveRegions &&
-      navLeafID &&
-      this.plugin.settings.flows[this.flowName].activeRegions[navLeafID].path
-    ) {
-      activeRegion =
-        this.plugin.settings.flows[this.flowName].activeRegions[navLeafID].path;
-    }
-    let activeRegionNoteName = "";
-    if (activeRegion) {
-      activeRegionNoteName = this.makeNavPath(activeRegion);
-    }
-    // get the first thing in the flowReceipe
-    const key = this.plugin.settings.flows[this.flowName].flowReceipe.bookmarks
-      ? "bookmarks"
-      : "foldersTagsProps";
-    const firstThing =
-      this.plugin.settings.flows[this.flowName].flowReceipe[key][0];
-    const firstThingNoteName = this.makeNavPath(firstThing);
-
-    // --------- The actual dropdown component ----------
-    const navigationDropdown = menuBarEl.createDiv({
-      cls: `menu-bar-navigation-dropdown spacing`,
-    });
-
-    const navHeadline = navigationDropdown.createDiv({
-      cls: "menu-bar-navigation-dropdown-headline",
-    });
-
-    // headline text and icon
-    // show either current region; click listener is added further down
-    if (this.getDropdownState("nav") === "hide") {
-      navHeadline.createSpan({
-        cls: "align-off-center",
-        text:
-          activeRegionNoteName === ""
-            ? firstThingNoteName
-            : activeRegionNoteName,
+      setIcon(menuBarEl, "chevron-right");
+      this.addManagedListener(menuBarEl, "click", (event) => {
+        this.plugin.settings.maxMenuBar = true;
+        this.refresh(this.associatedView.contentEl);
       });
+      return menuBarEl;
     } else {
-      // or the search plus
-      const searchInput = navHeadline.createEl("input", {
-        cls: "menu-bar-navigation-dropdown-search-input",
-        type: "text",
-        placeholder: "Filter...",
+      // ---------- FUNCTIONS -----------------
+      // ----------- Preparatory checks
+      let goSave = "neutral";
+
+      let goRebuild = "neutral";
+
+      // check if there is unsaved stuff for the flow
+      if (
+        this.plugin.settings.flows[this.flowName].unsavedRegionsArray.length > 0
+      ) {
+        goRebuild = "no-go";
+        goSave = "must"; // must save
+      }
+      // check if flow is flagged for rebuild
+      if (
+        goSave === "neutral" &&
+        this.plugin.settings.flows[this.flowName].flaggedForRebuild
+      ) {
+        goRebuild = "must";
+        goSave = "no-go";
+      }
+
+      const menuBarEl = this.associatedView.contentEl.createDiv({
+        cls: `textflow-menu-bar`,
       });
-      const searchItems = this.plugin.settings.flows[this.flowName].flowReceipe[
-        key
-      ].map((path) => ({
-        path: path,
-        displayName: `${this.makeNavPath(path)}`,
-      }));
 
-      const fuse = new Fuse(searchItems, {
-        keys: ["displayName"],
-        threshold: 0.4,
-        // We can tune these options
-        includeScore: true,
-        includeMatches: true,
-      });
+      // ----- SAVE BUTTON -----------
+      const saveButton = new ButtonComponent(menuBarEl);
+      saveButton
+        .setIcon("download")
+        .setClass(`menu-bar-button-save-${goSave}`)
+        .setClass("spacing")
+        .setClass("clickable-icon")
+        .onClick(async () => {
+          if (goSave === "neutral" || goSave === "must") {
+            const syncLeafID = (this.associatedView.leaf as any).id;
+            await this.plugin.saveBackToSource(
+              this.flowName,
+              this.associatedView.editor.getValue(),
+              syncLeafID
+            );
+            await this.plugin.saveSettings();
+            this.refresh(this.associatedView.contentEl);
+          } else {
+            return;
+          }
+        });
+      // ----------- REBUILD BUTTON ------------
+      const rebuildButton = new ButtonComponent(menuBarEl)
+        .setIcon("rotate-cw")
+        .setClass(`menu-bar-button-rebuild-${goRebuild}`)
+        .setClass("spacing")
+        .setClass("clickable-icon")
+        .onClick(async () => {
+          if (goRebuild === "neutral" || goRebuild === "must") {
+            await this.flowService.rebuildFlow(this.flowName);
+            this.plugin.setupFlowView(this.flowName, this.associatedView);
+          }
+        });
 
-      this.addManagedListener(searchInput, "input", (event) => {
-        const query = (event.target as HTMLInputElement).value;
-        console.log(
-          "Query value:",
-          query,
-          "Length:",
-          query.length,
-          "Type:",
-          typeof query
-        );
+      // ----------- NAVIGATION DROPDOWN ------
+      // get text for initial dropdown headline
 
-        // If no query (yet), return all paths
-        if (!query) {
-          this.filterList =
-            this.plugin.settings.flows[this.flowName].flowReceipe[key];
+      const hasActiveRegions =
+        Object.keys(this.plugin.settings.flows[this.flowName].activeRegions)
+          .length > 0;
+      // get the path of the currently active region
+      const navLeafID = (this.associatedView.leaf as any).id;
+      let activeRegion: string | undefined = ""; // It's the only way to pacify the Red Squiggle Demon's wrath at path being explicitly typed as string | undefined
+      if (
+        hasActiveRegions &&
+        navLeafID &&
+        this.plugin.settings.flows[this.flowName].activeRegions[navLeafID].path
+      ) {
+        activeRegion =
+          this.plugin.settings.flows[this.flowName].activeRegions[navLeafID]
+            .path;
+      }
+      let activeRegionNoteName = "";
+      let titleClass = "blargh";
+
+      if (activeRegion) {
+        activeRegionNoteName = this.makeNavPath(activeRegion);
+        const overlap = this.getOverlap();
+        if (overlap[1].includes(activeRegion)) {
+          activeRegionNoteName = `${activeRegion} ⚭`;
+          titleClass = `highlighted`;
         }
+      }
+      // get the first thing in the flowReceipe
+      const key = this.plugin.settings.flows[this.flowName].flowReceipe
+        .bookmarks
+        ? "bookmarks"
+        : "foldersTagsProps";
+      const firstThing =
+        this.plugin.settings.flows[this.flowName].flowReceipe[key][0];
+      const firstThingNoteName = this.makeNavPath(firstThing);
 
-        // Otherwise return filtered paths
-        this.filterList = fuse
-          .search(query)
-          .map((result) => (result as FuseResult<{ path: string }>).item.path);
+      // --------- The actual dropdown component ----------
 
-        if (this.filterList.length === 0 && query != "") {
-          // no entries because of failed filter
-          this.refreshNavDropdownEntries(dropdownEntries, true);
-        } else if (this.filterList.length > 0) {
-          // entries because of successful filter
-          this.refreshNavDropdownEntries(dropdownEntries, false);
-        } else {
-          // no entries because query has been deleted
-          this.filterList =
-            this.plugin.settings.flows[this.flowName].flowReceipe[key];
-          this.refreshNavDropdownEntries(dropdownEntries, false);
-        }
+      const navigationDropdown = menuBarEl.createDiv({
+        cls: `menu-bar-navigation-dropdown spacing`,
       });
-    }
 
-    const iconSpan = navHeadline.createSpan();
-    setIcon(iconSpan, "chevrons-down-up");
+      const navHeadline = navigationDropdown.createDiv({
+        cls: "menu-bar-navigation-dropdown-headline",
+      });
 
-    this.addManagedListener(navHeadline, "click", (event) => {
+      // headline text and icon
+      // show either current region; click listener is added further down
       if (this.getDropdownState("nav") === "hide") {
-        this.setDropdownState("nav", "show");
-        this.refresh(this.associatedView.contentEl);
-        const filterCriterion = this.element?.querySelector(
-          ".menu-bar-navigation-dropdown-search-input"
-        );
-        if (filterCriterion) {
-          (filterCriterion as HTMLInputElement).focus();
-        }
-
-        // Listener that will close dropdown if we click outside it
-        this.addManagedListener(document, "click", (e: MouseEvent) => {
-          const target = e.target as HTMLElement;
-          // Check if click is outside the navigation dropdown
-          if (!navigationDropdown.contains(target)) {
-            this.filterList = [];
-            this.setDropdownState("nav", "hide");
-            this.refresh(this.associatedView.contentEl);
-          }
+        navHeadline.createSpan({
+          cls: `align-off-center ${titleClass}`,
+          text:
+            activeRegionNoteName === ""
+              ? firstThingNoteName
+              : activeRegionNoteName,
         });
       } else {
-        this.setDropdownState("nav", "hide");
-        this.refresh(this.associatedView.contentEl);
-      }
-    });
+        // or the search plus
+        const searchInput = navHeadline.createEl("input", {
+          cls: "menu-bar-navigation-dropdown-search-input",
+          type: "text",
+          placeholder: "Filter...",
+        });
+        const searchItems = this.plugin.settings.flows[
+          this.flowName
+        ].flowReceipe[key].map((path) => ({
+          path: path,
+          displayName: `${this.makeNavPath(path)}`,
+        }));
 
-    const dropdownGeneral = navigationDropdown.createDiv({
-      cls: `menu-bar-navigation-dropdown-general ${this.getDropdownState(
-        "nav"
-      )}`,
-    });
-    const navDropdownScrollable = dropdownGeneral.createDiv({
-      cls: "menu-bar-navigation-dropdown-scrollable",
-    });
-    // the initial clickable list of entries
-    const dropdownEntries = navDropdownScrollable.createDiv({
-      cls: "menu-bar-navigation-dropdown-entries",
-    });
+        const fuse = new Fuse(searchItems, {
+          keys: ["displayName"],
+          threshold: 0.4,
+          // We can tune these options
+          includeScore: true,
+          includeMatches: true,
+        });
 
-    for (let path of this.plugin.settings.flows[this.flowName].flowReceipe[
-      key
-    ]) {
-      this.createNavDropdownEntry(path, dropdownEntries);
-    }
+        this.addManagedListener(searchInput, "input", (event) => {
+          const query = (event.target as HTMLInputElement).value;
+          console.log(
+            "Query value:",
+            query,
+            "Length:",
+            query.length,
+            "Type:",
+            typeof query
+          );
 
-    // ------ The cursor stuff -----------------------------------
+          // If no query (yet), return all paths
+          if (!query) {
+            this.filterList =
+              this.plugin.settings.flows[this.flowName].flowReceipe[key];
+          }
 
-    const cursorContainer = menuBarEl.createDiv({
-      cls: `menu-bar-cursor-container spacing`,
-    });
+          // Otherwise return filtered paths
+          this.filterList = fuse
+            .search(query)
+            .map(
+              (result) => (result as FuseResult<{ path: string }>).item.path
+            );
 
-    const cursorDropdown = cursorContainer.createDiv({
-      cls: "menu-bar-navigation-dropdown",
-    });
-
-    const cursorHeadline = cursorDropdown.createDiv({
-      cls: "menu-bar-navigation-dropdown-headline",
-    });
-
-    // headline text and icon
-    cursorHeadline.createSpan({
-      cls: "align-off-center",
-      text:
-        Object.keys(this.plugin.settings.flows[this.flowName].persistentCursors)
-          .length > 0
-          ? `Stored cursor positions`
-          : `No stored cursors found`,
-    });
-    const cursorIconSpan = cursorHeadline.createSpan();
-    setIcon(cursorIconSpan, "chevrons-down-up");
-
-    // headline click opens dropdown
-    this.addManagedListener(cursorHeadline, "click", (event) => {
-      if (this.getDropdownState("cursor") === "hide") {
-        this.setDropdownState("cursor", "show");
-        this.refresh(this.associatedView.contentEl);
-        const filterCriterion = this.element?.querySelector(
-          ".menu-bar-navigation-dropdown-search-input"
-        );
-        if (filterCriterion) {
-          (filterCriterion as HTMLInputElement).focus();
-        }
-
-        // Listener that will close dropdown if we click outside it
-        this.addManagedListener(document, "click", (e: MouseEvent) => {
-          const target = e.target as HTMLElement;
-          // Check if click is outside the navigation dropdown
-          if (!cursorDropdown.contains(target)) {
-            this.filterList = [];
-            this.setDropdownState("cursor", "hide");
-            this.refresh(this.associatedView.contentEl);
+          if (this.filterList.length === 0 && query != "") {
+            // no entries because of failed filter
+            this.refreshNavDropdownEntries(dropdownEntries, true);
+          } else if (this.filterList.length > 0) {
+            // entries because of successful filter
+            this.refreshNavDropdownEntries(dropdownEntries, false);
+          } else {
+            // no entries because query has been deleted
+            this.filterList =
+              this.plugin.settings.flows[this.flowName].flowReceipe[key];
+            this.refreshNavDropdownEntries(dropdownEntries, false);
           }
         });
-      } else {
-        this.setDropdownState("cursor", "hide");
-        this.refresh(this.associatedView.contentEl);
       }
-    });
-    const cursorDropdownGeneral = cursorDropdown.createDiv({
-      cls: `menu-bar-navigation-dropdown-general ${this.getDropdownState(
-        "cursor"
-      )}`,
-    });
 
-    // make scrollable container for the entries
-    const cursorDropdownScrollable = cursorDropdownGeneral.createDiv({
-      cls: `menu-bar-navigation-dropdown-scrollable`,
-    });
+      const iconSpan = navHeadline.createSpan();
+      setIcon(iconSpan, "chevrons-down-up");
 
-    // Get all the timestamps to use a sorted array as ordering device
-    const timestampArray: number[] = [];
+      this.addManagedListener(navHeadline, "click", (event) => {
+        if (this.getDropdownState("nav") === "hide") {
+          this.setDropdownState("nav", "show");
+          this.refresh(this.associatedView.contentEl);
+          const filterCriterion = this.element?.querySelector(
+            ".menu-bar-navigation-dropdown-search-input"
+          );
+          if (filterCriterion) {
+            (filterCriterion as HTMLInputElement).focus();
+          }
 
-    if (
-      Object.keys(this.plugin.settings.flows[this.flowName].persistentCursors)
-        .length > 0
-    ) {
-      Object.keys(
-        this.plugin.settings.flows[this.flowName].persistentCursors
-      ).forEach((leafID) => {
-        timestampArray.push(
-          this.plugin.settings.flows[this.flowName].persistentCursors[leafID]
-            .update
-        );
+          // Listener that will close dropdown if we click outside it
+          this.addManagedListener(document, "click", (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            // Check if click is outside the navigation dropdown
+            if (!navigationDropdown.contains(target)) {
+              this.filterList = [];
+              this.setDropdownState("nav", "hide");
+              this.refresh(this.associatedView.contentEl);
+            }
+          });
+        } else {
+          this.setDropdownState("nav", "hide");
+          this.refresh(this.associatedView.contentEl);
+        }
       });
-      // sort the timestamps in reverse order so youngest timestamp comes first
-      timestampArray.sort((a, b) => b - a);
 
-      // Find out if we have data for the active leaf so we can show it at the top
-      const cursorLeafID = (this.associatedView.leaf as any).id;
+      const dropdownGeneral = navigationDropdown.createDiv({
+        cls: `menu-bar-navigation-dropdown-general ${this.getDropdownState(
+          "nav"
+        )}`,
+      });
+      const navDropdownScrollable = dropdownGeneral.createDiv({
+        cls: "menu-bar-navigation-dropdown-scrollable",
+      });
+      // the initial clickable list of entries
+      const dropdownEntries = navDropdownScrollable.createDiv({
+        cls: "menu-bar-navigation-dropdown-entries",
+      });
+
+      for (let path of this.plugin.settings.flows[this.flowName].flowReceipe[
+        key
+      ]) {
+        this.createNavDropdownEntry(path, dropdownEntries);
+      }
+
+      // ------ The cursor stuff -----------------------------------
+
+      const cursorContainer = menuBarEl.createDiv({
+        cls: `menu-bar-cursor-container spacing`,
+      });
+
+      const cursorDropdown = cursorContainer.createDiv({
+        cls: "menu-bar-navigation-dropdown",
+      });
+
+      const cursorHeadline = cursorDropdown.createDiv({
+        cls: "menu-bar-navigation-dropdown-headline",
+      });
+
+      let cursorDropdownHeadline = `No stored cursors found`;
+      if (this.plugin.settings.flows[this.flowName].persistentCursors) {
+        if (
+          Object.keys(
+            this.plugin.settings.flows[this.flowName].persistentCursors
+          ).length > 0
+        ) {
+          cursorDropdownHeadline = `Stored cursor positions`;
+        }
+      }
+
+      // headline text and icon
+      cursorHeadline.createSpan({
+        cls: "align-off-center",
+        text: cursorDropdownHeadline,
+      });
+      const cursorIconSpan = cursorHeadline.createSpan();
+      setIcon(cursorIconSpan, "chevrons-down-up");
+
+      // headline click opens dropdown
+      this.addManagedListener(cursorHeadline, "click", (event) => {
+        if (this.getDropdownState("cursor") === "hide") {
+          this.setDropdownState("cursor", "show");
+          this.refresh(this.associatedView.contentEl);
+          const filterCriterion = this.element?.querySelector(
+            ".menu-bar-navigation-dropdown-search-input"
+          );
+          if (filterCriterion) {
+            (filterCriterion as HTMLInputElement).focus();
+          }
+
+          // Listener that will close dropdown if we click outside it
+          this.addManagedListener(document, "click", (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            // Check if click is outside the navigation dropdown
+            if (!cursorDropdown.contains(target)) {
+              this.filterList = [];
+              this.setDropdownState("cursor", "hide");
+              this.refresh(this.associatedView.contentEl);
+            }
+          });
+        } else {
+          this.setDropdownState("cursor", "hide");
+          this.refresh(this.associatedView.contentEl);
+        }
+      });
+      const cursorDropdownGeneral = cursorDropdown.createDiv({
+        cls: `menu-bar-navigation-dropdown-general ${this.getDropdownState(
+          "cursor"
+        )}`,
+      });
+
+      // make scrollable container for the entries
+      const cursorDropdownScrollable = cursorDropdownGeneral.createDiv({
+        cls: `menu-bar-navigation-dropdown-scrollable`,
+      });
+
+      // Get all the timestamps to use a sorted array as ordering device
+      const timestampArray: number[] = [];
 
       if (
-        this.plugin.settings.flows[this.flowName].persistentCursors[
-          cursorLeafID
-        ]
+        Object.keys(this.plugin.settings.flows[this.flowName].persistentCursors)
+          .length > 0
       ) {
-        // create headline entry that's not clickable
-        const cursorDropdownEntryDate = cursorDropdownScrollable.createDiv({
-          cls: `text-emphasis align-off-center`,
-          text: `${
-            this.plugin.settings.flows[this.flowName].persistentCursors[
-              cursorLeafID
-            ].creationDateString
-          }`,
-        });
-
-        // now iterate through the cursor positions that belong to the leaf
-        const cursorArray =
-          this.plugin.settings.flows[this.flowName].persistentCursors[
-            cursorLeafID
-          ].cursors;
-
-        // create a div for each
-        for (const [index, data] of cursorArray.entries()) {
-          const textTimestamp =
-            this.plugin.settings.flows[this.flowName].persistentCursors[
-              cursorLeafID
-            ].update;
-
-          const cursorDropdownEntryPos = cursorDropdownScrollable.createDiv({
-            cls: "blah",
-            text: `${cursorArray[index][1]} - ${this.makeNavPath(data[0])}`,
-          });
-          const cursorPos = cursorArray[index][1];
-          const editor = this.associatedView.editor as ObsidianEditor;
-          this.addManagedListener(cursorDropdownEntryPos, "click", (event) => {
-            this.flowService.scrollToPos(editor, cursorPos);
-          });
-        }
-      }
-
-      // get leaves by timestamp again, but exclude the current leaf
-      for (let timestamp of timestampArray) {
         Object.keys(
           this.plugin.settings.flows[this.flowName].persistentCursors
         ).forEach((leafID) => {
-          // skip the active leaf if present
-          if (leafID != cursorLeafID) {
+          timestampArray.push(
+            this.plugin.settings.flows[this.flowName].persistentCursors[leafID]
+              .update
+          );
+        });
+        // sort the timestamps in reverse order so youngest timestamp comes first
+        timestampArray.sort((a, b) => b - a);
+
+        // Find out if we have data for the active leaf so we can show it at the top
+        const cursorLeafID = (this.associatedView.leaf as any).id;
+
+        if (
+          this.plugin.settings.flows[this.flowName].persistentCursors[
+            cursorLeafID
+          ]
+        ) {
+          // create headline entry that's not clickable
+          const cursorDropdownEntryDate = cursorDropdownScrollable.createDiv({
+            cls: `text-emphasis align-off-center`,
+            text: `${
+              this.plugin.settings.flows[this.flowName].persistentCursors[
+                cursorLeafID
+              ].creationDateString
+            }`,
+          });
+
+          // now iterate through the cursor positions that belong to the leaf
+          const cursorArray =
+            this.plugin.settings.flows[this.flowName].persistentCursors[
+              cursorLeafID
+            ].cursors;
+
+          // create a div for each
+          for (const [index, data] of cursorArray.entries()) {
+            const textTimestamp =
+              this.plugin.settings.flows[this.flowName].persistentCursors[
+                cursorLeafID
+              ].update;
+
+            const cursorDropdownEntryPos = cursorDropdownScrollable.createDiv({
+              cls: "blah",
+              text: `${cursorArray[index][1]} - ${this.makeNavPath(data[0])}`,
+            });
+            const cursorPos = cursorArray[index][1];
+            const editor = this.associatedView.editor as ObsidianEditor;
+            this.addManagedListener(
+              cursorDropdownEntryPos,
+              "click",
+              (event) => {
+                this.flowService.scrollToPos(editor, cursorPos);
+              }
+            );
+          }
+        }
+
+        // get leaves by timestamp again, but exclude the current leaf
+        for (let timestamp of timestampArray) {
+          Object.keys(
+            this.plugin.settings.flows[this.flowName].persistentCursors
+          ).forEach((leafID) => {
+            // skip the active leaf if present
+            if (leafID != cursorLeafID) {
+              if (
+                this.plugin.settings.flows[this.flowName].persistentCursors[
+                  leafID
+                ].update === timestamp
+              ) {
+                // create headline entry that's not clickable
+                const cursorDropdownEntryDate =
+                  cursorDropdownScrollable.createDiv({
+                    cls: `text-emphasis align-off-center`,
+                    text: `${
+                      this.plugin.settings.flows[this.flowName]
+                        .persistentCursors[leafID].creationDateString
+                    }`,
+                  });
+
+                // divs for the cursors
+                const cursorArray =
+                  this.plugin.settings.flows[this.flowName].persistentCursors[
+                    leafID
+                  ].cursors;
+
+                for (const [index, data] of cursorArray.entries()) {
+                  const cursorDropdownEntryPos =
+                    cursorDropdownScrollable.createDiv({
+                      cls: `blah`,
+                      text: `${cursorArray[index][1]} - ${this.makeNavPath(
+                        data[0]
+                      )}`,
+                    });
+
+                  const cursorPos = cursorArray[index][1];
+
+                  // get cursor pos for target icon
+                  this.addManagedListener(
+                    cursorDropdownEntryPos,
+                    "click",
+                    (event) => {
+                      const editor = this.associatedView
+                        .editor as ObsidianEditor;
+                      this.flowService.scrollToPos(editor, cursorPos);
+                    }
+                  );
+                }
+              }
+            }
+          });
+        }
+
+        // get the most recent cursor position for the cursor button
+        const mostRecentTimestamp: number = timestampArray[0];
+        let mostRecentCursor: number = 0;
+        let mostRecentRegion: string = "";
+        if (this.plugin.settings.flows[this.flowName].persistentCursors) {
+          Object.keys(
+            this.plugin.settings.flows[this.flowName].persistentCursors
+          ).forEach((leafID) => {
             if (
               this.plugin.settings.flows[this.flowName].persistentCursors[
                 leafID
-              ].update === timestamp
+              ].update === mostRecentTimestamp
             ) {
-              // create headline entry that's not clickable
-              const cursorDropdownEntryDate =
-                cursorDropdownScrollable.createDiv({
-                  cls: `text-emphasis align-off-center`,
-                  text: `${
-                    this.plugin.settings.flows[this.flowName].persistentCursors[
-                      leafID
-                    ].creationDateString
-                  }`,
-                });
-
-              // divs for the cursors
-              const cursorArray =
+              mostRecentCursor =
                 this.plugin.settings.flows[this.flowName].persistentCursors[
                   leafID
-                ].cursors;
-
-              for (const [index, data] of cursorArray.entries()) {
-                const cursorDropdownEntryPos =
-                  cursorDropdownScrollable.createDiv({
-                    cls: `blah`,
-                    text: `${cursorArray[index][1]} - ${this.makeNavPath(
-                      data[0]
-                    )}`,
-                  });
-
-                const cursorPos = cursorArray[index][1];
-
-                // get cursor pos for target icon
-                this.addManagedListener(
-                  cursorDropdownEntryPos,
-                  "click",
-                  (event) => {
-                    const editor = this.associatedView.editor as ObsidianEditor;
-                    this.flowService.scrollToPos(editor, cursorPos);
-                  }
-                );
-              }
+                ].cursors[0][1];
+              mostRecentRegion = this.makeNavPath(
+                this.plugin.settings.flows[this.flowName].persistentCursors[
+                  leafID
+                ].cursors[0][0]
+              );
             }
-          }
-        });
+          });
+        }
+        const cursorIconTarget = new ButtonComponent(cursorContainer);
+        cursorIconTarget
+          .setIcon("target")
+          .setClass("cursor-target-button") // Add a specific class we can target
+          .setTooltip(
+            mostRecentCursor != 0 && mostRecentRegion != ""
+              ? `${mostRecentCursor} - ${mostRecentRegion}`
+              : "No cursor positions stored"
+          )
+          .onClick(() => {
+            const editor = this.associatedView.editor as ObsidianEditor;
+            mostRecentCursor
+              ? this.flowService.scrollToPos(editor, mostRecentCursor)
+              : "";
+          });
       }
 
-      // get the most recent cursor position for the cursor button
-      const mostRecentTimestamp: number = timestampArray[0];
-      let mostRecentCursor: number = 0;
-      let mostRecentRegion: string = "";
-      Object.keys(
-        this.plugin.settings.flows[this.flowName].persistentCursors
-      ).forEach((leafID) => {
-        if (
-          this.plugin.settings.flows[this.flowName].persistentCursors[leafID]
-            .update === mostRecentTimestamp
-        ) {
-          mostRecentCursor =
-            this.plugin.settings.flows[this.flowName].persistentCursors[leafID]
-              .cursors[0][1];
-          mostRecentRegion = this.makeNavPath(
-            this.plugin.settings.flows[this.flowName].persistentCursors[leafID]
-              .cursors[0][0]
-          );
-        }
-      });
-      const cursorIconTarget = new ButtonComponent(cursorContainer);
-      cursorIconTarget
-        .setIcon("target")
-        .setClass("cursor-target-button") // Add a specific class we can target
-        .setTooltip(
-          mostRecentCursor
-            ? `${mostRecentCursor} - ${mostRecentRegion}`
-            : "No cursor positions stored"
-        )
-        .onClick(() => {
-          const editor = this.associatedView.editor as ObsidianEditor;
-          mostRecentCursor
-            ? this.flowService.scrollToPos(editor, mostRecentCursor)
-            : "";
+      const selectButton = new ButtonComponent(menuBarEl);
+      selectButton
+        .setIcon("text-select")
+        .setClass("spacing")
+        .setClass("clickable-icon")
+        .setTooltip("Select active region")
+        .onClick(async () => {
+          if (activeRegion) {
+            this.flowService.selectActiveRegion(
+              this.flowName,
+              activeRegion,
+              this.associatedView.editor.getValue(),
+              this.associatedView.editor
+            );
+          }
         });
+
+      const exportButton = new ButtonComponent(menuBarEl);
+      exportButton
+        .setIcon("file-up")
+        .setClass("spacing")
+        .setClass("clickable-icon")
+        .setTooltip("Export flow")
+        .onClick(async () => {
+          const path = this.plugin.settings.flows[this.flowName].flowFilePath;
+          const file = this.app.vault.getAbstractFileByPath(path);
+          if (file instanceof TFile) {
+            const fileContent: string = await this.app.vault.read(file);
+            const stripUUIDs = (text: string): string => {
+              const uuidPattern =
+                /[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46}/g;
+              const result = text.replace(uuidPattern, "\n");
+              return result;
+            };
+            const cleanContent = stripUUIDs(fileContent);
+            const exportedFlowPath = normalizePath(
+              `/${this.flowName}_export.md`
+            );
+            await this.flowService.safeCreateFile(
+              this.app.vault,
+              exportedFlowPath,
+              cleanContent
+            );
+            new Notice(
+              `textFlow: Your flow has been exported to ${exportedFlowPath}.`
+            );
+          }
+        });
+
+      const minimiseButton = new ButtonComponent(menuBarEl);
+      minimiseButton
+        .setIcon("chevron-left")
+        .setClass("spacing")
+        .setClass("clickable-icon")
+        .setTooltip("Minimise menu bar")
+        .onClick(() => {
+          this.plugin.settings.maxMenuBar = false;
+          this.refresh(this.associatedView.contentEl);
+        });
+      // most recent cursor button
+      // mostRecentCursor
+
+      // there we go.
+      return menuBarEl;
     }
-
-    // most recent cursor button
-    // mostRecentCursor
-
-    // there we go.
-    return menuBarEl;
   }
 }

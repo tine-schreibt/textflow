@@ -6,16 +6,20 @@
   display: none;
 }
 
-.hide-scrollbar ::-webkit-scrollbar {
-  display: none;
-}
-
 .align-off-center {
   padding-left: 7px;
 }
 
+.highlighted {
+  background-color: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
 .textflow-menu-bar-div .setting-item.no-border {
   border: none !important;
+}
+
+.hide-scrollbar ::-webkit-scrollbar {
+  display: none;
 }
 
 /* --------- RADIO BUTTONS -----------*/
@@ -460,10 +464,17 @@
 }
 
 .textflow-menu-bar {
-  position: relative;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  background: var(--background-primary); /* Ensure it has a background */
   padding: 5px;
-  margin: 5px;
-  justify-content: start; /* Add this line */
+  margin-top: 30px;
+  margin-left: 5px;
+  margin-right: 5px;
+  justify-content: start;
   display: grid;
   grid-template-columns: repeat(6, auto);
   gap: 8px;
@@ -472,6 +483,20 @@
   font-size: var(--font-ui-small);
   font-weight: var(--input-font-weight);
   color: var(--text-normal);
+}
+
+.textflow-menu-bar-min {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  background: var(--background-primary); /* Ensure it has a background */
+  padding: 5px;
+  margin-top: 30px;
+  margin-left: 5px;
+  margin-right: 5px;
+  justify-content: start;
 }
 
 .spacing {
@@ -647,42 +672,7 @@
   width: 30px;
 }
 
-/*1 saveButton download*/
-/*2 rebuildButton cw-blahblah*/
-/*5 navigation dropdown*/
-/*3 cursor history last locate-fixed*/
-/*4 cursor history list text-cursor*/
-/*6 bookmarks bookmark*/
-/*7 search search*/
-/*8 snapshots camera*/
-/**/
-/**/
-/**/
-
 /* ------------ to make read-only visible ----------------*/
-.source-read-only .cm-content {
-  background-color: rgba(255, 255, 255, 0.1); /* Light tint */
-  opacity: 0.7; /* Make text slightly faded */
-  /*pointer-events: none; /* Prevent clicks */
-  /*user-select: none; /* Prevent text selection */
-  position: relative; /* Needed for the lock icon */
-}
-
-/* Add a "LOCKED" overlay */
-.source-read-only .cm-content::after {
-  content: "This note is the source of a flow. Please only edit its properties.";
-  position: absolute;
-  white-space: normal;
-  max-width: 90%;
-  word-wrap: break-word;
-  top: 10px;
-  left: 10px;
-  background: var(--interactive-accent);
-  color: var(--text-on-accent);
-  padding: 4px 8px;
-  font-size: 12px;
-  border-radius: 4px;
-}
 
 .save-rebuild-protection {
   color: var(--text-muted);
