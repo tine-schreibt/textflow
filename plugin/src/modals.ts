@@ -17,6 +17,7 @@ import {
 import * as Types from "./types";
 import { FlowService } from "./flowService";
 import { MenuBar } from "./menuBar";
+import { TextFlowSettingsTab } from "./settingsTab";
 
 export class previewModal extends Modal {
   constructor(
@@ -591,14 +592,13 @@ export class DeleteFlowDefModal extends Modal {
   constructor(
     app: App,
     private plugin: TextFlowPlugin,
-    private settings: Types.TextFlowSettings,
-    private flowName: string,
-    private modalSaveAndReload: () => Promise<void>
+    private settingsTab: TextFlowSettingsTab,
+
+    private flowName: string
   ) {
     super(app);
-    this.settings = settings;
+    this.settingsTab = new TextFlowSettingsTab(app, plugin);
     this.flowName = flowName;
-    this.modalSaveAndReload = modalSaveAndReload;
   }
   onOpen() {
     const { contentEl } = this;
@@ -617,10 +617,11 @@ export class DeleteFlowDefModal extends Modal {
     deleteButton.setTooltip(`Delete "${this.flowName}".`);
     deleteButton.setIcon("trash");
     deleteButton.onClick(async () => {
-      await this.modalSaveAndReload();
+      await this.plugin.saveSettings();
+      await this.settingsTab.display();
 
       const flowFilePath = normalizePath(
-        `${this.settings.systemFolderPath}/${this.flowName}.md`
+        `${this.plugin.settings.systemFolderPath}/${this.flowName}.md`
       );
       const flowFile = this.app.vault.getAbstractFileByPath(flowFilePath);
       if (flowFile instanceof TFile) {
@@ -628,13 +629,14 @@ export class DeleteFlowDefModal extends Modal {
       }
 
       try {
-        delete this.settings.flows[this.flowName];
-        delete this.settings.activeFlowObject[this.flowName];
+        delete this.plugin.settings.flows[this.flowName];
+        delete this.plugin.settings.activeFlowObject[this.flowName];
 
         if (flowFile) {
           await this.app.vault.delete(flowFile);
         }
-        await this.modalSaveAndReload();
+        await this.settingsTab.display();
+
         new Notice(
           `textFlow: The definition and flowFile of "${this.flowName}" were deleted!`
         );

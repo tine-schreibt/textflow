@@ -1,36 +1,23 @@
-import { getAPI } from "obsidian-dataview";
 import * as Modals from "./modals";
 import {
   App,
   ButtonComponent,
   setIcon,
-  MarkdownView,
   normalizePath,
   Notice,
   PluginSettingTab,
   Setting,
-  TFolder,
-  TFile,
-  TAbstractFile,
-  TextComponent,
-  ToggleComponent,
 } from "obsidian";
 import TextFlow from "../main";
-import * as Types from "./types";
-import Pickr from "@simonwep/pickr";
 import { FlowService } from "./flowService";
 import { dirname } from "path";
+
+export const TEXTFLOW_SYSTEMFOLDER = "TextFlow_SystemFolder";
 
 // --- The class that defines the settings tab
 export class TextFlowSettingsTab extends PluginSettingTab {
   plugin: TextFlow;
   flowService: FlowService;
-  private listeners: Array<{
-    // listener for the explorer deco items
-    element: HTMLElement | Document;
-    type: string;
-    handler: EventListener;
-  }> = [];
 
   constructor(app: App, plugin: TextFlow) {
     super(app, plugin);
@@ -38,61 +25,43 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     this.flowService = new FlowService(plugin, app);
   }
 
-  // ---- Function that bundles saving an reloading
-  // Enable modals save and redraw the display
-  modalSaveAndReload = async () => {
-    await this.plugin.saveSettings();
-    this.display(); // Refresh the UI after saving
-  };
+  // ----- Helper functions
 
-  private addManagedListener(
-    element: HTMLElement | Document,
-    type: string,
-    handler: EventListener
-  ) {
-    this.listeners.push({ element, type, handler });
-    element.addEventListener(type, handler);
-  }
+  //#######################################################################
+  //###########################   Settings Tab   ##########################
+  //#######################################################################
 
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
 
-    //#######################################################################
-    //###########################   Settings Tab   ##########################
-    //#######################################################################
+    this.plugin.settings.firstLaunch = false;
+    this.plugin.saveSettings();
 
     const setUpTextFlow = containerEl.createDiv({
       cls: "headline-container",
     });
 
     // ###############   SET UP A SYSTEM FOLDER   ###########################
+    //CHECKED AND TESTED
     const systemFolder = this.flowService.checkSystemFolder();
-    let newSystemFolderPlace = ""; // container for the new path
-    // -------------------
+    let newSystemFolderParent = ".";
+
     const setSystemFolder = new Setting(setUpTextFlow)
-      .setName("Choose a place for TextFlow_SystemFolder")
+      .setName("Choose an existing folder to put TextFlow_SystemFolder in")
       .setDesc(
         createFragment((desc) => {
           desc.createSpan({
-            text: "TextFlow needs a system folder to store its flows and snapshots.",
+            text: "TextFlow needs a (hidden) system folder to store its flows in.",
           });
-          desc.createEl("br"); // Add line break
+          desc.createEl("br");
           desc.createSpan({
-            text: "Enter / to choose the root folder.",
+            text: "Enter / or . to choose the root folder.",
           });
         })
       );
 
-    if (!systemFolder) {
-      this.plugin.settings.systemFolderPath = normalizePath(
-        "/TextFlow_SystemFolder"
-      );
-      this.plugin.saveSettings();
-    } else if (this.plugin.settings.systemFolderPath != systemFolder.path) {
-      this.plugin.settings.systemFolderPath = systemFolder.path;
-      this.plugin.saveSettings();
-    }
+    this.plugin.ensureSystemFolder();
 
     setSystemFolder
       .addText((newSystemFolderInput) =>
@@ -100,59 +69,71 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .setValue(
             this.plugin.settings.systemFolderPath
               ? normalizePath(dirname(this.plugin.settings.systemFolderPath))
-              : "/"
+              : "."
           )
           .onChange(async (value) => {
-            newSystemFolderPlace = normalizePath(value);
+            newSystemFolderParent = normalizePath(value);
             await this.flowService.debouncedSaveSettings();
           })
       )
       .addButton((systemFolderCreateOrMoveButton) => {
         systemFolderCreateOrMoveButton
-          .setButtonText(systemFolder ? "Move" : "Create")
+          .setButtonText(!systemFolder ? "Create" : "Move")
           .onClick(async () => {
             // Create SystemFolder
             if (!systemFolder) {
               const newPath = normalizePath(
-                `${newSystemFolderPlace}/TextFlow_SystemFolder`
+                `${newSystemFolderParent}/${TEXTFLOW_SYSTEMFOLDER}`
               );
               await this.flowService.createSystemFolder(newPath);
+
+              // set the folder hidden if appropriate
               this.plugin.discernAndSetSystemFolderState(
                 this.plugin.settings.systemFolderHidden,
-                newSystemFolderPlace
+                newSystemFolderParent
               );
             } else {
-              //Move SystemFolder
+              // Move SystemFolder
               try {
                 const newPath = normalizePath(
-                  `${newSystemFolderPlace}/TextFlow_SystemFolder`
+                  `${newSystemFolderParent}/${TEXTFLOW_SYSTEMFOLDER}`
                 );
                 await this.app.vault.rename(systemFolder, newPath);
+
+                // hide if appropriate
                 this.plugin.discernAndSetSystemFolderState(
                   this.plugin.settings.systemFolderHidden,
-                  newSystemFolderPlace
+                  newSystemFolderParent
                 );
-                // Update settings with new location
-                this.plugin.settings.systemFolderPath = newPath;
-                Object.keys(this.plugin.settings.flows).forEach((flowName) => {
-                  this.plugin.settings.flows[flowName].flowFilePath =
-                    normalizePath(
-                      `${this.plugin.settings.systemFolderPath}/${flowName}.md`
-                    );
-                });
-                await this.plugin.saveSettings();
 
-                new Notice(`textFlow: SystemFolder moved to ${newSystemFolderPlace}`);
+                this.plugin.settings.systemFolderPath = newPath;
+
+                // Update the flowFilePaths
+                if (this.plugin.settings.flows) {
+                  Object.keys(this.plugin.settings.flows).forEach(
+                    (flowName) => {
+                      this.plugin.settings.flows[flowName].flowFilePath =
+                        normalizePath(
+                          `${this.plugin.settings.systemFolderPath}/${flowName}.md`
+                        );
+                    }
+                  );
+                }
+                await this.plugin.saveSettings();
+                new Notice(
+                  `textFlow: TextFlow_SystemFolder moved to ${newSystemFolderParent}`
+                );
               } catch (error) {
                 new Notice(`textFlow: Failed to move folder: ${error.message}`);
               }
             }
           });
       });
+    // ^CHECKED AND TESTED
 
     // --------------------- UI settings
     // -----------   flowSwitcherModal  ---------------
-
+    //CHECKED AND TESTED
     const switcherModalPosition = new Setting(setUpTextFlow)
       .setName("Access to the flow switcher modal via...")
       .setDesc("Changes need a vault reload to take effect.")
@@ -168,8 +149,11 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         });
       });
 
+    //^CHECKED AND TESTED
+
+    //CHECKED
     // ------------ explorer Deco
-    // A robot wrote this, which is why it looks much more refined than my usual stuff
+    // Claude 3.5 Sonnet wrote this to preserve my sanity, which is also why it looks much more refined than my usual stuff
     const explorerDeco = new Setting(setUpTextFlow)
       .setName("Choose file explorer decoration")
       .setDesc(
@@ -177,13 +161,13 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           desc.createSpan({
             text: "Marks the source notes of all currently active (opened) flows.",
           });
-          desc.createEl("br"); // Add line break
+          desc.createEl("br");
           desc.createSpan({
             text: "First symbol: up to date; second symbol: waiting for sync.",
           });
-          desc.createEl("br"); // Add line break
+          desc.createEl("br");
           desc.createSpan({
-            text: "Color may be overridden by your theme settings.",
+            text: "The colour is the accent you chose in Obsidian's 'Appearance' settings.",
           });
         })
       );
@@ -275,7 +259,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       flowModeExplorerDecoHeadline.removeEventListener("click", toggleDropdown);
     });
 
-    // The Quality of Life stuff
+    // --- And we're back to my own beginner style, though Claude still helps me to get better at this -.-
+
+    // ------------ The Quality of Life stuff
     const qol = setUpTextFlow.createEl("details", {
       cls: "advancedSettings-container",
     });
@@ -333,27 +319,60 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
     // ------------- scrollbar ------------
     const scrollbar = new Setting(qol)
-      .setName("Hide scrollbar on flows")
+      .setName("Hide scrollbar")
       .setDesc(
         createFragment((desc) => {
           desc.createSpan({
-            text: "If the twitchy scrollbar handle annoys you but you don't want to hide it via your theme, toggle this on to hide it just for flows.",
-          });
-          desc.createEl("br"); // Add line break
-          desc.createSpan({
-            text: "Needs a vault reload to take effect.",
+            text: "If the twitchy scrollbar handle annoys you, hide it.",
           });
         })
       )
-      .addToggle((scollbarToggle) => {
-        scollbarToggle
+      .addDropdown((dropdown) => {
+        dropdown
+          .addOption("flows", "Hide only in flows")
+          .addOption("all", "Hide everywhere")
+          .addOption("none", "Don't hide")
           .setValue(this.plugin.settings.hideScrollbar)
           .onChange(async (value) => {
             this.plugin.settings.hideScrollbar = value;
             await this.plugin.saveSettings();
+            this.flowService.updateScrollbarVisibility();
           });
       });
 
+    // -----------   hide system folder  ---------------
+    const hidesystemFolder = new Setting(qol)
+      .setName("Hide TextFlow_SystemFolder")
+      .setDesc(
+        createFragment((desc) => {
+          desc.createSpan({
+            text: "Hiding this folder is recommended to protect its contents, but ultimately, it's an aesthetic and practical choice.",
+          });
+          desc.createEl("br");
+          desc.createSpan({
+            text: "If you open flows directly from the folder, they will still be protected and tracked.",
+          });
+          desc.createEl("br");
+          desc.createSpan({
+            text: "Unhiding the folder needs a vault reload to take effect.",
+          });
+        })
+      )
+      .addToggle((hideSystemFolderToggle) => {
+        hideSystemFolderToggle
+          .setValue(this.plugin.settings.systemFolderHidden)
+          .onChange(async (value) => {
+            this.plugin.settings.systemFolderHidden = value;
+            if (this.plugin.settings.systemFolderPath) {
+              this.plugin.discernAndSetSystemFolderState(
+                value,
+                normalizePath(this.plugin.settings.systemFolderPath)
+              );
+            }
+            await this.plugin.saveSettings();
+          });
+      });
+    //^CHECKED
     // --------   CREATE / EDIT FLOWS   ----------------
     const createFlows = containerEl.createDiv({
       cls: "headline-container",
@@ -364,16 +383,30 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     });
 
     //--------- FLOW NAME -----------------
+    // CHECKED AND TESTED
     const chooseFlowName = new Setting(createFlows)
       .setName("Name your flow")
       .setDesc(
         createFragment((desc) => {
-          desc.createSpan({
-            text:
-              this.plugin.settings.flowBuildBasket.createOrEdit != "edit"
-                ? "Please enter a unique name for your flow. This name can NOT be changed later."
-                : `Your flow is called "${this.plugin.settings.flowBuildBasket.flowName}"`,
-          });
+          if (this.plugin.settings.flowBuildBasket.createOrEdit != "edit") {
+            desc.createSpan({
+              text: "The following characters can not be part of your flow name:",
+              cls: "text-emphasis",
+            });
+            desc.createEl("br");
+            desc.createSpan({
+              text: '? : # * < > [ ] / | \\ "  ^ `',
+              cls: "text-emphasis",
+            });
+            desc.createEl("br");
+            desc.createSpan({
+              text: "Also note that the name can not be changed later.",
+            });
+          } else {
+            desc.createSpan({
+              text: `Your flow is called "${this.plugin.settings.flowBuildBasket.flowName}"`,
+            });
+          }
         })
       );
     if (this.plugin.settings.flowBuildBasket.createOrEdit != "edit") {
@@ -388,7 +421,10 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         });
       });
     }
+    //^CHECKED AND TESTED
+
     // ---- SORT FLOW ---------
+    // CHECKED
     const sortFlow = new Setting(createFlows)
       .setName("Follow note order in file explorer (ignored for bookmarks)")
       .setDesc(
@@ -396,13 +432,13 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           desc.createSpan({
             text: "Note order overrides folder order. Best for flat hierarchy (and folder titles off).",
           });
-          desc.createEl("br"); // Add line break
+          desc.createEl("br");
           desc.createSpan({
             text: "If toggled off, folder order overrides note order. Best for deep hierarchy (and folder titles on).",
           });
-          desc.createEl("br"); // Add line break
+          desc.createEl("br");
           desc.createSpan({
-            text: "Test all options to see which one works best for each flow.",
+            text: "Test out both options in the preview to see which order fits you best.",
           });
         })
       )
@@ -416,8 +452,10 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           this.plugin.saveSettings();
         });
       });
+    // ^ CHECKED
 
     // --------- FOLDER TITLES ------------------
+    // CHECKED
     const toggleFolderTitles = new Setting(createFlows)
       .setName("Include folder / bookmark group titles in flow")
       .setDesc(
@@ -440,21 +478,25 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         });
       });
 
+    // ^CHECKED
+
     //------- DEFINE FLOW --------------------
+    //CHECKED
     const defineFlow = new Setting(createFlows)
       .setName("Define your Flow...")
       .setDesc(
         createFragment((desc) => {
           desc.createSpan({
-            text: "Changing definition modes will clear all values.",
+            text: "Only the active definition method will be used for your definition.",
           });
-          desc.createEl("br"); // Add line break
+          desc.createEl("br");
           desc.createSpan({
             text: "If you don't enter any criteria, your enitre vault will be included in your flow.",
             cls: "text-emphasis",
           });
         })
       );
+    //^CHECKED
 
     //------- RADIO BUTTONS
     const radioButtonContainer = defineFlow.controlEl.createDiv({
@@ -463,8 +505,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     const buttons: { [key: string]: ButtonComponent } = {};
 
     // -------- Radio Buttons ---------------
-    // Creating just the buttons to keep UI order; settings and .onClick
-    // are below the input element setup
+    // Just creating and styling the buttons; the dependent UI and .onClick behaviour
+    // are below the input element setup because I want to keep the hide/show with its elements
     buttons.bookmarks = new ButtonComponent(radioButtonContainer)
       .setButtonText("... by a bookmark group")
       .setClass("settings-radio-button");
@@ -484,6 +526,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     }
 
     // ------ BOOKMARKS INPUT ELEMENT AND STUFF --------------------------------------
+    //CHECKED
     const chooseBookmarks = new Setting(createFlows);
     chooseBookmarks.settingEl.hide(); // HIDE INITIALLY
     chooseBookmarks.settingEl.addClass("border-top-none");
@@ -493,17 +536,17 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         desc.createSpan({
           text: "Input the name of a bookmarks group.",
         });
-        desc.createEl("br"); // Add line break
+        desc.createEl("br");
         desc.createSpan({
           text: "To choose a subgroup, enter its path like this:",
         });
-        desc.createEl("br"); // Add line break
+        desc.createEl("br");
         desc.createSpan({
-          text: "rootLevelGroup/subGroup1/subGroup2",
+          text: "rootGroup/subGroupOfRoot/subGroupOfSubgroup",
         });
-        desc.createEl("br"); // Add line break
+        desc.createEl("br");
         desc.createSpan({
-          text: "To exclude a group's subgroups end its name/path with /",
+          text: "To exclude a group's subgroups end its name or path with /",
         });
       })
     );
@@ -521,8 +564,14 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         this.flowService.debouncedSaveSettings();
       });
     });
+    //^CHECKED
 
     // ---------- FOLDERS, TAGS AND PROPERTIES INPUT ELEMENT -----------------------------------------
+    // This function used to be called IHateCSSAndHTML.
+    // I just can't get the layout to work with containers and
+    // I am NOT going to try again.
+
+    //CHECKED
     const showOrHideAlLFoldersTagsProps = (state: string) => {
       if (state === "show") {
         headlineChoosePathsTagsProperties.settingEl.show();
@@ -543,25 +592,28 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         propertiesExcludeInput.settingEl.hide();
       }
     };
+    //^CHECKED
+
+    //CHECKED
     // --- headline object ------
     const headlineChoosePathsTagsProperties = new Setting(createFlows);
     headlineChoosePathsTagsProperties.settingEl.hide();
     headlineChoosePathsTagsProperties
       .setClass("border-top-none")
       .setClass("input-width")
-      //.setClass("paths-props-setting")
       .setDesc(
         createFragment((desc) => {
           desc.createSpan({
-            text: "All six inputs are optional. For inclusion, all criteria must be true; for exclusion only one criterion must me true.",
+            text: "All six inputs are optional. For inclusion, all given criteria must be true; for exclusion only one criterion must me true.",
           });
-          desc.createEl("br"); // Add line break
+          desc.createEl("br");
           desc.createSpan({
-            text: "If you need more complex logic, consider defining your flow using a Dataview query and tagging the results. ",
+            text: "If you need more complex logic, consider defining your flow using a dataview query and tagging the results with your flow's name.",
           });
         })
       );
-
+    //^CHECKED
+    //CHECKED
     // ----- Folder include
     const folderIncludeInput = new Setting(createFlows);
     folderIncludeInput.settingEl.hide();
@@ -570,13 +622,13 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     folderIncludeInput.setDesc(
       createFragment((desc) => {
         desc.createSpan({
-          text: "Choose a source folder.",
+          text: "Choose a single source folder.",
         });
-        desc.createEl("br"); // Add line break
+        desc.createEl("br");
         desc.createSpan({
           text: "Default is root.",
         });
-        desc.createEl("br"); // Add line break
+        desc.createEl("br");
         desc.createSpan({
           text: "End path with / to not include subfolders.",
         });
@@ -589,7 +641,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
       if (!this.plugin.settings.flowBuildBasket?.fresh) {
         // this is so setValue is either a filled string or undefined;
-        // with an empty string for some reason not all folders get included on editing
+        // with an empty string for some reason not all folders get included when editing
         if (!storedValue || storedValue === "/" || storedValue === "") {
           delete this.plugin.settings.flowBuildBasket.flowCookbook
             .folderIncluded;
@@ -600,6 +652,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         );
       }
       folderIncludeInput.onChange(async (value) => {
+        value = normalizePath(value);
         this.plugin.settings.flowBuildBasket.previewUsed = false;
         // When storing the value
         this.plugin.settings.flowBuildBasket.flowCookbook.folderIncluded =
@@ -610,7 +663,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         this.flowService.debouncedSaveSettings();
       });
     });
+    //^CHECKED
 
+    //CHECKED
     // ----- Folder exclude
     const folderExcludeInput = new Setting(createFlows);
     folderExcludeInput.settingEl.hide();
@@ -622,7 +677,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           desc.createSpan({
             text: "EXclude subfolder(s) by PATH.",
           });
-          desc.createEl("br"); // Add line break
+          desc.createEl("br");
           desc.createSpan({
             text: "Input comma separated list.",
           });
@@ -636,13 +691,23 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         }
         chooseExcludedFolders.onChange(async (value) => {
           this.plugin.settings.flowBuildBasket.previewUsed = false;
+          // Split to sanitise input
+          const normalisedPaths = value
+            .split(",")
+            .map((path) => normalizePath(path.trim()))
+            .filter((path) => path !== "");
+
+          // Join back before saving
           this.plugin.settings.flowBuildBasket.flowCookbook.folderExcluded =
-            value.trim();
+            normalisedPaths.join(", ");
+
           this.plugin.settings.flowBuildBasket.fresh = false;
           this.flowService.debouncedSaveSettings();
         });
       });
 
+    //^CHECKED
+    //CHECKED
     // ----- Tags
     const tagsIncludeInput = new Setting(createFlows);
     tagsIncludeInput.settingEl.hide();
@@ -652,9 +717,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       .setDesc(
         createFragment((desc) => {
           desc.createSpan({
-            text: "INclude by TAG.",
+            text: "INclude by #TAG.",
           });
-          desc.createEl("br"); // Add line break
+          desc.createEl("br");
           desc.createSpan({
             text: "Input comma separated list.",
           });
@@ -668,13 +733,25 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         }
         chooseIncludedTags.onChange(async (value) => {
           this.plugin.settings.flowBuildBasket.previewUsed = false;
+
+          // Dataview expects tags to start with a #
+          const sanitisedTags = value
+            .split(",")
+            .map((tag) => {
+              tag = tag.trim();
+              return tag.startsWith("#") ? tag : `#${tag}`;
+            })
+            .filter((tag) => tag !== "#");
+
           this.plugin.settings.flowBuildBasket.flowCookbook.tagsIncluded =
-            value.trim();
+            sanitisedTags.join(", ");
+
           this.plugin.settings.flowBuildBasket.fresh = false;
           this.flowService.debouncedSaveSettings();
         });
       });
-
+    //^CHECKED
+    //CHECKED
     const tagsExcludeInput = new Setting(createFlows);
     tagsExcludeInput.settingEl.hide();
     tagsExcludeInput.settingEl.addClass("border-top-none");
@@ -683,9 +760,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       .setDesc(
         createFragment((desc) => {
           desc.createSpan({
-            text: "EXclude by TAG.",
+            text: "EXclude by #TAG.",
           });
-          desc.createEl("br"); // Add line break
+          desc.createEl("br");
           desc.createSpan({
             text: "Input comma separated list.",
           });
@@ -699,13 +776,23 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         }
         chooseExcludedTags.onChange(async (value) => {
           this.plugin.settings.flowBuildBasket.previewUsed = false;
+
+          const sanitisedTags = value
+            .split(",")
+            .map((tag) => {
+              tag = tag.trim();
+              return tag.startsWith("#") ? tag : `#${tag}`;
+            })
+            .filter((tag) => tag !== "#");
+
           this.plugin.settings.flowBuildBasket.flowCookbook.tagsExcluded =
-            value.trim();
+            sanitisedTags.join(", ");
           this.plugin.settings.flowBuildBasket.fresh = false;
           this.flowService.debouncedSaveSettings();
         });
       });
-
+    //^CHECKED
+    //CHECKED
     // ----- Properties
     const propertiesIncludeInput = new Setting(createFlows);
     propertiesIncludeInput.settingEl.hide();
@@ -717,11 +804,11 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           desc.createSpan({
             text: "INclude by PROPERTY.",
           });
-          desc.createEl("br"); // Add line break
+          desc.createEl("br");
           desc.createSpan({
             text: "Input comma separated list.",
           });
-          desc.createEl("br"); // Add line break
+          desc.createEl("br");
           desc.createSpan({
             text: `You can use property = "value"`,
           });
@@ -735,13 +822,20 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         }
         chooseIncludedProperties.onChange(async (value) => {
           this.plugin.settings.flowBuildBasket.previewUsed = false;
+
+          const sanitisedProps = value
+            .split(",")
+            .map((prop) => prop.trim())
+            .filter((prop) => prop !== "");
+
           this.plugin.settings.flowBuildBasket.flowCookbook.propsIncluded =
-            value.trim();
+            sanitisedProps.join(",");
           this.plugin.settings.flowBuildBasket.fresh = false;
           this.flowService.debouncedSaveSettings();
         });
       });
-
+    //^CHECKED
+    //CHECKED
     const propertiesExcludeInput = new Setting(createFlows);
     propertiesExcludeInput.settingEl.hide();
     propertiesExcludeInput.settingEl.addClass("border-top-none");
@@ -752,11 +846,11 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           desc.createSpan({
             text: "EXclude by PROPERTY.",
           });
-          desc.createEl("br"); // Add line break
+          desc.createEl("br");
           desc.createSpan({
             text: "Input comma separated list.",
           });
-          desc.createEl("br"); // Add line break
+          desc.createEl("br");
           desc.createSpan({
             text: `You can use property = "value"`,
           });
@@ -770,15 +864,22 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         }
         chooseExcludedProperties.onChange(async (value) => {
           this.plugin.settings.flowBuildBasket.previewUsed = false;
+
+          const sanitisedProps = value
+            .split(",")
+            .map((prop) => prop.trim())
+            .filter((prop) => prop !== "");
+
           this.plugin.settings.flowBuildBasket.flowCookbook.propsExcluded =
-            value.trim();
+            sanitisedProps.join(", ");
           this.plugin.settings.flowBuildBasket.fresh = false;
           this.flowService.debouncedSaveSettings();
         });
       });
-
+    //^CHECKED
+    //CHECKED
     // ---- RADIO BUTTON SETTINGS AND LOGIC
-    // ---------------- Presets for the BOOKMARKS button
+    // --- Presets for the BOOKMARKS button
     if (!this.plugin.settings.flowBuildBasket?.fresh) {
       if (this.plugin.settings.flowBuildBasket.definitionMode === "bookmarks") {
         showOrHideAlLFoldersTagsProps("hide");
@@ -787,6 +888,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     }
     // onClick for the BOOKMARKS button
     buttons.bookmarks.onClick(() => {
+      // if we could have prior values from foldersTagsProps, clear out the flowCookbook
       if (
         this.plugin.settings.flowBuildBasket.definitionMode ===
         "foldersTagsProps"
@@ -794,17 +896,23 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         this.plugin.settings.flowBuildBasket.flowCookbook = {};
         this.plugin.saveSettings();
       }
+
+      // then set correct definition mode and show/hide correct elements
       this.plugin.settings.flowBuildBasket.definitionMode = "bookmarks";
       this.plugin.settings.flowBuildBasket.previewUsed = false;
+
+      // update button
       this.flowService.radioButtonManager(
         buttons.bookmarks,
         buttons.foldersTagsProps
       );
+
+      // hide/show input elements
       chooseBookmarks.settingEl.show();
       showOrHideAlLFoldersTagsProps("hide");
     });
 
-    // ------------ Presets for the foldersTagsProps button
+    // ---- Presets for the foldersTagsProps button
     if (!this.plugin.settings.flowBuildBasket?.fresh) {
       if (
         this.plugin.settings.flowBuildBasket.definitionMode ===
@@ -823,43 +931,37 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       }
       this.plugin.settings.flowBuildBasket.definitionMode = "foldersTagsProps";
       this.plugin.settings.flowBuildBasket.previewUsed = false;
+
       this.flowService.radioButtonManager(
         buttons.foldersTagsProps,
         buttons.bookmarks
       );
+
       chooseBookmarks.settingEl.hide();
       showOrHideAlLFoldersTagsProps("show");
     });
+    //^CHECKED
 
     // ----------- Preview and save BUTTONS --------------------
-
+    //CHECKED
     const previewButton = new ButtonComponent(containerEl);
     previewButton
       .setButtonText("Preview your flow structure")
       .onClick(async (buttonEl: MouseEvent) => {
-        this.plugin.settings.flowBuildBasket = {
-          flowName: this.plugin.settings.flowBuildBasket.flowName,
-          createOrEdit: this.plugin.settings.flowBuildBasket.createOrEdit,
-          previewUsed: true,
-          dataviewSearchPath: "",
-          definitionMode: this.plugin.settings.flowBuildBasket.definitionMode,
-          depthFirst: this.plugin.settings.flowBuildBasket.depthFirst,
-          folderTitles: this.plugin.settings.flowBuildBasket.folderTitles,
-          success: false,
-          fresh: false,
-          flowCookbook: this.plugin.settings.flowBuildBasket.flowCookbook,
-          cleanCookbook: {},
-          finalReceipe: this.plugin.settings.flowBuildBasket.finalReceipe,
-          conflictObject: this.plugin.settings.flowBuildBasket.conflictObject,
-          activeRegions: this.plugin.settings.flowBuildBasket.activeRegions,
-          persistentCursors:
-            this.plugin.settings.flowBuildBasket.persistentCursors,
-        };
+        // setting up the flowBuildBasket's missing values
+        this.plugin.settings.flowBuildBasket.previewUsed = true;
+        this.plugin.settings.flowBuildBasket.dataviewSearchPath = "";
+        this.plugin.settings.flowBuildBasket.success = false;
+        this.plugin.settings.flowBuildBasket.fresh = false;
+        this.plugin.settings.flowBuildBasket.cleanCookbook = {};
+
+        // do the logic that leads to a list of note paths
         await this.flowService.createFlowDefinition(
           this.plugin.settings.flowBuildBasket
         );
-        this.plugin.settings.flowBuildBasket.previewUsed = true;
-        if (this.plugin.settings.flowBuildBasket.success === true) {
+
+        // make the modal
+        if (this.plugin.settings.flowBuildBasket.success) {
           const previewModal = new Modals.previewModal(
             this.app,
             this.plugin,
@@ -868,18 +970,20 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           previewModal.open();
         }
       });
+    //^CHECKED
 
+    //CHECKED
     const saveButton = new ButtonComponent(containerEl);
     saveButton
       .setButtonText("Save flow definition")
       .onClick(async (buttonEl: MouseEvent) => {
         // if no flow name is given
-
         if (!this.plugin.settings.flowBuildBasket.flowName) {
           new Notice("textFlow: Please give your flow a name first.");
           return;
         }
-        // if we're creating and a flow with the given name already exists
+
+        // if we're creating and a flow with the chosen name already exists
         if (
           this.plugin.settings.flowBuildBasket.createOrEdit === "create" &&
           this.plugin.settings.flows[
@@ -887,13 +991,23 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           ]
         ) {
           new Notice(
-            "textFlow: A flow by this name already exists. Rename your new flow or delete the old one."
+            "textFlow: A flow by this name already exists. Please rename your new flow or delete the old one."
           );
           return;
         }
 
-        // Build a flow definition if preview hasn't done that yet
+        // check if flow name would make a valid file name (because that's what it will be)
+        const flowNameIsValid = this.flowService.isValidFlowName(
+          this.plugin.settings.flowBuildBasket.flowName
+        );
+        if (!flowNameIsValid.valid && flowNameIsValid.reason) {
+          new Notice(flowNameIsValid.reason);
+          return;
+        }
+
+        // check if we have to create a definition or can reuse the one from the preview
         if (!this.plugin.settings.flowBuildBasket.previewUsed) {
+          // Build a flow definition if preview hasn't done that yet
           await this.flowService.createFlowDefinition(
             this.plugin.settings.flowBuildBasket
           );
@@ -902,6 +1016,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           }
         }
 
+        // write the whole stuff, update conflicts and clean up the basket
         await this.flowService.writeFlowDef(
           this.plugin.settings,
           this.plugin.settings.flowBuildBasket
@@ -915,21 +1030,29 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           this.plugin.settings.flowBuildBasket
         );
 
+        // save
         this.plugin.saveSettings();
         this.display();
       });
+    //^CHECKED
 
+    //CHECKED
     // ----- Clear the input mask
     const clearValues = new ButtonComponent(containerEl);
-    clearValues.setButtonText("Reset").onClick(async (buttonEl: MouseEvent) => {
-      this.plugin.settings.flowBuildBasket.previewUsed = false;
-      this.flowService.resetFlowBuildBasket(
-        this.plugin.settings.flowBuildBasket
-      );
-      this.plugin.saveSettings();
-      this.display();
-    });
-
+    clearValues
+      .setButtonText("Clear values")
+      .onClick(async (buttonEl: MouseEvent) => {
+        // Clear all input values and reset the basket
+        this.plugin.settings.flowBuildBasket.previewUsed = false;
+        this.flowService.resetFlowBuildBasket(
+          this.plugin.settings.flowBuildBasket
+        );
+        this.plugin.saveSettings();
+        this.display();
+      });
+    //^CHECKED
+    //CHECKED
+    // ------- FLOW DISPLAY -----------------------------
     const flowDisplay = containerEl.createDiv({
       cls: "headline-container",
     });
@@ -989,55 +1112,42 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
       // --- THE DISPLAY ITSELF -------------------------------
       const flowShow = new Setting(flowDisplay);
-      let modWarning = "";
-      if (shownFlow.unsavedRegionsArray.length > 0) {
-        modWarning = " - UNSAVED CHANGES!";
-      }
       flowShow
-        .setName(`${shownFlow.flowName}${modWarning}`)
+        .setName(`${shownFlow.flowName}`)
         .setDesc(
           createFragment((desc) => {
             desc.createSpan({
               text: `Source: ${source}`,
             });
             if (inclusionString != "" && inclusionString != undefined) {
-              desc.createEl("br"); // Add line break
+              desc.createEl("br");
               desc.createSpan({
                 text: `Inclusion criteria: ${inclusionString}`,
               });
             }
             if (exclusionString != "" && exclusionString != undefined) {
-              desc.createEl("br"); // Add line break
+              desc.createEl("br");
               desc.createSpan({
                 text: `Exclusion criteria: ${exclusionString}`,
               });
             }
-            if (Object.keys(shownFlow.conflictObject).length > 0) {
-              const conflictArray: string[] = [];
-              Object.keys(shownFlow.conflictObject).forEach((flow) => {
-                conflictArray.push(flow);
-              });
-              const conflictString = conflictArray.join(" ,");
-              desc.createEl("br"); // Add line break
-              desc.createSpan({
-                text: `Overlaps with: ${conflictString}`,
-              });
-            }
           })
         )
+        //^CHECKED
+        //CHECKED
         .addButton((rebuildButton) =>
-          rebuildButton.setButtonText("(Re)build)").onClick(async () => {
+          rebuildButton.setButtonText("(Re)build").onClick(async () => {
             // gather all info for the flowDefinition
             this.flowService.rebuildFlow(flowName);
             await this.plugin.saveSettings();
             this.display();
           })
         )
-
+        //^CHECKED
+        //CHECKED
         .addButton((editFlow) => {
           editFlow.setButtonText("Edit").onClick(async () => {
-            // state check creating vs editing
-
+            // putting values in the flowBuildBasket
             this.plugin.settings.flowBuildBasket = {
               flowName: shownFlow.flowName,
               createOrEdit: "edit",
@@ -1056,64 +1166,25 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               persistentCursors: shownFlow.persistentCursors,
             };
 
+            // save to make them stick
             this.plugin.saveSettings();
+
+            // rebuild display so values are shown in the input mask
             this.display();
           });
         })
+        //^CHECKED
         .addButton((deleteDef) => {
           deleteDef.setButtonText("Delete definition").onClick(async () => {
             const DeleteFlowDefModal = new Modals.DeleteFlowDefModal(
               this.app,
               this.plugin,
-              this.plugin.settings,
-              shownFlow.flowName,
-              this.modalSaveAndReload
+              this,
+              shownFlow.flowName
             );
             DeleteFlowDefModal.open();
           });
         });
     }
-
-    const advancedSettings = containerEl.createEl("details", {
-      cls: "advancedSettings-container",
-    });
-
-    advancedSettings
-      .createEl("summary", {
-        cls: "advancedSettings-headline",
-      })
-      .createSpan({ text: "A hidden setting" });
-
-    // The content div where your advanced settings will go
-    const advancedContent = advancedSettings.createDiv();
-
-    // -----------   hide system folder  ---------------
-    const hidesystemFolder = new Setting(advancedContent)
-      .setName("Hide TextFlow_SystemFolder")
-      .setDesc(
-        createFragment((desc) => {
-          desc.createSpan({
-            text: "Hiding this folder is strongly recommended (messing with it can lose you data).",
-          });
-          desc.createEl("br"); // Add line break
-          desc.createSpan({
-            text: "Unhiding the folder needs a vault reload to take effect.",
-          });
-        })
-      )
-      .addToggle((hideSystemFolderToggle) => {
-        hideSystemFolderToggle
-          .setValue(this.plugin.settings.systemFolderHidden)
-          .onChange(async (value) => {
-            this.plugin.settings.systemFolderHidden = value;
-            if (this.plugin.settings.systemFolderPath) {
-              this.plugin.discernAndSetSystemFolderState(
-                value,
-                normalizePath(this.plugin.settings.systemFolderPath)
-              );
-            }
-            await this.plugin.saveSettings();
-          });
-      });
   }
 }

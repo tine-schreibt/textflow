@@ -36,6 +36,7 @@ import * as Types from "./src/types";
 import * as Modals from "./src/modals";
 import { MenuBar } from "./src/menuBar";
 import { FlowService } from "./src/flowService";
+import { TEXTFLOW_SYSTEMFOLDER } from "./src/settingsTab";
 import { dirname, basename } from "path";
 
 // so the menu bar can be kept within the view
@@ -66,6 +67,7 @@ interface ListenerBasketItem {
 export default class TextFlowPlugin extends Plugin {
   settings: TextFlowSettings;
   flowService: FlowService;
+  settingsTab: TextFlowSettingsTab;
   isRebuilding: boolean = false; // to prevent a doom spiral of the modify listener
   isLoading: boolean = true; // to prevent the create listener from spamming notices onload
 
@@ -174,59 +176,44 @@ export default class TextFlowPlugin extends Plugin {
   }
 
   // ---------------------------------------------------------------
+  //CHECKED
   async ensureSystemFolder() {
     const systemFolder = this.app.vault
       .getAllLoadedFiles()
       .find(
-        (file) =>
-          file instanceof TFolder && file.name === "TextFlow_SystemFolder"
+        (file) => file instanceof TFolder && file.name === TEXTFLOW_SYSTEMFOLDER
       );
 
-    if (!systemFolder) {
-      // if there is no system folder
-      if (this.settings.systemFolderPath != undefined) {
-        new Notice(
-          `textFlow: The TextFlow_SystemFolder could not be found. Please return it to ${dirname(
-            this.settings.systemFolderPath
-          )} or create a new one via the TextFlow settings.`
-        );
-      }
-    }
+    if (this.settings.firstLaunch) return;
+
     if (systemFolder) {
       // if there is a systemFolder
       if (
         // but expected path doesn't agree with actual place/path
         this.settings.systemFolderPath != systemFolder.path
       ) {
+        console.log(
+          `this.settings.systemFolderPath`,
+          this.settings.systemFolderPath
+        );
+        console.log(`this.settings.systemFolder.path`, systemFolder.path);
         // defer to reality and update settings
         if (!this.settings.systemFolderPath) return;
-        const oldPath = normalizePath(this.settings.systemFolderPath);
-        this.settings.systemFolderPath = systemFolder.parent?.path
-          ? normalizePath(systemFolder.parent.path)
-          : normalizePath("");
-        this.settings.systemFolderPath = normalizePath(systemFolder.path);
-        for (let flow in this.settings.flows) {
-          this.settings.flows[flow].flowFilePath = normalizePath(
-            `${this.settings.systemFolderPath}/${flow}.md`
-          );
+        const oldPath = this.settings.systemFolderPath;
+        this.settings.systemFolderPath = systemFolder.path;
+
+        if (this.settings.flows) {
+          Object.keys(this.settings.flows).forEach((flowName) => {
+            this.settings.flows[flowName].flowFilePath = normalizePath(
+              `${this.settings.systemFolderPath}/${flowName}.md`
+            );
+          });
         }
+        await this.saveSettings();
+        new Notice(
+          `textFlow: "${TEXTFLOW_SYSTEMFOLDER}" found at: ${systemFolder.path}; settings have been updated.`
+        );
       }
-      // ---- check version number; for some reason, Obsidian sometimes forgets about
-      // what's in the systemFolder, and making it rename it causes it to remember
-      if (!this.settings.activeVersion) {
-        this.settings.activeVersion = this.manifest.version;
-        return;
-      } else {
-        if (this.settings.activeVersion != this.manifest.version) {
-          const systemFolder = this.flowService.checkSystemFolder();
-          const path = normalizePath(this.settings.systemFolderPath);
-          if (systemFolder && path) {
-            this.app.vault.rename(systemFolder, path);
-          }
-          this.settings.activeVersion = this.manifest.version;
-        }
-      }
-      await this.saveSettings();
     }
   }
 
@@ -380,12 +367,15 @@ export default class TextFlowPlugin extends Plugin {
     });
   }
 
-  // ----- is called onload
+  // ----- is called onload and sets the visibility of TextFlow_SystemFolder
+  //CHECKED
   discernAndSetSystemFolderState = (
-    systemFolderState?: boolean,
+    systemFolderHidden?: boolean,
     systemFolderPath?: string
   ): void => {
-    if (systemFolderPath) systemFolderPath = normalizePath(systemFolderPath);
+    if (systemFolderPath) {
+      systemFolderPath = normalizePath(systemFolderPath);
+    }
 
     // Remove any existing style
     const existingStyle = document.head.querySelector(
@@ -395,8 +385,8 @@ export default class TextFlowPlugin extends Plugin {
       existingStyle.remove();
     }
 
-    // If we're not hiding or don't have a place defined, just return after removing style
-    if (!systemFolderState || systemFolderPath === undefined) {
+    // If we're not hiding (or don't have a place defined) just return after removing style
+    if (!systemFolderHidden || systemFolderPath === undefined) {
       return;
     }
 
@@ -418,6 +408,7 @@ export default class TextFlowPlugin extends Plugin {
     addStyle();
     setTimeout(addStyle, 500); // Add style again after 500ms
   };
+  // ^CHECKED
 
   // ----- DECORATE SOURCE NOTES IN FILE EXPLORER -----------
   decorateSourceFiles = (): void => {
@@ -740,6 +731,16 @@ export default class TextFlowPlugin extends Plugin {
         if (file instanceof TFolder) {
           parentFolder = file.path;
         }
+
+        // Check if the current folder's path is the stored systemFolderPath;
+        // if it is, we don't have to do any more checks
+        if (parentFolder === this.settings.systemFolderPath) return;
+        // if it's not, check if it should be
+        if (parentFolder.contains(TEXTFLOW_SYSTEMFOLDER)) {
+          // if it should be, update settings
+          this.ensureSystemFolder();
+        }
+
         const breakableCheckPaths = Object.keys(this.settings.flows);
         for (let flowName of breakableCheckPaths) {
           // if the flow is made from bookmarks, move on
@@ -1617,19 +1618,8 @@ export default class TextFlowPlugin extends Plugin {
       this.addCursorListener(view);
       this.addTextChangeListener(view);
 
-      // remove protecitve CSS
-      if (view.containerEl.hasClass("source-read-only")) {
-        view.containerEl.removeClass("source-read-only");
-      }
-
-      // hide scrollbar
-      if (
-        this.settings.hideScrollbar &&
-        !view.containerEl.hasClass("hide-scrollbar")
-      ) {
-        view.containerEl.addClass("hide-scrollbar");
-      }
-
+      // scroll bar visibility
+      this.flowService.updateScrollbarVisibility();
       this.restoreCursorPos(flowName, view, leafID);
 
       // Update the modal
@@ -1863,12 +1853,7 @@ export default class TextFlowPlugin extends Plugin {
       view.menuBar.detach();
     }
     // reveal scrollbar
-    if (
-      this.settings.hideScrollbar &&
-      view.containerEl.hasClass("hide-scrollbar")
-    ) {
-      view.containerEl.removeClass("hide-scrollbar");
-    }
+    this.flowService.updateScrollbarVisibility();
     this.saveSettings();
   };
 
@@ -2541,6 +2526,7 @@ export default class TextFlowPlugin extends Plugin {
       if (this.settings.showExplorerDeco) {
         this.decorateSourceFiles();
       }
+      this.flowService.updateScrollbarVisibility();
       // ----- ONLOAD: set up UI -------------------------
 
       // ------------------- Flow switcher modal ---------------------

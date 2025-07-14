@@ -9,6 +9,7 @@ import { EditorView } from "@codemirror/view";
 //#######################################################################
 
 export interface TextFlowSettings {
+  firstLaunch: boolean;
   activeVersion?: string;
   systemFolderPath?: string;
   advancedToggle: boolean;
@@ -17,7 +18,7 @@ export interface TextFlowSettings {
   showExplorerDeco: boolean;
   explorerDecoDropdownOpen: boolean;
   explorerListener: boolean;
-  hideScrollbar: boolean;
+  hideScrollbar: string;
   switcherPos: string;
   showMenuBar: boolean;
   maxMenuBar: boolean;
@@ -96,6 +97,7 @@ export interface SourceFileObject {
 
 // --------- them defaults --------------------
 export const DEFAULT_SETTINGS: TextFlowSettings = {
+  firstLaunch: true,
   advancedToggle: false,
   systemFolderHidden: false,
   explorerDecoStyle: [
@@ -107,7 +109,7 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
   showExplorerDeco: true,
   explorerDecoDropdownOpen: false,
   explorerListener: true,
-  hideScrollbar: false,
+  hideScrollbar: "none",
   switcherPos: "statusBar",
   showMenuBar: true,
   maxMenuBar: true,
@@ -166,7 +168,12 @@ export interface flowBuildBasket {
 // ---------- Flow management
 export type ModalFlowStatus = "on" | "off" | "incompatible";
 
-export type DecorationEntry = [string, string, string, string]; // if each inner array always has 3 elements
+export type DecorationEntry = [
+  symbol1: string,
+  symbol2: string,
+  symbol1Class: string,
+  symbol2Class: string
+];
 
 // ------- Dataview stuff
 export interface DataviewFolder {
@@ -209,4 +216,9 @@ export type SearchResult = SearchItem | FuseResult<SearchItem>;
 // needed for scoll into view stuff    // needed for scoll into view stuff
 export interface ObsidianEditor extends Editor {
   cm?: EditorView;
+}
+
+export interface FlowNameValidation {
+  valid: boolean;
+  reason?: string;
 }

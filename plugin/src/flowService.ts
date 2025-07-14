@@ -1,27 +1,24 @@
 import { getAPI } from "obsidian-dataview";
-import * as Modals from "./modals";
 import {
   App,
   ButtonComponent,
   Editor,
-  setIcon,
   MarkdownView,
   normalizePath,
   Notice,
-  PluginSettingTab,
-  Setting,
   TFolder,
   TFile,
-  TAbstractFile,
-  TextComponent,
   Vault,
   WorkspaceLeaf,
 } from "obsidian";
 import { EditorView } from "@codemirror/view";
 import TextFlow from "../main";
 import * as Types from "./types";
-import Pickr from "@simonwep/pickr";
 import { basename, dirname, join } from "path";
+
+interface ObsidianEditor extends Editor {
+  cm?: EditorView;
+}
 
 // --- A class for the build progress notice (shown when rebuilding from settings tab)
 class ProgressNotice {
@@ -94,6 +91,20 @@ export class FlowService {
   //#######################################################################
   //###########################    Functions   ############################
   //#######################################################################
+
+  // stuff is sorted in the order in which it is being called from settingsTab
+
+  // -------- see if a system folder already -------
+  //CHECKED
+  checkSystemFolder = () => {
+    const systemFolder = this.app.vault
+      .getAllLoadedFiles()
+      .find(
+        (file) =>
+          file instanceof TFolder && file.name === "TextFlow_SystemFolder"
+      );
+    return systemFolder instanceof TFolder ? systemFolder : null;
+  };
 
   private debouncedSaveTimer: NodeJS.Timeout | undefined;
 
@@ -206,16 +217,63 @@ export class FlowService {
     }
   };
 
-  // ---------------- see if system folder already exists -------
-  checkSystemFolder = () => {
-    const systemFolder = this.app.vault
-      .getAllLoadedFiles()
-      .find(
-        (file) =>
-          file instanceof TFolder && file.name === "TextFlow_SystemFolder"
-      );
-    return systemFolder instanceof TFolder ? systemFolder : null;
+  // --------- Make sure only valid file names can be entered as flow names
+  // CHECKED AND TESTED
+  isValidFlowName = (name: string): { valid: boolean; reason?: string } => {
+    // Check for empty or whitespace-only names
+    if (!name || name.trim() === "") {
+      return { valid: false, reason: "Flow name cannot be empty" };
+    }
+
+    // Check for system-reserved names
+    const reservedNames = [
+      ".",
+      "..",
+      "CON",
+      "PRN",
+      "AUX",
+      "NUL",
+      "COM1",
+      "COM2",
+      "COM3",
+      "COM4",
+      "COM5",
+      "COM6",
+      "COM7",
+      "COM8",
+      "COM9",
+      "LPT1",
+      "LPT2",
+      "LPT3",
+      "LPT4",
+      "LPT5",
+      "LPT6",
+      "LPT7",
+      "LPT8",
+      "LPT9",
+    ];
+    if (reservedNames.includes(name.toUpperCase())) {
+      return { valid: false, reason: "This name is reserved by the system" };
+    }
+
+    // Check for invalid characters - added backtick
+    const invalidChars = /[<>:"/\\|?*#^[\]`\x00-\x1F]/;
+    if (invalidChars.test(name)) {
+      return {
+        valid: false,
+        reason:
+          'Name contains invalid characters (< > : " / \\ | ? * # ^ ` [ ])',
+      };
+    }
+
+    // Check for names ending with period or space (problematic on Windows)
+    if (name.endsWith(".") || name.endsWith(" ")) {
+      return { valid: false, reason: "Name cannot end with a period or space" };
+    }
+
+    return { valid: true };
   };
+  // ^ CHECKED AND TESTED
 
   // --- RADIO BUTTON MANAGER -----------------
   radioButtonManager(
@@ -1557,4 +1615,40 @@ export class FlowService {
       }
     }
   };
+
+  updateScrollbarVisibility() {
+    // Handle all leaves
+    // add hider if all are hidden
+    if (this.plugin.settings.hideScrollbar === "all") {
+      const body = document.body;
+      body.classList.remove("hide-scrollbar");
+      body.classList.add("hide-scrollbar");
+    } else {
+      // otherwise remove the hiding
+      const body = document.body;
+      body.classList.remove("hide-scrollbar");
+    }
+
+    // Handle flow leaves
+    // get all the leaves and check they're valid
+    const allLeaves = this.app.workspace.getLeavesOfType("markdown");
+    for (let leaf of allLeaves) {
+      if (leaf.view instanceof MarkdownView && leaf.view.file) {
+        // check if it's a flow
+        const flowName = this.plugin.isFlowFile(leaf.view.file.path);
+        if (!flowName) return;
+
+        // if only flows are hidden, add the hiding
+        if (
+          this.plugin.settings.hideScrollbar === "flows" &&
+          !leaf.view.containerEl.hasClass("hide-scrollbar")
+        ) {
+          leaf.view.containerEl.addClass("hide-scrollbar");
+        } else {
+          // if none or all are hidden, remove it
+          leaf.view.containerEl.removeClass("hide-scrollbar");
+        }
+      }
+    }
+  }
 }
