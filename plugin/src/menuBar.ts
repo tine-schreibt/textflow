@@ -41,6 +41,7 @@ export class MenuBar {
   }> = [];
   flowService: FlowService;
 
+  // ############ CONFLICTS ###############################
   constructor(
     app: App,
     plugin: TextFlowPlugin,
@@ -253,7 +254,6 @@ export class MenuBar {
           text: `- ${navPath}`,
           attr: {
             "aria-label": `Flow overlaps with ${overlap[0].join(", ")}`,
-            title: "Your tooltip text here", // this is for non-screen-reader tooltip
           },
         });
 
@@ -296,12 +296,11 @@ export class MenuBar {
       this.createNavDropdownEntry("No results", dropdownEntries);
     } else {
       // Re-create filtered entries
-      const key = this.plugin.settings.flows[this.flowName].flowReceipe
-        .bookmarks
+      const key = this.plugin.settings.flows[this.flowName].flowRecipe.bookmarks
         ? "bookmarks"
         : "foldersTagsProps";
 
-      for (let path of this.plugin.settings.flows[this.flowName].flowReceipe[
+      for (let path of this.plugin.settings.flows[this.flowName].flowRecipe[
         key
       ]) {
         this.createNavDropdownEntry(path, dropdownEntries);
@@ -385,7 +384,7 @@ export class MenuBar {
         .setClass("clickable-icon")
         .onClick(async () => {
           if (goRebuild === "neutral" || goRebuild === "must") {
-            await this.flowService.rebuildFlow(this.flowName);
+            await this.flowService.rebuildFlow(this.flowName, "menuBar");
             this.plugin.setupFlowView(this.flowName, this.associatedView);
           }
         });
@@ -419,13 +418,12 @@ export class MenuBar {
           titleClass = `highlighted`;
         }
       }
-      // get the first thing in the flowReceipe
-      const key = this.plugin.settings.flows[this.flowName].flowReceipe
-        .bookmarks
+      // get the first thing in the flowRecipe
+      const key = this.plugin.settings.flows[this.flowName].flowRecipe.bookmarks
         ? "bookmarks"
         : "foldersTagsProps";
       const firstThing =
-        this.plugin.settings.flows[this.flowName].flowReceipe[key][0];
+        this.plugin.settings.flows[this.flowName].flowRecipe[key][0];
       const firstThingNoteName = this.makeNavPath(firstThing);
 
       // --------- The actual dropdown component ----------
@@ -457,7 +455,7 @@ export class MenuBar {
         });
         const searchItems = this.plugin.settings.flows[
           this.flowName
-        ].flowReceipe[key].map((path) => ({
+        ].flowRecipe[key].map((path) => ({
           path: path,
           displayName: `${this.makeNavPath(path)}`,
         }));
@@ -484,7 +482,7 @@ export class MenuBar {
           // If no query (yet), return all paths
           if (!query) {
             this.filterList =
-              this.plugin.settings.flows[this.flowName].flowReceipe[key];
+              this.plugin.settings.flows[this.flowName].flowRecipe[key];
           }
 
           // Otherwise return filtered paths
@@ -503,7 +501,7 @@ export class MenuBar {
           } else {
             // no entries because query has been deleted
             this.filterList =
-              this.plugin.settings.flows[this.flowName].flowReceipe[key];
+              this.plugin.settings.flows[this.flowName].flowRecipe[key];
             this.refreshNavDropdownEntries(dropdownEntries, false);
           }
         });
@@ -552,7 +550,7 @@ export class MenuBar {
         cls: "menu-bar-navigation-dropdown-entries",
       });
 
-      for (let path of this.plugin.settings.flows[this.flowName].flowReceipe[
+      for (let path of this.plugin.settings.flows[this.flowName].flowRecipe[
         key
       ]) {
         this.createNavDropdownEntry(path, dropdownEntries);

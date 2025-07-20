@@ -192,11 +192,6 @@ export default class TextFlowPlugin extends Plugin {
         // but expected path doesn't agree with actual place/path
         this.settings.systemFolderPath != systemFolder.path
       ) {
-        console.log(
-          `this.settings.systemFolderPath`,
-          this.settings.systemFolderPath
-        );
-        console.log(`this.settings.systemFolder.path`, systemFolder.path);
         // defer to reality and update settings
         if (!this.settings.systemFolderPath) return;
         const oldPath = this.settings.systemFolderPath;
@@ -210,9 +205,6 @@ export default class TextFlowPlugin extends Plugin {
           });
         }
         await this.saveSettings();
-        new Notice(
-          `textFlow: "${TEXTFLOW_SYSTEMFOLDER}" found at: ${systemFolder.path}; settings have been updated.`
-        );
       }
     }
   }
@@ -534,11 +526,11 @@ export default class TextFlowPlugin extends Plugin {
     // handle general paths
     Object.keys(this.settings.activeFlowObject).forEach((flow) => {
       // get the file list
-      let key = this.settings.flows[flow].flowReceipe.bookmarks
+      let key = this.settings.flows[flow].flowRecipe.bookmarks
         ? "bookmarks"
         : "foldersTagsProps";
 
-      for (path of this.settings.flows[flow].flowReceipe[key]) {
+      for (path of this.settings.flows[flow].flowRecipe[key]) {
         // exclude folder titles
         if (!path.startsWith("#")) {
           if (!this.settings.flows[flow].unsavedRegionsArray.includes(path)) {
@@ -681,11 +673,11 @@ export default class TextFlowPlugin extends Plugin {
     // handle general paths
     Object.keys(this.settings.activeFlowObject).forEach((flow) => {
       // get the file list
-      let key = this.settings.flows[flow].flowReceipe.bookmarks
+      let key = this.settings.flows[flow].flowRecipe.bookmarks
         ? "bookmarks"
         : "foldersTagsProps";
 
-      for (path of this.settings.flows[flow].flowReceipe[key]) {
+      for (path of this.settings.flows[flow].flowRecipe[key]) {
         // exclude folder titles
         if (!path.startsWith("#")) {
           if (!this.settings.flows[flow].unsavedRegionsArray.includes(path)) {
@@ -745,7 +737,7 @@ export default class TextFlowPlugin extends Plugin {
         for (let flowName of breakableCheckPaths) {
           // if the flow is made from bookmarks, move on
           if (this.settings.flows[flowName].flaggedForRebuild) break;
-          if (this.settings.flows[flowName].flowReceipe.bookmarks) break;
+          if (this.settings.flows[flowName].flowRecipe.bookmarks) break;
 
           // if the flow contained the old path, flag and move on
           if (this.settings.flows[flowName].flowMap[oldPath]) {
@@ -795,7 +787,7 @@ export default class TextFlowPlugin extends Plugin {
         const breakableCheckPaths = Object.keys(this.settings.flows);
         for (let flowName of breakableCheckPaths) {
           if (this.settings.flows[flowName].flaggedForRebuild) break;
-          if (this.settings.flows[flowName].flowReceipe.bookmarks) break;
+          if (this.settings.flows[flowName].flowRecipe.bookmarks) break;
           // if the parent folder is included
           if (
             parentFolder ===
@@ -1610,7 +1602,7 @@ export default class TextFlowPlugin extends Plugin {
 
       // and this also has to be done before the setup so I don't have to refresh the menu bar
       if (this.settings.flows[flowName].flaggedForRebuild) {
-        await this.flowService.rebuildFlow(flowName);
+        await this.flowService.rebuildFlow(flowName, "setupFlowView");
       }
 
       this.addProtectDuringSaveExtension(editor);
@@ -2590,7 +2582,6 @@ export default class TextFlowPlugin extends Plugin {
   // ------------------ ONUNLOAD---------------------------
   // -------------------------------------------------------
   onunload() {
-    // this.persistCursorPosition();
     this.saveSettings();
     // ---------------- Store data for all active flows ----
 

@@ -1,5 +1,5 @@
 import type { FuseResult } from "fuse.js";
-import { Editor } from "obsidian";
+import { App, Editor } from "obsidian";
 import { EditorView } from "@codemirror/view";
 
 //#######################################################################
@@ -7,6 +7,25 @@ import { EditorView } from "@codemirror/view";
 //###########################     types      ############################
 //###########################                ############################
 //#######################################################################
+
+export interface FlowNameValidation {
+  valid: boolean;
+  reason?: string;
+}
+
+interface InternalPlugins {
+  plugins: {
+    bookmarks: {
+      instance: {
+        items: BookmarkItem[];
+      };
+    };
+  };
+}
+
+export interface ObsidianApp extends App {
+  internalPlugins: InternalPlugins;
+}
 
 export interface TextFlowSettings {
   firstLaunch: boolean;
@@ -36,10 +55,10 @@ export interface ModeSettings {
 export interface FlowDef {
   timestamp: string;
   flowName: string;
-  flowFilePath: string; // REMOVE!?!?
+  flowFilePath: string;
+  definitionMode: string;
   flowCookbook: { [key: string]: string }; // user input
-  flowReceipe: { [key: string]: string[] };
-  depthFirst: boolean;
+  flowRecipe: { [key: string]: string[] };
   folderTitles: boolean;
   isFreshBuild: boolean;
   flowBuilt: boolean;
@@ -92,7 +111,6 @@ export interface SourceFileObject {
   flowOrder: number;
   minLength: number;
   lengthPlusDividers: number;
-  yamlMini: string;
 }
 
 // --------- them defaults --------------------
@@ -114,18 +132,15 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
   showMenuBar: true,
   maxMenuBar: true,
   flowBuildBasket: {
-    flowName: "",
     createOrEdit: "create",
-    previewUsed: false,
     dataviewSearchPath: "",
-    definitionMode: "",
-    depthFirst: true,
-    folderTitles: true,
+    previewUsed: false,
     success: false,
-    fresh: true,
-    cleanCookbook: {},
+    flowName: "",
+    definitionMode: "",
+    folderTitles: true,
     flowCookbook: {},
-    finalReceipe: {},
+    finalRecipe: {},
     conflictObject: {},
     activeRegions: {},
     persistentCursors: {},
@@ -141,25 +156,22 @@ export interface mapValueBasket {
   identifier: string;
   flowOrder: number;
   UID: string;
-  yamlMini: string;
   singleFileContent: string;
   currentEnd: number;
   idDivider: string;
 }
 
 export interface flowBuildBasket {
-  flowName: string;
+  // Processing flags and temporary data
   createOrEdit: string;
-  previewUsed: boolean;
   dataviewSearchPath: string;
-  definitionMode: string;
+  previewUsed: boolean;
   success: boolean;
-  fresh: boolean;
-  flowCookbook: { [key: string]: string };
-  cleanCookbook: { [key: string]: string };
-  finalReceipe: { [key: string]: string[] };
-  depthFirst: boolean;
+  flowName: string;
+  definitionMode: string;
   folderTitles: boolean;
+  flowCookbook: { [key: string]: string };
+  finalRecipe: { [key: string]: string[] };
   conflictObject: ConflictObject;
   activeRegions: { [key: number | string]: ActiveRegion };
   persistentCursors: CursorData;
@@ -167,6 +179,8 @@ export interface flowBuildBasket {
 
 // ---------- Flow management
 export type ModalFlowStatus = "on" | "off" | "incompatible";
+
+export type SortOrder = "depthFirst" | "filesFirst" | "custom";
 
 export type DecorationEntry = [
   symbol1: string,
@@ -190,7 +204,7 @@ export interface FolderGroup {
 // -----------------------
 export interface BookmarkItem {
   type: "file" | "group";
-  ctime: number;
+  ctime?: number;
   path?: string; // only for type "file"
   items?: BookmarkItem[]; // only for type "group"
   title?: string; // only for type "group"
@@ -217,8 +231,9 @@ export type SearchResult = SearchItem | FuseResult<SearchItem>;
 export interface ObsidianEditor extends Editor {
   cm?: EditorView;
 }
-
-export interface FlowNameValidation {
-  valid: boolean;
-  reason?: string;
+interface FlowCookbook {
+  definitionMode: "bookmarks" | "foldersTagsProps";
+  bookmarks?: string;
+  foldersTagsProps?: string;
+  // ... other properties
 }

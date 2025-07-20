@@ -95,7 +95,7 @@ export class FlowService {
   // stuff is sorted in the order in which it is being called from settingsTab
 
   // -------- see if a system folder already -------
-  //CHECKED
+  //CHECKED AND TESTED
   checkSystemFolder = () => {
     const systemFolder = this.app.vault
       .getAllLoadedFiles()
@@ -105,97 +105,7 @@ export class FlowService {
       );
     return systemFolder instanceof TFolder ? systemFolder : null;
   };
-
-  private debouncedSaveTimer: NodeJS.Timeout | undefined;
-
-  debouncedSaveSettings = async () => {
-    if (this.debouncedSaveTimer) {
-      clearTimeout(this.debouncedSaveTimer);
-    }
-    this.debouncedSaveTimer = setTimeout(async () => {
-      await this.plugin.saveSettings();
-      this.debouncedSaveTimer = undefined;
-    }, 200); // .2 second delay
-  };
-
-  // ------ function that checks if flows overlap
-  conflictCollector = (flowBuildBasket: Types.flowBuildBasket) => {
-    const conflictObject: Types.ConflictObject = {};
-    const key1 = Object.keys(flowBuildBasket.finalReceipe)[0];
-    if (Object.keys(this.plugin.settings.flows).length >= 1) {
-      flowLoop: for (let flowName in this.plugin.settings.flows) {
-        if (flowName != flowBuildBasket.flowName) {
-          const key2 = Object.keys(
-            this.plugin.settings.flows[flowName].flowReceipe
-          )[0];
-          for (let path of flowBuildBasket.finalReceipe[key1]) {
-            if (
-              !path.startsWith("#") &&
-              this.plugin.settings.flows[flowName].flowReceipe[key2].includes(
-                path
-              )
-            ) {
-              if (!conflictObject[flowName]) {
-                conflictObject[flowName] = {};
-              }
-              conflictObject[flowName][path] = true;
-              continue flowLoop;
-            }
-          }
-        }
-      }
-    }
-    return conflictObject;
-  };
-
-  // ----------------- sync conflicts
-
-  // -- REMOVE DELETED ENTRIES?!
-
-  syncConflictObjects = (referenceFlow: Types.flowBuildBasket) => {
-    let refFlowName = referenceFlow.flowName;
-
-    Object.keys(this.plugin.settings.flows).forEach((syncFlowName) => {
-      // Case 1: Flow is in reference conflicts
-      if (syncFlowName != refFlowName && referenceFlow.conflictObject) {
-        if (!this.plugin.settings.flows[syncFlowName].conflictObject) {
-          this.plugin.settings.flows[syncFlowName].conflictObject = {};
-        }
-        this.plugin.settings.flows[syncFlowName].conflictObject[refFlowName] =
-          referenceFlow.conflictObject[syncFlowName];
-      }
-      // Case 2: Flow is not in reference conflicts but is in sync flow's conflicts
-      if (
-        !referenceFlow.conflictObject[syncFlowName] &&
-        this.plugin.settings.flows[syncFlowName].conflictObject
-      ) {
-        if (
-          this.plugin.settings.flows[syncFlowName].conflictObject[refFlowName]
-        ) {
-          delete this.plugin.settings.flows[syncFlowName].conflictObject[
-            refFlowName
-          ];
-        }
-      }
-    });
-  };
-
-  checkForActiveFlowConflicts(): boolean {
-    const ids = Object.keys(this.plugin.settings.activeFlowObject);
-    for (let i = 0; i < ids.length; i++) {
-      const flowA = this.plugin.settings.activeFlowObject[ids[i]];
-      for (let j = i + 1; j < ids.length; j++) {
-        const flowB = this.plugin.settings.activeFlowObject[ids[j]];
-        if (flowA.conflicts?.[flowB.id] || flowB.conflicts?.[flowA.id]) {
-          this.plugin.saveSettings();
-          console.log("open conflicts found");
-          return true;
-        }
-      }
-    }
-    this.plugin.saveSettings();
-    return false;
-  }
+  //^CHECKED AND TESTED
 
   createSystemFolder = async (newSystemFolderPath: string) => {
     try {
@@ -217,12 +127,49 @@ export class FlowService {
     }
   };
 
+  // ----- To slow down saving on input fields
+  private debouncedSaveTimer: NodeJS.Timeout | undefined;
+
+  debouncedSaveSettings = async () => {
+    if (this.debouncedSaveTimer) {
+      clearTimeout(this.debouncedSaveTimer);
+    }
+    this.debouncedSaveTimer = setTimeout(async () => {
+      await this.plugin.saveSettings();
+      this.debouncedSaveTimer = undefined;
+    }, 200); // .2 second delay
+  };
+
+  // --- RADIO BUTTON MANAGER -----------------
+  radioButtonManager(
+    selectedButton: ButtonComponent,
+    unselectedButton1: ButtonComponent
+  ) {
+    // Update all buttons
+    selectedButton.buttonEl.addClass("settings-radio-button-active");
+    unselectedButton1.buttonEl.removeClass("settings-radio-button-active");
+  }
+
   // --------- Make sure only valid file names can be entered as flow names
   // CHECKED AND TESTED
   isValidFlowName = (name: string): { valid: boolean; reason?: string } => {
-    // Check for empty or whitespace-only names
-    if (!name || name.trim() === "") {
-      return { valid: false, reason: "Flow name cannot be empty" };
+    // Check for null/undefined names
+    if (!name) {
+      return {
+        valid: false,
+        reason: "textFlow: Please give your flow a name.",
+      };
+    }
+    // if we're creating and a flow with the chosen name already exists
+    if (
+      this.plugin.settings.flowBuildBasket.createOrEdit != "edit" &&
+      this.plugin.settings.flows[this.plugin.settings.flowBuildBasket.flowName]
+    ) {
+      return {
+        valid: false,
+        reason:
+          "textFlow: A flow by this name already exists. Please rename your new flow or delete the old one.",
+      };
     }
 
     // Check for system-reserved names
@@ -262,184 +209,105 @@ export class FlowService {
       return {
         valid: false,
         reason:
-          'Name contains invalid characters (< > : " / \\ | ? * # ^ ` [ ])',
+          'textFlow: Please remove invalid characters from your flow name (? : # * < > [ ] / | \\ "  ^ `)',
       };
     }
 
     // Check for names ending with period or space (problematic on Windows)
-    if (name.endsWith(".") || name.endsWith(" ")) {
-      return { valid: false, reason: "Name cannot end with a period or space" };
+    if (name.startsWith(".") || name.endsWith(".")) {
+      return {
+        valid: false,
+        reason: "textFlow: A flow name cannot start or end with a period",
+      };
     }
 
     return { valid: true };
   };
   // ^ CHECKED AND TESTED
 
-  // --- RADIO BUTTON MANAGER -----------------
-  radioButtonManager(
-    selectedButton: ButtonComponent,
-    unselectedButton1: ButtonComponent
-  ) {
-    // Update all buttons
-    selectedButton.buttonEl.addClass("settings-radio-button-active");
-    unselectedButton1.buttonEl.removeClass("settings-radio-button-active");
-  }
-
+  //CHECKED
   createFlowDefinition = async (
     flowBuildBasket: Types.flowBuildBasket
   ): Promise<void> => {
-    // Pre-flight check 01 - flowName set / uniqueness when creating
-    if (flowBuildBasket.flowName === "") {
-      new Notice("textFlow: Flow name can not be empty.");
-      flowBuildBasket.success = false;
-      return Promise.reject(Error);
-    }
-    if (
-      flowBuildBasket.createOrEdit === "create" &&
-      this.plugin.settings.flows[flowBuildBasket.flowName]
-    ) {
-      new Notice(
-        `textFlow: A flow with the name ${flowBuildBasket.flowName} already exist. Please choose a different name or edit the existing flow.`
-      );
-      flowBuildBasket.success = false;
-      return Promise.reject(Error);
-    }
-
-    // -------- Putting the finalReceipe together by fetching/filtering all paths
+    // -------- Putting the finalRecipe together by fetching/filtering all paths
     try {
-      // ----------- FINAL RECEIPE FOR BOOKMARKS ---------------------
+      // ----------- FINAL RECIPE FOR BOOKMARKS ---------------------
       if (flowBuildBasket.definitionMode === "bookmarks") {
         if (
           flowBuildBasket.flowCookbook.bookmarks === undefined ||
           flowBuildBasket.flowCookbook.bookmarks === ""
         ) {
-          new Notice("textFlow: Please enter at least one bookmark group.");
+          new Notice("textFlow: Please enter a bookmark group.");
           flowBuildBasket.success = false;
           return Promise.reject(Error);
         } else {
           const bookmarkPathArray = await this.getBookmarkPathsByGroupName(
             flowBuildBasket
           );
-          flowBuildBasket.finalReceipe = { bookmarks: bookmarkPathArray };
-          flowBuildBasket.conflictObject =
-            this.conflictCollector(flowBuildBasket);
+          flowBuildBasket.finalRecipe = { bookmarks: bookmarkPathArray };
         }
 
-        // ------ FINAL RECEIPE FOR PATH TAG PROPERTY -----------------------
+        // ------ FINAL RECIPE FOR PATH TAG PROPERTY -----------------------
       } else {
-        const ensureNoUndefined = this.ensureNoUndefined(flowBuildBasket);
+        await this.ensureNoUndefined(flowBuildBasket);
         const foldersTagsPropsPathArray = await this.getPathsByFoldersTagsProps(
           flowBuildBasket
         );
-        flowBuildBasket.finalReceipe = {
+        flowBuildBasket.finalRecipe = {
           foldersTagsProps: foldersTagsPropsPathArray,
         };
-        flowBuildBasket.conflictObject =
-          this.conflictCollector(flowBuildBasket);
       }
-      // ---- Pre-flight check 02 - finalReceipe array
+      // ---- Check for empty
       if (
-        (flowBuildBasket.finalReceipe.bookmarks &&
-          flowBuildBasket.finalReceipe.bookmarks.length <= 1) ||
-        (flowBuildBasket.finalReceipe.folderTagsProperties &&
-          flowBuildBasket.finalReceipe.folderTagsProperties.length <= 1)
+        (flowBuildBasket.definitionMode === "bookmarks" &&
+          flowBuildBasket.finalRecipe.bookmarks.length === 0) ||
+        (flowBuildBasket.definitionMode == "foldersTagsProps" &&
+          flowBuildBasket.finalRecipe.foldersTagsProps.length === 0)
       ) {
         new Notice(
-          "textFlow: Your flow definition leads to an empty flow. Please edit it to be less restrictive"
+          "textFlow: Your definition leads to an empty flow. Please check for typos or make your criteria less restrictive."
         );
         flowBuildBasket.success = false;
-        return Promise.reject(Error);
       }
-
+      // get conflict info
+      flowBuildBasket.conflictObject = this.conflictCollector(flowBuildBasket);
       flowBuildBasket.success = true;
-      return Promise.resolve();
     } catch (error) {
       new Notice(
-        "textFlow: An error occurred while creating the finalReceipe for your flow. Check the console for details."
+        "textFlow: An error occurred while creating the finalRecipe for your flow. Please check the console for details."
       );
       flowBuildBasket.success = false;
-      return Promise.reject(error);
     }
   };
+  //^CHECKED
 
-  getTimestamp = (): string => {
-    const date = new Date();
-    const weekday = date.toLocaleDateString("en-US", { weekday: "short" });
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-
-    return `${weekday}, ${year}.${month}.${day}, ${hours}:${minutes}`;
-  };
-
-  writeFlowDef = async (
-    settings: Types.TextFlowSettings,
-    flowBuildBasket: Types.flowBuildBasket
-  ) => {
-    const conflicts = this.conflictCollector(flowBuildBasket);
-
-    // -------- CREATE THE FLOW OBJECT -------------------------------
-    settings.flows[flowBuildBasket.flowName] = {
-      timestamp: this.getTimestamp(),
-      flowName: flowBuildBasket.flowName,
-      flowFilePath: normalizePath(
-        `${this.plugin.settings.systemFolderPath}/${flowBuildBasket.flowName}.md`
-      ),
-      flowCookbook: flowBuildBasket.cleanCookbook, // cleaned up user input
-      flowReceipe: flowBuildBasket.finalReceipe, // { defMode: pathArray }
-      depthFirst: flowBuildBasket.depthFirst,
-      folderTitles: flowBuildBasket.folderTitles,
-      isFreshBuild: true,
-      flowBuilt: false,
-      flaggedForRebuild: false,
-      conflictObject: conflicts,
-      activeRegions: flowBuildBasket.activeRegions,
-      persistentCursors: flowBuildBasket.persistentCursors,
-      unsavedRegionsArray: [],
-      flowMap: {},
-    };
-    await this.plugin.saveSettings();
-  };
-
-  // --- Reset flowBuildBasket
-  resetFlowBuildBasket = async (flowBuildBasket: Types.flowBuildBasket) => {
-    flowBuildBasket.flowName = "";
-    flowBuildBasket.createOrEdit = "";
-    flowBuildBasket.definitionMode = "";
-    flowBuildBasket.depthFirst = true;
-    flowBuildBasket.flowCookbook = {};
-    flowBuildBasket.cleanCookbook = {};
-    flowBuildBasket.finalReceipe = {};
-    flowBuildBasket.conflictObject = {};
-    flowBuildBasket.dataviewSearchPath = "";
-    flowBuildBasket.success = false;
-    flowBuildBasket.fresh = true;
-  };
   // --- HELPER FUNCTIONS FOR FETCHING PATHS (AND CLEANING UP STUFF)
   // Also we're using the opportunity to get a clean cookbook (user input) for storage
 
+  //CHECKED AND TESTED
   // ---- GET PATHS IN BOOKMARK GROUP ----------------
   getBookmarkPathsByGroupName = async (
     flowBuildBasket: Types.flowBuildBasket
   ) => {
     let groupName = flowBuildBasket.flowCookbook.bookmarks;
-    // prepare path for further processing:
+
+    // since groupName could be a path, prepare it for further processing:
     const cleanPath = groupName.replace(/\/+/g, "/");
-    flowBuildBasket.cleanCookbook.bookmarks = cleanPath;
+    flowBuildBasket.flowCookbook.bookmarks = cleanPath;
     const groupPathArray = cleanPath.split("/");
+
+    // if the user wants to exclude subgroups, flag and remove the trailing /
     let includeSubgroups: boolean = true;
-    if (groupPathArray[groupPathArray.length - 1] === "") {
+    if (cleanPath.endsWith("/")) {
       includeSubgroups = false;
       groupPathArray.splice(groupPathArray.length - 1, 1);
     }
 
     // get the bookmarks via the API and prepare helper variables
-    const bookmarks = (this.app as any).internalPlugins.plugins.bookmarks
-      .instance;
+    const bookmarks = (this.app as Types.ObsidianApp).internalPlugins.plugins
+      .bookmarks.instance;
     const bookmarkItems = bookmarks.items;
-    const bookmarkedNotePathsArray: string[] = [];
+    let bookmarkedNotePathsArray: string[] = [];
 
     //-- Function to navigate to the group and dissect out its contents
     const navigateToGroup = (
@@ -461,42 +329,203 @@ export class FlowService {
       return found;
     };
 
-    // Function call
+    // Call to the function we just defined
     const finalGroup = navigateToGroup(bookmarkItems, groupPathArray);
 
-    //-- Function to recursively collect the file paths and group names
-    const collectPaths = (
+    // -- the collection triplet was birthed by Claude 3.5 Sonnet --------------------
+    //-- as the midspouse, I shed quite some sweat, though, and maybe even some tears-------
+
+    //-- Function to collect stuff DEPTH FIRST
+    const collectPathsDepthFirst = (
       items: Types.BookmarkItem[],
-      flowBuildBasket: Types.flowBuildBasket
+      flowBuildBasket: Types.flowBuildBasket,
+      topLevelTitle: string // Add parameter for top level title
     ): string[] => {
+      const bookmarkedNotePathsArray: string[] = [];
+
+      const processGroup = (group: any) => {
+        // First, process any subgroups (going deep first)
+        if (group.items) {
+          // Process subgroups first
+          for (const item of group.items) {
+            if (item.type === "group") {
+              processGroup(item);
+            }
+          }
+
+          // After processing subgroups, add this group's title and direct files
+          if (flowBuildBasket.folderTitles) {
+            bookmarkedNotePathsArray.push(`# ${group.title}`);
+          }
+
+          // Add only direct file children (not those in subgroups)
+          const directFiles = group.items.filter(
+            (item: any) => item.type === "file"
+          );
+          directFiles.forEach((file: any) => {
+            bookmarkedNotePathsArray.push(file.path);
+          });
+        }
+      };
+
+      if (includeSubgroups) {
+        // Process each group in the items array
+        items.forEach((item) => {
+          if (item.type === "group") {
+            processGroup(item);
+          }
+        });
+      }
+
+      // After processing all groups, add the top level title and direct files
+      if (topLevelTitle && flowBuildBasket.folderTitles) {
+        bookmarkedNotePathsArray.push(`# ${topLevelTitle}`);
+      }
+
+      // Add top-level files
+      const topLevelFiles = items.filter((item) => item.type === "file");
+      topLevelFiles.forEach((file) => {
+        if (file && file.path) {
+          bookmarkedNotePathsArray.push(file.path);
+        }
+      });
+
+      return bookmarkedNotePathsArray;
+    };
+
+    // ---- FILES FIRST
+    const collectPathsFilesFirst = (
+      items: Types.BookmarkItem[],
+      flowBuildBasket: Types.flowBuildBasket,
+      topLevelTitle: string
+    ): string[] => {
+      const bookmarkedNotePathsArray: string[] = [];
+
+      // First handle top-level files
+      const topLevelFiles = items.filter((item) => item.type === "file");
+      if (topLevelTitle && flowBuildBasket.folderTitles) {
+        bookmarkedNotePathsArray.push(`#${topLevelTitle}`);
+      }
+      topLevelFiles.forEach((file) => {
+        if (file.type === "file" && file.path) {
+          bookmarkedNotePathsArray.push(file.path);
+        }
+      });
+
+      // Then process groups
       for (const item of items) {
-        if (item.type === "file" && item.path) {
-          bookmarkedNotePathsArray.push(item.path);
-        } else if (includeSubgroups && item.type === "group" && item.items) {
-          // Recurse into nested groups
+        if (item.type === "group" && item.items) {
+          // Add this group's name and its direct files
           if (flowBuildBasket.folderTitles) {
             bookmarkedNotePathsArray.push(`#${item.title ?? "Unnamed Group"}`);
           }
-          collectPaths(item.items, flowBuildBasket);
+          // Add direct files
+          item.items.forEach((file) => {
+            if (file.type === "file" && file.path) {
+              bookmarkedNotePathsArray.push(file.path);
+            }
+          });
+
+          // Then process subgroups if included
+          if (includeSubgroups) {
+            item.items.forEach((subItem) => {
+              if (subItem.type === "group") {
+                if (flowBuildBasket.folderTitles) {
+                  bookmarkedNotePathsArray.push(
+                    `#${subItem.title ?? "Unnamed Group"}`
+                  );
+                }
+                subItem.items?.forEach((file) => {
+                  if (file.type === "file" && file.path) {
+                    bookmarkedNotePathsArray.push(file.path);
+                  }
+                });
+              }
+            });
+          }
         }
       }
       return bookmarkedNotePathsArray;
     };
 
-    // Function call
+    // --- Take everything as it comes: CUSTOM
+    // iterator is needed so it doesn't add the main group's name before every
+    // new level of the hierarchy
+    let iterator = 0;
+    const collectPathsPreserveOrder = (
+      items: Types.BookmarkItem[],
+      flowBuildBasket: Types.flowBuildBasket
+    ): string[] => {
+      iterator++;
+      const bookmarkedNotePathsArray: string[] = [];
+
+      // Add the toplevel title, if titles are wanted
+      if (flowBuildBasket.folderTitles && iterator === 1) {
+        bookmarkedNotePathsArray.push(
+          `# ${groupPathArray[groupPathArray.length - 1]}`
+        );
+      }
+
+      // Process each item in original order
+      for (const item of items) {
+        if (item.type === "file" && item.path) {
+          bookmarkedNotePathsArray.push(item.path);
+        } else if (includeSubgroups && item.type === "group" && item.items) {
+          if (flowBuildBasket.folderTitles) {
+            bookmarkedNotePathsArray.push(`#${item.title ?? "Unnamed Group"}`);
+          }
+          // Recursively process group contents and add results to our array
+          const subGroupPaths = collectPathsPreserveOrder(
+            item.items,
+            flowBuildBasket
+          );
+          bookmarkedNotePathsArray.push(...subGroupPaths);
+        }
+      }
+
+      return bookmarkedNotePathsArray;
+    };
+
+    // Call to the function we just defined
     if (finalGroup?.items) {
-      bookmarkedNotePathsArray.push(`#${finalGroup.title ?? "Unnamed Group"}`); // push name of main group
-      collectPaths(finalGroup.items, flowBuildBasket);
+      if (
+        flowBuildBasket.flowCookbook.bookmarksSortOrder === "depthFirst" ||
+        flowBuildBasket.flowCookbook.bookmarksSortOrder === undefined
+      ) {
+        bookmarkedNotePathsArray = await collectPathsDepthFirst(
+          finalGroup.items,
+          flowBuildBasket,
+          groupPathArray[groupPathArray.length - 1]
+        );
+        return Promise.resolve(bookmarkedNotePathsArray);
+      } else if (
+        flowBuildBasket.flowCookbook.bookmarksSortOrder === "filesFirst"
+      ) {
+        bookmarkedNotePathsArray = await collectPathsFilesFirst(
+          finalGroup.items,
+          flowBuildBasket,
+          groupPathArray[groupPathArray.length - 1]
+        );
+        return Promise.resolve(bookmarkedNotePathsArray);
+      } else {
+        bookmarkedNotePathsArray = await collectPathsPreserveOrder(
+          finalGroup.items,
+          flowBuildBasket
+        );
+        return Promise.resolve(bookmarkedNotePathsArray);
+      }
     } else {
       new Notice(
         "textFlow: Please check the name of the bookmark group you submitted"
       );
+      return Promise.reject(Error);
     }
-    return Promise.resolve(bookmarkedNotePathsArray);
   };
+  //^CHECKED AND TESTED
 
-  // --- GET ALL PATHS FROM FOLDER TAG PROPERTY -------------------
-  // In case input hasn't been touched; also makes ! safe to use
+  // --- GET ALL PATHS FROM FOLDER TAG PROPERTY ---------------------------
+  // But first we snappily ensure we don't have undefineds and make the ! type assertion later on safe to use
+  //^CHECKED AND TESTED
   ensureNoUndefined = (flowBuildBasket: Types.flowBuildBasket) => {
     if (flowBuildBasket.flowCookbook.folderIncluded === undefined) {
       flowBuildBasket.flowCookbook.folderIncluded = "";
@@ -516,10 +545,13 @@ export class FlowService {
     if (flowBuildBasket.flowCookbook.propsExcluded === undefined) {
       flowBuildBasket.flowCookbook.propsExcluded = "";
     }
+    this.plugin.saveSettings();
     return Promise.resolve();
   };
+  //^CHECKED AND TESTED
 
-  // --- Function to get the paths
+  // --- Function to get the paths -------
+  //CHECKED AND TESTED
   getPathsByFoldersTagsProps = async (
     flowBuildBasket: Types.flowBuildBasket
   ) => {
@@ -537,6 +569,7 @@ export class FlowService {
     //--- INCLUDED FOLDER - only one path; notify if multiple
     let cleanInclusionPath: string = "";
     const folderInclusionArray = shCookbook.folderIncluded.split(",");
+    let excludeSubfolders = false;
     if (folderInclusionArray.length > 1) {
       new Notice(
         "textFlow: Folder inclusion can only contain a single folder."
@@ -548,25 +581,41 @@ export class FlowService {
         .replace(/\/+/g, "/") // Replace multiple forward slashes with single ones
         .trim();
       // check for trailing slash, because normalizePath will eat it
-      let hasSlash = cleanInclusionPath.endsWith("/");
+      if (
+        cleanInclusionPath != "/" &&
+        cleanInclusionPath != "//" &&
+        cleanInclusionPath != "."
+      ) {
+        excludeSubfolders = cleanInclusionPath.endsWith("/");
+      }
       // Normalize
       cleanInclusionPath = normalizePath(cleanInclusionPath);
+      // and because all that cleaning STILL doesn't get rid of "//":
+      if (shCookbook.folderIncluded === "//") {
+        shCookbook.folderIncluded = "/";
+      }
       // save path with trailing slash
-      if (hasSlash) {
-        flowBuildBasket.cleanCookbook.folderIncluded = `${cleanInclusionPath}/`;
+      if (excludeSubfolders) {
+        flowBuildBasket.flowCookbook.folderIncluded = `${cleanInclusionPath}/`;
+        this.plugin.saveSettings();
       } else {
-        flowBuildBasket.cleanCookbook.folderIncluded = `${cleanInclusionPath}`;
+        flowBuildBasket.flowCookbook.folderIncluded = `${cleanInclusionPath}`;
+        this.plugin.saveSettings();
       }
 
       // dataview likes paths only with extra garnish
       flowBuildBasket.dataviewSearchPath =
-        cleanInclusionPath === "" || cleanInclusionPath === "/"
+        cleanInclusionPath === "" ||
+        cleanInclusionPath === "/" ||
+        cleanInclusionPath === "root"
           ? "" // Empty string in Dataview queries means "search everywhere"
           : `\"${cleanInclusionPath}\"`; // For specific paths, we need to wrap in quotes
     }
 
+    // Leave it. I know it's redundant, but if you touch it, it releases a curse
     //--- EXCLUDED FOLDERS - clean up paths
     let cleanFolderExclusionArray: string[] = [];
+
     const folderExclusionArray = shCookbook.folderExcluded.split(",");
     if (folderExclusionArray.length >= 1) {
       const nonEmptyFolderExclusionArray = folderExclusionArray
@@ -576,11 +625,11 @@ export class FlowService {
         let cleanExcludedPath = normalizePath(excludedFolder.trim());
         cleanFolderExclusionArray.push(cleanExcludedPath);
       }
-      flowBuildBasket.cleanCookbook.folderExcluded =
+      flowBuildBasket.flowCookbook.folderExcluded =
         cleanFolderExclusionArray.join(", ");
     } else {
       cleanFolderExclusionArray.push("");
-      flowBuildBasket.cleanCookbook.folderExcluded = "";
+      flowBuildBasket.flowCookbook.folderExcluded = "";
     }
 
     //--- INCLUDED and EXCLUDED TAGS - strip #
@@ -602,10 +651,10 @@ export class FlowService {
 
     // use cleanup on tags
     const cleanTagInclusionArray = tagCleanup(shCookbook.tagsIncluded);
-    flowBuildBasket.cleanCookbook.tagsIncluded =
+    flowBuildBasket.flowCookbook.tagsIncluded =
       cleanTagInclusionArray.join(", ");
     const cleanTagExclusionArray = tagCleanup(shCookbook.tagsExcluded);
-    flowBuildBasket.cleanCookbook.tagsExcluded =
+    flowBuildBasket.flowCookbook.tagsExcluded =
       cleanTagExclusionArray.join(", ");
 
     //--- INCLUDED and  EXCLUDED PROPERTIES - clean up and split at =
@@ -637,14 +686,10 @@ export class FlowService {
     let cleanPropertiesInclusionArray = propertyCleanup(
       shCookbook.propsIncluded
     );
-    flowBuildBasket.cleanCookbook.propsIncluded =
-      cleanPropertiesInclusionArray.join(", ");
 
     let cleanPropertiesExclusionArray = propertyCleanup(
       shCookbook.propsExcluded
     );
-    flowBuildBasket.cleanCookbook.propsExcluded =
-      cleanPropertiesExclusionArray.join(", ");
 
     // -------- cleanup done ----------------
 
@@ -664,12 +709,12 @@ export class FlowService {
         .filter((child): child is TFile => child instanceof TFile)
         .sort((a, b) => a.name.localeCompare(b.name));
 
-      // Process all folders first (depth-first)
+      // then recurse into subfolders, if we don't exclude them
       for (const subfolder of folders) {
         buildDepthFirstFileTree(subfolder);
       }
 
-      // Then process all files in current folder
+      // Always process files in current folder
       for (const file of files) {
         fileTreeArray.push(file.path);
       }
@@ -687,7 +732,7 @@ export class FlowService {
           fileTreeArray.push(child.path);
         }
       }
-      // then recurse into subfolders
+      // then recurse into subfolders, if we don't exclude them
       for (const child of children) {
         if (child instanceof TFolder) {
           buildFilesFirstFileTree(child);
@@ -696,7 +741,10 @@ export class FlowService {
     };
 
     // Build the complete file tree (which puts results in fileTreeArray)
-    flowBuildBasket.depthFirst
+    this.plugin.settings.flowBuildBasket.flowCookbook
+      .pathsTagsPropertiesSortOrder === "depthFirst" ||
+    this.plugin.settings.flowBuildBasket.flowCookbook
+      .pathsTagsPropertiesSortOrder === undefined
       ? buildDepthFirstFileTree(vault.getRoot())
       : buildFilesFirstFileTree(vault.getRoot());
 
@@ -712,13 +760,13 @@ export class FlowService {
     };
     // If inclusion path ends with slash, do the thing
     if (
-      flowBuildBasket.cleanCookbook.folderIncluded != "/" &&
-      flowBuildBasket.cleanCookbook.folderIncluded.endsWith("/")
+      flowBuildBasket.flowCookbook.folderIncluded != "/" &&
+      flowBuildBasket.flowCookbook.folderIncluded.endsWith("/")
     ) {
       allNotes = allNotes.filter((page: Types.DVNote) =>
         isDirectChild(
           page.file.path,
-          flowBuildBasket.cleanCookbook.folderIncluded.slice(0, -1)
+          flowBuildBasket.flowCookbook.folderIncluded.slice(0, -1)
         )
       );
     }
@@ -847,10 +895,218 @@ export class FlowService {
     // presto
     return Promise.resolve(pathArrayWithFolderTitles);
   };
+  //^CHECKED AND TESTED
 
+  // ----- Save the stuff we just put together --------------
+  //CHECKED AND TESTED
+  writeFlowDef = async (
+    settings: Types.TextFlowSettings,
+    flowBuildBasket: Types.flowBuildBasket
+  ) => {
+    // handle double slashes
+    if (flowBuildBasket.flowCookbook.folderIncluded === "//") {
+      flowBuildBasket.flowCookbook.folderIncluded = "/";
+    }
+
+    // -------- CREATE THE FLOW OBJECT -------------------------------
+    settings.flows[flowBuildBasket.flowName] = {
+      timestamp: this.getTimestamp(),
+      flowName: flowBuildBasket.flowName,
+      flowFilePath: normalizePath(
+        `${this.plugin.settings.systemFolderPath}/${flowBuildBasket.flowName}.md`
+      ),
+      definitionMode: flowBuildBasket.definitionMode,
+      flowCookbook: flowBuildBasket.flowCookbook,
+      flowRecipe: flowBuildBasket.finalRecipe, // { defMode: pathArray }
+      folderTitles: flowBuildBasket.folderTitles,
+      isFreshBuild: true,
+      flowBuilt: false,
+      flaggedForRebuild: false,
+      conflictObject: flowBuildBasket.conflictObject,
+      activeRegions: flowBuildBasket.activeRegions,
+      persistentCursors: flowBuildBasket.persistentCursors,
+      unsavedRegionsArray: [],
+      flowMap: {},
+    };
+    await this.plugin.saveSettings();
+  };
+  //^CHECKED AND TESTED
+
+  // ------ function that checks if flows overlap
+  //CHECKED AND TESTED
+  conflictCollector = (flowBuildBasket: Types.flowBuildBasket) => {
+    const conflictObject: Types.ConflictObject = {};
+    const key1 = Object.keys(flowBuildBasket.finalRecipe)[0];
+    if (Object.keys(this.plugin.settings.flows).length >= 1) {
+      flowLoop: for (let flowName in this.plugin.settings.flows) {
+        if (flowName != flowBuildBasket.flowName) {
+          const key2 = Object.keys(
+            this.plugin.settings.flows[flowName].flowRecipe
+          )[0];
+          for (let path of flowBuildBasket.finalRecipe[key1]) {
+            if (
+              !path.startsWith("#") &&
+              this.plugin.settings.flows[flowName].flowRecipe[key2].includes(
+                path
+              )
+            ) {
+              if (!conflictObject[flowName]) {
+                conflictObject[flowName] = {};
+              }
+              conflictObject[flowName][path] = true;
+            }
+          }
+        }
+      }
+    }
+    return conflictObject;
+  };
+  //^CHECKED AND TESTED
+
+  // ----------------- sync conflicts
+
+  //CHECKED AND TESTED
+  syncConflictObjects = (referenceFlow: Types.flowBuildBasket) => {
+    let refFlowName = referenceFlow.flowName;
+
+    Object.keys(this.plugin.settings.flows).forEach((syncFlowName) => {
+      // Case 1: Flow is in reference conflicts
+      if (syncFlowName != refFlowName && referenceFlow.conflictObject) {
+        if (!this.plugin.settings.flows[syncFlowName].conflictObject) {
+          this.plugin.settings.flows[syncFlowName].conflictObject = {};
+        }
+        this.plugin.settings.flows[syncFlowName].conflictObject[refFlowName] =
+          referenceFlow.conflictObject[syncFlowName];
+      }
+      // Case 2: Syncflow is not in reference conflicts, but reference is in syncFlow's conflicts
+      if (
+        !referenceFlow.conflictObject[syncFlowName] &&
+        this.plugin.settings.flows[syncFlowName].conflictObject
+      ) {
+        if (
+          this.plugin.settings.flows[syncFlowName].conflictObject[refFlowName]
+        ) {
+          delete this.plugin.settings.flows[syncFlowName].conflictObject[
+            refFlowName
+          ];
+        }
+      }
+    });
+  };
+  //^CHECKED AND TESTED
+
+  // --- Reset flowBuildBasket -------------
+  resetFlowBuildBasket = async (
+    resetFlowBuildBasket: Types.flowBuildBasket
+  ) => {
+    resetFlowBuildBasket.createOrEdit = "create";
+    resetFlowBuildBasket.dataviewSearchPath = "";
+    resetFlowBuildBasket.previewUsed = false;
+    resetFlowBuildBasket.success = false;
+    resetFlowBuildBasket.flowName = "";
+    resetFlowBuildBasket.definitionMode = "";
+    resetFlowBuildBasket.folderTitles = true;
+    resetFlowBuildBasket.flowCookbook = {};
+    resetFlowBuildBasket.finalRecipe = {};
+    resetFlowBuildBasket.conflictObject = {};
+    resetFlowBuildBasket.activeRegions = {};
+    resetFlowBuildBasket.persistentCursors = {};
+  };
+
+  // CHECKED AND TESTED
+  // ------ The function that handles everything necessary to (re)build a flow
+  rebuildFlow = async (flowName: string, caller: string) => {
+    const flowReBuildBasket: Types.flowBuildBasket = {
+      // rebuild specific properties
+      createOrEdit: "",
+      dataviewSearchPath: "",
+      previewUsed: false,
+      success: false,
+      // properties that will be transferred to the actual flow object
+      flowName: this.plugin.settings.flows[flowName].flowName,
+      definitionMode: this.plugin.settings.flows[flowName].definitionMode,
+      folderTitles: this.plugin.settings.flows[flowName].folderTitles,
+      flowCookbook: this.plugin.settings.flows[flowName].flowCookbook,
+      finalRecipe: {},
+      conflictObject: this.plugin.settings.flows[flowName].conflictObject,
+      activeRegions: this.plugin.settings.flows[flowName].activeRegions,
+      persistentCursors: this.plugin.settings.flows[flowName].persistentCursors,
+    };
+
+    // do the thing
+    await this.createFlowDefinition(flowReBuildBasket);
+
+    // exit; error messages are sent by createFlowDefinition
+    if (!flowReBuildBasket.success) {
+      // clean up and save
+      this.resetFlowBuildBasket(flowReBuildBasket);
+      this.plugin.saveSettings();
+      return;
+    }
+
+    // do the other thing
+    await this.writeFlowDef(this.plugin.settings, flowReBuildBasket);
+
+    // update conflicts, reset flag, clean up the basket
+    await this.syncConflictObjects(flowReBuildBasket); // null unsavedRegions
+    this.plugin.settings.flows[flowName].flaggedForRebuild = false;
+    await this.resetFlowBuildBasket(flowReBuildBasket);
+    await this.plugin.saveSettings();
+
+    // Get a fresh reference now that we've written the def
+    const updatedFlow = this.plugin.settings.flows[flowName];
+
+    // ---------- THE ACTUAL FLOW FILE CREATION ----------------
+    // the object that keeps track of stuff and shuttles values between the various parts of the function
+    let mapValueBasket: Types.mapValueBasket = {
+      concatenatedFileContents: "",
+      initialIteration: true,
+      identifier: "0",
+      flowOrder: 0,
+      UID: "",
+      singleFileContent: "",
+      currentEnd: 0,
+      idDivider: "",
+    };
+
+    // for some reason, using definitionMode here doesn't work
+    let key = "";
+    updatedFlow.flowRecipe.bookmarks
+      ? (key = "bookmarks")
+      : (key = "foldersTagsProps");
+
+    // this is to make sure we got the latest version of everything
+    await this.plugin.syncAllLeaves();
+
+    // Call the build function; didn't think we'd get here...
+    await this.flowBuilder(
+      updatedFlow.flowRecipe[key],
+      updatedFlow,
+      flowName,
+      mapValueBasket,
+      caller
+    );
+
+    // null the basket, just to be thorough.
+    mapValueBasket = {
+      concatenatedFileContents: "",
+      initialIteration: true,
+      identifier: "0",
+      flowOrder: 0,
+      UID: "",
+      singleFileContent: "",
+      currentEnd: 0,
+      idDivider: "",
+    };
+
+    this.plugin.saveSettings();
+  };
+  // ^CHECKED AND TESTED
+
+  // CHECKED AND TESTED
   // ------ The flowBuilder --------------------------
   flowBuilder = async (
-    receipeArray: string[],
+    recipeArray: string[],
     flow: Types.FlowDef,
     flowName: string,
     mapValueBasket: Types.mapValueBasket,
@@ -871,10 +1127,10 @@ export class FlowService {
     let progressBar: ProgressVisualizer = new ProgressNotice(flowName);
 
     // Get an object started in case the call came from inside the...
-    // flow  or switcher modal
+    // flow, or from settings or the switcher modal
     let progressBars: { [key: string]: LoadingOverlay } = {};
     // Check if we even need it:
-    if (caller === "") {
+    if (caller === "settingsTab") {
       if (this.plugin.settings.activeFlowObject[flowName]) {
         Object.keys(this.plugin.settings.flows[flowName].activeRegions).forEach(
           (leafID) => {
@@ -911,9 +1167,10 @@ export class FlowService {
       }
     }
 
+    // Info exange with the progress bar
     let counter = 0;
-    const total = receipeArray.length;
-    for (let ingredient of receipeArray) {
+    const total = recipeArray.length;
+    for (let ingredient of recipeArray) {
       // create update the progress bar
       counter++;
       if (caller != "") {
@@ -927,18 +1184,22 @@ export class FlowService {
         });
       }
 
+      // --- The actual handling of content ----------
+      // If the ingredient (array entry) is a title
       if (ingredient.startsWith("#")) {
-        // if it's a folder name
         mapValueBasket.flowOrder++;
         await this.createInvisibleUID(mapValueBasket);
         // make the proper divider
         const divider = `\r${mapValueBasket.UID}<hr>\r\r`;
-        // make unencoded divider for debugging
+
+        // unencoded divider for debugging purposes (there's also debugUID())
         // const divider = `\r${mapValueBasket.identifier}<hr>\r\r`;
         mapValueBasket.idDivider = divider.replace(/\\r/g, "\r");
 
+        // stripping # so Outline will look as expected
         const ingredientName = ingredient.replace("#", "");
 
+        // The object that holds the info about the folder/group
         flow.flowMap[ingredient] = {
           type: "folder",
           path: ingredient,
@@ -955,12 +1216,12 @@ export class FlowService {
         // Add content with marker before divider
         mapValueBasket.concatenatedFileContents += `<center><b>${ingredientName}</b></center>${mapValueBasket.idDivider}`;
       }
-      // it ingredient is a path
+      // if the ingredient is a path
       else {
         mapValueBasket.flowOrder++;
         await this.createInvisibleUID(mapValueBasket);
 
-        // make unencoded divider for debugging
+        // unencoded divider for debugging purposes (there's also debugUID())
         // const divider = `\r${mapValueBasket.identifier}<hr>\r\r`;
         const divider = `\r${mapValueBasket.UID}<hr>\r\r`;
         mapValueBasket.idDivider = divider.replace(/\\r/g, "\r");
@@ -969,7 +1230,9 @@ export class FlowService {
         const note = this.app.vault.getAbstractFileByPath(ingredient);
         if (!note) {
           new Notice(`textFlow: The note at ${ingredient} couldn't be found.`);
+          return;
         }
+        // type check
         if (note instanceof TFile) {
           const modificationTimestamp = Date.now();
           let fileContent: string = await this.app.vault.read(note);
@@ -978,6 +1241,7 @@ export class FlowService {
             .replace(/^---\n[\s\S]*?\n---\n*/, "")
             .trim();
 
+          // put all info in the note object
           flow.flowMap[ingredient] = {
             type: "file",
             path: ingredient,
@@ -997,7 +1261,6 @@ export class FlowService {
                 fileContent.length +
                 mapValueBasket.idDivider.length,
             },
-            yamlMini: mapValueBasket.yamlMini,
           } as Types.SourceFileObject;
 
           mapValueBasket.initialIteration = false;
@@ -1014,7 +1277,7 @@ export class FlowService {
         `${this.plugin.settings.systemFolderPath}/${flowName}.md`
       );
 
-      // then check, if there's already a file there
+      // check, if there's already a file there
       const existingFile = this.app.vault.getAbstractFileByPath(flowFilePath);
       if (existingFile instanceof TFile) {
         // If file exists, modify it
@@ -1029,96 +1292,18 @@ export class FlowService {
           mapValueBasket.concatenatedFileContents
         );
       }
+      // remove the flag
       this.plugin.isRebuilding = false;
       this.plugin.saveSettings();
       progressBar.close();
     }
   };
 
-  // -------------- manage YAML ------------------
+  // ^CHECKED AND TESTED
 
-  // ---------------- the actual handling of YAML -------
-  manageYaml = async (file: TFile, mapValueBasket: Types.mapValueBasket) => {
-    try {
-      // Create a variable to store the modified frontmatter
-      let modifiedFrontmatter: any = {};
-
-      await this.app.fileManager.processFrontMatter(
-        file,
-        async (frontmatter) => {
-          // Store the entire frontmatter object so we don't lose other properties
-          modifiedFrontmatter = { ...frontmatter };
-
-          if (frontmatter?.TextFlowUID) {
-            //this.debugUID(frontmatter.TextFlowUID);
-            const identifierMatch =
-              frontmatter.TextFlowUID.match(/【([a-f0-9-]{36})】/i);
-
-            if (identifierMatch) {
-              const [_, identifierString] = identifierMatch;
-              const identifierNumber = identifierString;
-              mapValueBasket.identifier = identifierNumber;
-
-              const invisibleUidRegex =
-                /⟦([\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46})⟧/;
-              const invisibleUidMatchResult =
-                frontmatter.TextFlowUID.match(invisibleUidRegex);
-
-              if (invisibleUidMatchResult && invisibleUidMatchResult[1]) {
-                // Invisible UID part found and captured
-                mapValueBasket.UID = invisibleUidMatchResult[1];
-                modifiedFrontmatter.TextFlowUID = `【${identifierNumber}】⟦${mapValueBasket.UID}⟧`;
-              } else {
-                // Timestamp part was found, but the invisible UID part is missing or malformed.
-                // Recreate the invisible UID.
-                const newInvisibleUID = this.reCreateInvisibleUID(
-                  identifierNumber,
-                  mapValueBasket
-                );
-                mapValueBasket.UID = newInvisibleUID;
-
-                // Update frontmatter to store the newly created/recreated complete UID
-                modifiedFrontmatter.TextFlowUID = `【${String(
-                  identifierNumber
-                ).padStart(13, "0")}】⟦${mapValueBasket.UID}⟧`;
-              }
-            } else {
-              // if (!timestampMatch) - TextFlowUID exists but is incomplete (no timestamp)
-              throw new Error(
-                `TextFlow: Invalid UID format in properties of ${file.name}.\n` +
-                  "This file seems to be part of a flow but its UID is corrupted.\n" +
-                  "Please restore from backup or remove TextFlowUID from properties to treat as new file."
-              );
-            }
-          } else {
-            // if (!frontmatter?.TextFlowUID) - No TextFlowUID found
-            // Create one
-            await this.createInvisibleUID(mapValueBasket); // This sets mapValueBasket.UID and .timestamp
-            modifiedFrontmatter.TextFlowUID = `【${mapValueBasket.identifier}】⟦${mapValueBasket.UID}⟧`;
-          }
-        }
-      );
-
-      await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
-        Object.assign(frontmatter, modifiedFrontmatter);
-      });
-    } catch (error) {
-      console.error("Error processing frontmatter:", error);
-      throw error;
-    }
-
-    // Get content without YAML for flow map
-    const content = await this.app.vault.read(file);
-    mapValueBasket.singleFileContent = content
-      .replace(/^---\n[\s\S]*?\n---\n*/, "")
-      .trim();
-
-    //this.debugMarker(mapValueBasket.UID);
-    return mapValueBasket;
-  };
-
-  // ----------- translate timestamp into invisible base2 UID and make YAML entry
-  createInvisibleUID = (mapValueBasket: Types.mapValueBasket) => {
+  // CHECKED AND TESTED
+  // ---- Like it says....
+  createInvisibleUID = async (mapValueBasket: Types.mapValueBasket) => {
     const invisibleChars = [
       "\u200B", // Zero-width space 0
       "\u200C", // Zero-width non-joiner 1
@@ -1132,11 +1317,10 @@ export class FlowService {
       "\u00A0", // No-Break Space 9
     ];
 
-    const getNewUUID = () => {
-      return crypto.randomUUID();
-    };
+    // get the initial UUID
+    let UUID = crypto.randomUUID();
 
-    // turn the UUID into base9 piecemeal, then join and pad
+    // turn it into base9 piecemeal (to avoid bigint), then join and pad
     const base9Transform = (identifier: string) => {
       const initialIdentifierArray = identifier.split("-");
       const base9IdentifierArray: string[] = [];
@@ -1158,88 +1342,19 @@ export class FlowService {
       return paddedTransformedIdentifier;
     };
 
-    let UUID = getNewUUID();
+    // call the function
     const paddedBase9Identifier = base9Transform(UUID);
+
+    // put both versions in the basket
     mapValueBasket.identifier = UUID;
-    //console.log(`base3 timestamp: ${base3Identifier}`);
-    // debugMarker(base3Identifier);
     mapValueBasket.UID = paddedBase9Identifier;
-    mapValueBasket.yamlMini = `\nTextFlowUID: 【${mapValueBasket.identifier}】⟦${paddedBase9Identifier}⟧`;
   };
 
-  // ----------------- If invisible UID got eaten by external editor -----------
-  reCreateInvisibleUID = (
-    identifier: string,
-    mapValueBasket: Types.mapValueBasket
-  ) => {
-    // Define our invisible characters
-    const invisibleChars = [
-      "\u200B", // Zero-width space 0
-      "\u200C", // Zero-width non-joiner 1
-      "\u200D", // Zero-width joiner 2
-      "\u2060", // Word joiner 3
-      "\u2061", // Function application 4
-      "\u2062", // Invisible times 5
-      "\u2063", // Invisible separator 6
-      "\u2064", // Invisible plus 7
-      "\uFEFF", // Zero-width no-break space 8
-      "\u00A0", // No-Break Space 9
-    ];
+  // ^CHECKED AND TESTED
 
-    const initialIdentifierArray = identifier.split("-");
-    const base10IdentifierArray: string[] = [];
+  // CHECKED AND TESTED
 
-    for (let hexNumber of initialIdentifierArray) {
-      const numberIdentifier = parseInt(hexNumber, 16);
-      const base10 = numberIdentifier.toString(10);
-      const transformedIdentifier = [...base10]
-        .map((digit) => invisibleChars[parseInt(digit)])
-        .join("");
-      base10IdentifierArray.push(transformedIdentifier);
-    }
-    const finalIdentifier = base10IdentifierArray.join("");
-    const paddedTransformedIdentifier = finalIdentifier.padStart(
-      46,
-      invisibleChars[0]
-    );
-
-    return paddedTransformedIdentifier;
-  };
-
-  // --------------- debug the UID
-  debugMarker = (marker: string) => {
-    console.log({
-      fullMarker: marker,
-      length: marker.length,
-      chars: Array.from(marker).map((char) => ({
-        char: char,
-        code: char.charCodeAt(0).toString(10),
-        name:
-          char === "\u00A0"
-            ? "NBSP"
-            : char === "\u200B"
-            ? "ZWSP"
-            : char === "\u200C"
-            ? "ZWNJ"
-            : char === "\u200D"
-            ? "ZWJ"
-            : char === "\u2060"
-            ? "WJ"
-            : char === "\u2061"
-            ? "FA"
-            : char === "\u2062"
-            ? "*"
-            : char === "\u2063"
-            ? "IS"
-            : char === "\u2064"
-            ? "+"
-            : char === "\uFEFF"
-            ? "NBZWS"
-            : "unknown",
-      })),
-    });
-  };
-
+  // for debugging
   debugUID = (uid: string) => {
     console.log({
       originalNumber: uid.match(/【(\d+)】/)?.[1],
@@ -1275,116 +1390,39 @@ export class FlowService {
       ),
     });
   };
+  // ^CHECKED AND TESTED
 
-  rebuildFlow = async (flowName: string) => {
-    try {
-      let flowReBuildBasket: Types.flowBuildBasket = {
-        // rebuild specific properties
-        flowName: this.plugin.settings.flows[flowName].flowName,
-        createOrEdit: "",
-        dataviewSearchPath: "",
-        previewUsed: false,
-        success: false,
-        fresh: false,
-        // properties that will be transferred to the actual flow object
-        // plus flowName
-        definitionMode: Object.keys(
-          this.plugin.settings.flows[flowName].flowReceipe
-        )[0],
-        depthFirst: this.plugin.settings.flows[flowName].depthFirst,
-        folderTitles: this.plugin.settings.flows[flowName].folderTitles,
-        cleanCookbook: {},
-        flowCookbook: this.plugin.settings.flows[flowName].flowCookbook,
-        finalReceipe: {},
-        conflictObject: this.plugin.settings.flows[flowName].conflictObject,
-        activeRegions: this.plugin.settings.flows[flowName].activeRegions,
-        persistentCursors:
-          this.plugin.settings.flows[flowName].persistentCursors,
-      };
-
-      await this.createFlowDefinition(flowReBuildBasket);
-
-      if (!flowReBuildBasket.success) {
-        return; // The 'finally' block will still run
-      }
-      await this.writeFlowDef(this.plugin.settings, flowReBuildBasket);
-      await this.syncConflictObjects(flowReBuildBasket); // null unsavedRegions
-      this.plugin.settings.flows[flowName].flaggedForRebuild = false;
-      await this.resetFlowBuildBasket(flowReBuildBasket);
-      await this.plugin.saveSettings();
-
-      // Get fresh reference to the flow object after createFlowDefinition
-      const updatedFlow = this.plugin.settings.flows[flowName];
-
-      // ---------- flow creation ----------------
-      // the object that shuttles the values between the functions
-      const mapValueBasket: Types.mapValueBasket = {
-        concatenatedFileContents: "",
-        initialIteration: true,
-        identifier: "0",
-        flowOrder: 0,
-        UID: "",
-        yamlMini: "",
-        singleFileContent: "",
-        currentEnd: 0,
-        idDivider: "",
-      };
-
-      let key = "";
-      updatedFlow.flowReceipe.bookmarks // Use updatedFlow instead of shownFlow
-        ? (key = "bookmarks")
-        : (key = "foldersTagsProps");
-
-      // check if any of the rebuilt flow's conflict partners are active
-      const foundConflicts: string[] = [];
-      if (updatedFlow.conflictObject) {
-        const allLeaves = this.app.workspace.getLeavesOfType("markdown");
-        for (const leaf of allLeaves) {
-          const view = leaf.view as MarkdownView;
-          const filePath = view.file?.path;
-          if (!filePath) continue;
-          const checkingFlowName = this.plugin.isFlowFile(filePath);
-          if (!checkingFlowName) continue;
-          if (!updatedFlow.conflictObject[checkingFlowName]) continue;
-          foundConflicts.push(checkingFlowName);
+  // CHECKED AND TESTED
+  checkForActiveFlowConflicts = (): boolean => {
+    const ids = Object.keys(this.plugin.settings.activeFlowObject);
+    for (let i = 0; i < ids.length; i++) {
+      const flowA = this.plugin.settings.activeFlowObject[ids[i]];
+      for (let j = i + 1; j < ids.length; j++) {
+        const flowB = this.plugin.settings.activeFlowObject[ids[j]];
+        if (flowA.conflicts?.[flowB.id] || flowB.conflicts?.[flowA.id]) {
+          console.log("open conflicts found");
+          return true;
         }
       }
-      if (foundConflicts.length > 0) {
-        await this.plugin.syncAllLeaves();
-      }
-
-      // Calling the build function
-      const caller = "";
-      await this.flowBuilder(
-        updatedFlow.flowReceipe[key],
-        updatedFlow,
-        flowName,
-        mapValueBasket,
-        caller
-      );
-
-      // reset the basket
-      flowReBuildBasket = {
-        flowName: "",
-        createOrEdit: "",
-        dataviewSearchPath: "",
-        previewUsed: false,
-        success: false,
-        fresh: false,
-        definitionMode: "",
-        depthFirst: true,
-        folderTitles: true,
-        cleanCookbook: {},
-        flowCookbook: {},
-        finalReceipe: {},
-        conflictObject: {},
-        activeRegions: {},
-        persistentCursors: {},
-      };
-    } finally {
-      this.plugin.saveSettings();
     }
+    return false;
   };
+  // ^CHECKED AND TESTED
+
+  //
+  //
+  //
+  //
+  //
+  //
+  //
+  //
+  //
+  //
+  //
+  //
+  //
+  //
 
   scrollToPos(editor: Types.ObsidianEditor, cursorPos: number) {
     const cmEditor = editor.cm;
@@ -1651,4 +1689,16 @@ export class FlowService {
       }
     }
   }
+
+  getTimestamp = (): string => {
+    const date = new Date();
+    const weekday = date.toLocaleDateString("en-US", { weekday: "short" });
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+
+    return `${weekday}, ${year}.${month}.${day}, ${hours}:${minutes}`;
+  };
 }

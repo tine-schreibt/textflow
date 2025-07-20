@@ -16,9 +16,10 @@ import {
 } from "obsidian";
 import * as Types from "./types";
 import { FlowService } from "./flowService";
-import { MenuBar } from "./menuBar";
 import { TextFlowSettingsTab } from "./settingsTab";
+import { dirname, basename } from "path";
 
+//CHECKED AND TESTED
 export class previewModal extends Modal {
   constructor(
     app: App,
@@ -35,16 +36,32 @@ export class previewModal extends Modal {
     const modalTitle = contentEl.createEl("h2", {
       text: `Preview for flow ${this.flowBuildBasket.flowName}.`,
     });
+
+    // Show found overlaps
     if (Object.keys(this.flowBuildBasket.conflictObject).length > 0) {
       const conflictText = new Setting(contentEl).setDesc(
         createFragment((desc) => {
           desc.createSpan({
             text: `The following flows overlap with ${this.flowBuildBasket.flowName}:`,
           });
+          desc.createEl("br");
+          const flowSpan = desc.createSpan({ text: `Hover for details.` });
           Object.keys(this.flowBuildBasket.conflictObject).forEach((flow) => {
+            // get the paths
+            const conflictingPaths = Object.keys(
+              this.flowBuildBasket.conflictObject[flow]
+            );
+            // make the label
+            const ariaText = `\n-${conflictingPaths.join("\n")}`;
+            // the span itself:
             desc.createEl("br");
-            desc.createSpan({
+            const flowSpan = desc.createSpan({
               text: `- ${flow}`,
+              attr: {
+                "aria-label": `Overlapping notes:\n${Object.keys(
+                  this.flowBuildBasket.conflictObject[flow]
+                ).join("\n")}`,
+              },
             });
           });
         })
@@ -55,17 +72,16 @@ export class previewModal extends Modal {
       cls: "preview-container",
     });
 
-    let key = this.flowBuildBasket.finalReceipe.bookmarks
-      ? "bookmarks"
-      : "foldersTagsProps";
+    const key = this.flowBuildBasket.definitionMode;
 
-    if (this.flowBuildBasket.finalReceipe[key]!.length <= 1) {
-      // there's a whole fucking function making sure no fragment of the value is ever undefined, so... ! it is.
+    const recipeItems = this.flowBuildBasket.finalRecipe[key] ?? [];
+    if (recipeItems.length === 0) {
       previewContainer.setText(
-        "Your criteria yielded no results. Check them for typos and/or make them less restrictive."
+        "Your criteria yielded an empty list. Check them for typos and/or make them less restrictive."
       );
     } else {
-      for (let ingredient of this.flowBuildBasket.finalReceipe[key]!) {
+      // Format the elements of the array for display
+      for (let ingredient of this.flowBuildBasket.finalRecipe[key]!) {
         if (ingredient.startsWith("#")) {
           previewContainer.createEl("p", {
             text: ingredient.replace("#", ""),
@@ -73,11 +89,16 @@ export class previewModal extends Modal {
           });
         } else {
           const ingredientArray = ingredient.split("/");
-          let dashes = "";
-          for (let i = 0; i < ingredientArray.length - 1; i++) dashes += "-";
-          ingredient = `${dashes} ${
-            ingredientArray[ingredientArray.length - 1]
-          }`;
+          if (this.flowBuildBasket.finalRecipe.foldersTagsProps) {
+            // if we are not working with bookmarks
+            let dashes = "";
+            for (let i = 0; i < ingredientArray.length - 1; i++) dashes += "-";
+            ingredient = `${dashes} ${
+              ingredientArray[ingredientArray.length - 1]
+            }`;
+          } else {
+            ingredient = `- ${ingredientArray[ingredientArray.length - 1]}`;
+          }
           previewContainer.createEl("p", {
             text: `${ingredient}`,
             cls: "preview-note-name",
@@ -85,6 +106,7 @@ export class previewModal extends Modal {
         }
       }
     }
+    // Close button with info text
     const closeModal = new Setting(contentEl).setDesc(
       createFragment((desc) => {
         desc.createSpan({
@@ -106,6 +128,101 @@ export class previewModal extends Modal {
     this.contentEl.empty();
   }
 }
+//^CHECKED AND TESTED
+
+// ^CHECKED AND TESTED
+//----------- FLOW DEF DELETION
+export class DeleteFlowDefModal extends Modal {
+  constructor(
+    app: App,
+    private plugin: TextFlowPlugin,
+    private settingsTab: TextFlowSettingsTab,
+
+    private flowName: string
+  ) {
+    super(app);
+    this.settingsTab = settingsTab;
+    this.flowName = flowName;
+  }
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.createEl("h2", {
+      text: `Delete the definition for "${this.flowName}"`,
+    });
+    const helperText = contentEl.createEl("p", {
+      text: `This will also delete the related flowFile.`,
+      cls: "Tag-modal-helper",
+    });
+
+    const deleteButton = new ButtonComponent(contentEl);
+    deleteButton.setClass("action-button");
+    deleteButton.setClass("action-button-delete-modal");
+    deleteButton.setWarning();
+    deleteButton.setTooltip(`Delete "${this.flowName}".`);
+    deleteButton.setIcon("trash");
+    deleteButton.onClick(async () => {
+      // sync all, just to be thorough
+      this.plugin.syncAllLeaves();
+
+      // Get the file path
+      const flowFilePath = normalizePath(
+        `${this.plugin.settings.systemFolderPath}/${this.flowName}.md`
+      );
+
+      const flowFile = this.app.vault.getAbstractFileByPath(flowFilePath);
+
+      // delete file if present; in two steps to make TypeScript happy
+      if (flowFile) {
+        if (flowFile instanceof TFile) {
+          await this.app.vault.delete(flowFile);
+        }
+      }
+
+      // delete flowObject
+      delete this.plugin.settings.flows[this.flowName];
+
+      // delete entry from activeFlowObject
+      delete this.plugin.settings.activeFlowObject[this.flowName];
+
+      // delete conflictObjects for the flow
+      Object.keys(this.plugin.settings.flows).forEach((flowName) => {
+        if (this.plugin.settings.flows[flowName].conflictObject) {
+          if (
+            this.plugin.settings.flows[flowName].conflictObject[this.flowName]
+          ) {
+            delete this.plugin.settings.flows[flowName].conflictObject[
+              this.flowName
+            ];
+          }
+        }
+      });
+      new Notice(
+        `textFlow: The definition and flowFile of "${this.flowName}" were deleted!`
+      );
+
+      // if the user was about to edit this flow, unlock the name input field
+      if (this.plugin.settings.flowBuildBasket.flowName === this.flowName) {
+        this.plugin.settings.flowBuildBasket.createOrEdit = "create";
+      }
+
+      await this.plugin.saveSettings();
+      this.settingsTab.display();
+      this.close();
+    });
+
+    const cancelButton = new ButtonComponent(contentEl);
+    cancelButton.setClass("action-button");
+    cancelButton.setClass("action-button-cancel");
+    cancelButton.setCta();
+    cancelButton.setTooltip("Cancel.");
+    cancelButton.setIcon("x-circle");
+    cancelButton.onClick(async () => {
+      this.settingsTab.display();
+      this.close();
+    });
+  }
+}
+// ^CHECKED AND TESTED
 
 //-------- FLOW SWITCHING
 export class FlowSwitcherModal extends Modal {
@@ -132,28 +249,26 @@ export class FlowSwitcherModal extends Modal {
     // ----------------------------------------------------------
     // ---- PREPARE ACTIVE REGIONS ---------------
     // object to make flow info easier to grab
-    // activeFlowInfoObject: {flowName: {leafID: regionName}
+    // activeFlowInfoObject: {flowName: {leafID: regionName}}
     const activeFlowInfoObject: { [key: string]: { [key: string]: string } } =
       {};
 
     // iterate over active flow object
     Object.keys(this.plugin.settings.activeFlowObject).forEach((flow) => {
       // gather the info on the active flow's leaves:
-      Object.keys(this.plugin.settings.flows[flow].activeRegions).forEach(
-        (leafID) => {
-          const activeRegion =
-            this.plugin.settings.flows[flow].activeRegions[leafID].path?.split(
-              "/"
-            );
-          if (activeRegion) {
-            const fileName = activeRegion[activeRegion.length - 1];
-            if (!activeFlowInfoObject[flow]) {
-              activeFlowInfoObject[flow] = {};
+      if (this.plugin.settings.flows[flow].activeRegions) {
+        Object.keys(this.plugin.settings.flows[flow].activeRegions).forEach(
+          (leafID) => {
+            // get the note name; normalisation of path not necessary
+            if (this.plugin.settings.flows[flow].activeRegions[leafID].path) {
+              const activeRegion = basename(
+                this.plugin.settings.flows[flow].activeRegions[leafID].path
+              );
+              activeFlowInfoObject[flow][leafID] = activeRegion;
             }
-            activeFlowInfoObject[flow][leafID] = fileName;
           }
-        }
-      );
+        );
+      }
     });
 
     // Now we sort it all to make the display predictable to the user
@@ -163,8 +278,7 @@ export class FlowSwitcherModal extends Modal {
     });
     sortActiveRegionsArray.sort();
 
-    // ---------- PREPARE INACTIVE REGIONS
-    // ------------------------------------------------------------
+    // ---------- PREPARE INACTIVE REGIONS --------------------
     const inactiveFlowArray: string[] = [];
     Object.keys(this.plugin.settings.flows).forEach((flow) => {
       // if there's entries for a flow
@@ -194,7 +308,7 @@ export class FlowSwitcherModal extends Modal {
       cls: "textflow-switcher-active-container textflow-switcher-border-rounded-accent",
     });
 
-    // container for each flow's two parts: header and regions
+    // container for each flow's two parts: header with its buttons and the regions with their buttons
     for (let activeFlow of sortActiveRegionsArray) {
       const activeFlowEntry = activeFlowContainer.createDiv({
         cls: "flow-switch-modal-active-entry",
@@ -217,33 +331,30 @@ export class FlowSwitcherModal extends Modal {
       // -------- HEADER BUTTONS -------
       // ---- conditionals for styling
       let goOpen = "neutral";
-      let goSave = "neutral";
+      let goSync = "neutral";
       let goRebuild = "neutral";
 
-      // check if there is unsaved stuff for the flow
+      // check if there is unsynced stuff for the flow
       if (
         this.plugin.settings.flows[activeFlow].unsavedRegionsArray.length > 0
       ) {
-        goOpen = "no-go"; // don't open
-        goRebuild = "no-go";
-        goSave = "must"; // must save
+        goOpen = "neutral";
+        goSync = "must"; // must sync
+        goRebuild = "no-go"; // don't rebuild; it would overwrite the unsynced stuff
       }
 
-      // if no save is required, check if flow is flagged for rebuild
+      // if no sync is required, check if flow is flagged for rebuild
       if (
-        goSave === "neutral" &&
+        goSync === "neutral" &&
         this.plugin.settings.flows[activeFlow].flaggedForRebuild
       ) {
         goOpen = "no-go";
+        goSync = "no-go";
         goRebuild = "must";
-        goSave = "no-go";
       }
 
-      // if no save and no rebuild are required
-      if (goRebuild === "neutral") {
-        goOpen = "neutral";
-      }
-
+      // ------------ All the buttons for the active flowses headers
+      // Button that opens in a new tab
       const openActiveTabButton = new ButtonComponent(flowHeader)
         .setIcon("play")
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
@@ -258,8 +369,7 @@ export class FlowSwitcherModal extends Modal {
               await leaf.openFile(file);
               leaf.setPinned(true);
               await this.app.workspace.setActiveLeaf(leaf, { focus: true });
-              // make absolutely sure the active flow stuff is up to date
-              // before we check for conflicts and do the initial save
+              // this is called in setupFlowView, too, but timing matters for the conflict check
               await this.plugin.manageActiveFlowObject();
               if (this.flowService.checkForActiveFlowConflicts()) {
                 this.plugin.syncAllLeaves();
@@ -268,6 +378,7 @@ export class FlowSwitcherModal extends Modal {
           }
         });
 
+      // Button that opens in split to the right
       const openActiveRightButton = new ButtonComponent(flowHeader)
         .setIcon("step-forward")
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
@@ -290,6 +401,7 @@ export class FlowSwitcherModal extends Modal {
           }
         });
 
+      // Button that opens in a split down
       const openActiveDownButton = new ButtonComponent(flowHeader)
         .setIcon("step-forward")
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
@@ -313,12 +425,13 @@ export class FlowSwitcherModal extends Modal {
           }
         });
 
-      const saveButton = new ButtonComponent(flowHeader)
+      // Button to sync
+      const syncButton = new ButtonComponent(flowHeader)
         .setIcon("download")
-        .setClass(`menu-bar-button-save-${goSave}`)
+        .setClass(`menu-bar-button-save-${goSync}`)
         .setClass("clickable-icon")
         .onClick(async () => {
-          if (goSave === "neutral" || goSave === "must") {
+          if (goSync === "neutral" || goSync === "must") {
             await this.plugin.syncAllLeaves();
             await this.plugin.saveSettings();
             this.display();
@@ -327,18 +440,13 @@ export class FlowSwitcherModal extends Modal {
           }
         });
 
+      // Button to rebuild
       const rebuildButton = new ButtonComponent(flowHeader)
         .setIcon("rotate-cw")
         .setClass(`menu-bar-button-rebuild-${goRebuild}`)
-        .setTooltip(
-          goRebuild === "no-go"
-            ? `To overwrite unsaved changes, please use the settings tab.`
-            : ""
-        )
         .setClass("clickable-icon")
         .onClick(async () => {
           if (goRebuild === "neutral" || goRebuild === "must") {
-            await this.flowService.rebuildFlow(activeFlow);
             const allLeaves = this.app.workspace.getLeavesOfType("markdown");
             for (const leaf of allLeaves) {
               const view = leaf.view as MarkdownView;
@@ -346,8 +454,11 @@ export class FlowSwitcherModal extends Modal {
               if (!filePath) continue;
               const flowName = this.plugin.isFlowFile(filePath);
               if (flowName === activeFlow)
+                // make double sure we got everything set up for the overlay,
+                // so user doesn't type while we rebuild
                 await this.plugin.setupFlowView(activeFlow, view);
             }
+            await this.flowService.rebuildFlow(activeFlow, "switcher");
             await this.plugin.saveSettings();
             this.display();
           } else if (goRebuild === "no-go") {
@@ -355,6 +466,7 @@ export class FlowSwitcherModal extends Modal {
           }
         });
 
+      // Button to close all active leaves that contain this flow
       const closeButton = new ButtonComponent(flowHeader)
         .setIcon("x")
         .setClass(`flow-switcher-modal-neutral`)
@@ -376,7 +488,8 @@ export class FlowSwitcherModal extends Modal {
           );
         });
 
-      // ------ ACTIVE FLOW LEAF NAVIGATION --------------
+      // ------ ACTIVE FLOW LEAVES (navigation area) --------------
+      // if many leaves are open, we want some visual distinction
       let activeRegionBorderColorCounter = 0;
 
       Object.keys(activeFlowInfoObject[activeFlow]).forEach((leafID) => {
@@ -396,9 +509,55 @@ export class FlowSwitcherModal extends Modal {
         setIcon(regionIconSpan, "corner-down-right");
 
         // region name
+        // first the logic to find and display overlap
+        let overlap = "";
+        const infoObject: { [key: string]: string[] } = {};
+        let infoText = "";
+        Object.keys(activeFlowInfoObject).forEach((flowName) => {
+          if (flowName != activeFlow) {
+            if (this.plugin.settings.flows[activeFlow].conflictObject) {
+              if (
+                this.plugin.settings.flows[activeFlow].conflictObject[flowName]
+              ) {
+                const pathArray = Object.keys(
+                  this.plugin.settings.flows[activeFlow].conflictObject[
+                    flowName
+                  ]
+                );
+                pathArray.forEach((path) => {
+                  if (
+                    // if we're not handling a title and the region name is the file name
+                    !leafID.startsWith("#") &&
+                    path.endsWith(activeFlowInfoObject[activeFlow][leafID])
+                  ) {
+                    if (!infoObject[flowName]) {
+                      infoObject[flowName] = [];
+                    }
+                    infoObject[flowName].push(leafID);
+                    if (overlap === "") {
+                      overlap = "⚭";
+                    }
+                  }
+                });
+              }
+            }
+          }
+        });
+
+        if (overlap === "⚭") {
+          Object.keys(infoText).forEach((flowName) => {
+            infoText += `${flowName},`;
+          });
+        }
         const regionName = flowRegion.createSpan({
-          text: `${activeFlowInfoObject[activeFlow][leafID].replace("#", "")}`,
+          text: `${activeFlowInfoObject[activeFlow][leafID].replace(
+            "#",
+            ""
+          )} ${overlap}`,
           cls: "flow-switch-modal-active-region-name",
+          attr: {
+            "aria-label": `This region also occurs in other flows: ${infoText}`,
+          },
         });
 
         // ----------- GOTO BUTTON ------------
@@ -570,7 +729,7 @@ export class FlowSwitcherModal extends Modal {
         .setClass("clickable-icon")
         .onClick(async () => {
           if (goRebuild === "neutral" || goRebuild === "must") {
-            await this.flowService.rebuildFlow(inactiveFlow);
+            await this.flowService.rebuildFlow(inactiveFlow, "switcher");
             await this.plugin.saveSettings();
             this.display();
           } else {
@@ -584,79 +743,5 @@ export class FlowSwitcherModal extends Modal {
     this.plugin.unregisterModalUpdateCallback();
     const { contentEl } = this;
     contentEl.empty();
-  }
-}
-
-//----------- FLOW DEF DELETION
-export class DeleteFlowDefModal extends Modal {
-  constructor(
-    app: App,
-    private plugin: TextFlowPlugin,
-    private settingsTab: TextFlowSettingsTab,
-
-    private flowName: string
-  ) {
-    super(app);
-    this.settingsTab = new TextFlowSettingsTab(app, plugin);
-    this.flowName = flowName;
-  }
-  onOpen() {
-    const { contentEl } = this;
-    contentEl.createEl("h2", {
-      text: `Delete the definition for "${this.flowName}"`,
-    });
-    const helperText = contentEl.createEl("p", {
-      text: `This will also delete the related flowFile.`,
-      cls: "Tag-modal-helper",
-    });
-
-    const deleteButton = new ButtonComponent(contentEl);
-    deleteButton.setClass("action-button");
-    deleteButton.setClass("action-button-delete-modal");
-    deleteButton.setWarning();
-    deleteButton.setTooltip(`Delete "${this.flowName}".`);
-    deleteButton.setIcon("trash");
-    deleteButton.onClick(async () => {
-      await this.plugin.saveSettings();
-      await this.settingsTab.display();
-
-      const flowFilePath = normalizePath(
-        `${this.plugin.settings.systemFolderPath}/${this.flowName}.md`
-      );
-      const flowFile = this.app.vault.getAbstractFileByPath(flowFilePath);
-      if (flowFile instanceof TFile) {
-        await this.app.vault.delete(flowFile);
-      }
-
-      try {
-        delete this.plugin.settings.flows[this.flowName];
-        delete this.plugin.settings.activeFlowObject[this.flowName];
-
-        if (flowFile) {
-          await this.app.vault.delete(flowFile);
-        }
-        await this.settingsTab.display();
-
-        new Notice(
-          `textFlow: The definition and flowFile of "${this.flowName}" were deleted!`
-        );
-        this.close();
-      } catch (error) {
-        new Notice(
-          `textFlow: FAILED to delete definition and flowFile for "${this.flowName}": ` +
-            error
-        );
-      }
-    });
-
-    const cancelButton = new ButtonComponent(contentEl);
-    cancelButton.setClass("action-button");
-    cancelButton.setClass("action-button-cancel");
-    cancelButton.setCta();
-    cancelButton.setTooltip("Cancel.");
-    cancelButton.setIcon("x-circle");
-    cancelButton.onClick(async () => {
-      this.close();
-    });
   }
 }
