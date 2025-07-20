@@ -781,20 +781,10 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         );
         chooseExcludedFolders.onChange(async (value) => {
           this.plugin.settings.flowBuildBasket.previewUsed = false;
-          // Split to sanitise input
-          const normalisedPaths = value
-            .split(",") // make an array
-            .map((x) => x.trim()) // remove whitespace
-            .filter((x) => x.length > 0) // filter empty entries
-            .map((x) => normalizePath(x)); // normalise what's left
 
-          if (normalisedPaths.length === 0) {
-            this.plugin.settings.flowBuildBasket.flowCookbook.folderExcluded =
-              "";
-          } else {
-            this.plugin.settings.flowBuildBasket.flowCookbook.folderExcluded =
-              normalisedPaths.join(", ");
-          }
+          // cleanup happens on preview/save
+          this.plugin.settings.flowBuildBasket.flowCookbook.folderExcluded =
+            value;
 
           this.flowService.debouncedSaveSettings();
         });
@@ -826,17 +816,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         chooseIncludedTags.onChange(async (value) => {
           this.plugin.settings.flowBuildBasket.previewUsed = false;
 
-          // Dataview expects tags to start with a #
-          const sanitisedTags = value
-            .split(",")
-            .map((tag) => {
-              tag = tag.trim();
-              return tag.startsWith("#") ? tag : `#${tag}`;
-            })
-            .filter((tag) => tag !== "#");
-
+          // cleanup happens on preview/save
           this.plugin.settings.flowBuildBasket.flowCookbook.tagsIncluded =
-            sanitisedTags.join(", ");
+            value;
 
           this.flowService.debouncedSaveSettings();
         });
@@ -866,16 +848,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         chooseExcludedTags.onChange(async (value) => {
           this.plugin.settings.flowBuildBasket.previewUsed = false;
 
-          const sanitisedTags = value
-            .split(",")
-            .map((tag) => {
-              tag = tag.trim();
-              return tag.startsWith("#") ? tag : `#${tag}`;
-            })
-            .filter((tag) => tag !== "#");
-
+          // cleanup happens on preview/save
           this.plugin.settings.flowBuildBasket.flowCookbook.tagsExcluded =
-            sanitisedTags.join(", ");
+            value;
           this.flowService.debouncedSaveSettings();
         });
       });
@@ -909,13 +884,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         chooseIncludedProperties.onChange(async (value) => {
           this.plugin.settings.flowBuildBasket.previewUsed = false;
 
-          const sanitisedProps = value
-            .split(",")
-            .map((prop) => prop.trim())
-            .filter((prop) => prop !== "");
-
+          // cleanup happens on preview/save
           this.plugin.settings.flowBuildBasket.flowCookbook.propsIncluded =
-            sanitisedProps.join(",");
+            value;
           this.flowService.debouncedSaveSettings();
         });
       });
@@ -948,17 +919,14 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         chooseExcludedProperties.onChange(async (value) => {
           this.plugin.settings.flowBuildBasket.previewUsed = false;
 
-          const sanitisedProps = value
-            .split(",")
-            .map((prop) => prop.trim())
-            .filter((prop) => prop !== "");
-
+          // cleanup happens on preview/save
           this.plugin.settings.flowBuildBasket.flowCookbook.propsExcluded =
-            sanitisedProps.join(", ");
+            value;
           this.flowService.debouncedSaveSettings();
         });
       });
     //^CHECKED
+
     //CHECKED
     // ---- RADIO BUTTON SETTINGS AND LOGIC
     // --- Presets for the BOOKMARKS button

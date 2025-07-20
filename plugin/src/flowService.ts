@@ -612,7 +612,7 @@ export class FlowService {
           : `\"${cleanInclusionPath}\"`; // For specific paths, we need to wrap in quotes
     }
 
-    // Leave it. I know it's redundant, but if you touch it, it releases a curse
+    // Leave the cleanup. I know it's redundant, but if you touch it, it releases a curse.
     //--- EXCLUDED FOLDERS - clean up paths
     let cleanFolderExclusionArray: string[] = [];
 
