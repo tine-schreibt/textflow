@@ -1597,6 +1597,10 @@ export default class TextFlowPlugin extends Plugin {
 
     try {
       // this has to happen first so the menuBar can access its leaf specific settings
+      console.log(
+        "setupFlowView calling manageActiveFlowObject for ",
+        flowName
+      );
       await this.manageActiveFlowObject();
       await this.syncAllLeaves();
 

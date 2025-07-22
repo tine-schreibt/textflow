@@ -5,16 +5,13 @@ CHECKED AND TESTED
 - this.flowService.isValidFlowName()
 - this.flowService.radioButtonManager()
 - this.flowService.updateScrollbarVisibility()
-
-- this.plugin.discernAndSetSystemFolderState(folderState, path)
-
-UNCHECKED
 - this.flowService.debouncedSaveSettings() 
 
 - this.plugin.decorateSourceFiles(); 
 - this.plugin.undecorateSourceFiles();
+- this.plugin.discernAndSetSystemFolderState(folderState, path)
 
-
+UNCHECKED
 
 */
 

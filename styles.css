@@ -11,7 +11,12 @@
 }
 
 .highlighted {
-  background-color: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  text-decoration: underline;
+  text-decoration-color: color-mix(
+    in srgb,
+    var(--color-accent) 50%,
+    transparent
+  );
 }
 
 .textflow-menu-bar-div .setting-item.no-border {
@@ -322,6 +327,14 @@
   gap: 10px; /* space between sections */
 }
 
+.flow-switcher-modal-reload-button {
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+  align-items: left;
+  width: 30px;
+  border: none;
+}
+
 .textflow-switcher-border-bottom-1 {
   border-bottom: 1px dashed var(--text-accent);
 }
@@ -509,7 +522,6 @@
   background-color: var(--background-primary);
   color: var(--text-normal);
   box-shadow: var(--input-shadow);
-
   align-items: center;
   width: 30px;
 }
@@ -518,7 +530,6 @@
   background-color: var(--background-primary);
   color: var(--text-faint);
   box-shadow: var(--input-shadow);
-
   align-items: center;
   width: 30px;
 }

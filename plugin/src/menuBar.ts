@@ -1,28 +1,17 @@
 import {
   App,
   ButtonComponent,
-  DropdownComponent,
   Editor,
   MarkdownView,
-  Menu,
   normalizePath,
   Notice,
-  Plugin,
   setIcon,
-  Setting,
   TFile,
 } from "obsidian";
-import {
-  EditorView,
-  Decoration,
-  DecorationSet,
-  ViewUpdate,
-  ViewPlugin,
-} from "@codemirror/view";
+import { EditorView } from "@codemirror/view";
 import { FlowService } from "./flowService";
 import Fuse, { FuseResult } from "fuse.js";
 import type TextFlowPlugin from "../main";
-import * as Types from "./types";
 
 interface ObsidianEditor extends Editor {
   cm?: EditorView;
@@ -41,7 +30,6 @@ export class MenuBar {
   }> = [];
   flowService: FlowService;
 
-  // ############ CONFLICTS ###############################
   constructor(
     app: App,
     plugin: TextFlowPlugin,
@@ -53,38 +41,34 @@ export class MenuBar {
     this.flowName = flow;
     this.associatedView = view;
     this.flowService = new FlowService(plugin, app);
-    this.initialize();
   }
 
-  // ------ uitilities
-  private initialize() {
-    // Remove any existing menu bar elements from the container first
-    const existingMenuBars =
-      this.associatedView.contentEl.getElementsByClassName("textflow-menu-bar");
-    Array.from(existingMenuBars).forEach((el) => el.remove());
-
-    // Create the element but don't attach it yet
-    this.element = this.createMenuBarElement();
-    this.element.dataset.flowPath = this.associatedView.file?.path;
-  }
-
+  // ------ uitilities ---------
+  // --- attachment of the menu bar
   public attach(containerEl: HTMLElement) {
+    // check that element isn't attached already
     if (containerEl === this.associatedView.contentEl) {
-      // First ensure the element isn't already attached somewhere
       this.detach();
 
-      // Double-check for any other menu bars and remove them
+      // Check for other menu bars and remove them
       const existingMenuBars =
         containerEl.getElementsByClassName("textflow-menu-bar");
       Array.from(existingMenuBars).forEach((el) => el.remove());
 
-      // Only prepend if the element exists and isn't already attached
+      // Check again, then prepend
       if (this.element && !this.element.parentNode) {
         containerEl.prepend(this.element);
       }
     }
   }
+  // if you attach, you gotta detach
+  public detach() {
+    if (this.element && this.element.parentNode) {
+      this.element.detach();
+    }
+  }
 
+  // To keep track of all the listeners we need to add for our custom dropdowns
   private addManagedListener(
     element: HTMLElement | Document,
     type: string,
@@ -94,6 +78,7 @@ export class MenuBar {
     element.addEventListener(type, handler);
   }
 
+  // If you attach you gotta detach
   private detachListeners() {
     this.listeners.forEach(({ element, type, handler }) => {
       element.removeEventListener(type, handler);
@@ -101,18 +86,9 @@ export class MenuBar {
     this.listeners = [];
   }
 
-  public detach() {
-    if (this.element && this.element.parentNode) {
-      this.element.detach();
-    }
-  }
-
-  public belongsToView(view: MarkdownView): boolean {
-    return view === this.associatedView;
-  }
-
+  // when we sync or rebuild, we need to refresh to see the updated button states
   public refresh(containerEl: HTMLElement) {
-    // First ensure the old element is detached
+    // Detach all the old stuff
     this.detach();
     this.detachListeners();
 
@@ -130,6 +106,7 @@ export class MenuBar {
     }
   }
 
+  // used by setupFlowView to coordinate
   public getFlowName(): string {
     return this.flowName;
   }
@@ -189,6 +166,7 @@ export class MenuBar {
     return noteName;
   };
 
+  // so we can mark regions where flows overlap 
   private getOverlap = () => {
     const overlap: string[][] = [[], []];
     if (this.plugin.settings.activeFlowObject) {

@@ -74,11 +74,9 @@ class LoadingOverlay {
   updateProgress(current: number, total: number) {
     const percent = Math.floor((current / total) * 100);
     const filled = Math.floor(percent / 10);
-    // SYMBOL
     const bar = "[" + "▰".repeat(filled) + "-".repeat(10 - filled) + "]";
-    this.progressText.setText(
-      `Building ${this.flowName}: ${bar} ${percent}% \nFirst build might take longer.`
-    );
+    const text = `Building ${this.flowName}: ${bar} ${percent}% \nFirst build might take longer.`;
+    this.progressText.setText(text);
   }
 
   remove() {
@@ -1130,7 +1128,7 @@ export class FlowService {
     // flow, or from settings or the switcher modal
     let progressBars: { [key: string]: LoadingOverlay } = {};
     // Check if we even need it:
-    if (caller === "settingsTab") {
+    if (caller != "settingsTab") {
       if (this.plugin.settings.activeFlowObject[flowName]) {
         Object.keys(this.plugin.settings.flows[flowName].activeRegions).forEach(
           (leafID) => {
@@ -1173,15 +1171,21 @@ export class FlowService {
     for (let ingredient of recipeArray) {
       // create update the progress bar
       counter++;
-      if (caller != "") {
+      if (caller === "settingsTab") {
         progressBar.updateProgress(counter, total);
       } else {
         Object.keys(progressBars).forEach((leafID) => {
           progressBars[leafID].updateProgress(counter, total);
-          if (counter === total) {
-            progressBars[leafID].remove();
-          }
         });
+      }
+      if (counter === total) {
+        if (caller === "settingsTab") {
+          progressBar.close();
+        } else {
+          Object.keys(progressBars).forEach((leafID) => {
+            progressBars[leafID].remove();
+          });
+        }
       }
 
       // --- The actual handling of content ----------
@@ -1236,6 +1240,26 @@ export class FlowService {
         if (note instanceof TFile) {
           const modificationTimestamp = Date.now();
           let fileContent: string = await this.app.vault.read(note);
+
+          // check if there are UUIDs in there due to a sync fuckup
+          let match;
+          const regex =
+            /[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46}/;
+
+          if ((match = regex.exec(fileContent) !== null)) {
+            new Notice(
+              `textFlow: The note\n` +
+                `${ingredient}\n` +
+                `contains at least one UUID.\n` +
+                `This can come about due to sync errors.\n` +
+                `Please check the mentined note (search for '<hr>') and remove any copied over regions.\n` +
+                `Also check if any edited content is within the copied regions.\n` +
+                `To make this easier, turn off navigation via file explorer (in the settings tab or command palette).\n` +
+                `Afterwards try another rebuild.\n`,
+              0
+            );
+          }
+
           // remove frontmatter
           mapValueBasket.singleFileContent = fileContent
             .replace(/^---\n[\s\S]*?\n---\n*/, "")

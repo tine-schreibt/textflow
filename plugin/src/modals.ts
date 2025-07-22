@@ -4,20 +4,16 @@ import {
   ButtonComponent,
   Notice,
   setIcon,
-  DropdownComponent,
   MarkdownView,
   Modal,
   normalizePath,
-  TextComponent,
   Setting,
-  TFolder,
   TFile,
-  WorkspaceLeaf,
 } from "obsidian";
 import * as Types from "./types";
 import { FlowService } from "./flowService";
 import { TextFlowSettingsTab } from "./settingsTab";
-import { dirname, basename } from "path";
+import { basename } from "path";
 
 //CHECKED AND TESTED
 export class previewModal extends Modal {
@@ -235,14 +231,48 @@ export class FlowSwitcherModal extends Modal {
     this.flowService = new FlowService(plugin, app);
   }
 
-  onOpen() {
-    this.display();
-    this.plugin.registerModalUpdateCallback(() => this.display());
+  private async initializeLeaves(): Promise<void> {
+    const currentView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    const currentLeaf = currentView?.leaf;
+    const leaves = this.app.workspace.getLeavesOfType("markdown");
+
+    for (let leaf of leaves) {
+      // Try to activate the leaf first, before checking if it's a MarkdownView
+      if (leaf !== currentLeaf) {
+        await this.app.workspace.setActiveLeaf(leaf, { focus: false });
+        // Give it a moment to initialize
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+
+      // Now check if it's a MarkdownView
+      if (leaf.view instanceof MarkdownView) {
+        const view = leaf.view;
+        if (view.file) {
+          const path = view.file.path;
+
+          const flowName = this.plugin.isFlowFile(path);
+          if (flowName) {
+            await this.plugin.setupFlowView(flowName, view);
+            await new Promise((resolve) => setTimeout(resolve, 500));
+          }
+        }
+      }
+
+      if (currentLeaf) {
+        await this.app.workspace.setActiveLeaf(currentLeaf);
+      }
+    }
   }
 
-  display() {
+  async onOpen() {
+    await this.display();
+    this.plugin.registerModalUpdateCallback(async () => await this.display());
+  }
+
+  async display() {
     const { contentEl, modalEl } = this;
     contentEl.empty();
+    console.log("initialising leaves");
 
     // ----------------------------------------------------------
     // -------- GATHERING AND PRE-PROCESSING OF FLOW DATA -------
@@ -254,17 +284,37 @@ export class FlowSwitcherModal extends Modal {
       {};
 
     // iterate over active flow object
-    Object.keys(this.plugin.settings.activeFlowObject).forEach((flow) => {
+    Object.keys(this.plugin.settings.activeFlowObject).forEach((flowName) => {
+      // initialise
+      activeFlowInfoObject[flowName] = {};
       // gather the info on the active flow's leaves:
-      if (this.plugin.settings.flows[flow].activeRegions) {
-        Object.keys(this.plugin.settings.flows[flow].activeRegions).forEach(
+      if (this.plugin.settings.flows[flowName].activeRegions) {
+        Object.keys(this.plugin.settings.flows[flowName].activeRegions).forEach(
           (leafID) => {
             // get the note name; normalisation of path not necessary
-            if (this.plugin.settings.flows[flow].activeRegions[leafID].path) {
-              const activeRegion = basename(
-                this.plugin.settings.flows[flow].activeRegions[leafID].path
-              );
-              activeFlowInfoObject[flow][leafID] = activeRegion;
+            if (
+              this.plugin.settings.flows[flowName].activeRegions[leafID].path
+            ) {
+              if (
+                // if it's a file, get the basename
+                this.plugin.settings.flows[flowName].activeRegions[leafID]
+                  .type === "file"
+              ) {
+                const activeRegion = basename(
+                  this.plugin.settings.flows[flowName].activeRegions[leafID]
+                    .path
+                );
+                activeFlowInfoObject[flowName][leafID] = activeRegion;
+              } else if (
+                // if it's a folder, just take the name
+                this.plugin.settings.flows[flowName].activeRegions[leafID]
+                  .type === "folder"
+              ) {
+                const activeRegion =
+                  this.plugin.settings.flows[flowName].activeRegions[leafID]
+                    .path;
+                activeFlowInfoObject[flowName][leafID] = activeRegion;
+              }
             }
           }
         );
@@ -300,6 +350,16 @@ export class FlowSwitcherModal extends Modal {
     const mainContainer = contentEl.createDiv({
       cls: "textflow-switcher-main-container",
     });
+
+    const reloadButton = new ButtonComponent(mainContainer)
+      .setIcon("list-restart")
+      .setClass(`flow-switcher-modal-reload-button`)
+      .setClass("clickable-icon")
+      .setTooltip("Check for open flow leaves after vault reload")
+      .onClick(async () => {
+        await this.initializeLeaves();
+        await this.display();
+      });
 
     // ---- DISPLAY ACTIVE FLOWS -----------
     // sub-container that holds only active flows
@@ -428,13 +488,13 @@ export class FlowSwitcherModal extends Modal {
       // Button to sync
       const syncButton = new ButtonComponent(flowHeader)
         .setIcon("download")
-        .setClass(`menu-bar-button-save-${goSync}`)
+        .setClass(`flow-switch-modal-header-button-${goSync}`)
         .setClass("clickable-icon")
         .onClick(async () => {
           if (goSync === "neutral" || goSync === "must") {
             await this.plugin.syncAllLeaves();
             await this.plugin.saveSettings();
-            this.display();
+            await this.display();
           } else {
             return;
           }
@@ -460,7 +520,7 @@ export class FlowSwitcherModal extends Modal {
             }
             await this.flowService.rebuildFlow(activeFlow, "switcher");
             await this.plugin.saveSettings();
-            this.display();
+            await this.display();
           } else if (goRebuild === "no-go") {
             return;
           }
@@ -482,7 +542,7 @@ export class FlowSwitcherModal extends Modal {
                 await targetLeaf.detach();
                 this.plugin.manageActiveFlowObject();
                 await this.plugin.saveSettings();
-                this.display();
+                await this.display();
               }
             }
           );
@@ -511,8 +571,7 @@ export class FlowSwitcherModal extends Modal {
         // region name
         // first the logic to find and display overlap
         let overlap = "";
-        const infoObject: { [key: string]: string[] } = {};
-        let infoText = "";
+        const overlapArray: string[] = [];
         Object.keys(activeFlowInfoObject).forEach((flowName) => {
           if (flowName != activeFlow) {
             if (this.plugin.settings.flows[activeFlow].conflictObject) {
@@ -530,11 +589,8 @@ export class FlowSwitcherModal extends Modal {
                     !leafID.startsWith("#") &&
                     path.endsWith(activeFlowInfoObject[activeFlow][leafID])
                   ) {
-                    if (!infoObject[flowName]) {
-                      infoObject[flowName] = [];
-                    }
-                    infoObject[flowName].push(leafID);
-                    if (overlap === "") {
+                    if (!overlapArray.contains(flowName)) {
+                      overlapArray.push(flowName);
                       overlap = "⚭";
                     }
                   }
@@ -545,20 +601,27 @@ export class FlowSwitcherModal extends Modal {
         });
 
         if (overlap === "⚭") {
-          Object.keys(infoText).forEach((flowName) => {
-            infoText += `${flowName},`;
+          const regionName = flowRegion.createSpan({
+            text: `${activeFlowInfoObject[activeFlow][leafID].replace(
+              "#",
+              ""
+            )} ${overlap}`,
+            cls: "flow-switch-modal-active-region-name",
+            attr: {
+              "aria-label": `This region also occurs in other flows: ${overlapArray.join(
+                ", "
+              )}`,
+            },
+          });
+        } else {
+          const regionName = flowRegion.createSpan({
+            text: `${activeFlowInfoObject[activeFlow][leafID].replace(
+              "#",
+              ""
+            )} ${overlap}`,
+            cls: "flow-switch-modal-active-region-name",
           });
         }
-        const regionName = flowRegion.createSpan({
-          text: `${activeFlowInfoObject[activeFlow][leafID].replace(
-            "#",
-            ""
-          )} ${overlap}`,
-          cls: "flow-switch-modal-active-region-name",
-          attr: {
-            "aria-label": `This region also occurs in other flows: ${infoText}`,
-          },
-        });
 
         // ----------- GOTO BUTTON ------------
         const navGotoButton = new ButtonComponent(flowRegion)
@@ -589,7 +652,7 @@ export class FlowSwitcherModal extends Modal {
               await targetLeaf.detach();
               this.plugin.manageActiveFlowObject();
               await this.plugin.saveSettings();
-              this.display();
+              await this.display();
             }
           });
       });
@@ -706,14 +769,14 @@ export class FlowSwitcherModal extends Modal {
       // ----------- SAVE BUTTON ------------
       const saveButton = new ButtonComponent(inactiveFlowHeader)
         .setIcon("download")
-        .setClass(`menu-bar-button-save-${goSave}`)
+        .setClass(`flow-switch-modal-header-button-${goSave}`)
         .setClass("clickable-icon")
         .onClick(async () => {
           if (goSave === "neutral" || goSave === "must") {
             if (goSave === "neutral" || goSave === "must") {
               await this.plugin.syncAllLeaves();
               await this.plugin.saveSettings();
-              this.display();
+              await this.display();
             } else {
               return;
             }
@@ -731,7 +794,7 @@ export class FlowSwitcherModal extends Modal {
           if (goRebuild === "neutral" || goRebuild === "must") {
             await this.flowService.rebuildFlow(inactiveFlow, "switcher");
             await this.plugin.saveSettings();
-            this.display();
+            await this.display();
           } else {
             return;
           }
