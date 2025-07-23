@@ -422,7 +422,7 @@ export class MenuBar {
       });
 
       // headline text and icon
-      // region and icon if the dropdown is collapsed,
+      // just the region, if the dropdown is collapsed
       if (this.getDropdownState("nav") === "hide") {
         navHeadline.createSpan({
           cls: `align-off-center ${titleClass}`,
@@ -462,7 +462,7 @@ export class MenuBar {
           }
         });
       } else {
-        // fuzzy search input if the dropdown is expanded
+        // or the search, if the dropdown is expanded
         const searchInput = navHeadline.createEl("input", {
           cls: "menu-bar-navigation-dropdown-search-input",
           type: "text",
@@ -474,6 +474,9 @@ export class MenuBar {
           path: path,
           displayName: `${this.makeNavPath(path)}`,
         }));
+
+        const iconSpan = navHeadline.createSpan();
+        setIcon(iconSpan, "chevrons-down-up");
 
         const fuse = new Fuse(searchItems, {
           keys: ["displayName"],
@@ -518,17 +521,6 @@ export class MenuBar {
             this.filterList =
               this.plugin.settings.flows[this.flowName].flowRecipe[key];
             this.refreshNavDropdownEntries(dropdownEntries, false);
-          }
-        });
-
-        // Listener that will close dropdown if we click outside it
-        this.addManagedListener(document, "click", (e: MouseEvent) => {
-          const target = e.target as HTMLElement;
-          // Check if click is outside the navigation dropdown
-          if (!navigationDropdown.contains(target)) {
-            this.filterList = [];
-            this.setDropdownState("nav", "hide");
-            this.refresh(this.associatedView.contentEl);
           }
         });
       }
