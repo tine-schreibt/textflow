@@ -1250,14 +1250,19 @@ export class FlowService {
             new Notice(
               `textFlow: The note\n` +
                 `${ingredient}\n` +
+                `of flow\n` +
+                `${flowName}\n` +
                 `contains at least one UUID.\n` +
                 `This can come about due to sync errors.\n` +
-                `Please check the mentined note (search for '<hr>') and remove any copied over regions.\n` +
-                `Also check if any edited content is within the copied regions.\n` +
-                `To make this easier, turn off navigation via file explorer (in the settings tab or command palette).\n` +
+                `How to proceed now: \n` +
+                `1. Export ${flowName} to prevent any loss of edits and backup your vault, just to be safe.\n` +
+                `2. Check the mentioned note (search for '<hr>') for any copied over regions.\n` +
+                `3. Check the source notes for these regions to make sure they are up to date; if they aren't, copy/paste the latest version from the flow.\n` +
+                `To make all of this easier, turn off navigation via file explorer (in the settings tab or command palette).\n` +
                 `Afterwards try another rebuild.\n`,
               0
             );
+            return;
           }
 
           // remove frontmatter
@@ -1666,7 +1671,7 @@ export class FlowService {
         if (cmEditor) {
           try {
             cmEditor.dispatch({
-              selection: { anchor: startPos, head: endPos },
+              selection: { anchor: startPos + 1, head: endPos },
               scrollIntoView: true, // Optional: scroll the selection into view
             });
             cmEditor.focus(); // Optional: focus the editor

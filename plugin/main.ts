@@ -1,16 +1,10 @@
 import {
-  App,
   Editor,
-  EventRef,
-  FileView,
   MarkdownView,
-  Modal,
   normalizePath,
   Notice,
   Plugin,
-  PluginSettingTab,
   setIcon,
-  Setting,
   TFolder,
   TAbstractFile,
   WorkspaceLeaf,
@@ -25,13 +19,7 @@ import {
   ViewUpdate,
   ViewPlugin,
 } from "@codemirror/view";
-import {
-  combineConfig,
-  EditorState,
-  StateEffect,
-  StateField,
-  Transaction,
-} from "@codemirror/state";
+import { EditorState, StateEffect, StateField } from "@codemirror/state";
 import * as Types from "./src/types";
 import * as Modals from "./src/modals";
 import { MenuBar } from "./src/menuBar";
@@ -76,10 +64,11 @@ export default class TextFlowPlugin extends Plugin {
   // ---- flag to prevent the leaf-change-listener from interfering with scrolling to source file in flow
   private isNavigatingFlow: boolean = false;
 
-  // ---- flag to keep textFlow from spiraling when its syncs trigger vault.modify()
+  // ---- flag to keep textFlow from eating its tail when its own sync triggers vault.modify()
   private isSyncing: boolean = false;
 
   // -- tracking read-only ranges (to protect region IDs) --------------------------
+
   // helper stuff and auxiliaries
   private hadTrackingError: boolean = false;
 
@@ -355,6 +344,22 @@ export default class TextFlowPlugin extends Plugin {
         const editor = activeView.editor as ObsidianEditor;
         const leafID = (activeView.leaf as any).id;
         this.restoreCursorPos(flowName, activeView, leafID);
+      },
+    });
+
+    this.addCommand({
+      id: "toggle-scroll-bar",
+      name: `Toggle scroll bar`,
+      callback: async () => {
+        if (this.settings.hideScrollbar === "none") {
+          this.settings.hideScrollbar = "all";
+          await this.saveSettings();
+          this.flowService.updateScrollbarVisibility();
+        } else if (this.settings.hideScrollbar === "all") {
+          this.settings.hideScrollbar = "none";
+          await this.saveSettings();
+          this.flowService.updateScrollbarVisibility();
+        }
       },
     });
   }
@@ -1995,7 +2000,8 @@ export default class TextFlowPlugin extends Plugin {
       console.error("Failed to toggle protection:", error);
     }
   }
-  // ---- Functions: Data safety: Save changes to source files
+
+  // ---- Functions: Data safety: sync changes to source files
   // --- but first, a little helper function, just in case the UI is sluggish:
 
   private async pollForEditor(

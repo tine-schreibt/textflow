@@ -339,7 +339,11 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       .setDesc(
         createFragment((desc) => {
           desc.createSpan({
-            text: "If the twitchy scrollbar handle annoys you, hide it.",
+            text: "When long notes/sections are on the screen, the scroll bar starts twitching. If that annoys you, you can hide it.",
+          });
+          desc.createEl("br");
+          desc.createSpan({
+            text: "There's also a command to toggle between 'hide everywhere' and 'don't hide'.",
           });
         })
       )

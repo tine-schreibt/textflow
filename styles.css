@@ -489,7 +489,7 @@
   margin-right: 5px;
   justify-content: start;
   display: grid;
-  grid-template-columns: repeat(6, auto);
+  grid-template-columns: repeat(7, auto);
   gap: 8px;
   box-shadow: var(--input-shadow);
   border-radius: 4px;
