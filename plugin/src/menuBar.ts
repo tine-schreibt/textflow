@@ -166,8 +166,9 @@ export class MenuBar {
     return noteName;
   };
 
-  // so we can mark regions where flows overlap 
+  // gather overlap so we can mark these regions
   private getOverlap = () => {
+    // one array for flow names, the other for paths
     const overlap: string[][] = [[], []];
     if (this.plugin.settings.activeFlowObject) {
       if (Object.keys(this.plugin.settings.activeFlowObject).length > 0) {
@@ -196,8 +197,10 @@ export class MenuBar {
     return overlap;
   };
 
+  // initialising this for the fuzzy search
   private filterList: string[] = [];
 
+  // handling the creation of entries
   private createNavDropdownEntry(path: string, dropdownEntries: HTMLElement) {
     // get flowOrder (also to search for start of region)
 
@@ -263,6 +266,7 @@ export class MenuBar {
     }
   }
 
+  // because the navDropdown needs to be dynamic
   private refreshNavDropdownEntries(
     dropdownEntries: HTMLElement,
     emptyResults: boolean
@@ -308,9 +312,9 @@ export class MenuBar {
       return menuBarEl;
     } else {
       // ---------- FUNCTIONS -----------------
+
       // ----------- Preparatory checks
       let goSave = "neutral";
-
       let goRebuild = "neutral";
 
       // check if there is unsaved stuff for the flow
@@ -354,6 +358,7 @@ export class MenuBar {
             return;
           }
         });
+
       // ----------- REBUILD BUTTON ------------
       const rebuildButton = new ButtonComponent(menuBarEl)
         .setIcon("rotate-cw")
@@ -368,14 +373,15 @@ export class MenuBar {
         });
 
       // ----------- NAVIGATION DROPDOWN ------
-      // get text for initial dropdown headline
-
+      // compute text for initial dropdown headline
       const hasActiveRegions =
         Object.keys(this.plugin.settings.flows[this.flowName].activeRegions)
           .length > 0;
-      // get the path of the currently active region
+
+      // get the path of the currently active region via the leafID
       const navLeafID = (this.associatedView.leaf as any).id;
-      let activeRegion: string | undefined = ""; // It's the only way to pacify the Red Squiggle Demon's wrath at path being explicitly typed as string | undefined
+      // Pacify the Red Squiggle Demon's wrath at 'path' being explicitly typed as string | undefined
+      let activeRegion: string | undefined = "";
       if (
         hasActiveRegions &&
         navLeafID &&
@@ -385,9 +391,9 @@ export class MenuBar {
           this.plugin.settings.flows[this.flowName].activeRegions[navLeafID]
             .path;
       }
-      let activeRegionNoteName = "";
-      let titleClass = "blargh";
 
+      let activeRegionNoteName = "";
+      let titleClass = "blargh"; // could also have been "lalalalalalalalalalalalalalalalalalal"
       if (activeRegion) {
         activeRegionNoteName = this.makeNavPath(activeRegion);
         const overlap = this.getOverlap();
@@ -396,7 +402,8 @@ export class MenuBar {
           titleClass = `highlighted`;
         }
       }
-      // get the first thing in the flowRecipe
+
+      // If we don't have an active region - we always do, but still - be ready to use the first region
       const key = this.plugin.settings.flows[this.flowName].flowRecipe.bookmarks
         ? "bookmarks"
         : "foldersTagsProps";
@@ -415,7 +422,7 @@ export class MenuBar {
       });
 
       // headline text and icon
-      // show either current region; click listener is added further down
+      // region and icon if the dropdown is collapsed,
       if (this.getDropdownState("nav") === "hide") {
         navHeadline.createSpan({
           cls: `align-off-center ${titleClass}`,
@@ -424,8 +431,38 @@ export class MenuBar {
               ? firstThingNoteName
               : activeRegionNoteName,
         });
+
+        const iconSpan = navHeadline.createSpan();
+        setIcon(iconSpan, "chevrons-down-up");
+
+        this.addManagedListener(navHeadline, "click", (event) => {
+          if (this.getDropdownState("nav") === "hide") {
+            this.setDropdownState("nav", "show");
+            this.refresh(this.associatedView.contentEl);
+            const filterCriterion = this.element?.querySelector(
+              ".menu-bar-navigation-dropdown-search-input"
+            );
+            if (filterCriterion) {
+              (filterCriterion as HTMLInputElement).focus();
+            }
+
+            // Listener that will close dropdown if we click outside it
+            this.addManagedListener(document, "click", (e: MouseEvent) => {
+              const target = e.target as HTMLElement;
+              // Check if click is outside the navigation dropdown
+              if (!navigationDropdown.contains(target)) {
+                this.filterList = [];
+                this.setDropdownState("nav", "hide");
+                this.refresh(this.associatedView.contentEl);
+              }
+            });
+          } else {
+            this.setDropdownState("nav", "hide");
+            this.refresh(this.associatedView.contentEl);
+          }
+        });
       } else {
-        // or the search plus
+        // fuzzy search input if the dropdown is expanded
         const searchInput = navHeadline.createEl("input", {
           cls: "menu-bar-navigation-dropdown-search-input",
           type: "text",
@@ -483,46 +520,30 @@ export class MenuBar {
             this.refreshNavDropdownEntries(dropdownEntries, false);
           }
         });
+
+        // Listener that will close dropdown if we click outside it
+        this.addManagedListener(document, "click", (e: MouseEvent) => {
+          const target = e.target as HTMLElement;
+          // Check if click is outside the navigation dropdown
+          if (!navigationDropdown.contains(target)) {
+            this.filterList = [];
+            this.setDropdownState("nav", "hide");
+            this.refresh(this.associatedView.contentEl);
+          }
+        });
       }
 
-      const iconSpan = navHeadline.createSpan();
-      setIcon(iconSpan, "chevrons-down-up");
-
-      this.addManagedListener(navHeadline, "click", (event) => {
-        if (this.getDropdownState("nav") === "hide") {
-          this.setDropdownState("nav", "show");
-          this.refresh(this.associatedView.contentEl);
-          const filterCriterion = this.element?.querySelector(
-            ".menu-bar-navigation-dropdown-search-input"
-          );
-          if (filterCriterion) {
-            (filterCriterion as HTMLInputElement).focus();
-          }
-
-          // Listener that will close dropdown if we click outside it
-          this.addManagedListener(document, "click", (e: MouseEvent) => {
-            const target = e.target as HTMLElement;
-            // Check if click is outside the navigation dropdown
-            if (!navigationDropdown.contains(target)) {
-              this.filterList = [];
-              this.setDropdownState("nav", "hide");
-              this.refresh(this.associatedView.contentEl);
-            }
-          });
-        } else {
-          this.setDropdownState("nav", "hide");
-          this.refresh(this.associatedView.contentEl);
-        }
-      });
-
+      // a matrioshka of layout despair
       const dropdownGeneral = navigationDropdown.createDiv({
         cls: `menu-bar-navigation-dropdown-general ${this.getDropdownState(
           "nav"
         )}`,
       });
+
       const navDropdownScrollable = dropdownGeneral.createDiv({
         cls: "menu-bar-navigation-dropdown-scrollable",
       });
+
       // the initial clickable list of entries
       const dropdownEntries = navDropdownScrollable.createDiv({
         cls: "menu-bar-navigation-dropdown-entries",
@@ -548,6 +569,7 @@ export class MenuBar {
         cls: "menu-bar-navigation-dropdown-headline",
       });
 
+      // initial content
       let cursorDropdownHeadline = `No stored cursors found`;
       if (this.plugin.settings.flows[this.flowName].persistentCursors) {
         if (
@@ -559,7 +581,7 @@ export class MenuBar {
         }
       }
 
-      // headline text and icon
+      // the span that holds abobe text, plus the fast travel icon
       cursorHeadline.createSpan({
         cls: "align-off-center",
         text: cursorDropdownHeadline,
@@ -567,7 +589,7 @@ export class MenuBar {
       const cursorIconSpan = cursorHeadline.createSpan();
       setIcon(cursorIconSpan, "chevrons-down-up");
 
-      // headline click opens dropdown
+      // the listener to open the dropdown
       this.addManagedListener(cursorHeadline, "click", (event) => {
         if (this.getDropdownState("cursor") === "hide") {
           this.setDropdownState("cursor", "show");
@@ -605,7 +627,7 @@ export class MenuBar {
         cls: `menu-bar-navigation-dropdown-scrollable`,
       });
 
-      // Get all the timestamps to use a sorted array as ordering device
+      // Get all the timestamps to use an array as ordering device
       const timestampArray: number[] = [];
 
       if (
@@ -620,7 +642,8 @@ export class MenuBar {
               .update
           );
         });
-        // sort the timestamps in reverse order so youngest timestamp comes first
+
+        // sort the timestamps in reverse order so newest timestamp comes first
         timestampArray.sort((a, b) => b - a);
 
         // Find out if we have data for the active leaf so we can show it at the top
@@ -709,7 +732,6 @@ export class MenuBar {
 
                   const cursorPos = cursorArray[index][1];
 
-                  // get cursor pos for target icon
                   this.addManagedListener(
                     cursorDropdownEntryPos,
                     "click",
@@ -725,7 +747,7 @@ export class MenuBar {
           });
         }
 
-        // get the most recent cursor position for the cursor button
+        // get the most recent cursor position for the fast travel button
         const mostRecentTimestamp: number = timestampArray[0];
         let mostRecentCursor: number = 0;
         let mostRecentRegion: string = "";
@@ -750,6 +772,8 @@ export class MenuBar {
             }
           });
         }
+
+        // the button itself
         const cursorIconTarget = new ButtonComponent(cursorContainer);
         cursorIconTarget
           .setIcon("target")
@@ -767,6 +791,7 @@ export class MenuBar {
           });
       }
 
+      // the button with which you can select the active region
       const selectButton = new ButtonComponent(menuBarEl);
       selectButton
         .setIcon("text-select")
@@ -784,6 +809,7 @@ export class MenuBar {
           }
         });
 
+      // a button to export the flow with UUIDs stripped
       const exportButton = new ButtonComponent(menuBarEl);
       exportButton
         .setIcon("file-up")
@@ -816,6 +842,7 @@ export class MenuBar {
           }
         });
 
+      // a chevron to minimise
       const minimiseButton = new ButtonComponent(menuBarEl);
       minimiseButton
         .setIcon("chevron-left")
@@ -826,8 +853,6 @@ export class MenuBar {
           this.plugin.settings.maxMenuBar = false;
           this.refresh(this.associatedView.contentEl);
         });
-      // most recent cursor button
-      // mostRecentCursor
 
       // there we go.
       return menuBarEl;
