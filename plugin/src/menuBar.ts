@@ -347,11 +347,13 @@ export class MenuBar {
         .onClick(async () => {
           if (goSave === "neutral" || goSave === "must") {
             const syncLeafID = (this.associatedView.leaf as any).id;
+            this.plugin.isSyncing = true;
             await this.plugin.saveBackToSource(
               this.flowName,
               this.associatedView.editor.getValue(),
               syncLeafID
             );
+            this.plugin.isSyncing = false;
             await this.plugin.saveSettings();
             this.refresh(this.associatedView.contentEl);
           } else {

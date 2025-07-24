@@ -409,14 +409,15 @@ export default class TextFlowPlugin extends Plugin {
   // ^CHECKED
 
   // ----- DECORATE SOURCE NOTES IN FILE EXPLORER -----------
-  decorateSourceNotes = (decorate: boolean): void => {
+  decorateSourceNotes = async (decorate: boolean) => {
     let path = "";
     let handledPathsArray: string[] = [];
     const unsavedPathsArray: string[] = [];
-    let isUnsaved = false;
+    let decoStyle = "";
 
+    type DecoStyle = "neutral" | "unsynced" | "none";
     // ------ all the helper functions used -------
-    const handlePath = (path: string, isUnsaved: boolean) => {
+    const handlePath = (path: string, decoStyle: DecoStyle) => {
       let successivePath = "";
       for (let fragment of path.split("/")) {
         if (!fragment.endsWith(".md")) {
@@ -426,26 +427,12 @@ export default class TextFlowPlugin extends Plugin {
         }
         if (!handledPathsArray.includes(successivePath)) {
           handledPathsArray.push(successivePath);
-          updateStyles(successivePath, isUnsaved);
+          updateStyles(successivePath, decoStyle);
         }
       }
     };
 
-    const updateStyles = (path: string, isUnsaved: boolean) => {
-      // Add console log to check the path being used
-
-      // Remove opposite style if exists
-      const oppositeStyle = document.head.querySelector(
-        `style[data-textflow-${isUnsaved ? "general" : "unsaved"}]`
-      );
-      if (oppositeStyle) oppositeStyle.remove();
-
-      // Add or update correct style
-      addStyle(path, isUnsaved ? "unsaved" : "general");
-    };
-
-    // Create and append style with the correct selector
-    const addStyle = (path: string, isUnsaved: string) => {
+    const updateStyles = (path: string, decoStyle: DecoStyle) => {
       // Remove trailing slash for files (if it exists)
       const cleanPath = path.endsWith("/") ? path.slice(0, -1) : path;
 
@@ -460,6 +447,27 @@ export default class TextFlowPlugin extends Plugin {
         );
       }
 
+      // First remove any existing styles for this path
+      const existingStyles = document.head.querySelectorAll(
+        "style[data-textflow-neutral], style[data-textflow-unsynced]"
+      );
+      existingStyles.forEach((style) => {
+        const styleContent = style.textContent || "";
+        // Only remove if it's for this specific path
+        if (styleContent.includes(`data-path='${escapeSelector(cleanPath)}'`)) {
+          style.remove();
+        }
+      });
+
+      // Return early if we're just removing styles
+      if (
+        !decorate ||
+        !this.settings.showExplorerDeco ||
+        decoStyle === "none"
+      ) {
+        return;
+      }
+
       const fileElement = document.querySelector(
         `div[data-path='${escapeSelector(cleanPath)}']`
       );
@@ -468,91 +476,101 @@ export default class TextFlowPlugin extends Plugin {
       );
 
       let style = document.createElement("style");
-      style.setAttribute(`data-textflow-${isUnsaved}`, "true");
+
+      style.setAttribute(`data-textflow-${decoStyle}`, "true");
 
       // the decoration symbol which we fetch from an array of options
       let neutralSymbol = this.settings.explorerDecoStyle[0];
       let unsyncedSymbol = this.settings.explorerDecoStyle[1];
-
-      // turned into empty strings to undecorate without needing a reload
-      if (!decorate || !this.settings.showExplorerDeco) {
-        neutralSymbol = "";
-        unsyncedSymbol = "";
-      }
-
-      // styles from the same array
       const neutralStyle = this.settings.explorerDecoStyle[2];
       const unsyncedStyle = this.settings.explorerDecoStyle[3];
-      const styleContent =
-        isUnsaved === "unsaved"
-          ? `
-    div[data-path='${escapeSelector(
-      cleanPath
-    )}'] .nav-file-title-content::after,
-    div[data-path='${escapeSelector(
-      cleanPath
-    )}'] .nav-folder-title-content::after {
-    content: " ${unsyncedSymbol}" !important;
-    --nav-item-color: var(--color-accent) !important;
-    color: var(--color-accent) !important;
-    opacity: ${unsyncedStyle.includes("high") ? "1" : "0.6"} !important;
-    font-size: ${unsyncedStyle.includes("large") ? "1.2em" : "1em"} !important;
-    font-family: monospace !important; // prevents emojis
-    vertical-align: middle !important;
-    }
-    `
-          : `
-    div[data-path='${escapeSelector(
-      cleanPath
-    )}'] .nav-file-title-content::after,
-    div[data-path='${escapeSelector(
-      cleanPath
-    )}'] .nav-folder-title-content::after {
-    content: " ${neutralSymbol}" !important;
-    --nav-item-color: ${
-      neutralStyle.includes("high") ? "var(--text-muted)" : "var(--text-faint)"
-    } !important;
-    color: ${
-      neutralStyle.includes("high") ? "var(--text-muted)" : "var(--text-faint)"
-    } !important;
-    opacity: 1;
-    font-size: ${neutralStyle.includes("large") ? "1.2em" : "1em"} !important;
-    font-family: monospace !important;
-    vertical-align: middle !important;
-    }
-    `;
 
+      let styleContent = "";
+
+      // style for neutral stuff
+      if (decoStyle === "neutral") {
+        styleContent = `
+  div[data-path='${escapeSelector(cleanPath)}'] .nav-file-title-content::after,
+  div[data-path='${escapeSelector(
+    cleanPath
+  )}'] .nav-folder-title-content::after {
+  content: " ${neutralSymbol}" !important;
+  --nav-item-color: ${
+    neutralStyle.includes("high") ? "var(--text-muted)" : "var(--text-faint)"
+  } !important;
+  color: ${
+    neutralStyle.includes("high") ? "var(--text-muted)" : "var(--text-faint)"
+  } !important;
+  opacity: 1;
+  font-size: ${neutralStyle.includes("large") ? "1.2em" : "1em"} !important;
+  font-family: monospace !important;
+  vertical-align: middle !important;
+  }
+  `;
+      }
+      // Style for unsynced stuff
+      if (decoStyle === "unsynced") {
+        styleContent = `
+  div[data-path='${escapeSelector(cleanPath)}'] .nav-file-title-content::after,
+  div[data-path='${escapeSelector(
+    cleanPath
+  )}'] .nav-folder-title-content::after {
+  content: " ${unsyncedSymbol}" !important;
+  --nav-item-color: var(--color-accent) !important;
+  color: var(--color-accent) !important;
+  opacity: ${unsyncedStyle.includes("high") ? "1" : "0.6"} !important;
+  font-size: ${unsyncedStyle.includes("large") ? "1.2em" : "1em"} !important;
+  font-family: monospace !important; // prevents emojis
+  vertical-align: middle !important;
+  }
+  `;
+      }
       style.textContent = styleContent;
       document.head.appendChild(style);
     };
 
     // -------- THE LOGIC -----------------
     // handle general paths
-    Object.keys(this.settings.activeFlowObject).forEach((flow) => {
+    const handledPaths: { [key: string]: boolean } = {};
+    Object.keys(this.settings.flows).forEach((flowName) => {
       // get the file list
-      let key = this.settings.flows[flow].flowRecipe.bookmarks
+      let key = this.settings.flows[flowName].flowRecipe.bookmarks
         ? "bookmarks"
         : "foldersTagsProps";
 
-      for (path of this.settings.flows[flow].flowRecipe[key]) {
+      for (path of this.settings.flows[flowName].flowRecipe[key]) {
         // exclude folder titles
-        if (!path.startsWith("#")) {
-          if (!this.settings.flows[flow].unsavedRegionsArray.includes(path)) {
-            isUnsaved = false;
-            handlePath(path, isUnsaved);
-          } else {
-            unsavedPathsArray.push(path);
-          }
+        if (path.startsWith("#")) continue;
+
+        // if we're handling a flow that is active, track the path
+        if (this.settings.activeFlowObject[flowName]) {
+          handledPaths[path] = true;
+        }
+        // if we're handling a non-active flow, protect path deco
+        if (!this.settings.activeFlowObject[flowName]) {
+          if (handledPaths[path]) continue;
+          decoStyle = "none";
+          handlePath(path, decoStyle as DecoStyle);
+          continue;
+        }
+        // handle the path
+        if (
+          this.settings.activeFlowObject[flowName] &&
+          !this.settings.flows[flowName].unsavedRegionsArray.includes(path)
+        ) {
+          decoStyle = "neutral";
+          handlePath(path, decoStyle as DecoStyle);
+        } else {
+          unsavedPathsArray.push(path);
         }
       }
     });
 
     // handle unsaved paths - null handled paths array
     // because we may need to override some general styles
-    handledPathsArray = [];
     for (path of unsavedPathsArray) {
-      isUnsaved = true;
-      handlePath(path, isUnsaved);
+      decoStyle = "unsynced";
+      handlePath(path, decoStyle as DecoStyle);
     }
   };
 
@@ -712,7 +730,6 @@ export default class TextFlowPlugin extends Plugin {
     this.registerEvent(
       this.app.workspace.on("active-leaf-change", async (leaf) => {
         if (this.isNavigatingFlow) {
-          // console.log("skipping active-leaf setups because isNavigatingFlow");
           return;
         }
         if (leaf?.view instanceof MarkdownView) {
@@ -724,7 +741,6 @@ export default class TextFlowPlugin extends Plugin {
               (flow) => flow.flowMap[activeLeafPath]
             );
             if (isSourceFile && this.isNavigatingFlow) {
-              console.log("Preventing source file setup during navigation");
               return;
             }
             // if active leaf is flow, set it up
@@ -738,11 +754,9 @@ export default class TextFlowPlugin extends Plugin {
             // if active leaf is source, set it up
             for (let flow in this.settings.flows) {
               if (this.settings.flows[flow].flowMap[activeLeafPath]) {
-                // console.log("active leaf change: is source");
                 this.setupSourceNote(view);
                 return;
               } else {
-                //console.log("active leaf change: is vanilla");
                 this.setupVanillaNote(view);
               }
             }
@@ -754,9 +768,7 @@ export default class TextFlowPlugin extends Plugin {
     // -- FILE OPEN - Manage editors and warning css on -------------
     this.registerEvent(
       this.app.workspace.on("file-open", async (file) => {
-        // console.log("file-open triggered");
         if (this.isNavigatingFlow) {
-          //    console.log("skipping file-open setup because isNavigatingFlow");
           return;
         }
         // In case the newly opened file has been loaded into
@@ -1462,10 +1474,6 @@ export default class TextFlowPlugin extends Plugin {
 
     try {
       // this has to happen first so the menuBar can access its leaf specific settings
-      console.log(
-        "setupFlowView calling manageActiveFlowObject for ",
-        flowName
-      );
       await this.manageActiveFlowObject();
       await this.syncAllLeaves();
 
@@ -1659,17 +1667,15 @@ export default class TextFlowPlugin extends Plugin {
           }
         }
         // And now update the decoration and refresh the menu bars
-        if (Object.keys(this.settings.activeFlowObject).length === 0) {
-          this.decorateSourceNotes(false);
-          const allLeaves = this.app.workspace.getLeavesOfType("markdown");
-          for (const leaf of allLeaves) {
-            const view = leaf.view as MarkdownView;
-            const filePath = view.file?.path;
-            if (!filePath) continue;
-            const flowName = this.isFlowFile(filePath);
-            if (!flowName) continue;
-            view.menuBar?.refresh(view.contentEl);
-          }
+        this.decorateSourceNotes(true);
+        const allLeaves = this.app.workspace.getLeavesOfType("markdown");
+        for (const leaf of allLeaves) {
+          const view = leaf.view as MarkdownView;
+          const filePath = view.file?.path;
+          if (!filePath) continue;
+          const flowName = this.isFlowFile(filePath);
+          if (!flowName) continue;
+          view.menuBar?.refresh(view.contentEl);
         }
       }
     });
@@ -1886,7 +1892,6 @@ export default class TextFlowPlugin extends Plugin {
   // Sync all leaves
 
   syncAllLeaves = async () => {
-    console.log("calling sync");
     this.isSyncing = true;
     const allLeaves = this.app.workspace.getLeavesOfType("markdown");
     const flowLeaves: Record<string, MarkdownView> = {};
@@ -2250,7 +2255,6 @@ export default class TextFlowPlugin extends Plugin {
         // Move cursor to safe position in first region
         const safePos = 1;
         this.flowService.scrollToPos(editor, safePos);
-        console.log("First region: ", path);
         return {
           currentCursorPos: safePos,
           type: regionMap.type,

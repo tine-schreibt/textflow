@@ -1152,7 +1152,6 @@ export class FlowService {
     // fetch frontmatter if there is any
     let flowFilePath = this.plugin.settings.flows[flowName].flowFilePath;
     // get the file to extract its frontmatter
-    console.log("flowFilePath: ", flowFilePath);
     const flowFile = this.app.vault.getAbstractFileByPath(flowFilePath);
     if (flowFile instanceof TFile) {
       const cache = this.app.metadataCache.getFileCache(flowFile);

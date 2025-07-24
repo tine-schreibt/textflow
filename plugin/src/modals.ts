@@ -272,7 +272,6 @@ export class FlowSwitcherModal extends Modal {
   async display() {
     const { contentEl, modalEl } = this;
     contentEl.empty();
-    console.log("initialising leaves");
 
     // ----------------------------------------------------------
     // -------- GATHERING AND PRE-PROCESSING OF FLOW DATA -------
