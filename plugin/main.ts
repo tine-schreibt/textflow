@@ -59,7 +59,7 @@ export default class TextFlowPlugin extends Plugin {
   private isNavigatingFlow: boolean = false;
 
   // ---- flag to keep textFlow from eating its tail when its own sync triggers vault.modify()
-  private isSyncing: boolean = false;
+  isSyncing: boolean = false;
 
   // ---- helper stuff and auxiliaries
   private hadTrackingError: boolean = false;
@@ -148,6 +148,7 @@ export default class TextFlowPlugin extends Plugin {
       name: `Sync all leaves.`,
       callback: async () => {
         // toggle
+        console.log("manual sync called");
         await this.syncAllLeaves();
         await this.saveSettings();
       },
@@ -389,7 +390,7 @@ export default class TextFlowPlugin extends Plugin {
       let unsyncedSymbol = this.settings.explorerDecoStyle[1];
 
       // turned into empty strings to undecorate without needing a reload
-      if (!decorate) {
+      if (!decorate || this.settings.showExplorerDeco) {
         neutralSymbol = "";
         unsyncedSymbol = "";
       }
@@ -491,18 +492,18 @@ export default class TextFlowPlugin extends Plugin {
     // the isSyncing flag prevents a doom spiral
     this.registerEvent(
       this.app.vault.on("modify", (file: TAbstractFile) => {
-        if (!this.isSyncing) {
-          if (file instanceof TFile) {
-            Object.keys(this.settings.flows).forEach((flowName) => {
-              if (
-                !this.settings.flows[flowName].flaggedForRebuild &&
-                this.settings.flows[flowName].flowMap[file.path]
-              ) {
-                this.settings.flows[flowName].flaggedForRebuild = true;
-                this.saveSettings();
-              }
-            });
-          }
+        if (this.isSyncing) return;
+
+        if (file instanceof TFile) {
+          Object.keys(this.settings.flows).forEach((flowName) => {
+            if (
+              !this.settings.flows[flowName].flaggedForRebuild &&
+              this.settings.flows[flowName].flowMap[file.path]
+            ) {
+              this.settings.flows[flowName].flaggedForRebuild = true;
+              this.saveSettings();
+            }
+          });
         }
       })
     );
@@ -678,7 +679,7 @@ export default class TextFlowPlugin extends Plugin {
     );
 
     // -- FILE OPEN - Manage editors and warning css on -------------
-    this.registerEvent(
+    /*    this.registerEvent(
       this.app.workspace.on("file-open", async (file) => {
         // console.log("file-open triggered");
         if (this.isNavigatingFlow) {
@@ -712,7 +713,7 @@ export default class TextFlowPlugin extends Plugin {
           }
         }
       })
-    );
+    );*/
 
     // catch it, when only an empty leaf remains
     this.registerEvent(
@@ -1583,21 +1584,19 @@ export default class TextFlowPlugin extends Plugin {
             );
           }
         }
-        // And now update the decoration and refresh the menu bars
-        if (Object.keys(this.settings.activeFlowObject).length === 0) {
-          this.decorateSourceNotes(false);
-          const allLeaves = this.app.workspace.getLeavesOfType("markdown");
-          for (const leaf of allLeaves) {
-            const view = leaf.view as MarkdownView;
+        // And now update the decorations and refresh the menu bars
+        this.decorateSourceNotes(true);
+        const allLeaves = this.app.workspace.getLeavesOfType("markdown");
+        for (const leaf of allLeaves) {
+          const view = leaf.view as MarkdownView;
 
-            const filePath = view.file?.path;
-            if (!filePath) continue;
+          const filePath = view.file?.path;
+          if (!filePath) continue;
 
-            const flowName = this.isFlowFile(filePath);
-            if (!flowName) continue;
+          const flowName = this.isFlowFile(filePath);
+          if (!flowName) continue;
 
-            view.menuBar?.refresh(view.contentEl);
-          }
+          view.menuBar?.refresh(view.contentEl);
         }
       }
     });
@@ -1635,7 +1634,7 @@ export default class TextFlowPlugin extends Plugin {
     await this.syncAllLeaves();
     this.removeCursorListener(view);
     this.removeTextChangeListener(view);
-    this.removeWriteProtection(view.editor as any, "divider");
+    this.removeWriteProtection(view, "divider");
     this.cleanupMenuBar(view.leaf);
     this.manageActiveFlowObject();
     if (view.menuBar) {
@@ -1671,6 +1670,7 @@ export default class TextFlowPlugin extends Plugin {
     view: MarkdownView,
     protectionType: Types.ProtectionType
   ) => {
+    console.log(`Adding ${protectionType} protection to`, view.file?.path);
     const editor = view.editor as any;
     if (!editor.cm) return;
 
@@ -1746,11 +1746,13 @@ export default class TextFlowPlugin extends Plugin {
 
   // -----------------------------------------------------------
   removeWriteProtection = (
-    editor: any,
+    view: MarkdownView,
     protectionType: Types.ProtectionType
   ) => {
+    console.log("removeWriteProtection being called");
+    const editor = view.editor as any;
     if (!editor.cm) return;
-
+    console.log("got past the editor check");
     const removeProtection = EditorState.transactionFilter.of((tr) => tr);
     (removeProtection as any).protectionType = protectionType;
 
@@ -1766,8 +1768,16 @@ export default class TextFlowPlugin extends Plugin {
   // Sync all leaves
 
   syncAllLeaves = async () => {
+    console.log("sync started, isSyncing:", this.isSyncing);
+    // prevent double calls
+    if (this.isSyncing) {
+      console.log("Sync already in progress, skipping");
+
+      return;
+    }
     this.isSyncing = true;
     const allLeaves = this.app.workspace.getLeavesOfType("markdown");
+
     const flowLeaves: Record<string, MarkdownView> = {};
 
     // Populate flowLeaves
@@ -1783,17 +1793,24 @@ export default class TextFlowPlugin extends Plugin {
     }
 
     try {
-      // Perform saves
       await Promise.all(
         Object.entries(flowLeaves).map(async ([flowName, view]) => {
-          await this.addWriteProtection(view, "sync");
-          const text = view.editor.getValue();
-          const leafID = (view.leaf as any).id;
-          await this.saveBackToSource(flowName, text, leafID);
-          if (view.menuBar) {
-            view.menuBar.refresh(view.contentEl);
+          console.log(`Starting sync for ${flowName}`);
+
+          try {
+            this.addWriteProtection(view, "sync");
+            const text = view.editor.getValue();
+            const leafID = (view.leaf as any).id;
+            await this.saveBackToSource(flowName, text, leafID);
+            if (view.menuBar) {
+              view.menuBar.refresh(view.contentEl);
+            }
+          } catch (error) {
+            console.error(`Error syncing ${flowName}:`, error);
+          } finally {
+            console.log(`Finishing sync for ${flowName}`);
+            this.removeWriteProtection(view, "sync");
           }
-          await this.removeWriteProtection(view, "sync");
         })
       );
     } finally {
@@ -2206,9 +2223,9 @@ export default class TextFlowPlugin extends Plugin {
         new Notice(
           `No matching region found for UUID.\n` +
             `This means that ${flow.flowName} and its data structure are out of sync.\n` +
-            `Please rebuild ${flow.flowName} to fix this.\n` +
-            `If you have unsynced edits, export the flow first and copy/past the edits into the rebuilt version.`,
-          0
+            `If you're getting this in combination with a note on UUIDs in a source notification, follow the instructions in that notification.\n` +
+            `Otherwise just rebuild ${flow.flowName} to fix this.\n` +
+            0
         );
       }
     } else {
@@ -2333,7 +2350,7 @@ export default class TextFlowPlugin extends Plugin {
       const flowName = this.isFlowFile(leaf.view.file.path);
 
       if (!flowName) continue;
-      this.removeWriteProtection(editor, "divider");
+      this.removeWriteProtection(leaf.view, "divider");
     }
 
     // ------------ ONUNLOAD: REMOVE cursor listeners -----------
