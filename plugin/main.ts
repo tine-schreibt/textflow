@@ -12,20 +12,14 @@ import {
 } from "obsidian";
 import { TextFlowSettingsTab } from "./src/settingsTab";
 import { TextFlowSettings, DEFAULT_SETTINGS } from "./src/types";
-import {
-  EditorView,
-  Decoration,
-  DecorationSet,
-  ViewUpdate,
-  ViewPlugin,
-} from "@codemirror/view";
+import { EditorView, ViewUpdate, ViewPlugin } from "@codemirror/view";
 import { EditorState, StateEffect, StateField } from "@codemirror/state";
 import * as Types from "./src/types";
 import * as Modals from "./src/modals";
 import { MenuBar } from "./src/menuBar";
 import { FlowService } from "./src/flowService";
 import { TEXTFLOW_SYSTEMFOLDER } from "./src/settingsTab";
-import { dirname, basename } from "path";
+import { dirname } from "path";
 
 // so the menu bar can be kept within the view
 declare module "obsidian" {
@@ -61,82 +55,16 @@ export default class TextFlowPlugin extends Plugin {
 
   // ---------------- Global objects and variables -------------------------
 
-  // ---- flag to prevent the leaf-change-listener from interfering with scrolling to source file in flow
+  // ---- flag to prevent the leaf-change-listener from interfering with scrolling
   private isNavigatingFlow: boolean = false;
 
   // ---- flag to keep textFlow from eating its tail when its own sync triggers vault.modify()
   private isSyncing: boolean = false;
 
-  // -- tracking read-only ranges (to protect region IDs) --------------------------
-
-  // helper stuff and auxiliaries
+  // ---- helper stuff and auxiliaries
   private hadTrackingError: boolean = false;
 
-  // adds a lock symbol to read-only files
-  private readOnlyHighlight = Decoration.mark({
-    class: "cm-read-only-region",
-  });
-
-  // state field for id protection
-  private readOnlyRanges = StateField.define<{
-    ranges: Array<{ from: number; to: number }>;
-    decorations: DecorationSet;
-  }>({
-    create: () => ({
-      ranges: [],
-      decorations: Decoration.none,
-    }),
-    // tr -> transaction
-    update: (state, tr) => {
-      let ranges = state.ranges;
-
-      // Handle range updates
-      // e -> effect
-      for (let e of tr.effects) {
-        if (e.is(this.updateRangesEffect)) {
-          ranges = e.value;
-        }
-      }
-
-      // Create decorations from ranges; normalize position 0
-      const decorations = Decoration.set(
-        ranges.map((range) =>
-          this.readOnlyHighlight.range(Math.max(0, range.from), range.to)
-        )
-      );
-
-      return {
-        ranges,
-        decorations,
-      };
-    },
-    provide: (state) =>
-      EditorView.decorations.from(state, (value) => value.decorations),
-  });
-
-  private updateRangesEffect =
-    StateEffect.define<Array<{ from: number; to: number }>>();
-
-  // ----- protect the editor from changes while a save is going on ----------------
-  private toggleProtectionEffect = StateEffect.define<boolean>();
-
-  protectDuringSaveExtension = StateField.define<boolean>({
-    create: () => false,
-    update: (value, tr) => {
-      for (let effect of tr.effects) {
-        if (effect.is(this.toggleProtectionEffect)) {
-          return effect.value;
-        }
-      }
-      return value;
-    },
-    provide: (field) =>
-      EditorView.editorAttributes.of((value) => ({
-        editable: value ? "false" : "true",
-      })),
-  });
-
-  // Add this new property to track the most recently active flow leaf
+  // ---- needed in the active-leaf-change listener
   private mostRecentActiveFlowLeaf: WorkspaceLeaf | null = null;
 
   // for timing of flowSwitcherModal display() calls, we need to access them from setupFlowView()
@@ -164,7 +92,8 @@ export default class TextFlowPlugin extends Plugin {
     await this.saveData(this.settings);
   }
 
-  // ---------------------------------------------------------------
+  // ----- Make sure we always know where our towel... system folder is.
+
   //CHECKED
   async ensureSystemFolder() {
     const systemFolder = this.app.vault
@@ -197,28 +126,7 @@ export default class TextFlowPlugin extends Plugin {
       }
     }
   }
-
-  // ---------- debug UID because I'm too lazy to implement importing stuff from flowService to here
-  debugMarker = (marker: string) => {
-    console.log({
-      fullMarker: marker,
-      length: marker.length,
-      chars: Array.from(marker).map((char) => ({
-        char: char,
-        code: char.charCodeAt(0).toString(16), // hex code
-        name:
-          char === "\u00A0"
-            ? "NBSP"
-            : char === "\u200B"
-            ? "ZWSP"
-            : char === "\u200C"
-            ? "ZWNJ"
-            : char === "\u200D"
-            ? "ZWJ"
-            : "unknown",
-      })),
-    });
-  };
+  //^CHECKED
 
   // ---------------- Functions: Utilities: UI/UX -------------------------
 
@@ -231,11 +139,13 @@ export default class TextFlowPlugin extends Plugin {
     }
   }
 
+  // ---- our various commands
+
+  // Sync
   registerCommands() {
-    // Command for syncing
     this.addCommand({
       id: `sync-text-flow`,
-      name: `Sync all modified regions.`,
+      name: `Sync all leaves.`,
       callback: async () => {
         // toggle
         await this.syncAllLeaves();
@@ -253,7 +163,7 @@ export default class TextFlowPlugin extends Plugin {
       },
     });
 
-    // turn off explorer navigation so multi-select works as expected
+    // Turn off explorer navigation
     this.addCommand({
       id: "toggle-explorer-listener",
       name: `Toggle explorer navigation`,
@@ -265,20 +175,23 @@ export default class TextFlowPlugin extends Plugin {
       },
     });
 
-    // hide explorer deco
-
+    // Hide explorer deco
     this.addCommand({
       id: "toggle-explorer-deco",
       name: `Toggle explorer decoration`,
       callback: () => {
-        this.settings.showExplorerDeco
-          ? (this.settings.showExplorerDeco = false)
-          : (this.settings.showExplorerDeco = true);
+        if (this.settings.showExplorerDeco) {
+          this.settings.showExplorerDeco = false;
+          this.decorateSourceNotes(false);
+        } else {
+          this.settings.showExplorerDeco = true;
+          this.decorateSourceNotes(true);
+        }
         this.saveSettings();
       },
     });
 
-    // hide menu bar
+    // Hide menu bar
     this.addCommand({
       id: "toggle-menu-bar",
       name: `Toggle menu bar`,
@@ -295,7 +208,7 @@ export default class TextFlowPlugin extends Plugin {
       },
     });
 
-    // select active region
+    // Select active region
     this.addCommand({
       id: "select-active-region",
       name: "Select active region",
@@ -324,10 +237,10 @@ export default class TextFlowPlugin extends Plugin {
       },
     });
 
-    // restore cursor position
+    // Restore last known cursor position
     this.addCommand({
       id: "restore-cursor",
-      name: `Restore most recent cursor position`,
+      name: `Restore last known cursor position`,
       callback: async () => {
         const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (!activeView || !activeView.file) {
@@ -347,6 +260,7 @@ export default class TextFlowPlugin extends Plugin {
       },
     });
 
+    // Toggle scroll bar visibility
     this.addCommand({
       id: "toggle-scroll-bar",
       name: `Toggle scroll bar`,
@@ -365,7 +279,7 @@ export default class TextFlowPlugin extends Plugin {
   }
 
   // ----- is called onload and sets the visibility of TextFlow_SystemFolder
-  //CHECKED
+  //CHECKED AND TESTED
   discernAndSetSystemFolderState = (
     systemFolderHidden?: boolean,
     systemFolderPath?: string
@@ -405,10 +319,11 @@ export default class TextFlowPlugin extends Plugin {
     addStyle();
     setTimeout(addStyle, 500); // Add style again after 500ms
   };
-  // ^CHECKED
+  // ^CHECKED AND TESTED
 
+  //CHECKED AND TESTED
   // ----- DECORATE SOURCE NOTES IN FILE EXPLORER -----------
-  decorateSourceFiles = (): void => {
+  decorateSourceNotes = (decorate: boolean): void => {
     let path = "";
     let handledPathsArray: string[] = [];
     const unsavedPathsArray: string[] = [];
@@ -469,9 +384,17 @@ export default class TextFlowPlugin extends Plugin {
       let style = document.createElement("style");
       style.setAttribute(`data-textflow-${isUnsaved}`, "true");
 
-      // Update selector to target both files and folders
-      const neutralSymbol = this.settings.explorerDecoStyle[0];
-      const unsyncedSymbol = this.settings.explorerDecoStyle[1];
+      // the decoration symbol which we fetch from an array of options
+      let neutralSymbol = this.settings.explorerDecoStyle[0];
+      let unsyncedSymbol = this.settings.explorerDecoStyle[1];
+
+      // turned into empty strings to undecorate without needing a reload
+      if (!decorate) {
+        neutralSymbol = "";
+        unsyncedSymbol = "";
+      }
+
+      // styles from the same array
       const neutralStyle = this.settings.explorerDecoStyle[2];
       const unsyncedStyle = this.settings.explorerDecoStyle[3];
       const styleContent =
@@ -557,144 +480,7 @@ export default class TextFlowPlugin extends Plugin {
     }
   };
 
-  // --------- So that toggling deco off doesn't require a reload ------
-  undecorateSourceFiles = (): void => {
-    let path = "";
-    let handledPathsArray: string[] = [];
-    const unsavedPathsArray: string[] = [];
-    let isUnsaved = false;
-
-    const accentColor = getComputedStyle(document.body)
-      .getPropertyValue("--interactive-accent")
-      .trim();
-
-    // ------ all the helper functions used -------
-    const handlePath = (path: string, isUnsaved: boolean) => {
-      let successivePath = "";
-      for (let fragment of path.split("/")) {
-        if (!fragment.endsWith(".md")) {
-          successivePath += `${fragment}/`;
-        } else {
-          successivePath += fragment;
-        }
-        if (!handledPathsArray.includes(successivePath)) {
-          handledPathsArray.push(successivePath);
-          updateStyles(successivePath, isUnsaved);
-        }
-      }
-    };
-
-    const updateStyles = (path: string, isUnsaved: boolean) => {
-      // Add console log to check the path being used
-
-      // Remove opposite style if exists
-      const oppositeStyle = document.head.querySelector(
-        `style[data-textflow-source-${isUnsaved ? "general" : "unsaved"}]`
-      );
-      if (oppositeStyle) oppositeStyle.remove();
-
-      // Add or update correct style
-      addStyle(path, isUnsaved ? "unsaved" : "general");
-    };
-
-    // Create and append style with the correct selector
-    const addStyle = (path: string, isUnsaved: string) => {
-      // Remove trailing slash for files (if it exists)
-      const cleanPath = path.endsWith("/") ? path.slice(0, -1) : path;
-
-      // Log both file and folder elements for this path
-      function escapeSelector(str: string): string {
-        // Escape special characters that have meaning in CSS selectors
-        return (
-          str
-            .replace(/["'&,.*+?^${}()|[\]\\]/g, "\\$&")
-            // Handle spaces
-            .replace(/\s/g, "\\ ")
-        );
-      }
-
-      const fileElement = document.querySelector(
-        `div[data-path='${escapeSelector(cleanPath)}']`
-      );
-      const folderElement = document.querySelector(
-        `div[data-path='${escapeSelector(cleanPath)}'] .nav-folder-title`
-      );
-
-      let style = document.createElement("style");
-      style.setAttribute(`data-textflow-${isUnsaved}`, "true");
-
-      // Update selector to target both files and folders
-      const neutralSymbol = this.settings.explorerDecoStyle[0];
-      const unsyncedSymbol = this.settings.explorerDecoStyle[1];
-      const neutralStyle = this.settings.explorerDecoStyle[2];
-      const unsyncedStyle = this.settings.explorerDecoStyle[3];
-      const styleContent =
-        isUnsaved === "unsaved"
-          ? `
-            div[data-path='${escapeSelector(
-              cleanPath
-            )}'] .nav-file-title-content::after,
-            div[data-path='${escapeSelector(
-              cleanPath
-            )}'] .nav-folder-title-content::after {
-                content: "" !important;  
-                color: ${accentColor} !important;
-                opacity: ${
-                  unsyncedStyle.includes("high") ? "1" : "0.6"
-                } !important;
-                font-size: ${
-                  unsyncedStyle.includes("large") ? "1.2em" : "1em"
-                } !important;
-                font-family: monospace !important;  // Add this to prevent emoji rendering
-                vertical-align: middle !important;
-            }
-        `
-          : `
-            div[data-path='${escapeSelector(
-              cleanPath
-            )}'] .nav-file-title-content::after,
-            div[data-path='${escapeSelector(
-              cleanPath
-            )}'] .nav-folder-title-content::after {
-                content: " " !important;  
-                color: ${
-                  neutralStyle.includes("high")
-                    ? "var(--text-muted)"
-                    : "var(--text-faint)"
-                } !important;
-                font-size: ${
-                  neutralStyle.includes("large") ? "1.2em" : "1em"
-                } !important;
-                font-family: monospace !important;  // Add this to prevent emoji rendering
-                vertical-align: middle !important;
-            }
-        `;
-
-      style.textContent = styleContent;
-      document.head.appendChild(style);
-    };
-
-    // -------- THE LOGIC -----------------
-    // handle general paths
-    Object.keys(this.settings.activeFlowObject).forEach((flow) => {
-      // get the file list
-      let key = this.settings.flows[flow].flowRecipe.bookmarks
-        ? "bookmarks"
-        : "foldersTagsProps";
-
-      for (path of this.settings.flows[flow].flowRecipe[key]) {
-        // exclude folder titles
-        if (!path.startsWith("#")) {
-          if (!this.settings.flows[flow].unsavedRegionsArray.includes(path)) {
-            isUnsaved = false;
-            handlePath(path, isUnsaved);
-          } else {
-            unsavedPathsArray.push(path);
-          }
-        }
-      }
-    });
-  };
+  //^CHECKED AND TESTED
 
   // ---------------- Functions: Listeners -------------------------
 
@@ -1218,7 +1004,7 @@ export default class TextFlowPlugin extends Plugin {
                             view.menuBar.refresh(view.contentEl);
                           }
                           if (plugin.settings.showExplorerDeco) {
-                            plugin.decorateSourceFiles();
+                            plugin.decorateSourceNotes(true);
                           }
 
                           // Check other flows that might need rebuilding
@@ -1614,8 +1400,7 @@ export default class TextFlowPlugin extends Plugin {
         await this.flowService.rebuildFlow(flowName, "setupFlowView");
       }
 
-      this.addProtectDuringSaveExtension(editor);
-      this.addIdDividerProtection(view, flowName);
+      this.addWriteProtection(view, "divider");
       this.addCursorListener(view);
       this.addTextChangeListener(view);
 
@@ -1800,14 +1585,17 @@ export default class TextFlowPlugin extends Plugin {
         }
         // And now update the decoration and refresh the menu bars
         if (Object.keys(this.settings.activeFlowObject).length === 0) {
-          this.undecorateSourceFiles();
+          this.decorateSourceNotes(false);
           const allLeaves = this.app.workspace.getLeavesOfType("markdown");
           for (const leaf of allLeaves) {
             const view = leaf.view as MarkdownView;
+
             const filePath = view.file?.path;
             if (!filePath) continue;
+
             const flowName = this.isFlowFile(filePath);
             if (!flowName) continue;
+
             view.menuBar?.refresh(view.contentEl);
           }
         }
@@ -1847,7 +1635,7 @@ export default class TextFlowPlugin extends Plugin {
     await this.syncAllLeaves();
     this.removeCursorListener(view);
     this.removeTextChangeListener(view);
-    this.removeIdDividerProtection(view.editor as any);
+    this.removeWriteProtection(view.editor as any, "divider");
     this.cleanupMenuBar(view.leaf);
     this.manageActiveFlowObject();
     if (view.menuBar) {
@@ -1877,20 +1665,29 @@ export default class TextFlowPlugin extends Plugin {
   // ---- Functions: Data safety ----------------------------
 
   // ---- Functions: Data safety: Read-only for UIDs and dividers
-  addIdDividerProtection = (view: MarkdownView, flowName: string) => {
-    const flow = this.settings.flows[flowName];
-    if (!flow) return;
+  private protectedEditorsObject = new Map<string, boolean>();
 
+  addWriteProtection = (
+    view: MarkdownView,
+    protectionType: Types.ProtectionType
+  ) => {
     const editor = view.editor as any;
     if (!editor.cm) return;
 
-    if (!this.hasIdDividerProtection(editor)) {
+    const leafId = editor.cm.dom.closest(".workspace-leaf")?.id;
+
+    if (!this.hasWriteProtection(editor, protectionType)) {
       const preventEdit = EditorState.transactionFilter.of((tr) => {
-        if (this.isRebuilding) {
-          return tr;
+        // if the flow is being rebuilt, we need to suspend protection
+        // otherwise the editor contents can't be updated
+        if (this.isRebuilding) return tr;
+
+        // if we're syncing, we need to block everything
+        if (protectionType === "sync") {
+          return [];
         }
 
-        if (!tr.changes.empty) {
+        if (!tr.changes.empty && protectionType === "divider") {
           let shouldReject = false;
 
           tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
@@ -1927,102 +1724,45 @@ export default class TextFlowPlugin extends Plugin {
         return tr; // Allow normal edits
       });
 
+      // actually add the protection
+      (preventEdit as any).protectiontType = protectionType;
       editor.cm.dispatch({
         effects: StateEffect.appendConfig.of([preventEdit]),
       });
+
+      // add entry to out tracker
+      this.protectedEditorsObject.set(`${leafId}-${protectionType}`, true);
     }
   };
 
   // ----------------------------------------------------------
-  hasIdDividerProtection = (editor: any) => {
+  hasWriteProtection = (editor: any, protectionType: Types.ProtectionType) => {
     if (!editor.cm) return false;
-    const hasField =
-      editor.cm.state.field(this.readOnlyRanges, false) !== undefined;
-    return hasField;
+    const leafId = editor.cm.dom.closest(".workspace-leaf")?.id;
+    return (
+      this.protectedEditorsObject.get(`${leafId}-${protectionType}`) ?? false
+    );
   };
 
   // -----------------------------------------------------------
-  removeIdDividerProtection = (editor: any) => {
+  removeWriteProtection = (
+    editor: any,
+    protectionType: Types.ProtectionType
+  ) => {
     if (!editor.cm) return;
 
-    if (this.hasIdDividerProtection(editor)) {
-      editor.cm.dispatch({
-        effects: StateEffect.reconfigure.of([]),
-      });
-    }
+    const removeProtection = EditorState.transactionFilter.of((tr) => tr);
+    (removeProtection as any).protectionType = protectionType;
+
+    editor.cm.dispatch({
+      effects: StateEffect.appendConfig.of([removeProtection]),
+    });
+
+    const leafId = editor.cm.dom.closest(".workspace-leaf")?.id;
+    this.protectedEditorsObject.delete(`${leafId}-${protectionType}`);
   };
 
-  /// --- Functions: Data safety: Protect editor during saving
-  private addProtectDuringSaveExtension(editor: any) {
-    try {
-      if (editor.cm instanceof EditorView) {
-        // Check if protection extension already exists
-        const hasProtection = editor.cm.state.field(
-          this.protectDuringSaveExtension,
-          false
-        );
-
-        if (!hasProtection) {
-          editor.cm.dispatch({
-            effects: StateEffect.appendConfig.of([
-              this.protectDuringSaveExtension,
-            ]),
-          });
-        }
-      } else {
-        console.warn("Could not find EditorView instance:", editor);
-      }
-    } catch (error) {
-      if (error.message?.includes("Field is not present")) {
-        // This is fine - means we need to add the extension
-        editor.cm.dispatch({
-          effects: StateEffect.appendConfig.of([
-            this.protectDuringSaveExtension,
-          ]),
-        });
-      } else {
-        console.error("Failed to add protection extension:", error);
-      }
-    }
-  }
-
-  // Toggle protection state
-  toggleProtectionDuringSave(editorView: EditorView, isProtected: boolean) {
-    try {
-      const container = editorView.dom.closest(".cm-editor")?.parentElement;
-      if (container) {
-        container.classList.toggle("save-rebuild-protection", isProtected);
-      }
-      editorView.dispatch({
-        effects: this.toggleProtectionEffect.of(isProtected),
-      });
-    } catch (error) {
-      console.error("Failed to toggle protection:", error);
-    }
-  }
-
   // ---- Functions: Data safety: sync changes to source files
-  // --- but first, a little helper function, just in case the UI is sluggish:
-
-  private async pollForEditor(
-    view: MarkdownView,
-    retries = 5,
-    delay = 200
-  ): Promise<ObsidianEditor | null> {
-    for (let i = 0; i < retries; i++) {
-      const editor = view.editor as ObsidianEditor;
-      if (editor?.cm) {
-        return editor; // Success!
-      }
-      // Wait for the delay before the next attempt
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
-    new Notice(
-      `textFlow: Editor in view '${view.file?.path}' did not become available after ${retries} retries. Sync has been aborted. Please try again.`
-    );
-    return null; // Failure
-  }
-
   // Sync all leaves
 
   syncAllLeaves = async () => {
@@ -2043,38 +1783,20 @@ export default class TextFlowPlugin extends Plugin {
     }
 
     try {
-      // Enable protection
-      for (const [_, view] of Object.entries(flowLeaves)) {
-        let editor = view.editor as ObsidianEditor;
-        if (!editor) {
-          const newEditor = await this.pollForEditor(view);
-          if (newEditor) {
-            editor = newEditor;
-          }
-        }
-        if (editor.cm) {
-          await this.toggleProtectionDuringSave(editor.cm, true);
-        }
-      }
       // Perform saves
       await Promise.all(
         Object.entries(flowLeaves).map(async ([flowName, view]) => {
+          await this.addWriteProtection(view, "sync");
           const text = view.editor.getValue();
           const leafID = (view.leaf as any).id;
           await this.saveBackToSource(flowName, text, leafID);
           if (view.menuBar) {
             view.menuBar.refresh(view.contentEl);
           }
+          await this.removeWriteProtection(view, "sync");
         })
       );
     } finally {
-      // Remove protection
-      for (const [_, view] of Object.entries(flowLeaves)) {
-        const editor = view.editor as ObsidianEditor;
-        if (editor.cm) {
-          this.toggleProtectionDuringSave(editor.cm, false);
-        }
-      }
       this.isSyncing = false;
     }
   };
@@ -2156,7 +1878,7 @@ export default class TextFlowPlugin extends Plugin {
       this.saveSettings();
       this.settings.flows[flowName].timestamp = this.getTimestamp();
       if (this.settings.showExplorerDeco) {
-        this.decorateSourceFiles();
+        this.decorateSourceNotes(true);
       }
     }
   };
@@ -2481,7 +2203,13 @@ export default class TextFlowPlugin extends Plugin {
         };
         return activeRegionObject;
       } else {
-        console.error("No matching region found for UID");
+        new Notice(
+          `No matching region found for UUID.\n` +
+            `This means that ${flow.flowName} and its data structure are out of sync.\n` +
+            `Please rebuild ${flow.flowName} to fix this.\n` +
+            `If you have unsynced edits, export the flow first and copy/past the edits into the rebuilt version.`,
+          0
+        );
       }
     } else {
       console.error("No marker found in text after cursor");
@@ -2526,7 +2254,7 @@ export default class TextFlowPlugin extends Plugin {
       // ---------- Look for TextFlow_SystemFolder
       this.ensureSystemFolder();
       if (this.settings.showExplorerDeco) {
-        this.decorateSourceFiles();
+        this.decorateSourceNotes(true);
       }
       this.flowService.updateScrollbarVisibility();
       // ----- ONLOAD: set up UI -------------------------
@@ -2598,10 +2326,14 @@ export default class TextFlowPlugin extends Plugin {
     // Remove read-only extensions from all markdown views
     const markdownLeaves = this.app.workspace.getLeavesOfType("markdown");
     for (const leaf of markdownLeaves) {
-      if (leaf.view instanceof MarkdownView) {
-        const editor = leaf.view.editor as any;
-        this.removeIdDividerProtection(editor);
-      }
+      if (!(leaf.view instanceof MarkdownView)) continue;
+      const editor = leaf.view.editor as any;
+
+      if (!leaf.view.file) continue;
+      const flowName = this.isFlowFile(leaf.view.file.path);
+
+      if (!flowName) continue;
+      this.removeWriteProtection(editor, "divider");
     }
 
     // ------------ ONUNLOAD: REMOVE cursor listeners -----------

@@ -237,3 +237,5 @@ interface FlowCookbook {
   foldersTagsProps?: string;
   // ... other properties
 }
+
+export type ProtectionType = "divider" | "sync";

@@ -685,7 +685,7 @@
 
 /* ------------ to make read-only visible ----------------*/
 
-.save-rebuild-protection {
+.sync-protection {
   color: var(--text-muted);
   position: relative; /* Needed for the lock icon */
 }

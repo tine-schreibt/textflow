@@ -1121,13 +1121,17 @@ export class FlowService {
 
     // ---- Progress stuff.
     type ProgressVisualizer = ProgressNotice;
-    // if the call comes from the settingsTab, show a toast
-    let progressBar: ProgressVisualizer = new ProgressNotice(flowName);
 
-    // Get an object started in case the call came from inside the...
-    // flow, or from settings or the switcher modal
-    let progressBars: { [key: string]: LoadingOverlay } = {};
-    // Check if we even need it:
+    // prepare variable for the progress notice
+    // in case the call came from inside the...
+    // settingsTab
+    let progressToast: ProgressVisualizer | null = null;
+    if (caller === "settingsTab") {
+      progressToast = new ProgressNotice(flowName);
+    }
+
+    // Get an object started for the rest of cases
+    let progressOverlays: { [key: string]: LoadingOverlay } = {};
     if (caller != "settingsTab") {
       if (this.plugin.settings.activeFlowObject[flowName]) {
         Object.keys(this.plugin.settings.flows[flowName].activeRegions).forEach(
@@ -1137,7 +1141,7 @@ export class FlowService {
               (newLeaf) => (newLeaf as any).id === leafID
             );
             if (leaf) {
-              progressBars[leafID] = new LoadingOverlay(leaf, flowName);
+              progressOverlays[leafID] = new LoadingOverlay(leaf, flowName);
             }
           }
         );
@@ -1172,18 +1176,22 @@ export class FlowService {
       // create update the progress bar
       counter++;
       if (caller === "settingsTab") {
-        progressBar.updateProgress(counter, total);
+        if (progressToast) {
+          progressToast.updateProgress(counter, total);
+        }
       } else {
-        Object.keys(progressBars).forEach((leafID) => {
-          progressBars[leafID].updateProgress(counter, total);
+        Object.keys(progressOverlays).forEach((leafID) => {
+          progressOverlays[leafID].updateProgress(counter, total);
         });
       }
       if (counter === total) {
         if (caller === "settingsTab") {
-          progressBar.close();
+          if (progressToast) {
+            progressToast.close();
+          }
         } else {
-          Object.keys(progressBars).forEach((leafID) => {
-            progressBars[leafID].remove();
+          Object.keys(progressOverlays).forEach((leafID) => {
+            progressOverlays[leafID].remove();
           });
         }
       }
@@ -1262,6 +1270,17 @@ export class FlowService {
                 `Afterwards try another rebuild.\n`,
               0
             );
+
+            // remove the overlay/dismiss the progress toast
+            if (caller === "settingsTab") {
+              if (progressToast) {
+                progressToast.close();
+              }
+            } else {
+              Object.keys(progressOverlays).forEach((leafID) => {
+                progressOverlays[leafID].remove();
+              });
+            }
             return;
           }
 
@@ -1324,7 +1343,6 @@ export class FlowService {
       // remove the flag
       this.plugin.isRebuilding = false;
       this.plugin.saveSettings();
-      progressBar.close();
     }
   };
 
