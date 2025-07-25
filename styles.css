@@ -690,17 +690,6 @@
   position: relative; /* Needed for the lock icon */
 }
 
-.save-rebuild-protection .cm-content::after {
-  content: "Save or rebuild in progress...";
-  position: absolute;
-  white-space: normal;
-  max-width: 90%;
-  word-wrap: break-word;
-  top: 10px;
-  right: 100px;
-  background: var(--interactive-accent);
-  color: var(--text-on-accent);
-  padding: 4px 8px;
-  font-size: 12px;
-  border-radius: 4px;
+.sync-rebuild-protection {
+  color: var(--text-muted);
 }

@@ -12,14 +12,13 @@ import {
 } from "obsidian";
 import { TextFlowSettingsTab } from "./src/settingsTab";
 import { TextFlowSettings, DEFAULT_SETTINGS } from "./src/types";
+import { EditorView, ViewUpdate, ViewPlugin } from "@codemirror/view";
 import {
-  EditorView,
-  Decoration,
-  DecorationSet,
-  ViewUpdate,
-  ViewPlugin,
-} from "@codemirror/view";
-import { EditorState, StateEffect, StateField } from "@codemirror/state";
+  EditorState,
+  StateEffect,
+  StateField,
+  Extension,
+} from "@codemirror/state";
 import * as Types from "./src/types";
 import * as Modals from "./src/modals";
 import { MenuBar } from "./src/menuBar";
@@ -39,19 +38,12 @@ interface ObsidianEditor extends Editor {
   cm?: EditorView;
 }
 
-// used by the cursor listener
-interface CodeMirrorCursor {
-  line: number;
-  ch: number;
-}
-
 // keeps all the listeners in one place
 interface ListenerBasketItem {
-  plugin: ViewPlugin<any>;
-  extension: StateEffect<any>;
+  extension: Extension;
 }
 
-// The plugin class itself
+// ----------- THE PLUGIN CLASS ITESELF
 export default class TextFlowPlugin extends Plugin {
   settings: TextFlowSettings;
   flowService: FlowService;
@@ -62,17 +54,15 @@ export default class TextFlowPlugin extends Plugin {
   // ---------------- Global objects and variables -------------------------
 
   // ---- flag to prevent the leaf-change-listener from interfering with scrolling to source file in flow
-  private isNavigatingFlow: boolean = false;
+  private explorerClickListenerActive: boolean = false;
 
   // ---- flag to keep textFlow from eating its tail when its own sync triggers vault.modify()
   isSyncing: boolean = false;
 
-  // -- tracking read-only ranges (to protect region IDs) --------------------------
-
-  // helper stuff and auxiliaries
+  // ---- flag for the region tracking
   private hadTrackingError: boolean = false;
 
-  // Add this new property to track the most recently active flow leaf
+  // This is used by listeners and setups for proper leaf activation
   private mostRecentActiveFlowLeaf: WorkspaceLeaf | null = null;
 
   // for timing of flowSwitcherModal display() calls, we need to access them from setupFlowView()
@@ -134,39 +124,20 @@ export default class TextFlowPlugin extends Plugin {
     }
   }
 
-  // ---------- debug UID because I'm too lazy to implement importing stuff from flowService to here
-  debugMarker = (marker: string) => {
-    console.log({
-      fullMarker: marker,
-      length: marker.length,
-      chars: Array.from(marker).map((char) => ({
-        char: char,
-        code: char.charCodeAt(0).toString(16), // hex code
-        name:
-          char === "\u00A0"
-            ? "NBSP"
-            : char === "\u200B"
-            ? "ZWSP"
-            : char === "\u200C"
-            ? "ZWNJ"
-            : char === "\u200D"
-            ? "ZWJ"
-            : "unknown",
-      })),
-    });
-  };
-
   // ---------------- Functions: Utilities: UI/UX -------------------------
 
   // cleanup for the menu bar
   // creation happens in setupFlowView, using menuBar.ts
+  //CHECKED AND TESTED
   cleanupMenuBar(leaf: WorkspaceLeaf) {
     if (leaf.view instanceof MarkdownView && leaf.view.menuBar) {
       leaf.view.menuBar.detach();
       delete leaf.view.menuBar;
     }
   }
+  //^CHECKED AND TESTED
 
+  // ---------------- all our nice commands
   registerCommands() {
     // Command for syncing
     this.addCommand({
@@ -285,6 +256,7 @@ export default class TextFlowPlugin extends Plugin {
       },
     });
 
+    // toggle scrollbar visibility
     this.addCommand({
       id: "toggle-scroll-bar",
       name: `Toggle scroll bar`,
@@ -303,7 +275,7 @@ export default class TextFlowPlugin extends Plugin {
   }
 
   // ----- is called onload and sets the visibility of TextFlow_SystemFolder
-  //CHECKED
+  //CHECKED AND TESTED
   discernAndSetSystemFolderState = (
     systemFolderHidden?: boolean,
     systemFolderPath?: string
@@ -343,10 +315,10 @@ export default class TextFlowPlugin extends Plugin {
     addStyle();
     setTimeout(addStyle, 500); // Add style again after 500ms
   };
-  // ^CHECKED
+  // ^CHECKED AND TESTED
 
   // ----- DECORATE SOURCE NOTES IN FILE EXPLORER -----------
-
+  // CHECKED AND TESTED
   decorateSourceNotes = async (mode: Types.CalculationMode) => {
     if (!this.settings.showExplorerDeco) return;
 
@@ -516,8 +488,10 @@ export default class TextFlowPlugin extends Plugin {
     }
   };
 
-  // removing styles if we don't want to see them
+  //^CHECKED AND TESTED
 
+  // removing all styles on deactivation
+  //CHECKED AND TESTED
   unDecorateSourceNotes = async () => {
     if (this.settings.showExplorerDeco) return;
     let path = "";
@@ -576,7 +550,10 @@ export default class TextFlowPlugin extends Plugin {
     });
   };
 
-  //------ function to clean up paths for CSS handling
+  //^CHECKED AND TESTED
+
+  //------ function to clean up paths for CSS handling; used by deco function
+  //CHECKED AND TESTED
   escapeSelector = (str: string): string => {
     // Escape special characters that have meaning in CSS selectors
     return (
@@ -586,6 +563,7 @@ export default class TextFlowPlugin extends Plugin {
         .replace(/\s/g, "\\ ")
     );
   };
+  //^CHECKED AND TESTED
 
   // ---------------- Functions: Listeners -------------------------
 
@@ -594,25 +572,29 @@ export default class TextFlowPlugin extends Plugin {
     // ---------------- File modification -------------------------------
     // This event fires whenever any file in the vault is modified
     // the isSyncing flag prevents a doom spiral
+    //CHECKED AND TESTED
+
     this.registerEvent(
       this.app.vault.on("modify", (file: TAbstractFile) => {
-        if (!this.isSyncing) {
-          if (file instanceof TFile) {
-            Object.keys(this.settings.flows).forEach((flowName) => {
-              if (
-                !this.settings.flows[flowName].flaggedForRebuild &&
-                this.settings.flows[flowName].flowMap[file.path]
-              ) {
-                this.settings.flows[flowName].flaggedForRebuild = true;
-                this.saveSettings();
-              }
-            });
-          }
+        if (this.isSyncing) return;
+
+        if (file instanceof TFile) {
+          Object.keys(this.settings.flows).forEach((flowName) => {
+            if (
+              !this.settings.flows[flowName].flaggedForRebuild &&
+              this.settings.flows[flowName].flowMap[file.path]
+            ) {
+              this.settings.flows[flowName].flaggedForRebuild = true;
+              this.saveSettings();
+            }
+          });
         }
       })
     );
+    //^CHECKED AND TESTED
 
     // Rename events
+    //CHECKED AND TESTED
     this.registerEvent(
       this.app.vault.on("rename", (file: TAbstractFile, oldPath: string) => {
         let parentFolder = normalizePath(dirname(file.path));
@@ -620,26 +602,21 @@ export default class TextFlowPlugin extends Plugin {
           parentFolder = file.path;
         }
 
-        // Check if the current folder's path is the stored systemFolderPath;
-        // if it is, we don't have to do any more checks
-        if (parentFolder === this.settings.systemFolderPath) return;
-        // if it's not, check if it should be
+        // Check if the object's path is (or should be) system folder
         if (parentFolder.contains(TEXTFLOW_SYSTEMFOLDER)) {
-          // if it should be, update settings
           this.ensureSystemFolder();
+          return;
         }
 
-        const breakableCheckPaths = Object.keys(this.settings.flows);
-        for (let flowName of breakableCheckPaths) {
-          // if the flow is made from bookmarks, move on
-          if (this.settings.flows[flowName].flaggedForRebuild) break;
-          if (this.settings.flows[flowName].flowRecipe.bookmarks) break;
+        const continuableCheckPaths = Object.keys(this.settings.flows);
+        for (let flowName of continuableCheckPaths) {
+          if (this.settings.flows[flowName].flaggedForRebuild) continue;
 
           // if the flow contained the old path, flag and move on
           if (this.settings.flows[flowName].flowMap[oldPath]) {
             this.settings.flows[flowName].flaggedForRebuild = true;
             this.saveSettings();
-            break;
+            continue;
           }
           // if the parent is included
           if (
@@ -648,30 +625,39 @@ export default class TextFlowPlugin extends Plugin {
           ) {
             this.settings.flows[flowName].flaggedForRebuild = true;
             this.saveSettings();
-            break;
+            continue;
           }
           if (
-            // if the path starts with inclusion path, subfolders aren't excluded
-            // and the subfolder isn't excluded later
+            // if the path starts with inclusion path and subfolders aren't excluded
             parentFolder.startsWith(
               this.settings.flows[flowName].flowCookbook.folderIncluded + "/"
             ) &&
             !this.settings.flows[flowName].flowCookbook.folderIncluded.endsWith(
               "/"
-            ) &&
-            !parentFolder.includes(
-              this.settings.flows[flowName].flowCookbook.folderExcluded + "/"
             )
           ) {
+            // if the exclusion criterion isn't empty
+            if (this.settings.flows[flowName].flowCookbook.folderExcluded) {
+              const exclusionArray =
+                this.settings.flows[flowName].flowCookbook.folderExcluded.split(
+                  ","
+                );
+              const isExcluded = exclusionArray.some((path) =>
+                parentFolder.includes(path.trim() + "/")
+              );
+              if (isExcluded) continue;
+            }
             this.settings.flows[flowName].flaggedForRebuild = true;
             this.saveSettings();
-            break;
+            continue;
           }
         }
       })
     );
+    //^CHECKED AND TESTED
 
     // Create events
+    //CHECKED AND TESTED
     this.registerEvent(
       this.app.vault.on("create", (file: TAbstractFile) => {
         if (this.isLoading) return;
@@ -680,10 +666,18 @@ export default class TextFlowPlugin extends Plugin {
         if (file instanceof TFolder) {
           parentFolder = normalizePath(file.path);
         }
-        const breakableCheckPaths = Object.keys(this.settings.flows);
-        for (let flowName of breakableCheckPaths) {
-          if (this.settings.flows[flowName].flaggedForRebuild) break;
-          if (this.settings.flows[flowName].flowRecipe.bookmarks) break;
+
+        if (parentFolder.contains(TEXTFLOW_SYSTEMFOLDER)) {
+          this.ensureSystemFolder();
+          return;
+        }
+
+        const continuableCheckPaths = Object.keys(this.settings.flows);
+        for (let flowName of continuableCheckPaths) {
+          if (this.settings.flows[flowName].flaggedForRebuild) continue;
+          // if the flow is made from bookmarks, move on
+          if (this.settings.flows[flowName].flowRecipe.bookmarks) continue;
+
           // if the parent folder is included
           if (
             parentFolder ===
@@ -691,129 +685,95 @@ export default class TextFlowPlugin extends Plugin {
           ) {
             this.settings.flows[flowName].flaggedForRebuild = true;
             this.saveSettings();
-            break;
+            continue;
           }
           if (
             // if the path starts with inclusion path, subfolders aren't excluded
-            // and the subfolder isn't excluded later
             parentFolder.startsWith(
               this.settings.flows[flowName].flowCookbook.folderIncluded + "/"
             ) &&
             !this.settings.flows[flowName].flowCookbook.folderIncluded.endsWith(
               "/"
-            ) &&
-            !parentFolder.includes(
-              this.settings.flows[flowName].flowCookbook.folderExcluded + "/"
             )
           ) {
+            if (this.settings.flows[flowName].flowCookbook.folderExcluded) {
+              const exclusionArray =
+                this.settings.flows[flowName].flowCookbook.folderExcluded.split(
+                  ","
+                );
+              const isExcluded = exclusionArray.some((path) =>
+                parentFolder.includes(path.trim() + "/")
+              );
+              if (isExcluded) continue;
+            }
             this.settings.flows[flowName].flaggedForRebuild = true;
             this.saveSettings();
-            break;
+            continue;
           }
         }
       })
     );
+    //^CHECKED AND TESTED
 
     // Delete events
+    //CHECKED AND TESTED
     this.registerEvent(
       this.app.vault.on("delete", (file: TAbstractFile) => {
         if (file instanceof TFile) {
-          const breakableCheckPaths = Object.keys(this.settings.flows);
-          for (let flowName of breakableCheckPaths) {
+          const continuableCheckPaths = Object.keys(this.settings.flows);
+          for (let flowName of continuableCheckPaths) {
             if (
               !this.settings.flows[flowName].flaggedForRebuild &&
               this.settings.flows[flowName].flowMap[normalizePath(file.path)]
             ) {
               this.settings.flows[flowName].flaggedForRebuild = true;
               this.saveSettings();
-              break;
+              continue;
             }
           }
         }
       })
     );
+    //^CHECKED AND TESTED
 
+    //CHECKED AND TESTED
     // ----------------- Auto-save on blur  -------------------------------
     this.registerDomEvent(window, "blur", async () => {
       await this.syncAllLeaves();
     });
+    //^CHECKED AND TESTED
 
-    // -- LEAF CHANGE - Manage editors and warning css on flow, source and vanilla notes ------
+    // -- LEAF CHANGE - Call management for flow, source and vanilla notes ------
     // setup functions take care of the details
+    //CHECKED AND TESTED
     this.registerEvent(
       this.app.workspace.on("active-leaf-change", async (leaf) => {
-        if (this.isNavigatingFlow) {
+        // so we skip if the explorerClickListener is already taking care of stuff
+        if (this.explorerClickListenerActive) {
           return;
         }
+
         if (leaf?.view instanceof MarkdownView) {
           const view = leaf.view;
           const activeLeafPath = leaf.view.file?.path;
           if (activeLeafPath) {
-            // Check if this is a source file and we're navigating
-            const isSourceFile = Object.values(this.settings.flows).some(
-              (flow) => flow.flowMap[activeLeafPath]
-            );
-            if (isSourceFile && this.isNavigatingFlow) {
-              return;
-            }
             // if active leaf is flow, set it up
             const isFlow = this.isFlowFile(activeLeafPath);
             if (isFlow) {
               await this.setupFlowView(isFlow, leaf.view);
               this.mostRecentActiveFlowLeaf = leaf;
-
               return;
             }
-            // if active leaf is source, set it up
-            for (let flow in this.settings.flows) {
-              if (this.settings.flows[flow].flowMap[activeLeafPath]) {
-                this.setupSourceNote(view);
-                return;
-              } else {
-                this.setupVanillaNote(view);
-              }
-            }
+            // otherwise strip the flow stuff
+            this.closeFlow(view);
           }
         }
       })
     );
+    //^CHECKED AND TESTED
 
-    // -- FILE OPEN - Manage editors and warning css on -------------
-    this.registerEvent(
-      this.app.workspace.on("file-open", async (file) => {
-        if (this.isNavigatingFlow) {
-          return;
-        }
-        // In case the newly opened file has been loaded into
-        // the active leaf, which doesn't trigger active-leaf-change
-        const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (!activeView || !activeView.file) {
-          return;
-        }
-
-        if (activeView && activeView.file) {
-          const activeLeafPath = activeView.file.path;
-          if (activeLeafPath) {
-            // if active leaf is flow, set it up
-            const isFlow = this.isFlowFile(activeLeafPath);
-            if (isFlow) {
-              await this.setupFlowView(isFlow, activeView);
-              return;
-            }
-            // if active leaf is source, set it up
-            for (let flow in this.settings.flows) {
-              if (this.settings.flows[flow].flowMap[activeLeafPath]) {
-                this.setupSourceNote(activeView);
-              }
-            }
-          } else {
-            this.setupVanillaNote(activeView);
-          }
-        }
-      })
-    );
-
-    // catch it, when only an empty leaf remains
+    // catch if only an empty leaf remains
+    //CHECKED AND TESTED
     this.registerEvent(
       this.app.workspace.on("layout-change", () => {
         if (this.app.workspace.getLeavesOfType("markdown").length === 0) {
@@ -823,18 +783,17 @@ export default class TextFlowPlugin extends Plugin {
       })
     );
   }
+  //^CHECKED AND TESTED
+
+  //CHECKED AND TESTED
 
   // ---------------- Functions: Listeners: Individual ----------
-
-  // leaf.view as MarkdownView
   listenerBasket: { [key: string]: ListenerBasketItem } = {};
 
   private addCursorListener = (view: MarkdownView | null) => {
-    // Off ramps
     if (!view) {
       return;
     }
-
     const editor = view?.editor as ObsidianEditor | null;
     if (!editor) {
       return;
@@ -843,123 +802,68 @@ export default class TextFlowPlugin extends Plugin {
     if (!cmEditor) {
       return;
     }
+
     const activeLeafPath = view.file?.path;
     const leafID = (view.leaf as any).id;
-
-    if (activeLeafPath && this.listenerBasket[leafID]) {
+    if (this.listenerBasket[leafID]) {
       return;
     }
 
     // ---------- actual listener stuff
-    if (activeLeafPath !== undefined) {
-      const isItFlow = this.isFlowFile(activeLeafPath);
+    if (activeLeafPath) {
+      const flowName = this.isFlowFile(activeLeafPath);
 
-      if (cmEditor && isItFlow) {
+      if (cmEditor && flowName) {
         const plugin = this;
         let lastCursorPosition: number | null = null;
         let debounceTimeout: NodeJS.Timeout | null = null;
 
         const navigationListener = ViewPlugin.fromClass(
           class {
-            constructor(view: EditorView) {
-              try {
-                // Any initialization if needed
-              } catch (error) {
-                console.error("Error initializing navigation listener:", error);
-                new Notice(
-                  "textFlow Plugin Critical Error:\n " +
-                    "Flow tracking system failed.\n" +
-                    "1. Close the flow immediately\n" +
-                    "2. Close and reopen your vault\n" +
-                    "3. Verify your flow\n\n" +
-                    "If this error persists, please report it on github.",
-                  20000 // Show for 10 seconds
-                );
-                throw error;
-              }
-            }
+            constructor(view: EditorView) {}
 
             update(update: ViewUpdate) {
-              try {
-                if (update.selectionSet) {
-                  const cursorOffset = update.state.selection.main.from;
+              if (update.selectionSet) {
+                const cursorOffset = update.state.selection.main.from;
 
-                  if (cursorOffset !== lastCursorPosition) {
-                    lastCursorPosition = cursorOffset;
+                if (cursorOffset !== lastCursorPosition) {
+                  lastCursorPosition = cursorOffset;
 
-                    if (debounceTimeout) {
-                      clearTimeout(debounceTimeout);
-                    }
-
-                    debounceTimeout = setTimeout(() => {
-                      try {
-                        if (!plugin.settings.flows[isItFlow]) {
-                          throw new Error(
-                            `Flow ${isItFlow} not found in settings`
-                          );
-                        }
-                        plugin.checkActiveRegionCache(
-                          plugin.settings.flows[isItFlow],
-                          leafID,
-                          cursorOffset,
-                          view
-                        );
-                        /*console.log(
-                          "cusor listener calling checkActiveRegionCache"
-                        );*/
-                        if (plugin.hadTrackingError) {
-                          new Notice(
-                            "textFlow: Flow tracking restored. :)\n" +
-                              "Your changes are now being tracked properly again.",
-                            4000
-                          );
-                          plugin.hadTrackingError = false;
-                        }
-                      } catch (error) {
-                        console.error(
-                          "Error processing cursor position:",
-                          error
-                        );
-                        plugin.hadTrackingError = true;
-                        new Notice(
-                          "textFlow Plugin warning:\n " +
-                            "Flow region tracking failed!\n\n" +
-                            "Please close and reopen your flow.\n\n" +
-                            "If this error persists, please report it on github.",
-                          20000 // Show for 5 seconds
-                        );
-                      }
-                    }, 250);
+                  if (debounceTimeout) {
+                    clearTimeout(debounceTimeout);
                   }
+
+                  debounceTimeout = setTimeout(() => {
+                    if (!plugin.settings.flows[flowName]) {
+                      throw new Error(`Flow ${flowName} not found in settings`);
+                    }
+                    try {
+                      plugin.checkActiveRegionCache(
+                        plugin.settings.flows[flowName],
+                        leafID,
+                        cursorOffset,
+                        view
+                      );
+                    } catch (error) {
+                      console.error("Error processing cursor position:", error);
+                      new Notice(
+                        "textFlow:\n " +
+                          `Cursor tracking failed for ${flowName}!\n` +
+                          "Please close and reopen the flow.\n" +
+                          "If this error persists, reload your vault.",
+                        20000 // Show for 5 seconds
+                      );
+                    }
+                  }, 250);
                 }
-              } catch (error) {
-                console.error("Error in navigation update:", error);
-                new Notice(
-                  "textFlow Plugin warning:\n " +
-                    "Flow region tracking failed!\n\n" +
-                    "Please close and reopen your flow.\n\n" +
-                    "If this error persists, please report it on github.",
-                  20000
-                );
               }
             }
 
             destroy() {
-              try {
-                if (debounceTimeout) {
-                  clearTimeout(debounceTimeout);
-                }
-                if (activeLeafPath) {
-                  delete plugin.listenerBasket[leafID];
-                }
-              } catch (error) {
-                console.error("Error cleaning up navigation listener:", error);
-                new Notice(
-                  "textFlow Plugin: Error during cleanup of cursor listener.\n" +
-                    "Please reload the plugin to ensure proper operation.",
-                  10000
-                );
+              if (debounceTimeout) {
+                clearTimeout(debounceTimeout);
               }
+              delete plugin.listenerBasket[leafID];
             }
           }
         );
@@ -967,31 +871,21 @@ export default class TextFlowPlugin extends Plugin {
         try {
           const extension = StateEffect.appendConfig.of([navigationListener]);
 
-          if (!activeLeafPath) {
-            throw new Error("TextFlow plugin: No active leaf path available.");
-          }
-
           this.listenerBasket[leafID] = {
-            plugin: navigationListener,
-            extension: extension,
+            extension: navigationListener,
           };
 
           cmEditor.dispatch({
             effects: extension,
           });
         } catch (error) {
-          //  console.error("Error attaching navigation listener:", error);
-          if (activeLeafPath) {
-            delete this.listenerBasket[leafID];
-          }
+          delete this.listenerBasket[leafID];
           new Notice(
-            "textFlow Plugin Critical Error:\n " +
-              "Flow tracking system failed.\n" +
-              "1. Close the flow immediately\n" +
-              "2. Close and reopen your vault\n" +
-              "3. Verify your flow\n\n" +
-              "If this error persists, please report it on github.",
-            20000
+            "textFlow:\n " +
+              `Cursor tracking failed for ${flowName}!\n` +
+              "Please close and reopen the flow.\n" +
+              "If this error persists, reload your vault.",
+            20000 // Show for 5 seconds
           );
         }
       } else {
@@ -999,7 +893,9 @@ export default class TextFlowPlugin extends Plugin {
       }
     }
   };
+  //^CHECKED AND TESTED
 
+  //CHECKED AND TESTED
   // ---------------------------------------------------------
   removeCursorListener = (view: MarkdownView) => {
     const leafID = (view.leaf as any).id;
@@ -1008,17 +904,19 @@ export default class TextFlowPlugin extends Plugin {
       const cmEditor = editor.cm;
       if (cmEditor) {
         // Remove the listener
+        const { extension } = this.listenerBasket[leafID];
+
         cmEditor.dispatch({
-          effects: StateEffect.reconfigure.of([]),
+          effects: StateEffect.appendConfig.of([extension]),
         });
-        // The destroy callback will handle removing from the basket
+        delete this.listenerBasket[leafID];
       }
     }
   };
+  //^CHECKED AND TESTED
 
   // -----------------
   private addTextChangeListener = (view: MarkdownView | null) => {
-    // off ramps
     if (!view) return;
 
     const editor = view?.editor as ObsidianEditor | null;
@@ -1042,19 +940,7 @@ export default class TextFlowPlugin extends Plugin {
         let debounceTimeout: NodeJS.Timeout | null = null;
         const changeListener = ViewPlugin.fromClass(
           class {
-            constructor(view: EditorView) {
-              try {
-                // Any initialization if needed
-              } catch (error) {
-                console.error("Error initializing change listener:", error);
-                new Notice(
-                  "textFlow Plugin: Error tracking text changes.\n" +
-                    "Please report this issue on github.",
-                  10000
-                );
-                throw error;
-              }
-            }
+            constructor(view: EditorView) {}
 
             update(update: ViewUpdate) {
               try {
@@ -1172,8 +1058,7 @@ export default class TextFlowPlugin extends Plugin {
           }
 
           this.listenerBasket[`${leafID}-changes`] = {
-            plugin: changeListener,
-            extension: extension,
+            extension: changeListener,
           };
 
           cmEditor.dispatch({
@@ -1310,7 +1195,7 @@ export default class TextFlowPlugin extends Plugin {
 
       if (isFlowName) {
         clickHandled = true;
-        this.isNavigatingFlow = true;
+        this.explorerClickListenerActive = true;
         /* console.log(
           `TextFlow: Clicked file ${clickedFilePath} is a flow. Activating.`
         );*/
@@ -1322,7 +1207,7 @@ export default class TextFlowPlugin extends Plugin {
           }
         } finally {
           setTimeout(() => {
-            this.isNavigatingFlow = false;
+            this.explorerClickListenerActive = false;
             /*console.log(
               "TextFlow: isNavigatingFlow reset after flow activation."
             );*/
@@ -1346,7 +1231,7 @@ export default class TextFlowPlugin extends Plugin {
 
         if (parentFlowName && flowSettings && isOfActiveFlow) {
           clickHandled = true;
-          this.isNavigatingFlow = true; // Set before any async operations
+          this.explorerClickListenerActive = true; // Set before any async operations
           /*console.log(
             `TextFlow: Clicked source file ${clickedFilePath} belongs to flow ${parentFlowName}.`
           );*/
@@ -1456,7 +1341,7 @@ export default class TextFlowPlugin extends Plugin {
             );
           } finally {
             setTimeout(() => {
-              this.isNavigatingFlow = false;
+              this.explorerClickListenerActive = false;
             }, 300); // Increased delay
           }
         }
@@ -1464,7 +1349,7 @@ export default class TextFlowPlugin extends Plugin {
 
       // Fallback for files not handled as flows or source files by our logic
       if (!clickHandled) {
-        this.isNavigatingFlow = false; // Ensure this is false for regular note opening
+        this.explorerClickListenerActive = false; // Ensure this is false for regular note opening
         if (noteIsOpen) {
           this.app.workspace.setActiveLeaf(noteIsOpen, { focus: true });
         } else {
@@ -1737,22 +1622,6 @@ export default class TextFlowPlugin extends Plugin {
     this.saveSettings();
   };
 
-  // --- Set up source files
-  setupSourceNote = (view: MarkdownView) => {
-    if (this.isNavigatingFlow) {
-      //console.log("Skipping source note setup during navigation");
-      return;
-    }
-    //console.log("setupSourceNote: calling closeFlow");
-    this.closeFlow(view);
-  };
-
-  // --- set up vanilla note
-  setupVanillaNote = (view: MarkdownView) => {
-    //console.log("setupVanillaNote: calling close flow");
-    this.closeFlow(view);
-  };
-
   // ---- Functions: Data safety ----------------------------
 
   // ---- Functions: Data safety: Read-only for UIDs and dividers
@@ -1845,10 +1714,8 @@ export default class TextFlowPlugin extends Plugin {
     view: MarkdownView,
     protectionType: Types.ProtectionType
   ) => {
-    console.log("removeWriteProtection being called");
     const leafId = (view.leaf as any).id;
     const activeLeafPath = view.file?.path;
-    console.log("working on leaf ", activeLeafPath);
     let editor = view.editor as any;
     if (!editor) {
       const newEditor = await this.pollForEditor(view);
@@ -1856,10 +1723,9 @@ export default class TextFlowPlugin extends Plugin {
         editor = newEditor;
       }
     }
-    console.log("got past the editor check");
+
     const removeProtection = EditorState.transactionFilter.of((tr) => tr);
     (removeProtection as any).protectionType = protectionType;
-
     editor.cm.dispatch({
       effects: StateEffect.appendConfig.of([removeProtection]),
     });
@@ -1871,7 +1737,8 @@ export default class TextFlowPlugin extends Plugin {
 
   // For some reason removeWriteProtection refuses to work for sync
   // on the very first flow leaf. I have tried to fix it multiple times,
-  // and now I'm done trying. And since this works, I'm just going to keep it:
+  // and now I'm done trying. So since the following code works, I'm just
+  // going to keep it.
   // ----- protect the editor from changes while a save is going on ----------------
   private toggleProtectionEffect = StateEffect.define<boolean>();
 
@@ -1929,7 +1796,7 @@ export default class TextFlowPlugin extends Plugin {
     try {
       const container = editorView.dom.closest(".cm-editor")?.parentElement;
       if (container) {
-        container.classList.toggle("save-rebuild-protection", isProtected);
+        container.classList.toggle("sync-rebuild-protection", isProtected);
       }
       editorView.dispatch({
         effects: this.toggleProtectionEffect.of(isProtected),
