@@ -72,70 +72,6 @@ export default class TextFlowPlugin extends Plugin {
   // helper stuff and auxiliaries
   private hadTrackingError: boolean = false;
 
-  // adds a lock symbol to read-only files
-  private readOnlyHighlight = Decoration.mark({
-    class: "cm-read-only-region",
-  });
-
-  // state field for id protection
-  private readOnlyRanges = StateField.define<{
-    ranges: Array<{ from: number; to: number }>;
-    decorations: DecorationSet;
-  }>({
-    create: () => ({
-      ranges: [],
-      decorations: Decoration.none,
-    }),
-    // tr -> transaction
-    update: (state, tr) => {
-      let ranges = state.ranges;
-
-      // Handle range updates
-      // e -> effect
-      for (let e of tr.effects) {
-        if (e.is(this.updateRangesEffect)) {
-          ranges = e.value;
-        }
-      }
-
-      // Create decorations from ranges; normalize position 0
-      const decorations = Decoration.set(
-        ranges.map((range) =>
-          this.readOnlyHighlight.range(Math.max(0, range.from), range.to)
-        )
-      );
-
-      return {
-        ranges,
-        decorations,
-      };
-    },
-    provide: (state) =>
-      EditorView.decorations.from(state, (value) => value.decorations),
-  });
-
-  private updateRangesEffect =
-    StateEffect.define<Array<{ from: number; to: number }>>();
-
-  // ----- protect the editor from changes while a save is going on ----------------
-  private toggleProtectionEffect = StateEffect.define<boolean>();
-
-  protectDuringSaveExtension = StateField.define<boolean>({
-    create: () => false,
-    update: (value, tr) => {
-      for (let effect of tr.effects) {
-        if (effect.is(this.toggleProtectionEffect)) {
-          return effect.value;
-        }
-      }
-      return value;
-    },
-    provide: (field) =>
-      EditorView.editorAttributes.of((value) => ({
-        editable: value ? "false" : "true",
-      })),
-  });
-
   // Add this new property to track the most recently active flow leaf
   private mostRecentActiveFlowLeaf: WorkspaceLeaf | null = null;
 
@@ -1560,7 +1496,7 @@ export default class TextFlowPlugin extends Plugin {
       }
 
       this.addProtectDuringSaveExtension(editor);
-      this.addIdDividerProtection(view, flowName);
+      this.addWriteProtection(view, "divider");
       this.addCursorListener(view);
       this.addTextChangeListener(view);
 
@@ -1790,7 +1726,7 @@ export default class TextFlowPlugin extends Plugin {
     await this.syncAllLeaves();
     this.removeCursorListener(view);
     this.removeTextChangeListener(view);
-    this.removeIdDividerProtection(view.editor as any);
+    this.removeWriteProtection(view, "divider");
     this.cleanupMenuBar(view.leaf);
     this.manageActiveFlowObject();
     if (view.menuBar) {
@@ -1820,20 +1756,30 @@ export default class TextFlowPlugin extends Plugin {
   // ---- Functions: Data safety ----------------------------
 
   // ---- Functions: Data safety: Read-only for UIDs and dividers
-  addIdDividerProtection = (view: MarkdownView, flowName: string) => {
-    const flow = this.settings.flows[flowName];
-    if (!flow) return;
+  // ---- Functions: Data safety: Read-only for UIDs and dividers
+  private protectedEditorsObject = new Map<string, boolean>();
 
+  addWriteProtection = (
+    view: MarkdownView,
+    protectionType: Types.ProtectionType
+  ) => {
     const editor = view.editor as any;
     if (!editor.cm) return;
 
-    if (!this.hasIdDividerProtection(editor)) {
+    const leafId = (view.leaf as any).id;
+
+    if (!this.hasWriteProtection(view, protectionType)) {
       const preventEdit = EditorState.transactionFilter.of((tr) => {
-        if (this.isRebuilding) {
-          return tr;
+        // if the flow is being rebuilt, we need to suspend protection
+        // otherwise the editor contents can't be updated
+        if (this.isRebuilding) return tr;
+
+        // if we're syncing, we need to block everything
+        if (protectionType === "sync") {
+          return [];
         }
 
-        if (!tr.changes.empty) {
+        if (!tr.changes.empty && protectionType === "divider") {
           let shouldReject = false;
 
           tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
@@ -1870,32 +1816,81 @@ export default class TextFlowPlugin extends Plugin {
         return tr; // Allow normal edits
       });
 
+      // actually add the protection
+      (preventEdit as any).protectiontType = protectionType;
       editor.cm.dispatch({
         effects: StateEffect.appendConfig.of([preventEdit]),
       });
+
+      // add entry to out tracker
+      this.protectedEditorsObject.set(`${leafId}-${protectionType}`, true);
     }
   };
 
   // ----------------------------------------------------------
-  hasIdDividerProtection = (editor: any) => {
+  hasWriteProtection = (
+    view: MarkdownView,
+    protectionType: Types.ProtectionType
+  ) => {
+    let editor = view.editor as any;
     if (!editor.cm) return false;
-    const hasField =
-      editor.cm.state.field(this.readOnlyRanges, false) !== undefined;
-    return hasField;
+    const leafId = (view.leaf as any).id;
+    return (
+      this.protectedEditorsObject.get(`${leafId}-${protectionType}`) ?? false
+    );
   };
 
   // -----------------------------------------------------------
-  removeIdDividerProtection = (editor: any) => {
-    if (!editor.cm) return;
-
-    if (this.hasIdDividerProtection(editor)) {
-      editor.cm.dispatch({
-        effects: StateEffect.reconfigure.of([]),
-      });
+  removeWriteProtection = async (
+    view: MarkdownView,
+    protectionType: Types.ProtectionType
+  ) => {
+    console.log("removeWriteProtection being called");
+    const leafId = (view.leaf as any).id;
+    const activeLeafPath = view.file?.path;
+    console.log("working on leaf ", activeLeafPath);
+    let editor = view.editor as any;
+    if (!editor) {
+      const newEditor = await this.pollForEditor(view);
+      if (newEditor) {
+        editor = newEditor;
+      }
     }
+    console.log("got past the editor check");
+    const removeProtection = EditorState.transactionFilter.of((tr) => tr);
+    (removeProtection as any).protectionType = protectionType;
+
+    editor.cm.dispatch({
+      effects: StateEffect.appendConfig.of([removeProtection]),
+    });
+
+    this.protectedEditorsObject.delete(`${leafId}-${protectionType}`);
   };
 
   /// --- Functions: Data safety: Protect editor during saving
+
+  // For some reason removeWriteProtection refuses to work for sync
+  // on the very first flow leaf. I have tried to fix it multiple times,
+  // and now I'm done trying. And since this works, I'm just going to keep it:
+  // ----- protect the editor from changes while a save is going on ----------------
+  private toggleProtectionEffect = StateEffect.define<boolean>();
+
+  protectDuringSaveExtension = StateField.define<boolean>({
+    create: () => false,
+    update: (value, tr) => {
+      for (let effect of tr.effects) {
+        if (effect.is(this.toggleProtectionEffect)) {
+          return effect.value;
+        }
+      }
+      return value;
+    },
+    provide: (field) =>
+      EditorView.editorAttributes.of((value) => ({
+        editable: value ? "false" : "true",
+      })),
+  });
+
   private addProtectDuringSaveExtension(editor: any) {
     try {
       if (editor.cm instanceof EditorView) {
@@ -1953,7 +1948,7 @@ export default class TextFlowPlugin extends Plugin {
     delay = 200
   ): Promise<ObsidianEditor | null> {
     for (let i = 0; i < retries; i++) {
-      const editor = view.editor as ObsidianEditor;
+      let editor = view.editor as ObsidianEditor;
       if (editor?.cm) {
         return editor; // Success!
       }
@@ -2005,6 +2000,7 @@ export default class TextFlowPlugin extends Plugin {
           const text = view.editor.getValue();
           const leafID = (view.leaf as any).id;
           await this.saveBackToSource(flowName, text, leafID);
+
           if (view.menuBar) {
             view.menuBar.refresh(view.contentEl);
           }
@@ -2542,7 +2538,7 @@ export default class TextFlowPlugin extends Plugin {
     for (const leaf of markdownLeaves) {
       if (leaf.view instanceof MarkdownView) {
         const editor = leaf.view.editor as any;
-        this.removeIdDividerProtection(editor);
+        this.removeWriteProtection(leaf.view, "divider");
       }
     }
 
