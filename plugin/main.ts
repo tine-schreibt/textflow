@@ -804,7 +804,7 @@ export default class TextFlowPlugin extends Plugin {
     }
 
     const activeLeafPath = view.file?.path;
-    const leafID = (view.leaf as any).id;
+    const leafID: number = (view.leaf as any).id;
     if (this.listenerBasket[leafID]) {
       return;
     }
@@ -837,23 +837,13 @@ export default class TextFlowPlugin extends Plugin {
                     if (!plugin.settings.flows[flowName]) {
                       throw new Error(`Flow ${flowName} not found in settings`);
                     }
-                    try {
-                      plugin.checkActiveRegionCache(
-                        plugin.settings.flows[flowName],
-                        leafID,
-                        cursorOffset,
-                        view
-                      );
-                    } catch (error) {
-                      console.error("Error processing cursor position:", error);
-                      new Notice(
-                        "textFlow:\n " +
-                          `Cursor tracking failed for ${flowName}!\n` +
-                          "Please close and reopen the flow.\n" +
-                          "If this error persists, reload your vault.",
-                        20000 // Show for 5 seconds
-                      );
-                    }
+                    // this sets off a chain of functions which updates the active Region
+                    plugin.checkActiveRegionCache(
+                      plugin.settings.flows[flowName],
+                      leafID,
+                      cursorOffset,
+                      view
+                    );
                   }, 250);
                 }
               }
@@ -915,6 +905,7 @@ export default class TextFlowPlugin extends Plugin {
   };
   //^CHECKED AND TESTED
 
+  //CHECKED AND TESTED
   // -----------------
   private addTextChangeListener = (view: MarkdownView | null) => {
     if (!view) return;
@@ -927,106 +918,76 @@ export default class TextFlowPlugin extends Plugin {
 
     const activeLeafPath = view.file?.path;
     const leafID: number = (view.leaf as any).id; // Add this line
-
     if (leafID && this.listenerBasket[`${leafID}-changes`]) {
       return;
     }
-    if (activeLeafPath !== undefined) {
-      const isItFlow = this.isFlowFile(activeLeafPath);
+
+    if (activeLeafPath) {
+      const flowName = this.isFlowFile(activeLeafPath);
       // actual listener
 
-      if (cmEditor && isItFlow) {
+      if (cmEditor && flowName) {
         const plugin = this;
         let debounceTimeout: NodeJS.Timeout | null = null;
+
         const changeListener = ViewPlugin.fromClass(
           class {
             constructor(view: EditorView) {}
 
             update(update: ViewUpdate) {
-              try {
-                if (update.docChanged) {
-                  const changes = update.changes;
+              if (update.docChanged) {
+                const changes = update.changes;
 
-                  // return if no actual text change has taken place
-                  if (changes.empty) return;
+                // return if no actual text change has taken place
+                if (changes.empty) return;
 
-                  if (debounceTimeout) {
-                    clearTimeout(debounceTimeout);
+                if (debounceTimeout) {
+                  clearTimeout(debounceTimeout);
+                }
+
+                debounceTimeout = setTimeout(() => {
+                  // Prevent rebuild frong registering as text change
+                  if (plugin.settings.flows[flowName].isFreshBuild) {
+                    plugin.settings.flows[flowName].isFreshBuild = false;
+                    return;
                   }
 
-                  debounceTimeout = setTimeout(() => {
-                    try {
-                      // If leaf region is a file
-                      if (
-                        plugin.settings.flows[isItFlow].activeRegions[leafID] &&
-                        plugin.settings.flows[isItFlow].activeRegions[leafID]
-                          .type === "file"
-                      ) {
-                        const activePath =
-                          plugin.settings.flows[isItFlow].activeRegions[leafID]
-                            .path;
+                  // Ensure that active region for the leaf is of type 'file'
+                  if (!plugin.settings.flows[flowName].activeRegions) return;
+                  if (!plugin.settings.flows[flowName].activeRegions[leafID])
+                    return;
+                  if (
+                    plugin.settings.flows[flowName].activeRegions[leafID]
+                      .type != "file"
+                  )
+                    return;
 
-                        // This check is here because else a rebuild will put the currently active region in
-                        // the unsavedRegionsArray, and I don't want to fudge with more complicated state management
-                        if (plugin.settings.flows[isItFlow].isFreshBuild) {
-                          plugin.settings.flows[isItFlow].isFreshBuild = false;
-                          return;
-                        }
+                  const activeRegionPath =
+                    plugin.settings.flows[flowName].activeRegions[leafID].path;
+                  if (!activeRegionPath) return;
 
-                        // if the active region isn't registered as modified
-                        if (
-                          activePath &&
-                          !plugin.settings.flows[
-                            isItFlow
-                          ].unsavedRegionsArray.includes(activePath)
-                        ) {
-                          // Add to unsaved array
-                          plugin.settings.flows[
-                            isItFlow
-                          ].unsavedRegionsArray.push(activePath);
-                          plugin.saveSettings();
-                          if (view.menuBar) {
-                            view.menuBar.refresh(view.contentEl);
-                          }
-                          if (plugin.settings.showExplorerDeco) {
-                            plugin.decorateSourceNotes("update");
-                          }
+                  if (
+                    !plugin.settings.flows[
+                      flowName
+                    ].unsavedRegionsArray.includes(activeRegionPath)
+                  ) {
+                    // Add to unsynced array
+                    plugin.settings.flows[flowName].unsavedRegionsArray.push(
+                      activeRegionPath
+                    );
+                    plugin.saveSettings();
 
-                          // Check other flows that might need rebuilding
-                          Object.keys(plugin.settings.flows).forEach(
-                            (otherFlow) => {
-                              if (
-                                otherFlow !== isItFlow && // Different flow
-                                !plugin.settings.flows[otherFlow]
-                                  .flaggedForRebuild && // Not already flagged
-                                plugin.settings.flows[otherFlow].flowMap[
-                                  activePath
-                                ] // Contains this file
-                              ) {
-                                plugin.settings.flows[
-                                  otherFlow
-                                ].flaggedForRebuild = true;
-                              }
-                            }
-                          );
-                        }
-                      }
-                    } catch (error) {
-                      console.error("Error processing text change:", error);
-                      new Notice(
-                        "textFlow Plugin warning: Error processing text change",
-                        5000
-                      );
+                    // update the menu bar to show unsynced status
+                    if (view.menuBar) {
+                      view.menuBar.refresh(view.contentEl);
                     }
-                  }, 250);
-                }
-              } catch (error) {
-                console.error("Error in change update:", error);
-                new Notice(
-                  "textFlow Plugin: Error tracking changes.\n" +
-                    "Please report this issue on github.",
-                  10000
-                );
+
+                    // update source decoration
+                    if (plugin.settings.showExplorerDeco) {
+                      plugin.decorateSourceNotes("update");
+                    }
+                  }
+                }, 250);
               }
             }
 
@@ -1035,9 +996,7 @@ export default class TextFlowPlugin extends Plugin {
                 if (debounceTimeout) {
                   clearTimeout(debounceTimeout);
                 }
-                if (activeLeafPath) {
-                  delete plugin.listenerBasket[`${leafID}-changes`];
-                }
+                delete plugin.listenerBasket[`${leafID}-changes`];
               } catch (error) {
                 console.error("Error cleaning up change listener:", error);
                 new Notice(
@@ -1053,10 +1012,6 @@ export default class TextFlowPlugin extends Plugin {
         try {
           const extension = StateEffect.appendConfig.of([changeListener]);
 
-          if (!activeLeafPath) {
-            throw new Error("TextFlow plugin: No active leaf path available.");
-          }
-
           this.listenerBasket[`${leafID}-changes`] = {
             extension: changeListener,
           };
@@ -1065,7 +1020,6 @@ export default class TextFlowPlugin extends Plugin {
             effects: extension,
           });
         } catch (error) {
-          //  console.error("Error attaching change listener:", error);
           if (activeLeafPath) {
             delete this.listenerBasket[`${leafID}-changes`];
           }
@@ -1078,23 +1032,9 @@ export default class TextFlowPlugin extends Plugin {
       } else {
         this.removeTextChangeListener(view);
       }
-
-      Object.keys(this.settings.flows).forEach((flow) => {
-        if (
-          isItFlow &&
-          flow != isItFlow &&
-          !this.settings.flows[flow].flaggedForRebuild
-        ) {
-          for (let unsavedPath of this.settings.flows[isItFlow]
-            .unsavedRegionsArray) {
-            if (this.settings.flows[flow].flowMap.usavedPath) {
-              this.settings.flows[flow].flaggedForRebuild = true;
-            }
-          }
-        }
-      });
     }
   };
+  //^CHECKED AND TESTED
 
   //---------------
   removeTextChangeListener = (view: MarkdownView) => {
@@ -1104,15 +1044,17 @@ export default class TextFlowPlugin extends Plugin {
       const cmEditor = editor.cm;
       if (cmEditor) {
         // Remove the listener
+        const { extension } = this.listenerBasket[`${leafID}-changes`];
+
         cmEditor.dispatch({
-          effects: StateEffect.reconfigure.of([]),
+          effects: StateEffect.appendConfig.of([extension]),
         });
         // The destroy callback will handle removing from the basket
       }
     }
   };
 
-  // Instead of just checking for preventDefault(), let's verify we're dealing with a file explorer click
+  // Are we even clicking into the file explorer?
   private isFileExplorerClick = (event: MouseEvent) => {
     const target = event.target as HTMLElement;
 
@@ -1129,6 +1071,7 @@ export default class TextFlowPlugin extends Plugin {
 
     return true;
   };
+
   // ---------------------------------------------------------
   private boundFileExplorerClick: (event: MouseEvent) => void;
   // ---------- This listener is removed in ONUNLOAD ---------------------
@@ -1914,7 +1857,6 @@ export default class TextFlowPlugin extends Plugin {
             console.error(`File not found at path: ${path}`);
             return;
           }
-
           let startOfRegion = await this.findStartOfRegion(
             this.settings.flows[flowName],
             map[path].flowOrder,
