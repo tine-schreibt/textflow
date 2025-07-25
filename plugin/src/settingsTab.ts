@@ -253,7 +253,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         this.plugin.settings.explorerDecoDropdownOpen = false;
         flowModeExplorerDecoContainer.classList.remove("show");
         updateHeadlineDisplay(entry);
-        this.plugin.decorateSourceNotes(true);
+        this.plugin.decorateSourceNotes("redo");
         await this.plugin.saveSettings();
       });
     });
@@ -306,9 +306,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.settings.showExplorerDeco = !value;
             if (value) {
-              this.plugin.decorateSourceNotes(false);
+              this.plugin.unDecorateSourceNotes();
             } else {
-              this.plugin.decorateSourceNotes(true);
+              this.plugin.decorateSourceNotes("redo");
             }
             await this.plugin.saveSettings();
           });

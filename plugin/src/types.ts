@@ -239,3 +239,7 @@ interface FlowCookbook {
 }
 
 export type ProtectionType = "divider" | "sync";
+
+export type CalculationMode = "redo" | "update";
+
+export type DecoStyle = "neutral" | "unsynced" | "none";

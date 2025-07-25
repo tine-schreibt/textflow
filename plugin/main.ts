@@ -237,8 +237,6 @@ export default class TextFlowPlugin extends Plugin {
       id: `sync-text-flow`,
       name: `Sync all modified regions.`,
       callback: async () => {
-        // toggle
-        console.log("Shorcut for sync pressed");
         await this.syncAllLeaves();
         await this.saveSettings();
       },
@@ -267,14 +265,17 @@ export default class TextFlowPlugin extends Plugin {
     });
 
     // hide explorer deco
-
     this.addCommand({
       id: "toggle-explorer-deco",
       name: `Toggle explorer decoration`,
       callback: () => {
-        this.settings.showExplorerDeco
-          ? (this.settings.showExplorerDeco = false)
-          : (this.settings.showExplorerDeco = true);
+        if (this.settings.showExplorerDeco) {
+          this.settings.showExplorerDeco = false;
+          this.unDecorateSourceNotes();
+        } else {
+          this.settings.showExplorerDeco = true;
+          this.decorateSourceNotes("redo");
+        }
         this.saveSettings();
       },
     });
@@ -409,15 +410,17 @@ export default class TextFlowPlugin extends Plugin {
   // ^CHECKED
 
   // ----- DECORATE SOURCE NOTES IN FILE EXPLORER -----------
-  decorateSourceNotes = async (decorate: boolean) => {
+
+  decorateSourceNotes = async (mode: Types.CalculationMode) => {
+    if (!this.settings.showExplorerDeco) return;
+
     let path = "";
     let handledPathsArray: string[] = [];
     const unsavedPathsArray: string[] = [];
     let decoStyle = "";
 
-    type DecoStyle = "neutral" | "unsynced" | "none";
     // ------ all the helper functions used -------
-    const handlePath = (path: string, decoStyle: DecoStyle) => {
+    const handlePath = (path: string, decoStyle: Types.DecoStyle) => {
       let successivePath = "";
       for (let fragment of path.split("/")) {
         if (!fragment.endsWith(".md")) {
@@ -432,20 +435,9 @@ export default class TextFlowPlugin extends Plugin {
       }
     };
 
-    const updateStyles = (path: string, decoStyle: DecoStyle) => {
+    const updateStyles = (path: string, decoStyle: Types.DecoStyle) => {
       // Remove trailing slash for files (if it exists)
       const cleanPath = path.endsWith("/") ? path.slice(0, -1) : path;
-
-      // Log both file and folder elements for this path
-      function escapeSelector(str: string): string {
-        // Escape special characters that have meaning in CSS selectors
-        return (
-          str
-            .replace(/["'&,.*+?^${}()|[\]\\]/g, "\\$&")
-            // Handle spaces
-            .replace(/\s/g, "\\ ")
-        );
-      }
 
       // First remove any existing styles for this path
       const existingStyles = document.head.querySelectorAll(
@@ -454,25 +446,23 @@ export default class TextFlowPlugin extends Plugin {
       existingStyles.forEach((style) => {
         const styleContent = style.textContent || "";
         // Only remove if it's for this specific path
-        if (styleContent.includes(`data-path='${escapeSelector(cleanPath)}'`)) {
+        if (
+          styleContent.includes(`data-path='${this.escapeSelector(cleanPath)}'`)
+        ) {
           style.remove();
         }
       });
 
       // Return early if we're just removing styles
-      if (
-        !decorate ||
-        !this.settings.showExplorerDeco ||
-        decoStyle === "none"
-      ) {
+      if (decoStyle === "none") {
         return;
       }
 
       const fileElement = document.querySelector(
-        `div[data-path='${escapeSelector(cleanPath)}']`
+        `div[data-path='${this.escapeSelector(cleanPath)}']`
       );
       const folderElement = document.querySelector(
-        `div[data-path='${escapeSelector(cleanPath)}'] .nav-folder-title`
+        `div[data-path='${this.escapeSelector(cleanPath)}'] .nav-folder-title`
       );
 
       let style = document.createElement("style");
@@ -490,8 +480,10 @@ export default class TextFlowPlugin extends Plugin {
       // style for neutral stuff
       if (decoStyle === "neutral") {
         styleContent = `
-  div[data-path='${escapeSelector(cleanPath)}'] .nav-file-title-content::after,
-  div[data-path='${escapeSelector(
+  div[data-path='${this.escapeSelector(
+    cleanPath
+  )}'] .nav-file-title-content::after,
+  div[data-path='${this.escapeSelector(
     cleanPath
   )}'] .nav-folder-title-content::after {
   content: " ${neutralSymbol}" !important;
@@ -511,8 +503,10 @@ export default class TextFlowPlugin extends Plugin {
       // Style for unsynced stuff
       if (decoStyle === "unsynced") {
         styleContent = `
-  div[data-path='${escapeSelector(cleanPath)}'] .nav-file-title-content::after,
-  div[data-path='${escapeSelector(
+  div[data-path='${this.escapeSelector(
+    cleanPath
+  )}'] .nav-file-title-content::after,
+  div[data-path='${this.escapeSelector(
     cleanPath
   )}'] .nav-folder-title-content::after {
   content: " ${unsyncedSymbol}" !important;
@@ -532,7 +526,16 @@ export default class TextFlowPlugin extends Plugin {
     // -------- THE LOGIC -----------------
     // handle general paths
     const handledPaths: { [key: string]: boolean } = {};
-    Object.keys(this.settings.flows).forEach((flowName) => {
+    let flowArray: string[] = [];
+
+    // if we redo, we need all flows, else we just need the active ones
+    if (mode === "redo") {
+      flowArray = Object.keys(this.settings.flows);
+    } else {
+      flowArray = Object.keys(this.settings.activeFlowObject);
+    }
+
+    for (let flowName of flowArray) {
       // get the file list
       let key = this.settings.flows[flowName].flowRecipe.bookmarks
         ? "bookmarks"
@@ -542,16 +545,19 @@ export default class TextFlowPlugin extends Plugin {
         // exclude folder titles
         if (path.startsWith("#")) continue;
 
-        // if we're handling a flow that is active, track the path
-        if (this.settings.activeFlowObject[flowName]) {
-          handledPaths[path] = true;
-        }
-        // if we're handling a non-active flow, protect path deco
-        if (!this.settings.activeFlowObject[flowName]) {
-          if (handledPaths[path]) continue;
-          decoStyle = "none";
-          handlePath(path, decoStyle as DecoStyle);
-          continue;
+        // and we only need to do this if we redo the whole shebang
+        if (mode === "redo") {
+          // if we're handling a flow that is active, track the path
+          if (this.settings.activeFlowObject[flowName]) {
+            handledPaths[path] = true;
+          }
+          // if we're handling a non-active flow, protect the known active paths
+          if (!this.settings.activeFlowObject[flowName]) {
+            if (handledPaths[path]) continue;
+            decoStyle = "none";
+            handlePath(path, decoStyle as Types.DecoStyle);
+            continue;
+          }
         }
         // handle the path
         if (
@@ -559,19 +565,90 @@ export default class TextFlowPlugin extends Plugin {
           !this.settings.flows[flowName].unsavedRegionsArray.includes(path)
         ) {
           decoStyle = "neutral";
-          handlePath(path, decoStyle as DecoStyle);
+          handlePath(path, decoStyle as Types.DecoStyle);
         } else {
           unsavedPathsArray.push(path);
         }
       }
-    });
+    }
 
     // handle unsaved paths - null handled paths array
     // because we may need to override some general styles
     for (path of unsavedPathsArray) {
       decoStyle = "unsynced";
-      handlePath(path, decoStyle as DecoStyle);
+      handlePath(path, decoStyle as Types.DecoStyle);
     }
+  };
+
+  // removing styles if we don't want to see them
+
+  unDecorateSourceNotes = async () => {
+    if (this.settings.showExplorerDeco) return;
+    let path = "";
+    let handledPathsArray: string[] = [];
+
+    type DecoStyle = "neutral" | "unsynced" | "none";
+    // ------ all the helper functions used -------
+    const handlePath = (path: string) => {
+      let successivePath = "";
+      for (let fragment of path.split("/")) {
+        if (!fragment.endsWith(".md")) {
+          successivePath += `${fragment}/`;
+        } else {
+          successivePath += fragment;
+        }
+        if (!handledPathsArray.includes(successivePath)) {
+          handledPathsArray.push(successivePath);
+          updateStyles(successivePath);
+        }
+      }
+    };
+
+    const updateStyles = (path: string) => {
+      // Remove trailing slash for files (if it exists)
+      const cleanPath = path.endsWith("/") ? path.slice(0, -1) : path;
+
+      // First remove any existing styles for this path
+      const existingStyles = document.head.querySelectorAll(
+        "style[data-textflow-neutral], style[data-textflow-unsynced]"
+      );
+      existingStyles.forEach((style) => {
+        const styleContent = style.textContent || "";
+        // Only remove if it's for this specific path
+        if (
+          styleContent.includes(`data-path='${this.escapeSelector(cleanPath)}'`)
+        ) {
+          style.remove();
+        }
+      });
+    };
+
+    // -------- THE LOGIC -----------------
+    const handledPaths: { [key: string]: boolean } = {};
+    Object.keys(this.settings.flows).forEach((flowName) => {
+      // get the file list
+      let key = this.settings.flows[flowName].flowRecipe.bookmarks
+        ? "bookmarks"
+        : "foldersTagsProps";
+
+      for (path of this.settings.flows[flowName].flowRecipe[key]) {
+        // exclude folder titles
+        if (path.startsWith("#")) continue;
+        handlePath(path);
+        continue;
+      }
+    });
+  };
+
+  //------ function to clean up paths for CSS handling
+  escapeSelector = (str: string): string => {
+    // Escape special characters that have meaning in CSS selectors
+    return (
+      str
+        .replace(/["'&,.*+?^${}()|[\]\\]/g, "\\$&")
+        // Handle spaces
+        .replace(/\s/g, "\\ ")
+    );
   };
 
   // ---------------- Functions: Listeners -------------------------
@@ -1090,7 +1167,7 @@ export default class TextFlowPlugin extends Plugin {
                             view.menuBar.refresh(view.contentEl);
                           }
                           if (plugin.settings.showExplorerDeco) {
-                            plugin.decorateSourceNotes(true);
+                            plugin.decorateSourceNotes("update");
                           }
 
                           // Check other flows that might need rebuilding
@@ -1667,7 +1744,7 @@ export default class TextFlowPlugin extends Plugin {
           }
         }
         // And now update the decoration and refresh the menu bars
-        this.decorateSourceNotes(true);
+        this.decorateSourceNotes("redo");
         const allLeaves = this.app.workspace.getLeavesOfType("markdown");
         for (const leaf of allLeaves) {
           const view = leaf.view as MarkdownView;
@@ -2022,7 +2099,7 @@ export default class TextFlowPlugin extends Plugin {
       this.saveSettings();
       this.settings.flows[flowName].timestamp = this.getTimestamp();
       if (this.settings.showExplorerDeco) {
-        this.decorateSourceNotes(true);
+        this.decorateSourceNotes("update");
       }
     }
   };
@@ -2391,7 +2468,7 @@ export default class TextFlowPlugin extends Plugin {
       // ---------- Look for TextFlow_SystemFolder
       this.ensureSystemFolder();
       if (this.settings.showExplorerDeco) {
-        this.decorateSourceNotes(true);
+        this.decorateSourceNotes("redo");
       }
       this.flowService.updateScrollbarVisibility();
       // ----- ONLOAD: set up UI -------------------------
