@@ -1571,7 +1571,7 @@ export default class TextFlowPlugin extends Plugin {
     await this.syncAllLeaves();
     this.removeCursorListener(view);
     this.removeTextChangeListener(view);
-    this.removeWriteProtection(view, "divider");
+    this.removeWriteProtection(view);
     this.removeProtectDuringSaveExtension(view);
     this.cleanupMenuBar(view.leaf);
     this.manageActiveFlowObject();
@@ -1586,8 +1586,7 @@ export default class TextFlowPlugin extends Plugin {
   // ---- Functions: Data safety ----------------------------
 
   // ---- Functions: Data safety: Read-only for UIDs and dividers
-  // ---- Functions: Data safety: Read-only for UIDs and dividers
-  private protectedEditorsObject = new Map<string, boolean>();
+  private compartmentBasket: { [key: string]: Compartment } = {};
 
   addWriteProtection = (
     view: MarkdownView,
@@ -1597,22 +1596,30 @@ export default class TextFlowPlugin extends Plugin {
     if (!editor.cm) return;
 
     const leafId = (view.leaf as any).id;
+    const compartmentKey = `${leafId}-IDProtect`;
 
     if (!this.hasWriteProtection(view, protectionType)) {
+      // defining the protection
       const preventEdit = EditorState.transactionFilter.of((tr) => {
+        console.log("Filter running", {
+          isRebuilding: this.isRebuilding,
+          hasChanges: !tr.changes.empty,
+          protectionType,
+        });
         // if the flow is being rebuilt, we need to suspend protection
         // otherwise the editor contents can't be updated
         if (this.isRebuilding) return tr;
-
-        // if we're syncing, we need to block everything
-        if (protectionType === "sync") {
-          return [];
-        }
 
         if (!tr.changes.empty && protectionType === "divider") {
           let shouldReject = false;
 
           tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
+            console.log("Checking change", {
+              fromA,
+              toA,
+              inserted: inserted.toString(),
+            });
+
             const windowStart = Math.max(0, fromA - 60);
             const windowEnd = Math.min(tr.startState.doc.length, toA + 60);
             const windowText = tr.startState.sliceDoc(windowStart, windowEnd);
@@ -1640,20 +1647,32 @@ export default class TextFlowPlugin extends Plugin {
           });
 
           if (shouldReject) {
+            console.log("Change rejected");
+
             return []; // Reject the transaction
           }
         }
         return tr; // Allow normal edits
       });
 
-      // actually add the protection
-      (preventEdit as any).protectiontType = protectionType;
-      editor.cm.dispatch({
-        effects: StateEffect.appendConfig.of([preventEdit]),
-      });
-
-      // add entry to out tracker
-      this.protectedEditorsObject.set(`${leafId}-${protectionType}`, true);
+      // Get existing or create new compartment
+      let writeProtectCompartment = this.compartmentBasket[compartmentKey];
+      if (!writeProtectCompartment) {
+        writeProtectCompartment = new Compartment();
+        // Initialize the compartment when creating it
+        editor.cm.dispatch({
+          effects: StateEffect.appendConfig.of([
+            writeProtectCompartment.of([preventEdit]),
+          ]),
+        });
+        this.compartmentBasket[compartmentKey] = writeProtectCompartment;
+      } else {
+        // Update existing compartment
+        editor.cm.dispatch({
+          effects: writeProtectCompartment.reconfigure([preventEdit]),
+        });
+      }
+      console.log("Protection added", protectionType, editor.cm.state); // debug log
     }
   };
 
@@ -1664,35 +1683,42 @@ export default class TextFlowPlugin extends Plugin {
   ) => {
     let editor = view.editor as any;
     if (!editor.cm) return false;
+
     const leafId = (view.leaf as any).id;
-    return (
-      this.protectedEditorsObject.get(`${leafId}-${protectionType}`) ?? false
-    );
+    if (!this.compartmentBasket) return false;
+
+    const compartment = this.compartmentBasket[`${leafId}-IDProtect`];
+    if (!compartment) return false;
+
+    // Check if there's an active protection configuration
+    const currentState = editor.cm.state;
+    const currentConfig = compartment.get(currentState);
+
+    return currentConfig !== undefined;
   };
 
   // -----------------------------------------------------------
-  removeWriteProtection = async (
-    view: MarkdownView,
-    protectionType: Types.ProtectionType
-  ) => {
-    const leafId = (view.leaf as any).id;
-    const activeLeafPath = view.file?.path;
-    let editor = view.editor as any;
-    if (!editor) {
-      const newEditor = await this.pollForEditor(view);
-      if (newEditor) {
-        editor = newEditor;
-      }
+  removeWriteProtection = async (view: MarkdownView) => {
+    try {
+        const editor = view.editor as any;
+        if (!editor?.cm) return;
+
+        const leafId = (view.leaf as any).id;
+        const compartmentKey = `${leafId}-IDProtect`;
+        
+        const compartment = this.compartmentBasket[compartmentKey];
+        if (compartment) {
+            // Instead of removing, replace with empty config
+            editor.cm.dispatch({
+                effects: compartment.reconfigure([EditorState.transactionFilter.of(tr => tr)])
+            });
+            // Keep the compartment but mark it as inactive
+            this.compartmentBasket[compartmentKey] = compartment;
+        }
+    } catch (error) {
+        console.debug("textFlow: Cleanup error (can be ignored)", error);
     }
-
-    const removeProtection = EditorState.transactionFilter.of((tr) => tr);
-    (removeProtection as any).protectionType = protectionType;
-    editor.cm.dispatch({
-      effects: StateEffect.reconfigure.of([removeProtection]),
-    });
-
-    this.protectedEditorsObject.delete(`${leafId}-${protectionType}`);
-  };
+};
 
   /// --- Functions: Data safety: Protect editor during saving
 
@@ -2422,7 +2448,7 @@ export default class TextFlowPlugin extends Plugin {
     const markdownLeaves = this.app.workspace.getLeavesOfType("markdown");
     for (const leaf of markdownLeaves) {
       if (leaf.view instanceof MarkdownView) {
-        this.removeWriteProtection(leaf.view, "divider");
+        this.removeWriteProtection(leaf.view);
         this.removeProtectDuringSaveExtension(leaf.view);
       }
     }
