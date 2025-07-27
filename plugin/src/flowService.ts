@@ -1263,8 +1263,8 @@ export class FlowService {
                 `This can come about due to sync errors.\n` +
                 `How to proceed now: \n` +
                 `1. Export ${flowName} to prevent any loss of edits and backup your vault, just to be safe.\n` +
-                `2. Check the mentioned note (search for '<hr>') for any copied over regions.\n` +
-                `3. Check the source notes for these regions to make sure they are up to date; if they aren't, copy/paste the latest version from the flow.\n` +
+                `2. Check the mentioned note (search for '<hr>') for any copied over regions and cut them out.\n` +
+                `3. Check the source notes of these regions to make sure they are up to date; if they aren't, copy/paste the latest version from the flow.\n` +
                 `To make all of this easier, turn off navigation via file explorer (in the settings tab or command palette).\n` +
                 `Afterwards try another rebuild.\n`,
               0

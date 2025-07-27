@@ -1421,30 +1421,34 @@ export default class TextFlowPlugin extends Plugin {
   manageActiveFlowObject = async () => {
     // track all leaves
     const foundFlowLeaves: Record<string, Set<string>> = {};
+
     this.app.workspace.iterateAllLeaves((leaf) => {
-      if (leaf.view instanceof MarkdownView) {
+      // get info for all leaves' contents, initalised or not
+      const leafViewState = leaf.getViewState();
+
+      if (leafViewState.type === "markdown" && leafViewState.state?.file) {
         const leafID = (leaf as any).id;
-        const leafPath = leaf.view.file?.path;
-        if (leafPath) {
-          const flowName = this.isFlowFile(leafPath);
-          if (flowName) {
-            // get leaves per flow
-            if (!foundFlowLeaves[flowName]) {
-              foundFlowLeaves[flowName] = new Set();
-            }
-            foundFlowLeaves[flowName].add(leafID);
+        const leafPath = leafViewState.state?.file;
+        if (typeof leafPath != "string") return; // behaves like 'continue' in this callback
 
-            // Ensure the acviveFlowObject exists
-            if (!this.settings.activeFlowObject[flowName]) {
-              this.settings.activeFlowObject[flowName] = {};
-            }
-            this.settings.activeFlowObject[flowName][leafID] = true;
+        const flowName = this.isFlowFile(leafPath);
+        if (flowName) {
+          // get leaves per flow
+          if (!foundFlowLeaves[flowName]) {
+            foundFlowLeaves[flowName] = new Set();
+          }
+          foundFlowLeaves[flowName].add(leafID);
 
-            // Then add region tracking for newly opened leaves
-            if (this.settings.flows[flowName].activeRegions) {
-              if (!this.settings.flows[flowName].activeRegions[leafID]) {
-                this.addRegionTracking(flowName, leafID);
-              }
+          // Ensure the acviveFlowObject exists
+          if (!this.settings.activeFlowObject[flowName]) {
+            this.settings.activeFlowObject[flowName] = {};
+          }
+          this.settings.activeFlowObject[flowName][leafID] = true;
+
+          // Then add region tracking for newly opened leaves
+          if (this.settings.flows[flowName].activeRegions) {
+            if (!this.settings.flows[flowName].activeRegions[leafID]) {
+              this.addRegionTracking(flowName, leafID);
             }
           }
         }

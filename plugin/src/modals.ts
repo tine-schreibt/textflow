@@ -231,39 +231,6 @@ export class FlowSwitcherModal extends Modal {
     this.flowService = new FlowService(plugin, app);
   }
 
-  private async initializeLeaves(): Promise<void> {
-    const currentView = this.app.workspace.getActiveViewOfType(MarkdownView);
-    const currentLeaf = currentView?.leaf;
-    const leaves = this.app.workspace.getLeavesOfType("markdown");
-
-    for (let leaf of leaves) {
-      // Try to activate the leaf first, before checking if it's a MarkdownView
-      if (leaf !== currentLeaf) {
-        await this.app.workspace.setActiveLeaf(leaf, { focus: false });
-        // Give it a moment to initialize
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      }
-
-      // Now check if it's a MarkdownView
-      if (leaf.view instanceof MarkdownView) {
-        const view = leaf.view;
-        if (view.file) {
-          const path = view.file.path;
-
-          const flowName = this.plugin.isFlowFile(path);
-          if (flowName) {
-            await this.plugin.setupFlowView(flowName, view);
-            await new Promise((resolve) => setTimeout(resolve, 500));
-          }
-        }
-      }
-
-      if (currentLeaf) {
-        await this.app.workspace.setActiveLeaf(currentLeaf);
-      }
-    }
-  }
-
   async onOpen() {
     await this.display();
     this.plugin.registerModalUpdateCallback(async () => await this.display());
@@ -349,16 +316,6 @@ export class FlowSwitcherModal extends Modal {
     const mainContainer = contentEl.createDiv({
       cls: "textflow-switcher-main-container",
     });
-
-    const reloadButton = new ButtonComponent(mainContainer)
-      .setIcon("list-restart")
-      .setClass(`flow-switcher-modal-reload-button`)
-      .setClass("clickable-icon")
-      .setTooltip("Check for open flow leaves after vault reload")
-      .onClick(async () => {
-        await this.initializeLeaves();
-        await this.display();
-      });
 
     // ---- DISPLAY ACTIVE FLOWS -----------
     // sub-container that holds only active flows
