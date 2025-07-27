@@ -788,12 +788,30 @@ export default class TextFlowPlugin extends Plugin {
   //CHECKED AND TESTED
 
   // ---------------- Functions: Listeners: Individual ----------
+  // a little object to keep track of stuff
   listenerBasket: { [key: string]: ListenerBasketItem } = {};
 
+  // This listener is used to track the active region
   private addCursorListener = (view: MarkdownView | null) => {
     if (!view) {
       return;
     }
+    const leafID: number = (view.leaf as any).id;
+    if (!leafID) return;
+
+    if (this.listenerBasket[leafID]) {
+      return;
+    }
+
+    const activeLeafPath = view.file?.path;
+    if (!activeLeafPath) return;
+
+    const flowName = this.isFlowFile(activeLeafPath);
+    if (!flowName) {
+      this.removeCursorListener(view);
+      return;
+    }
+
     const editor = view?.editor as ObsidianEditor | null;
     if (!editor) {
       return;
@@ -803,84 +821,71 @@ export default class TextFlowPlugin extends Plugin {
       return;
     }
 
-    const activeLeafPath = view.file?.path;
-    const leafID: number = (view.leaf as any).id;
-    if (this.listenerBasket[leafID]) {
-      return;
-    }
-
     // ---------- actual listener stuff
-    if (activeLeafPath) {
-      const flowName = this.isFlowFile(activeLeafPath);
 
-      if (cmEditor && flowName) {
-        const plugin = this;
-        let lastCursorPosition: number | null = null;
-        let debounceTimeout: NodeJS.Timeout | null = null;
+    const plugin = this;
+    let lastCursorPosition: number | null = null;
+    let debounceTimeout: NodeJS.Timeout | null = null;
 
-        const navigationListener = ViewPlugin.fromClass(
-          class {
-            constructor(view: EditorView) {}
+    const navigationListener = ViewPlugin.fromClass(
+      class {
+        constructor(view: EditorView) {}
 
-            update(update: ViewUpdate) {
-              if (update.selectionSet) {
-                const cursorOffset = update.state.selection.main.from;
+        update(update: ViewUpdate) {
+          if (!update.selectionSet) return;
 
-                if (cursorOffset !== lastCursorPosition) {
-                  lastCursorPosition = cursorOffset;
+          const cursorOffset = update.state.selection.main.from;
 
-                  if (debounceTimeout) {
-                    clearTimeout(debounceTimeout);
-                  }
+          if (cursorOffset !== lastCursorPosition) {
+            lastCursorPosition = cursorOffset;
 
-                  debounceTimeout = setTimeout(() => {
-                    if (!plugin.settings.flows[flowName]) {
-                      throw new Error(`Flow ${flowName} not found in settings`);
-                    }
-                    // this sets off a chain of functions which updates the active Region
-                    plugin.checkActiveRegionCache(
-                      plugin.settings.flows[flowName],
-                      leafID,
-                      cursorOffset,
-                      view
-                    );
-                  }, 250);
-                }
-              }
+            if (debounceTimeout) {
+              clearTimeout(debounceTimeout);
             }
 
-            destroy() {
-              if (debounceTimeout) {
-                clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(() => {
+              if (!plugin.settings.flows[flowName]) {
+                throw new Error(`Flow ${flowName} not found in settings`);
               }
-              delete plugin.listenerBasket[leafID];
-            }
+              // this sets off a chain of functions which updates the active Region
+              plugin.checkActiveRegionCache(
+                plugin.settings.flows[flowName],
+                leafID,
+                cursorOffset,
+                view
+              );
+            }, 250);
           }
-        );
-
-        try {
-          const extension = StateEffect.appendConfig.of([navigationListener]);
-
-          this.listenerBasket[leafID] = {
-            extension: navigationListener,
-          };
-
-          cmEditor.dispatch({
-            effects: extension,
-          });
-        } catch (error) {
-          delete this.listenerBasket[leafID];
-          new Notice(
-            "textFlow:\n " +
-              `Cursor tracking failed for ${flowName}!\n` +
-              "Please close and reopen the flow.\n" +
-              "If this error persists, reload your vault.",
-            20000 // Show for 5 seconds
-          );
         }
-      } else {
-        this.removeCursorListener(view);
+
+        destroy() {
+          if (debounceTimeout) {
+            clearTimeout(debounceTimeout);
+          }
+          delete plugin.listenerBasket[leafID];
+        }
       }
+    );
+
+    try {
+      const extension = StateEffect.appendConfig.of([navigationListener]);
+
+      this.listenerBasket[leafID] = {
+        extension: navigationListener,
+      };
+
+      cmEditor.dispatch({
+        effects: extension,
+      });
+    } catch (error) {
+      delete this.listenerBasket[leafID];
+      new Notice(
+        "textFlow:\n " +
+          `Cursor tracking failed for ${flowName}!\n` +
+          "Please close and reopen the flow.\n" +
+          "If this error persists, reload your vault.",
+        20000 // Show for 5 seconds
+      );
     }
   };
   //^CHECKED AND TESTED
@@ -889,19 +894,19 @@ export default class TextFlowPlugin extends Plugin {
   // ---------------------------------------------------------
   removeCursorListener = (view: MarkdownView) => {
     const leafID = (view.leaf as any).id;
-    if (leafID !== undefined && this.listenerBasket[leafID]) {
-      const editor = view.editor as ObsidianEditor;
-      const cmEditor = editor.cm;
-      if (cmEditor) {
-        // Remove the listener
-        const { extension } = this.listenerBasket[leafID];
+    if (!leafID) return;
+    if (!this.listenerBasket[leafID]) return;
 
-        cmEditor.dispatch({
-          effects: StateEffect.appendConfig.of([extension]),
-        });
-        delete this.listenerBasket[leafID];
-      }
-    }
+    const editor = view.editor as ObsidianEditor;
+    const cmEditor = editor.cm;
+    if (!cmEditor) return;
+
+    // Remove the listener
+    const { extension } = this.listenerBasket[leafID];
+    cmEditor.dispatch({
+      effects: StateEffect.appendConfig.of([extension]),
+    });
+    delete this.listenerBasket[leafID];
   };
   //^CHECKED AND TESTED
 
@@ -910,150 +915,157 @@ export default class TextFlowPlugin extends Plugin {
   private addTextChangeListener = (view: MarkdownView | null) => {
     if (!view) return;
 
-    const editor = view?.editor as ObsidianEditor | null;
+    const leafID: number = (view.leaf as any).id;
+    if (!leafID) return;
+
+    if (this.listenerBasket[`${leafID}-changes`]) {
+      return;
+    }
+
+    const activeLeafPath = view.file?.path;
+    if (!activeLeafPath) return;
+
+    const flowName = this.isFlowFile(activeLeafPath);
+    if (!flowName) {
+      this.removeTextChangeListener(view);
+      return;
+    }
+
+    const editor = view?.editor as ObsidianEditor;
     if (!editor) return;
 
     const cmEditor = editor.cm;
     if (!cmEditor) return;
 
-    const activeLeafPath = view.file?.path;
-    const leafID: number = (view.leaf as any).id; // Add this line
-    if (leafID && this.listenerBasket[`${leafID}-changes`]) {
-      return;
-    }
+    // ---------- actual listener stuff
 
-    if (activeLeafPath) {
-      const flowName = this.isFlowFile(activeLeafPath);
-      // actual listener
+    const plugin = this;
+    let debounceTimeout: NodeJS.Timeout | null = null;
 
-      if (cmEditor && flowName) {
-        const plugin = this;
-        let debounceTimeout: NodeJS.Timeout | null = null;
+    const changeListener = ViewPlugin.fromClass(
+      class {
+        constructor(view: EditorView) {}
 
-        const changeListener = ViewPlugin.fromClass(
-          class {
-            constructor(view: EditorView) {}
+        update(update: ViewUpdate) {
+          if (!update.docChanged) return;
 
-            update(update: ViewUpdate) {
-              if (update.docChanged) {
-                const changes = update.changes;
+          const changes = update.changes;
 
-                // return if no actual text change has taken place
-                if (changes.empty) return;
+          // return if no actual text change has taken place
+          if (changes.empty) return;
 
-                if (debounceTimeout) {
-                  clearTimeout(debounceTimeout);
-                }
+          if (debounceTimeout) {
+            clearTimeout(debounceTimeout);
+          }
 
-                debounceTimeout = setTimeout(() => {
-                  // Prevent rebuild frong registering as text change
-                  if (plugin.settings.flows[flowName].isFreshBuild) {
-                    plugin.settings.flows[flowName].isFreshBuild = false;
-                    return;
-                  }
-
-                  // Ensure that active region for the leaf is of type 'file'
-                  if (!plugin.settings.flows[flowName].activeRegions) return;
-                  if (!plugin.settings.flows[flowName].activeRegions[leafID])
-                    return;
-                  if (
-                    plugin.settings.flows[flowName].activeRegions[leafID]
-                      .type != "file"
-                  )
-                    return;
-
-                  const activeRegionPath =
-                    plugin.settings.flows[flowName].activeRegions[leafID].path;
-                  if (!activeRegionPath) return;
-
-                  if (
-                    !plugin.settings.flows[
-                      flowName
-                    ].unsavedRegionsArray.includes(activeRegionPath)
-                  ) {
-                    // Add to unsynced array
-                    plugin.settings.flows[flowName].unsavedRegionsArray.push(
-                      activeRegionPath
-                    );
-                    plugin.saveSettings();
-
-                    // update the menu bar to show unsynced status
-                    if (view.menuBar) {
-                      view.menuBar.refresh(view.contentEl);
-                    }
-
-                    // update source decoration
-                    if (plugin.settings.showExplorerDeco) {
-                      plugin.decorateSourceNotes("update");
-                    }
-                  }
-                }, 250);
-              }
+          debounceTimeout = setTimeout(() => {
+            // Prevent rebuild frong registering as text change
+            if (plugin.settings.flows[flowName].isFreshBuild) {
+              plugin.settings.flows[flowName].isFreshBuild = false;
+              return;
             }
 
-            destroy() {
-              try {
-                if (debounceTimeout) {
-                  clearTimeout(debounceTimeout);
-                }
-                delete plugin.listenerBasket[`${leafID}-changes`];
-              } catch (error) {
-                console.error("Error cleaning up change listener:", error);
-                new Notice(
-                  "textFlow Plugin: Error during cleanup of change listener.\n" +
-                    "Please reload the plugin to ensure proper operation.",
-                  10000
-                );
+            // Ensure that active region for the leaf is of type 'file'
+            if (!plugin.settings.flows[flowName].activeRegions) return;
+            if (!plugin.settings.flows[flowName].activeRegions[leafID]) return;
+            if (
+              plugin.settings.flows[flowName].activeRegions[leafID].type !=
+              "file"
+            )
+              return;
+
+            const activeRegionPath =
+              plugin.settings.flows[flowName].activeRegions[leafID].path;
+            if (!activeRegionPath) return;
+
+            if (
+              !plugin.settings.flows[flowName].unsavedRegionsArray.includes(
+                activeRegionPath
+              )
+            ) {
+              // Add to unsynced array
+              plugin.settings.flows[flowName].unsavedRegionsArray.push(
+                activeRegionPath
+              );
+              plugin.saveSettings();
+
+              // update the menu bar to show unsynced status
+              if (view.menuBar) {
+                view.menuBar.refresh(view.contentEl);
+              }
+
+              // update source decoration
+              if (plugin.settings.showExplorerDeco) {
+                plugin.decorateSourceNotes("update");
               }
             }
-          }
-        );
-
-        try {
-          const extension = StateEffect.appendConfig.of([changeListener]);
-
-          this.listenerBasket[`${leafID}-changes`] = {
-            extension: changeListener,
-          };
-
-          cmEditor.dispatch({
-            effects: extension,
-          });
-        } catch (error) {
-          if (activeLeafPath) {
-            delete this.listenerBasket[`${leafID}-changes`];
-          }
-          new Notice(
-            "textFlow Plugin: Error setting up change tracking.\n" +
-              "Please report this issue on github.",
-            10000
-          );
+          }, 250);
         }
-      } else {
-        this.removeTextChangeListener(view);
+
+        destroy() {
+          try {
+            if (debounceTimeout) {
+              clearTimeout(debounceTimeout);
+            }
+            delete plugin.listenerBasket[`${leafID}-changes`];
+          } catch (error) {
+            console.error("Error cleaning up change listener:", error);
+            new Notice(
+              "textFlow Plugin: Error during cleanup of change listener.\n" +
+                "Please reload the plugin to ensure proper operation.",
+              10000
+            );
+          }
+        }
       }
+    );
+
+    try {
+      const extension = StateEffect.appendConfig.of([changeListener]);
+
+      this.listenerBasket[`${leafID}-changes`] = {
+        extension: changeListener,
+      };
+
+      cmEditor.dispatch({
+        effects: extension,
+      });
+    } catch (error) {
+      if (activeLeafPath) {
+        delete this.listenerBasket[`${leafID}-changes`];
+      }
+      new Notice(
+        "textFlow Plugin: Error setting up change tracking.\n" +
+          "Please report this issue on github.",
+        10000
+      );
     }
   };
   //^CHECKED AND TESTED
 
+  //CHECKED AND TESTED
   //---------------
   removeTextChangeListener = (view: MarkdownView) => {
     const leafID = (view.leaf as any).id;
-    if (leafID !== undefined && this.listenerBasket[`${leafID}-changes`]) {
-      const editor = view.editor as ObsidianEditor;
-      const cmEditor = editor.cm;
-      if (cmEditor) {
-        // Remove the listener
-        const { extension } = this.listenerBasket[`${leafID}-changes`];
+    if (!leafID) return;
+    if (!this.listenerBasket[`${leafID}-changes`]) return;
 
-        cmEditor.dispatch({
-          effects: StateEffect.appendConfig.of([extension]),
-        });
-        // The destroy callback will handle removing from the basket
-      }
-    }
+    const editor = view.editor as ObsidianEditor;
+    const cmEditor = editor.cm;
+    if (!cmEditor) return;
+
+    // Remove the listener
+    const { extension } = this.listenerBasket[`${leafID}-changes`];
+
+    cmEditor.dispatch({
+      effects: StateEffect.appendConfig.of([extension]),
+    });
+
+    delete this.listenerBasket[`${leafID}-changes`];
   };
+  //^CHECKED AND TESTED
 
+  // -------- helper for the fileExplorerClickListener
   // Are we even clicking into the file explorer?
   private isFileExplorerClick = (event: MouseEvent) => {
     const target = event.target as HTMLElement;
@@ -1072,10 +1084,10 @@ export default class TextFlowPlugin extends Plugin {
     return true;
   };
 
-  // ---------------------------------------------------------
+  // ---- This listener is for navigating flows via the file explorer
+  // it is removed onunload. It is also a nervous steed, so handle with care.
   private boundFileExplorerClick: (event: MouseEvent) => void;
-  // ---------- This listener is removed in ONUNLOAD ---------------------
-  // it checks, if left-clicked files are flows or constituents of open flows and handles the behaviour
+
   fileExplorerOpenClickListener() {
     this.boundFileExplorerClick = async (event: MouseEvent) => {
       if (!this.settings.explorerListener) {
@@ -1085,15 +1097,6 @@ export default class TextFlowPlugin extends Plugin {
       if (!this.isFileExplorerClick(event)) {
         return;
       }
-
-      // CAPTURE ACTIVE VIEW IMMEDIATELY - before any other operations
-      const activeViewAtClickTime =
-        this.app.workspace.getActiveViewOfType(MarkdownView);
-
-      const allLeaves = this.app.workspace.getLeavesOfType("markdown");
-      allLeaves.forEach((leaf, index) => {
-        const view = leaf.view as MarkdownView;
-      });
 
       const target = event.target as HTMLElement;
       const fileItem = target.closest(".nav-file-title");
@@ -1112,14 +1115,15 @@ export default class TextFlowPlugin extends Plugin {
         return;
       }
 
-      // I don't remember why I did this; I guess to prevent some bug?
-      // Should have commented right away -.-
+      // I don't remember why I did this, but it's not increasing complexity so let's just keep it
       const activeFlowObjectSnapshot = this.settings.activeFlowObject;
 
       // check if the user likely isn't trying to open a file with their click
+      // it doesn't do much, though.
       if (event.shiftKey || event.ctrlKey || event.metaKey) {
         return;
       }
+
       // Prevent Obsidian's default click action immediately.
       event.preventDefault();
       event.stopPropagation();
@@ -1135,13 +1139,10 @@ export default class TextFlowPlugin extends Plugin {
       );
 
       const isFlowName = this.isFlowFile(clickedFilePath);
-
       if (isFlowName) {
         clickHandled = true;
         this.explorerClickListenerActive = true;
-        /* console.log(
-          `TextFlow: Clicked file ${clickedFilePath} is a flow. Activating.`
-        );*/
+
         try {
           if (noteIsOpen && noteIsOpen.view instanceof MarkdownView) {
             await this.activateFlow(isFlowName, noteIsOpen.view);
@@ -1149,15 +1150,14 @@ export default class TextFlowPlugin extends Plugin {
             await this.activateFlow(isFlowName);
           }
         } finally {
+          // Delay to allow UI to settle
           setTimeout(() => {
             this.explorerClickListenerActive = false;
-            /*console.log(
-              "TextFlow: isNavigatingFlow reset after flow activation."
-            );*/
-          }, 100); // Delay to allow UI to settle
+          }, 100);
         }
       } else {
-        // Not a flow file, check if it's a source file of an active flow
+        // If it's not a flow file, check if it's a source file of an active flow
+        // and gather info on it
         let parentFlowName: string | null = null;
         let flowSettings: Types.FlowDef | null = null;
         let isOfActiveFlow: boolean = false;
@@ -1172,19 +1172,17 @@ export default class TextFlowPlugin extends Plugin {
           }
         }
 
+        // handle the source note
         if (parentFlowName && flowSettings && isOfActiveFlow) {
           clickHandled = true;
           this.explorerClickListenerActive = true; // Set before any async operations
-          /*console.log(
-            `TextFlow: Clicked source file ${clickedFilePath} belongs to flow ${parentFlowName}.`
-          );*/
 
           try {
             const flowFilePath = flowSettings.flowFilePath;
 
             let flowLeaf;
 
-            // First priority: Check if the most recently active flow leaf matches our target
+            // Check if the most recently active flow leaf matches our target
             if (
               this.mostRecentActiveFlowLeaf?.view instanceof MarkdownView &&
               (this.mostRecentActiveFlowLeaf.view as MarkdownView).file
@@ -1192,7 +1190,7 @@ export default class TextFlowPlugin extends Plugin {
             ) {
               flowLeaf = this.mostRecentActiveFlowLeaf;
             } else {
-              // Fallback: Find any existing leaf with our flow
+              // Find the next best leaf with our flow
               flowLeaf = leaves.find(
                 (leaf) =>
                   leaf.view instanceof MarkdownView &&
@@ -1200,10 +1198,8 @@ export default class TextFlowPlugin extends Plugin {
               );
             }
 
+            // if there's no leaf with our flow, make one
             if (!flowLeaf || !(flowLeaf.view instanceof MarkdownView)) {
-              /*console.log(
-                `Flow ${parentFlowName} (${flowFilePath}) is not open or leaf is invalid. Activating it.`
-              );*/
               await this.activateFlow(parentFlowName);
               flowLeaf = this.app.workspace
                 .getLeavesOfType("markdown")
@@ -1212,23 +1208,12 @@ export default class TextFlowPlugin extends Plugin {
                     leaf.view instanceof MarkdownView &&
                     (leaf.view as MarkdownView).file?.path === flowFilePath
                 );
-
-              if (!flowLeaf || !(flowLeaf.view instanceof MarkdownView)) {
-                /*console.error(
-                  `TextFlow: Failed to find or create a valid leaf for flow ${parentFlowName} after activation.`
-                );*/
-                return; // Exit: click handled by failing.
-              }
+              return;
             }
 
-            /*console.log(
-              `TextFlow: Setting active leaf to flow ${parentFlowName} in leaf ${
-                (flowLeaf as any).id
-              }`
-            );*/
             this.app.workspace.setActiveLeaf(flowLeaf, { focus: true });
 
-            // Crucial delay: Allow editor to fully load and focus after setActiveLeaf
+            // Delay so dust can settle
             await new Promise((resolve) => setTimeout(resolve, 150)); // 150ms, adjust if needed
 
             const flowView = flowLeaf.view as MarkdownView;
@@ -1285,7 +1270,7 @@ export default class TextFlowPlugin extends Plugin {
           } finally {
             setTimeout(() => {
               this.explorerClickListenerActive = false;
-            }, 300); // Increased delay
+            }, 300);
           }
         }
       }
