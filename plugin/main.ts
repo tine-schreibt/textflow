@@ -14,6 +14,7 @@ import { TextFlowSettingsTab } from "./src/settingsTab";
 import { TextFlowSettings, DEFAULT_SETTINGS } from "./src/types";
 import { EditorView, ViewUpdate, ViewPlugin } from "@codemirror/view";
 import {
+  Compartment,
   EditorState,
   StateEffect,
   StateField,
@@ -25,6 +26,7 @@ import { MenuBar } from "./src/menuBar";
 import { FlowService } from "./src/flowService";
 import { TEXTFLOW_SYSTEMFOLDER } from "./src/settingsTab";
 import { dirname, basename } from "path";
+import { Mark } from "js-yaml";
 
 // so the menu bar can be kept within the view
 declare module "obsidian" {
@@ -250,8 +252,8 @@ export default class TextFlowPlugin extends Plugin {
         const flowName = this.isFlowFile(activeLeafPath);
         if (!flowName) return;
 
-        const editor = activeView.editor as ObsidianEditor;
         const leafID = (activeView.leaf as any).id;
+        // check if we got data for that leafID
         this.restoreCursorPos(flowName, activeView, leafID);
       },
     });
@@ -904,7 +906,7 @@ export default class TextFlowPlugin extends Plugin {
     // Remove the listener
     const { extension } = this.listenerBasket[leafID];
     cmEditor.dispatch({
-      effects: StateEffect.appendConfig.of([extension]),
+      effects: StateEffect.reconfigure.of([extension]),
     });
     delete this.listenerBasket[leafID];
   };
@@ -1058,13 +1060,14 @@ export default class TextFlowPlugin extends Plugin {
     const { extension } = this.listenerBasket[`${leafID}-changes`];
 
     cmEditor.dispatch({
-      effects: StateEffect.appendConfig.of([extension]),
+      effects: StateEffect.reconfigure.of([extension]),
     });
 
     delete this.listenerBasket[`${leafID}-changes`];
   };
   //^CHECKED AND TESTED
 
+  //CHECKED AND TESTED
   // -------- helper for the fileExplorerClickListener
   // Are we even clicking into the file explorer?
   private isFileExplorerClick = (event: MouseEvent) => {
@@ -1083,9 +1086,11 @@ export default class TextFlowPlugin extends Plugin {
 
     return true;
   };
+  //^CHECKED AND TESTED
 
+  //CHECKED AND TESTED
   // ---- This listener is for navigating flows via the file explorer
-  // it is removed onunload. It is also a nervous steed, so handle with care.
+  // it is removed onunload. It's also a nervous steed, so just admire it from afar.
   private boundFileExplorerClick: (event: MouseEvent) => void;
 
   fileExplorerOpenClickListener() {
@@ -1138,23 +1143,25 @@ export default class TextFlowPlugin extends Plugin {
           (leaf.view as MarkdownView).file?.path === clickedFilePath
       );
 
-      const isFlowName = this.isFlowFile(clickedFilePath);
-      if (isFlowName) {
+      const flowName = this.isFlowFile(clickedFilePath);
+      if (flowName) {
         clickHandled = true;
         this.explorerClickListenerActive = true;
 
-        try {
-          if (noteIsOpen && noteIsOpen.view instanceof MarkdownView) {
-            await this.activateFlow(isFlowName, noteIsOpen.view);
-          } else {
-            await this.activateFlow(isFlowName);
-          }
-        } finally {
-          // Delay to allow UI to settle
-          setTimeout(() => {
-            this.explorerClickListenerActive = false;
-          }, 100);
+        if (noteIsOpen && noteIsOpen.view instanceof MarkdownView) {
+          // Flow is already open, just set it up
+          await this.setupFlowView(flowName, noteIsOpen.view);
+          this.app.workspace.setActiveLeaf(noteIsOpen.view.leaf, {
+            focus: true,
+          });
+        } else {
+          await this.activateFlow(flowName);
         }
+
+        // Delay to allow UI to settle
+        setTimeout(() => {
+          this.explorerClickListenerActive = false;
+        }, 100);
       } else {
         // If it's not a flow file, check if it's a source file of an active flow
         // and gather info on it
@@ -1208,36 +1215,41 @@ export default class TextFlowPlugin extends Plugin {
                     leaf.view instanceof MarkdownView &&
                     (leaf.view as MarkdownView).file?.path === flowFilePath
                 );
-              return;
+
+              // if we couldn't set up the leaf for some reason, bow out
+              if (!flowLeaf || !(flowLeaf.view instanceof MarkdownView)) {
+                return;
+              }
             }
 
+            // but if we got the leaf set up, let's focus it
             this.app.workspace.setActiveLeaf(flowLeaf, { focus: true });
 
             // Delay so dust can settle
             await new Promise((resolve) => setTimeout(resolve, 150)); // 150ms, adjust if needed
 
+            // Now prepare for the scrolling
             const flowView = flowLeaf.view as MarkdownView;
             const editor = flowView.editor as ObsidianEditor;
             const cmEditor = editor.cm;
 
             if (!cmEditor) {
-              /*console.error(
-                "TextFlow: CodeMirror editor not found in the flow view after activation and delay."
-              );*/
-              return; // Exit: click handled.
+              return;
             }
 
-            // Defensive check: Ensure the active leaf is still our target flow leaf
+            // Make sure the active leaf is still our target flow leaf
             const currentActiveLeaf =
               this.app.workspace.getActiveViewOfType(MarkdownView)?.leaf;
             if (currentActiveLeaf !== flowLeaf) {
+              // if not, yank it back into focus
               console.warn(
                 "TextFlow: Active leaf changed unexpectedly. Forcing it back to flow leaf before scrolling."
               );
               this.app.workspace.setActiveLeaf(flowLeaf, { focus: true });
-              await new Promise((resolve) => setTimeout(resolve, 50)); // Shorter delay for re-focus
+              await new Promise((resolve) => setTimeout(resolve, 50));
             }
 
+            // get all the info we need
             const flowDocumentText = cmEditor.state.doc.toString();
             const regionFlowOrder =
               flowSettings.flowMap[clickedFilePath].flowOrder;
@@ -1247,20 +1259,23 @@ export default class TextFlowPlugin extends Plugin {
               flowDocumentText
             );
 
+            // make sure info is good
             if (startPosInFlow !== undefined && startPosInFlow >= 0) {
               const line = cmEditor.state.doc.lineAt(
                 Math.max(0, startPosInFlow)
-              ); // Ensure position is not negative
-              const targetPos = line.from; // Scroll to the beginning of the line
+              );
+              const targetPos = line.from;
+              // scroll
               cmEditor.dispatch({
                 selection: { anchor: targetPos, head: targetPos },
                 effects: EditorView.scrollIntoView(targetPos, {
-                  y: "center", // Center in viewport
-                  yMargin: 10, // Small margin
+                  y: "center",
+                  yMargin: 10,
                 }),
                 userEvent: "select.pointer",
               });
-              cmEditor.focus(); // Explicitly focus the editor
+              // focus
+              cmEditor.focus();
             }
           } catch (err) {
             console.error(
@@ -1281,8 +1296,7 @@ export default class TextFlowPlugin extends Plugin {
         if (noteIsOpen) {
           this.app.workspace.setActiveLeaf(noteIsOpen, { focus: true });
         } else {
-          // We prevented default, so we must explicitly open it if it's a regular note.
-          // Determine if we should open in a new split or existing leaf.
+          // Since we prevented the default, we must roleplay it now
           const openInNewSplit =
             this.app.workspace.getLeavesOfType("markdown").length > 0 &&
             (event.metaKey || event.ctrlKey);
@@ -1291,67 +1305,11 @@ export default class TextFlowPlugin extends Plugin {
       }
     };
   }
+  //^CHECKED AND TESTED
 
-  // ---------------- Functions: Flow management -------------------------
-  // The big bundle that centralises flow management
-  async setupFlowView(flowName: string, view: MarkdownView) {
-    const leafID = (view.leaf as any).id;
-    const editor = view.editor as any;
-
-    try {
-      // this has to happen first so the menuBar can access its leaf specific settings
-      await this.manageActiveFlowObject();
-      await this.syncAllLeaves();
-
-      // and this also has to be done before the setup so I don't have to refresh the menu bar
-      if (this.settings.flows[flowName].flaggedForRebuild) {
-        await this.flowService.rebuildFlow(flowName, "setupFlowView");
-      }
-
-      this.addProtectDuringSaveExtension(editor);
-      this.addWriteProtection(view, "divider");
-      this.addCursorListener(view);
-      this.addTextChangeListener(view);
-
-      // scroll bar visibility
-      this.flowService.updateScrollbarVisibility();
-      this.restoreCursorPos(flowName, view, leafID);
-
-      // Update the modal
-      if (this.modalUpdateCallback) {
-        this.modalUpdateCallback();
-      }
-    } finally {
-      // Do the menu bar stuff
-      if (view.menuBar) {
-        if ((view.menuBar as MenuBar).getFlowName() === flowName) {
-          view.menuBar.refresh(view.contentEl);
-          return;
-        }
-        view.menuBar.detach();
-        delete view.menuBar;
-      }
-
-      const menuBar = new MenuBar(this.app, this, flowName, view);
-      menuBar.attach(view.contentEl);
-      view.menuBar = menuBar;
-
-      // this is here so if the user has other leaves with the same flow
-      // visible, the menu bar gets updated
-      const allLeaves = this.app.workspace.getLeavesOfType("markdown");
-      for (const leaf of allLeaves) {
-        const otherView = leaf.view as MarkdownView;
-        if (otherView === view) continue;
-        const filePath = view.file?.path;
-        if (!filePath) continue;
-        const otherFlowName = this.isFlowFile(filePath);
-        if (!otherFlowName || otherFlowName != flowName) continue;
-        otherView.menuBar?.refresh(view.contentEl);
-      }
-    }
-  }
-
+  // ---------------- Functions: Flow management and UI -------------------------
   // ---- Identity check
+  //CHECKED AND TESTED
   isFlowFile = (activeLeafPath: string) => {
     if (!normalizePath(activeLeafPath).includes("TextFlow_SystemFolder")) {
       return null;
@@ -1363,45 +1321,112 @@ export default class TextFlowPlugin extends Plugin {
       return null;
     }
   };
+  //^CHECKED AND TESTED
 
+  // The big bundle that centralises flow management
+  async setupFlowView(flowName: string, view: MarkdownView) {
+    const leafID = (view.leaf as any).id;
+    let editor = view.editor as any;
+
+    // this has to happen first so the menuBar can just be set up
+    await this.manageActiveFlowObject();
+
+    if (this.settings.flows[flowName].flaggedForRebuild) {
+      this.flowService.rebuildFlow(flowName, "setupFlowView");
+    }
+    // now do the menu bar
+    this.setupMenuBar(view, flowName);
+
+    // set up the editor with its extensions and listeners
+    this.addProtectDuringSaveExtension(editor);
+    this.addWriteProtection(view, "divider");
+    this.addCursorListener(view);
+    this.addTextChangeListener(view);
+
+    // Update the switcher modal
+    if (this.modalUpdateCallback) {
+      this.modalUpdateCallback();
+    }
+
+    // check scroll bar visibility
+    this.flowService.updateScrollbarVisibility();
+
+    // put the cursor back to its last known location
+    this.restoreCursorPos(flowName, view, leafID);
+
+    // Do a blanket refresh of all the menu bars involved with the flow
+    const allLeaves = this.app.workspace.getLeavesOfType("markdown");
+    for (const leaf of allLeaves) {
+      const view = leaf.view as MarkdownView;
+
+      const filePath = view.file?.path;
+      if (!filePath) continue;
+
+      const otherFlowName = this.isFlowFile(filePath);
+      if (!otherFlowName || otherFlowName != flowName) continue;
+
+      view.menuBar?.refresh(view.contentEl);
+    }
+  }
+  //^CHECKED AND TESTED
+
+  //CHECKED AND TESTED
+  // ---- handle menuBar setup
+  setupMenuBar = (view: MarkdownView, flowName: string) => {
+    let menuBar: MenuBar;
+    // If we got one, check if it belongs to the flow
+    if (view.menuBar) {
+      if ((view.menuBar as MenuBar).getFlowName() != flowName) {
+        view.menuBar.detach();
+        delete view.menuBar;
+      }
+    }
+    // not in an else because it also needs to catch when we delete the menu bar
+    if (!view.menuBar) {
+      menuBar = new MenuBar(this.app, this, flowName, view);
+      menuBar.attach(view.contentEl);
+      view.menuBar = menuBar;
+    }
+    view.menuBar.refresh(view.contentEl);
+  };
+  //^CHECKED AND TESTED
+
+  //CHECKED AND TESTED
   // ---- Make sure flows are set up when they are activated
-  async activateFlow(flowName: string, existingView?: MarkdownView) {
+  async activateFlow(flowName: string) {
     const flow = this.settings.flows[flowName];
     if (!flow) {
       new Notice(`textFlow: No flow with name ${flowName} found.`, 10000);
       return;
     }
+    // Get the file
+    const flowFile = this.app.vault.getAbstractFileByPath(flow.flowFilePath);
 
-    if (existingView) {
-      // Flow is already open, just set it up
-      this.setupFlowView(flowName, existingView);
-      this.app.workspace.setActiveLeaf(existingView.leaf, {
-        focus: true,
-      }); // Added focus: true
-    } else {
-      // Need to open new leaf
-      const flowFile = this.app.vault.getAbstractFileByPath(flow.flowFilePath);
+    if (flowFile instanceof TFile) {
+      // make a leaf and put the file into it
+      const leaf = this.app.workspace.getLeaf("tab"); // Prefer opening in a new split if creating
+      await leaf.openFile(flowFile);
 
-      if (flowFile instanceof TFile) {
-        const leaf = this.app.workspace.getLeaf("split"); // Prefer opening in a new split if creating
-        await leaf.openFile(flowFile);
-        if (leaf.view instanceof MarkdownView) {
-          this.setupFlowView(flowName, leaf.view);
-          this.app.workspace.setActiveLeaf(leaf, { focus: true }); // Make sure to activate the leaf with focus
-        } else {
-          console.error(
-            "textFlow: View is not MarkdownView after opening flow file"
-          );
-        }
+      // now set it up and focus it
+      if (leaf.view instanceof MarkdownView) {
+        this.setupFlowView(flowName, leaf.view);
+        this.app.workspace.setActiveLeaf(leaf, { focus: true }); // Make sure to activate the leaf with focus
       } else {
-        new Notice(
-          `textFlow: Flow file not found: ${flow.flowFilePath}\nTry clicking the 'Move' button for the TextFlow_SystemFolder location.`,
-          10000
+        console.error(
+          "textFlow: View is not MarkdownView after opening flow file"
         );
       }
+    } else {
+      new Notice(
+        `textFlow: Flow file not found: ${flow.flowFilePath}\n` +
+          `Try clicking the 'Move' button for the TextFlow_SystemFolder location.`,
+        10000
+      );
     }
   }
+  //^CHECKED AND TESTED
 
+  //CHECKED AND TESTED
   // ------------- Used by flowSwitcherModal -----------
   manageActiveFlowObject = async () => {
     // track all leaves
@@ -1410,7 +1435,6 @@ export default class TextFlowPlugin extends Plugin {
     this.app.workspace.iterateAllLeaves((leaf) => {
       // get info for all leaves' contents, initalised or not
       const leafViewState = leaf.getViewState();
-
       if (leafViewState.type === "markdown" && leafViewState.state?.file) {
         const leafID = (leaf as any).id;
         const leafPath = leafViewState.state?.file;
@@ -1470,7 +1494,6 @@ export default class TextFlowPlugin extends Plugin {
                   if (note instanceof TFile) {
                     // get the text from the file
                     const text: string = await this.app.vault.read(note);
-
                     this.saveBackToSource(flowName, text);
                   }
                 }
@@ -1496,23 +1519,27 @@ export default class TextFlowPlugin extends Plugin {
             );
           }
         }
-        // And now update the decoration and refresh the menu bars
+        // And now update all decoration and refresh the menu bars
         this.decorateSourceNotes("redo");
         const allLeaves = this.app.workspace.getLeavesOfType("markdown");
         for (const leaf of allLeaves) {
           const view = leaf.view as MarkdownView;
           const filePath = view.file?.path;
           if (!filePath) continue;
+
           const flowName = this.isFlowFile(filePath);
           if (!flowName) continue;
+
           view.menuBar?.refresh(view.contentEl);
         }
       }
     });
     await this.saveSettings();
   };
+  //^CHECKED AND TESTED
 
-  // ----- add region tracking for new leafs
+  //CHECKED AND TESTED
+  // ----- add region tracking for new leafs, because we get errors if we don't
   addRegionTracking = async (flowName: string, leafID: string) => {
     const [path, targetObject] =
       Object.entries(this.settings.flows[flowName].flowMap).find(
@@ -1537,6 +1564,7 @@ export default class TextFlowPlugin extends Plugin {
       await this.saveSettings();
     }
   };
+  //^CHECKED AND TESTED
 
   // if a flow is replaced by a non-flow
   closeFlow = async (view: MarkdownView) => {
@@ -1544,6 +1572,7 @@ export default class TextFlowPlugin extends Plugin {
     this.removeCursorListener(view);
     this.removeTextChangeListener(view);
     this.removeWriteProtection(view, "divider");
+    this.removeProtectDuringSaveExtension(view);
     this.cleanupMenuBar(view.leaf);
     this.manageActiveFlowObject();
     if (view.menuBar) {
@@ -1659,7 +1688,7 @@ export default class TextFlowPlugin extends Plugin {
     const removeProtection = EditorState.transactionFilter.of((tr) => tr);
     (removeProtection as any).protectionType = protectionType;
     editor.cm.dispatch({
-      effects: StateEffect.appendConfig.of([removeProtection]),
+      effects: StateEffect.reconfigure.of([removeProtection]),
     });
 
     this.protectedEditorsObject.delete(`${leafId}-${protectionType}`);
@@ -1690,7 +1719,7 @@ export default class TextFlowPlugin extends Plugin {
       })),
   });
 
-  private addProtectDuringSaveExtension(editor: any) {
+  private addProtectDuringSaveExtension = async (editor: any) => {
     try {
       if (editor.cm instanceof EditorView) {
         // Check if protection extension already exists
@@ -1721,10 +1750,13 @@ export default class TextFlowPlugin extends Plugin {
         console.error("Failed to add protection extension:", error);
       }
     }
-  }
+  };
 
   // Toggle protection state
-  toggleProtectionDuringSave(editorView: EditorView, isProtected: boolean) {
+  toggleProtectionDuringSave = async (
+    editorView: EditorView,
+    isProtected: boolean
+  ) => {
     try {
       const container = editorView.dom.closest(".cm-editor")?.parentElement;
       if (container) {
@@ -1736,7 +1768,23 @@ export default class TextFlowPlugin extends Plugin {
     } catch (error) {
       console.error("Failed to toggle protection:", error);
     }
-  }
+  };
+
+  removeProtectDuringSaveExtension = async (view: MarkdownView) => {
+    let editor = view.editor as any;
+
+    if (!editor) {
+      const newEditor = await this.pollForEditor(view);
+      if (newEditor) {
+        editor = newEditor;
+      }
+    }
+    if (!editor) return;
+
+    editor.cm.dispatch({
+      effects: StateEffect.reconfigure.of([this.protectDuringSaveExtension]),
+    });
+  };
 
   // ---- Functions: Data safety: sync changes to source files
   // --- but first, a little helper function, just in case the UI is sluggish:
@@ -2009,7 +2057,7 @@ export default class TextFlowPlugin extends Plugin {
     }
   };
 
-  // -------- Restore cursorPos for known leaves
+  // -------- Restore cursorPos for known and unknown leaves
   restoreCursorPos = (flowName: string, view: MarkdownView, leafID: string) => {
     if (
       this.settings.flows[flowName].persistentCursors &&
@@ -2024,6 +2072,45 @@ export default class TextFlowPlugin extends Plugin {
         if (cursorPos !== undefined && cursorPos >= 0) {
           this.flowService.scrollToPos(editor, cursorPos);
         }
+      }
+    } else {
+      // get the most recent time stamp for the active flow
+      const timestampArray: number[] = [];
+      if (
+        Object.keys(this.settings.flows[flowName].persistentCursors).length > 0
+      ) {
+        Object.keys(this.settings.flows[flowName].persistentCursors).forEach(
+          (leafID) => {
+            timestampArray.push(
+              this.settings.flows[flowName].persistentCursors[leafID].update
+            );
+          }
+        );
+
+        // sort the timestamps in reverse order so newest timestamp comes first
+        timestampArray.sort((a, b) => b - a);
+
+        const mostRecentTimestamp: number = timestampArray[0];
+        let mostRecentCursor: number = 0;
+        if (this.settings.flows[flowName].persistentCursors) {
+          Object.keys(this.settings.flows[flowName].persistentCursors).forEach(
+            (leafID) => {
+              if (
+                this.settings.flows[flowName].persistentCursors[leafID]
+                  .update === mostRecentTimestamp
+              ) {
+                mostRecentCursor =
+                  this.settings.flows[flowName].persistentCursors[leafID]
+                    .cursors[0][1];
+              }
+            }
+          );
+        }
+
+        const editor = view.editor as ObsidianEditor;
+        mostRecentCursor
+          ? this.flowService.scrollToPos(editor, mostRecentCursor)
+          : "";
       }
     }
   };
@@ -2335,8 +2422,8 @@ export default class TextFlowPlugin extends Plugin {
     const markdownLeaves = this.app.workspace.getLeavesOfType("markdown");
     for (const leaf of markdownLeaves) {
       if (leaf.view instanceof MarkdownView) {
-        const editor = leaf.view.editor as any;
         this.removeWriteProtection(leaf.view, "divider");
+        this.removeProtectDuringSaveExtension(leaf.view);
       }
     }
 
