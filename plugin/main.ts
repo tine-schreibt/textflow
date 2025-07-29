@@ -1608,11 +1608,9 @@ export default class TextFlowPlugin extends Plugin {
       return;
     }
 
-    console.log("adding protection: ", protectionType);
     // defining the protection
     if (protectionType === "sync") {
       // create new compartment
-      console.log("creating sync compartment for ", leafId);
       const protectSyncCompartment = new Compartment();
 
       this.editableCompartments[leafId] = [protectSyncCompartment, true];
@@ -1625,15 +1623,6 @@ export default class TextFlowPlugin extends Plugin {
           ),
         ]),
       });
-
-      console.log(
-        "added sync compartment:",
-        editor.cm.state.facet(EditorState.transactionFilter)
-      );
-      console.log(
-        "domEventHandlers:",
-        editor.cm.state.facet(EditorView.domEventHandlers)
-      );
     }
 
     /////////////////////////////////
@@ -1685,7 +1674,6 @@ export default class TextFlowPlugin extends Plugin {
       });
 
       // Get existing or create new compartment
-      console.log("creating divider compartment");
       const protectDividerCompartment = new Compartment();
       // Initialize the compartment when creating it
       editor.cm.dispatch({
@@ -1693,14 +1681,11 @@ export default class TextFlowPlugin extends Plugin {
           protectDividerCompartment.of([preventEdit]),
         ]),
       });
-
-      console.log(
-        "added divider compartment:",
-        editor.cm.state.facet(EditorState.transactionFilter)
-      );
     }
   };
 
+  // the function that builds the preventDefault configuration for the
+  // sync (and mostly rebuild) writelock
   preventEdit = (
     editableCompartments: { [key: string]: [Compartment, boolean] },
     leafID: string
@@ -1710,17 +1695,16 @@ export default class TextFlowPlugin extends Plugin {
         const isEditable = editableCompartments[leafID]?.[1];
         if (isEditable === false) {
           event.preventDefault(); // Blocks all user input
-          console.log("preventing default");
         }
       },
     });
   };
 
+  // toggle the sync protection by reconfiguring the compartment
   toggleEditable = (view: MarkdownView, editable: boolean) => {
     const editor = view.editor as any;
 
     const leafId = (view.leaf as any).id;
-    console.log("toggling ", leafId, "to", editable);
     this.editableCompartments[leafId][1] = editable;
     const compartment = this.editableCompartments[leafId][0];
 
@@ -1732,107 +1716,6 @@ export default class TextFlowPlugin extends Plugin {
       });
     }
   };
-
-  /// --- Functions: Data safety: Protect editor during saving
-
-  // For some reason removeWriteProtection refuses to work for sync
-  // on the very first flow leaf. I have tried to fix it multiple times,
-  // and now I'm done trying. So since the following code works, I'm just
-  // going to keep it.
-
-  // ----- protect the editor from changes while a save is going on ----------------
-  private toggleProtectionEffect = StateEffect.define<boolean>();
-
-  protectDuringSaveExtension = StateField.define<boolean>({
-    create: () => false,
-    update: (value, tr) => {
-      for (let effect of tr.effects) {
-        if (effect.is(this.toggleProtectionEffect)) {
-          return effect.value;
-        }
-      }
-      return value;
-    },
-    provide: (field) =>
-      EditorView.editorAttributes.of((value) => ({
-        editable: value ? "false" : "true",
-      })),
-  });
-
-  private addProtectDuringSaveExtension = async (editor: any) => {
-    try {
-      if (editor.cm instanceof EditorView) {
-        // Check if protection extension already exists
-        const hasProtection = editor.cm.state.field(
-          this.protectDuringSaveExtension,
-          false
-        );
-
-        if (!hasProtection) {
-          editor.cm.dispatch({
-            effects: StateEffect.appendConfig.of([
-              this.protectDuringSaveExtension,
-            ]),
-          });
-        }
-      } else {
-        console.warn("Could not find EditorView instance:", editor);
-      }
-    } catch (error) {
-      if (error.message?.includes("Field is not present")) {
-        // This is fine - means we need to add the extension
-        editor.cm.dispatch({
-          effects: StateEffect.appendConfig.of([
-            this.protectDuringSaveExtension,
-          ]),
-        });
-      } else {
-        console.error("Failed to add protection extension:", error);
-      }
-    }
-  };
-
-  // Toggle protection state
-  // there should be a removal function for this whole thing, but so far, everyhting I've
-  // tried was either broken or broke stuff.
-  toggleProtectionDuringSave = async (
-    editorView: EditorView,
-    isProtected: boolean
-  ) => {
-    try {
-      const container = editorView.dom.closest(".cm-editor")?.parentElement;
-      if (container) {
-        container.classList.toggle("sync-rebuild-protection", isProtected);
-      }
-      editorView.dispatch({
-        effects: this.toggleProtectionEffect.of(isProtected),
-      });
-    } catch (error) {
-      console.error("Failed to toggle protection:", error);
-    }
-  };
-
-  // ---- Functions: Data safety: sync changes to source files
-  // --- but first, a little helper function, just in case the UI is sluggish:
-
-  private async pollForEditor(
-    view: MarkdownView,
-    retries = 5,
-    delay = 200
-  ): Promise<ObsidianEditor | null> {
-    for (let i = 0; i < retries; i++) {
-      let editor = view.editor as ObsidianEditor;
-      if (editor?.cm) {
-        return editor; // Success!
-      }
-      // Wait for the delay before the next attempt
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
-    new Notice(
-      `textFlow: Editor in view '${view.file?.path}' did not become available after ${retries} retries. Sync has been aborted. Please try again.`
-    );
-    return null; // Failure
-  }
 
   // Sync all leaves
 

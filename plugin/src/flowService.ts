@@ -50,15 +50,24 @@ class ProgressNotice {
 
 // the overlay for active flows
 class LoadingOverlay {
+  private app: App;
   private container: HTMLElement;
   private progressEl: HTMLElement;
   private progressText: HTMLElement;
   private flowName: string;
 
-  constructor(leaf: WorkspaceLeaf, flowName: string) {
+  constructor(leaf: WorkspaceLeaf, flowName: string, app: App) {
+    this.app = app;
     this.flowName = flowName;
+    console.log("leaf.view constructor:", leaf.view?.constructor?.name);
+
+    if (!(leaf.view instanceof MarkdownView)) {
+      console.log("trick didn't work. aborting");
+      throw new Error("LoadingOverlay: view is not a MarkdownView");
+    }
+
     // Create overlay container
-    this.container = (leaf.view as MarkdownView).contentEl.createDiv({
+    this.container = leaf.view.contentEl.createDiv({
       cls: "textflow-loading-container",
     });
 
@@ -78,6 +87,35 @@ class LoadingOverlay {
     const text = `Building ${this.flowName}: ${bar} ${percent}% \nFirst build might take longer.`;
     this.progressText.setText(text);
   }
+
+  ensureMarkdownViewFromLeaf = async (
+    leaf: WorkspaceLeaf
+  ): Promise<MarkdownView> => {
+    if (leaf.view instanceof MarkdownView) return leaf.view;
+
+    // Switch to any other leaf temporarily
+    const leaves: WorkspaceLeaf[] = [];
+    this.app.workspace.iterateAllLeaves((leaf) => {
+      leaves.push(leaf);
+    });
+    const otherLeaf = leaves.find((l: WorkspaceLeaf) => l !== leaf);
+
+    if (otherLeaf) {
+      this.app.workspace.setActiveLeaf(otherLeaf, { focus: true });
+      await sleep(50);
+    }
+
+    this.app.workspace.setActiveLeaf(leaf, { focus: true });
+    await sleep(50);
+
+    if (leaf.view instanceof MarkdownView) return leaf.view;
+
+    throw new Error("Leaf did not resolve to MarkdownView after re-activation");
+  };
+
+  sleep = (ms: number): Promise<void> => {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  };
 
   remove() {
     this.container.remove();
@@ -1120,6 +1158,7 @@ export class FlowService {
     }
 
     // ---- Progress stuff.
+
     type ProgressVisualizer = ProgressNotice;
 
     // prepare variable for the progress notice
@@ -1135,13 +1174,25 @@ export class FlowService {
     if (caller != "settingsTab") {
       if (this.plugin.settings.activeFlowObject[flowName]) {
         Object.keys(this.plugin.settings.flows[flowName].activeRegions).forEach(
-          (leafID) => {
+          async (leafID) => {
             const leaves = this.app.workspace.getLeavesOfType("markdown");
             const leaf = leaves.find(
               (newLeaf) => (newLeaf as any).id === leafID
             );
             if (leaf) {
-              progressOverlays[leafID] = new LoadingOverlay(leaf, flowName);
+              if (!(leaf instanceof MarkdownView)) {
+                const flowFile = this.app.vault.getAbstractFileByPath(
+                  this.plugin.settings.flows[flowName].flowFilePath
+                );
+                if (flowFile instanceof TFile) {
+                  await leaf.openFile(flowFile);
+                }
+              }
+              progressOverlays[leafID] = new LoadingOverlay(
+                leaf,
+                flowName,
+                this.app
+              );
             }
           }
         );
