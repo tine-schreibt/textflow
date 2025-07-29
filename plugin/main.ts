@@ -1328,6 +1328,7 @@ export default class TextFlowPlugin extends Plugin {
     const leafID = (view.leaf as any).id;
     let editor = view.editor as any;
 
+    console.log("setting up flow");
     // this has to happen first so the menuBar can just be set up
     await this.manageActiveFlowObject();
 
@@ -1338,8 +1339,10 @@ export default class TextFlowPlugin extends Plugin {
     this.setupMenuBar(view, flowName);
 
     // set up the editor with its extensions and listeners
-    this.addProtectDuringSaveExtension(editor);
+    this.addWriteProtection(view, "sync");
+    console.log("call to add sync protection");
     this.addWriteProtection(view, "divider");
+    console.log("call to add divider protection");
     this.addCursorListener(view);
     this.addTextChangeListener(view);
 
@@ -1571,8 +1574,7 @@ export default class TextFlowPlugin extends Plugin {
     await this.syncAllLeaves();
     this.removeCursorListener(view);
     this.removeTextChangeListener(view);
-    this.removeWriteProtection(view);
-    this.removeProtectDuringSaveExtension(view);
+    // this.removeProtectDuringSaveExtension(view);
     this.cleanupMenuBar(view.leaf);
     this.manageActiveFlowObject();
     if (view.menuBar) {
@@ -1580,46 +1582,81 @@ export default class TextFlowPlugin extends Plugin {
     }
     // reveal scrollbar
     this.flowService.updateScrollbarVisibility();
+
+    const leafId = (view.leaf as any).id;
+    if (this.readOnlyCompartments?.[leafId]) {
+      delete this.readOnlyCompartments[leafId];
+    }
+
     this.saveSettings();
   };
 
   // ---- Functions: Data safety ----------------------------
 
   // ---- Functions: Data safety: Read-only for UIDs and dividers
-  private compartmentBasket: { [key: string]: Compartment } = {};
+  private readOnlyCompartments: { [key: string]: boolean } = {};
 
   addWriteProtection = (
     view: MarkdownView,
     protectionType: Types.ProtectionType
   ) => {
     const editor = view.editor as any;
-    if (!editor.cm) return;
-
     const leafId = (view.leaf as any).id;
-    const compartmentKey = `${leafId}-IDProtect`;
 
-    if (!this.hasWriteProtection(view, protectionType)) {
-      // defining the protection
+    if (!editor.cm) {
+      console.log("no editor");
+      return;
+    }
+
+    console.log("adding protection: ", protectionType);
+    // defining the protection
+    if (protectionType === "sync") {
       const preventEdit = EditorState.transactionFilter.of((tr) => {
-        console.log("Filter running", {
-          isRebuilding: this.isRebuilding,
-          hasChanges: !tr.changes.empty,
-          protectionType,
-        });
+        if (this.isRebuilding) return tr;
+
+        // Skip filter if read-only protection is not enabled
+        if (!this.readOnlyCompartments[leafId]) {
+          console.log("Bypassing due to read-only not active");
+          return tr;
+        }
+
+        // Block all changes
+        if (!tr.changes.empty) {
+          return []; // Reject the transaction
+        }
+
+        return tr; // Always return a fallback value
+      });
+
+      // create new compartment
+      console.log("creating sync compartment");
+      const protectSyncCompartment = new Compartment();
+
+      this.readOnlyCompartments[leafId] = false;
+
+      // Initialize the compartment when creating it
+      editor.cm.dispatch({
+        effects: StateEffect.appendConfig.of([
+          protectSyncCompartment.of([preventEdit]),
+        ]),
+      });
+      console.log(
+        "added sync compartment:",
+        editor.cm.state.facet(EditorState.transactionFilter)
+      );
+    }
+
+    /////////////////////////////////
+    if (protectionType === "divider") {
+      const preventEdit = EditorState.transactionFilter.of((tr) => {
         // if the flow is being rebuilt, we need to suspend protection
         // otherwise the editor contents can't be updated
         if (this.isRebuilding) return tr;
 
-        if (!tr.changes.empty && protectionType === "divider") {
+        if (!tr.changes.empty) {
           let shouldReject = false;
 
           tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
-            console.log("Checking change", {
-              fromA,
-              toA,
-              inserted: inserted.toString(),
-            });
-
             const windowStart = Math.max(0, fromA - 60);
             const windowEnd = Math.min(tr.startState.doc.length, toA + 60);
             const windowText = tr.startState.sliceDoc(windowStart, windowEnd);
@@ -1647,78 +1684,36 @@ export default class TextFlowPlugin extends Plugin {
           });
 
           if (shouldReject) {
-            console.log("Change rejected");
-
+            // console.log(this.compartmentBasket[compartmentKey][1]);
+            // console.log("Transaction rejected");
             return []; // Reject the transaction
           }
         }
+        // console.log(this.compartmentBasket[compartmentKey][1]);
+        //  console.log("Transaction allowed");
         return tr; // Allow normal edits
       });
 
       // Get existing or create new compartment
-      let writeProtectCompartment = this.compartmentBasket[compartmentKey];
-      if (!writeProtectCompartment) {
-        writeProtectCompartment = new Compartment();
-        // Initialize the compartment when creating it
-        editor.cm.dispatch({
-          effects: StateEffect.appendConfig.of([
-            writeProtectCompartment.of([preventEdit]),
-          ]),
-        });
-        this.compartmentBasket[compartmentKey] = writeProtectCompartment;
-      } else {
-        // Update existing compartment
-        editor.cm.dispatch({
-          effects: writeProtectCompartment.reconfigure([preventEdit]),
-        });
-      }
-      console.log("Protection added", protectionType, editor.cm.state); // debug log
+      console.log("creating compartment");
+      const protectDividerCompartment = new Compartment();
+      // Initialize the compartment when creating it
+      editor.cm.dispatch({
+        effects: StateEffect.appendConfig.of([
+          protectDividerCompartment.of([preventEdit]),
+        ]),
+      });
+      console.log(
+        "added divider compartment:",
+        editor.cm.state.facet(EditorState.transactionFilter)
+      );
     }
   };
 
-  // ----------------------------------------------------------
-  hasWriteProtection = (
-    view: MarkdownView,
-    protectionType: Types.ProtectionType
-  ) => {
-    let editor = view.editor as any;
-    if (!editor.cm) return false;
-
+  toggleEditable = (view: MarkdownView, editable: boolean) => {
     const leafId = (view.leaf as any).id;
-    if (!this.compartmentBasket) return false;
-
-    const compartment = this.compartmentBasket[`${leafId}-IDProtect`];
-    if (!compartment) return false;
-
-    // Check if there's an active protection configuration
-    const currentState = editor.cm.state;
-    const currentConfig = compartment.get(currentState);
-
-    return currentConfig !== undefined;
+    this.readOnlyCompartments[leafId] = editable;
   };
-
-  // -----------------------------------------------------------
-  removeWriteProtection = async (view: MarkdownView) => {
-    try {
-        const editor = view.editor as any;
-        if (!editor?.cm) return;
-
-        const leafId = (view.leaf as any).id;
-        const compartmentKey = `${leafId}-IDProtect`;
-        
-        const compartment = this.compartmentBasket[compartmentKey];
-        if (compartment) {
-            // Instead of removing, replace with empty config
-            editor.cm.dispatch({
-                effects: compartment.reconfigure([EditorState.transactionFilter.of(tr => tr)])
-            });
-            // Keep the compartment but mark it as inactive
-            this.compartmentBasket[compartmentKey] = compartment;
-        }
-    } catch (error) {
-        console.debug("textFlow: Cleanup error (can be ignored)", error);
-    }
-};
 
   /// --- Functions: Data safety: Protect editor during saving
 
@@ -1726,6 +1721,7 @@ export default class TextFlowPlugin extends Plugin {
   // on the very first flow leaf. I have tried to fix it multiple times,
   // and now I'm done trying. So since the following code works, I'm just
   // going to keep it.
+
   // ----- protect the editor from changes while a save is going on ----------------
   private toggleProtectionEffect = StateEffect.define<boolean>();
 
@@ -1779,6 +1775,8 @@ export default class TextFlowPlugin extends Plugin {
   };
 
   // Toggle protection state
+  // there should be a removal function for this whole thing, but so far, everyhting I've
+  // tried was either broken or broke stuff.
   toggleProtectionDuringSave = async (
     editorView: EditorView,
     isProtected: boolean
@@ -1794,22 +1792,6 @@ export default class TextFlowPlugin extends Plugin {
     } catch (error) {
       console.error("Failed to toggle protection:", error);
     }
-  };
-
-  removeProtectDuringSaveExtension = async (view: MarkdownView) => {
-    let editor = view.editor as any;
-
-    if (!editor) {
-      const newEditor = await this.pollForEditor(view);
-      if (newEditor) {
-        editor = newEditor;
-      }
-    }
-    if (!editor) return;
-
-    editor.cm.dispatch({
-      effects: StateEffect.reconfigure.of([this.protectDuringSaveExtension]),
-    });
   };
 
   // ---- Functions: Data safety: sync changes to source files
@@ -1854,22 +1836,10 @@ export default class TextFlowPlugin extends Plugin {
     }
 
     try {
-      // Enable protection
-      for (const [_, view] of Object.entries(flowLeaves)) {
-        let editor = view.editor as ObsidianEditor;
-        if (!editor) {
-          const newEditor = await this.pollForEditor(view);
-          if (newEditor) {
-            editor = newEditor;
-          }
-        }
-        if (editor.cm) {
-          await this.toggleProtectionDuringSave(editor.cm, true);
-        }
-      }
       // Perform saves
       await Promise.all(
         Object.entries(flowLeaves).map(async ([flowName, view]) => {
+          await this.toggleEditable(view, false);
           const text = view.editor.getValue();
           const leafID = (view.leaf as any).id;
           await this.saveBackToSource(flowName, text, leafID);
@@ -1882,10 +1852,7 @@ export default class TextFlowPlugin extends Plugin {
     } finally {
       // Remove protection
       for (const [_, view] of Object.entries(flowLeaves)) {
-        const editor = view.editor as ObsidianEditor;
-        if (editor.cm) {
-          this.toggleProtectionDuringSave(editor.cm, false);
-        }
+        // await this.toggleReadOnly(view, false);
       }
       this.isSyncing = false;
     }
@@ -2443,15 +2410,6 @@ export default class TextFlowPlugin extends Plugin {
   onunload() {
     this.saveSettings();
     // ---------------- Store data for all active flows ----
-
-    // Remove read-only extensions from all markdown views
-    const markdownLeaves = this.app.workspace.getLeavesOfType("markdown");
-    for (const leaf of markdownLeaves) {
-      if (leaf.view instanceof MarkdownView) {
-        this.removeWriteProtection(leaf.view);
-        this.removeProtectDuringSaveExtension(leaf.view);
-      }
-    }
 
     // ------------ ONUNLOAD: REMOVE cursor listeners -----------
     Object.keys(this.listenerBasket).forEach((key) => {
