@@ -1339,10 +1339,10 @@ export default class TextFlowPlugin extends Plugin {
     this.setupMenuBar(view, flowName);
 
     // set up the editor with its extensions and listeners
-    this.addWriteProtection(view, "sync");
     console.log("call to add sync protection");
-    this.addWriteProtection(view, "divider");
+    this.addWriteProtection(view, "sync");
     console.log("call to add divider protection");
+    this.addWriteProtection(view, "divider");
     this.addCursorListener(view);
     this.addTextChangeListener(view);
 
@@ -1584,8 +1584,8 @@ export default class TextFlowPlugin extends Plugin {
     this.flowService.updateScrollbarVisibility();
 
     const leafId = (view.leaf as any).id;
-    if (this.readOnlyCompartments?.[leafId]) {
-      delete this.readOnlyCompartments[leafId];
+    if (this.editableCompartments?.[leafId]) {
+      delete this.editableCompartments[leafId];
     }
 
     this.saveSettings();
@@ -1594,7 +1594,7 @@ export default class TextFlowPlugin extends Plugin {
   // ---- Functions: Data safety ----------------------------
 
   // ---- Functions: Data safety: Read-only for UIDs and dividers
-  private readOnlyCompartments: { [key: string]: boolean } = {};
+  private editableCompartments: { [key: string]: [Compartment, boolean] } = {};
 
   addWriteProtection = (
     view: MarkdownView,
@@ -1611,38 +1611,28 @@ export default class TextFlowPlugin extends Plugin {
     console.log("adding protection: ", protectionType);
     // defining the protection
     if (protectionType === "sync") {
-      const preventEdit = EditorState.transactionFilter.of((tr) => {
-        if (this.isRebuilding) return tr;
-
-        // Skip filter if read-only protection is not enabled
-        if (!this.readOnlyCompartments[leafId]) {
-          console.log("Bypassing due to read-only not active");
-          return tr;
-        }
-
-        // Block all changes
-        if (!tr.changes.empty) {
-          return []; // Reject the transaction
-        }
-
-        return tr; // Always return a fallback value
-      });
-
       // create new compartment
-      console.log("creating sync compartment");
+      console.log("creating sync compartment for ", leafId);
       const protectSyncCompartment = new Compartment();
 
-      this.readOnlyCompartments[leafId] = false;
+      this.editableCompartments[leafId] = [protectSyncCompartment, true];
 
       // Initialize the compartment when creating it
       editor.cm.dispatch({
         effects: StateEffect.appendConfig.of([
-          protectSyncCompartment.of([preventEdit]),
+          protectSyncCompartment.of(
+            this.preventEdit(this.editableCompartments, leafId)
+          ),
         ]),
       });
+
       console.log(
         "added sync compartment:",
         editor.cm.state.facet(EditorState.transactionFilter)
+      );
+      console.log(
+        "domEventHandlers:",
+        editor.cm.state.facet(EditorView.domEventHandlers)
       );
     }
 
@@ -1695,7 +1685,7 @@ export default class TextFlowPlugin extends Plugin {
       });
 
       // Get existing or create new compartment
-      console.log("creating compartment");
+      console.log("creating divider compartment");
       const protectDividerCompartment = new Compartment();
       // Initialize the compartment when creating it
       editor.cm.dispatch({
@@ -1703,6 +1693,7 @@ export default class TextFlowPlugin extends Plugin {
           protectDividerCompartment.of([preventEdit]),
         ]),
       });
+
       console.log(
         "added divider compartment:",
         editor.cm.state.facet(EditorState.transactionFilter)
@@ -1710,9 +1701,36 @@ export default class TextFlowPlugin extends Plugin {
     }
   };
 
+  preventEdit = (
+    editableCompartments: { [key: string]: [Compartment, boolean] },
+    leafID: string
+  ): Extension => {
+    return EditorView.domEventHandlers({
+      beforeinput(event) {
+        const isEditable = editableCompartments[leafID]?.[1];
+        if (isEditable === false) {
+          event.preventDefault(); // Blocks all user input
+          console.log("preventing default");
+        }
+      },
+    });
+  };
+
   toggleEditable = (view: MarkdownView, editable: boolean) => {
+    const editor = view.editor as any;
+
     const leafId = (view.leaf as any).id;
-    this.readOnlyCompartments[leafId] = editable;
+    console.log("toggling ", leafId, "to", editable);
+    this.editableCompartments[leafId][1] = editable;
+    const compartment = this.editableCompartments[leafId][0];
+
+    if (compartment) {
+      editor.cm.dispatch({
+        effects: compartment.reconfigure([
+          this.preventEdit(this.editableCompartments, leafId),
+        ]),
+      });
+    }
   };
 
   /// --- Functions: Data safety: Protect editor during saving
@@ -1839,10 +1857,11 @@ export default class TextFlowPlugin extends Plugin {
       // Perform saves
       await Promise.all(
         Object.entries(flowLeaves).map(async ([flowName, view]) => {
-          await this.toggleEditable(view, false);
           const text = view.editor.getValue();
           const leafID = (view.leaf as any).id;
+          await this.toggleEditable(view, false);
           await this.saveBackToSource(flowName, text, leafID);
+          await this.toggleEditable(view, true);
 
           if (view.menuBar) {
             view.menuBar.refresh(view.contentEl);
