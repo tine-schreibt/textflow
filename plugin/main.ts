@@ -51,7 +51,7 @@ export default class TextFlowPlugin extends Plugin {
   flowService: FlowService;
   settingsTab: TextFlowSettingsTab;
   isRebuilding: boolean = false; // to prevent a doom spiral of the modify listener
-  isLoading: boolean = true; // to prevent the create listener from spamming notices onload
+  isLoading: boolean = true; // suspend create listener while we're setting up
 
   // ---------------- Global objects and variables -------------------------
 
@@ -326,7 +326,7 @@ export default class TextFlowPlugin extends Plugin {
 
     let path = "";
     let handledPathsArray: string[] = [];
-    const unsavedPathsArray: string[] = [];
+    const unsyncedPathsArray: string[] = [];
     let decoStyle = "";
 
     // ------ all the helper functions used -------
@@ -472,19 +472,19 @@ export default class TextFlowPlugin extends Plugin {
         // handle the path
         if (
           this.settings.activeFlowObject[flowName] &&
-          !this.settings.flows[flowName].unsavedRegionsArray.includes(path)
+          !this.settings.flows[flowName].unsyncedRegionsArray.includes(path)
         ) {
           decoStyle = "neutral";
           handlePath(path, decoStyle as Types.DecoStyle);
         } else {
-          unsavedPathsArray.push(path);
+          unsyncedPathsArray.push(path);
         }
       }
     }
 
-    // handle unsaved paths - null handled paths array
+    // handle unsynced paths - null handled paths array
     // because we may need to override some general styles
-    for (path of unsavedPathsArray) {
+    for (path of unsyncedPathsArray) {
       decoStyle = "unsynced";
       handlePath(path, decoStyle as Types.DecoStyle);
     }
@@ -739,7 +739,7 @@ export default class TextFlowPlugin extends Plugin {
     //^CHECKED AND TESTED
 
     //CHECKED AND TESTED
-    // ----------------- Auto-save on blur  -------------------------------
+    // ----------------- Auto-sync on blur  -------------------------------
     this.registerDomEvent(window, "blur", async () => {
       await this.syncAllLeaves();
     });
@@ -798,7 +798,7 @@ export default class TextFlowPlugin extends Plugin {
     if (!view) {
       return;
     }
-    const leafID: number = (view.leaf as any).id;
+    const leafID: string = (view.leaf as any).id;
     if (!leafID) return;
 
     if (this.listenerBasket[leafID]) {
@@ -850,7 +850,7 @@ export default class TextFlowPlugin extends Plugin {
                 throw new Error(`Flow ${flowName} not found in settings`);
               }
               // this sets off a chain of functions which updates the active Region
-              plugin.checkActiveRegionCache(
+              plugin.checkActiveRegion(
                 plugin.settings.flows[flowName],
                 leafID,
                 cursorOffset,
@@ -981,12 +981,12 @@ export default class TextFlowPlugin extends Plugin {
             if (!activeRegionPath) return;
 
             if (
-              !plugin.settings.flows[flowName].unsavedRegionsArray.includes(
+              !plugin.settings.flows[flowName].unsyncedRegionsArray.includes(
                 activeRegionPath
               )
             ) {
               // Add to unsynced array
-              plugin.settings.flows[flowName].unsavedRegionsArray.push(
+              plugin.settings.flows[flowName].unsyncedRegionsArray.push(
                 activeRegionPath
               );
               plugin.saveSettings();
@@ -1336,12 +1336,11 @@ export default class TextFlowPlugin extends Plugin {
       this.flowService.rebuildFlow(flowName, "setupFlowView");
     }
     // now do the menu bar
+    console.log("setupFlowView calling setupMenuBar");
     this.setupMenuBar(view, flowName);
 
     // set up the editor with its extensions and listeners
-    console.log("call to add sync protection");
     this.addWriteProtection(view, "sync");
-    console.log("call to add divider protection");
     this.addWriteProtection(view, "divider");
     this.addCursorListener(view);
     this.addTextChangeListener(view);
@@ -1376,7 +1375,21 @@ export default class TextFlowPlugin extends Plugin {
   //CHECKED AND TESTED
   // ---- handle menuBar setup
   setupMenuBar = (view: MarkdownView, flowName: string) => {
+    console.log("setting up menu bar");
     let menuBar: MenuBar;
+    const filePath = view.file?.path;
+    if (!filePath) return;
+    const leaf = view.leaf as WorkspaceLeaf;
+
+    if (!(view instanceof MarkdownView)) {
+      // reopen note if it's not
+      console.log("reopening leaf");
+      const flowFile = this.app.vault.getAbstractFileByPath(filePath);
+      if (flowFile instanceof TFile) {
+        leaf.openFile(flowFile);
+      }
+    }
+
     // If we got one, check if it belongs to the flow
     if (view.menuBar) {
       if ((view.menuBar as MenuBar).getFlowName() != flowName) {
@@ -1391,6 +1404,36 @@ export default class TextFlowPlugin extends Plugin {
       view.menuBar = menuBar;
     }
     view.menuBar.refresh(view.contentEl);
+  };
+  //^CHECKED AND TESTED
+
+  //CHECKED AND TESTED
+  // mostly here to handle uninitialised leaves
+  refreshMenuBars = async () => {
+    const leaves = this.app.workspace.getLeavesOfType("markdown");
+    for (let leaf of leaves) {
+      const view = leaf.view as MarkdownView;
+      const filePath = view.file?.path;
+      if (!filePath) continue;
+
+      const flowName = this.isFlowFile(filePath);
+      if (!flowName) continue;
+
+      const leafID = (leaf as any).id;
+
+      // check if leaf is properly initialised
+      if (!(leaf instanceof MarkdownView)) {
+        // reopen note if it's not
+        const flowFile = this.app.vault.getAbstractFileByPath(filePath);
+        if (flowFile instanceof TFile) {
+          await leaf.openFile(flowFile);
+        }
+      }
+      // then refresh
+      if (view.menuBar) {
+        view.menuBar.refresh(view.contentEl);
+      }
+    }
   };
   //^CHECKED AND TESTED
 
@@ -1485,7 +1528,7 @@ export default class TextFlowPlugin extends Plugin {
                   .length === 0
               ) {
                 if (
-                  this.settings.flows[flowName].unsavedRegionsArray.length > 0
+                  this.settings.flows[flowName].unsyncedRegionsArray.length > 0
                 ) {
                   const path = this.settings.flows[flowName].flowFilePath;
                   const note = this.app.vault.getAbstractFileByPath(path);
@@ -1497,7 +1540,7 @@ export default class TextFlowPlugin extends Plugin {
                   if (note instanceof TFile) {
                     // get the text from the file
                     const text: string = await this.app.vault.read(note);
-                    this.saveBackToSource(flowName, text);
+                    this.syncBackToSource(flowName, text, leafID);
                   }
                 }
               }
@@ -1569,12 +1612,12 @@ export default class TextFlowPlugin extends Plugin {
   };
   //^CHECKED AND TESTED
 
+  // CHECKED AND TESTED
   // if a flow is replaced by a non-flow
   closeFlow = async (view: MarkdownView) => {
     await this.syncAllLeaves();
     this.removeCursorListener(view);
     this.removeTextChangeListener(view);
-    // this.removeProtectDuringSaveExtension(view);
     this.cleanupMenuBar(view.leaf);
     this.manageActiveFlowObject();
     if (view.menuBar) {
@@ -1590,12 +1633,13 @@ export default class TextFlowPlugin extends Plugin {
 
     this.saveSettings();
   };
+  // ^CHECKED AND TESTED
 
   // ---- Functions: Data safety ----------------------------
 
-  // ---- Functions: Data safety: Read-only for UIDs and dividers
+  // ---- Functions: Data safety: Read-only for dividers and during sync
   private editableCompartments: { [key: string]: [Compartment, boolean] } = {};
-
+  // CHECKED AND TESTED
   addWriteProtection = (
     view: MarkdownView,
     protectionType: Types.ProtectionType
@@ -1608,14 +1652,13 @@ export default class TextFlowPlugin extends Plugin {
       return;
     }
 
-    // defining the protection
     if (protectionType === "sync") {
       // create new compartment
       const protectSyncCompartment = new Compartment();
-
+      // store compartment so we can reuse it to toggle on/off
       this.editableCompartments[leafId] = [protectSyncCompartment, true];
 
-      // Initialize the compartment when creating it
+      // Initialize
       editor.cm.dispatch({
         effects: StateEffect.appendConfig.of([
           protectSyncCompartment.of(
@@ -1625,8 +1668,9 @@ export default class TextFlowPlugin extends Plugin {
       });
     }
 
-    /////////////////////////////////
     if (protectionType === "divider") {
+      // this needs to be full-on transaction filter because a domEventHandler
+      // can be deleted into
       const preventEdit = EditorState.transactionFilter.of((tr) => {
         // if the flow is being rebuilt, we need to suspend protection
         // otherwise the editor contents can't be updated
@@ -1663,19 +1707,15 @@ export default class TextFlowPlugin extends Plugin {
           });
 
           if (shouldReject) {
-            // console.log(this.compartmentBasket[compartmentKey][1]);
-            // console.log("Transaction rejected");
-            return []; // Reject the transaction
+            return [];
           }
         }
-        // console.log(this.compartmentBasket[compartmentKey][1]);
-        //  console.log("Transaction allowed");
-        return tr; // Allow normal edits
+        return tr;
       });
 
-      // Get existing or create new compartment
+      // Create new compartment
       const protectDividerCompartment = new Compartment();
-      // Initialize the compartment when creating it
+      // Initialize
       editor.cm.dispatch({
         effects: StateEffect.appendConfig.of([
           protectDividerCompartment.of([preventEdit]),
@@ -1683,9 +1723,11 @@ export default class TextFlowPlugin extends Plugin {
       });
     }
   };
+  // ^CHECKED AND TESTED
 
   // the function that builds the preventDefault configuration for the
   // sync (and mostly rebuild) writelock
+  // CHECKED AND TESTED
   preventEdit = (
     editableCompartments: { [key: string]: [Compartment, boolean] },
     leafID: string
@@ -1699,12 +1741,15 @@ export default class TextFlowPlugin extends Plugin {
       },
     });
   };
+  // ^CHECKED AND TESTED
 
   // toggle the sync protection by reconfiguring the compartment
+  // CHECKED AND TESTED
   toggleEditable = (view: MarkdownView, editable: boolean) => {
     const editor = view.editor as any;
 
     const leafId = (view.leaf as any).id;
+    if (!this.editableCompartments[leafId]) return;
     this.editableCompartments[leafId][1] = editable;
     const compartment = this.editableCompartments[leafId][0];
 
@@ -1716,11 +1761,11 @@ export default class TextFlowPlugin extends Plugin {
       });
     }
   };
+  // ^CHECKED AND TESTED
 
+  // CHECKED AND TESTED
   // Sync all leaves
-
   syncAllLeaves = async () => {
-    this.isSyncing = true;
     const allLeaves = this.app.workspace.getLeavesOfType("markdown");
     const flowLeaves: Record<string, MarkdownView> = {};
 
@@ -1735,55 +1780,32 @@ export default class TextFlowPlugin extends Plugin {
         }
       }
     }
+    // Perform syncs
+    this.isSyncing = true; // suspends modify listener
 
-    try {
-      // Perform saves
-      await Promise.all(
-        Object.entries(flowLeaves).map(async ([flowName, view]) => {
-          const text = view.editor.getValue();
-          const leafID = (view.leaf as any).id;
-          await this.toggleEditable(view, false);
-          await this.saveBackToSource(flowName, text, leafID);
-          await this.toggleEditable(view, true);
-
-          if (view.menuBar) {
-            view.menuBar.refresh(view.contentEl);
-          }
-        })
-      );
-    } finally {
-      // Remove protection
-      for (const [_, view] of Object.entries(flowLeaves)) {
-        // await this.toggleReadOnly(view, false);
-      }
-      this.isSyncing = false;
-    }
+    await Promise.all(
+      Object.entries(flowLeaves).map(async ([flowName, view]) => {
+        const text = view.editor.getValue();
+        const leafID = (view.leaf as any).id;
+        await this.toggleEditable(view, false); // block all user edits
+        await this.syncBackToSource(flowName, text, leafID);
+        await this.toggleEditable(view, true);
+      })
+    );
+    console.log("done syncing, now refreshing");
+    this.refreshMenuBars();
+    this.isSyncing = false; // unsuspends modify listener
   };
+  // ^CHECKED AND TESTED
 
-  getTimestamp = (): string => {
-    const date = new Date();
-    const weekday = date.toLocaleDateString("en-US", { weekday: "short" });
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-
-    return `${weekday}, ${year}.${month}.${day}, ${hours}:${minutes}`;
-  };
-
-  //---- The actual save function -------------
-  saveBackToSource = async (
-    flowName: string,
-    text: string,
-    leafID?: number
-  ) => {
-    // console.log("saveBackToSource responding");
-    if (this.settings.flows[flowName].unsavedRegionsArray) {
+  // CHECKED AND TESTED
+  //---- The actual sync function -------------
+  syncBackToSource = async (flowName: string, text: string, leafID: string) => {
+    if (this.settings.flows[flowName].unsyncedRegionsArray) {
       const map = this.settings.flows[flowName].flowMap;
       const remainingPaths: string[] = [];
-      if (this.settings.flows[flowName].unsavedRegionsArray.length > 0) {
-        for (const path of this.settings.flows[flowName].unsavedRegionsArray) {
+      if (this.settings.flows[flowName].unsyncedRegionsArray.length > 0) {
+        for (const path of this.settings.flows[flowName].unsyncedRegionsArray) {
           const sourceFile = await this.app.vault.getFileByPath(path);
           if (!sourceFile) {
             console.error(`File not found at path: ${path}`);
@@ -1815,7 +1837,7 @@ export default class TextFlowPlugin extends Plugin {
                 ? `${yamlMatch[0]}${regionSlice}`
                 : regionSlice;
 
-              // Save modified content
+              // sync modified content
               await this.app.vault.modify(sourceFile, newContent);
             } catch (error) {
               remainingPaths.push(path);
@@ -1823,74 +1845,29 @@ export default class TextFlowPlugin extends Plugin {
                 `textFlow: An error occurred while trying to sync to ${path}. Please try again in a second. If the error persists, consult the 'Fixing problems' section of the readme.`
               );
 
-              // console.error(`Failed to save changes to ${file.path}:`, error);
+              // console.error(`Failed to sync changes to ${file.path}:`, error);
               throw error;
             }
           }
         }
       }
-      this.settings.flows[flowName].unsavedRegionsArray = remainingPaths;
-      if (leafID) {
-        this.manageCursorPos(flowName, leafID);
-      }
+      this.settings.flows[flowName].unsyncedRegionsArray = remainingPaths;
+
+      this.manageCursorPos(flowName, leafID);
       this.saveSettings();
-      this.settings.flows[flowName].timestamp = this.getTimestamp();
       if (this.settings.showExplorerDeco) {
         this.decorateSourceNotes("update");
       }
     }
   };
 
-  formatTimestamp = (timestamp: number, allTimestamps: number[]): string => {
-    // Create date formatter for the date part
-    const dateFormatter = new Intl.DateTimeFormat(undefined, {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
+  // ^CHECKED AND TESTED
 
-    // Create time formatter - will automatically use 24h format based on locale
-    const timeFormatter = new Intl.DateTimeFormat(undefined, {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-
-    const date = new Date(timestamp);
-    const dateStr = dateFormatter.format(date).replace(/\//g, "-");
-    const timeStr = timeFormatter.format(date);
-
-    // Find duplicates (timestamps that match when rounded to seconds)
-    const timestampSec = Math.floor(timestamp / 1000);
-    const duplicates = allTimestamps
-      .filter((t) => Math.floor(t / 1000) === timestampSec)
-      .sort();
-
-    // If this timestamp has duplicates, add the index
-    const index = duplicates.indexOf(timestamp);
-    const suffix = duplicates.length > 1 ? ` (${index + 1})` : "";
-
-    return `${dateStr} / ${timeStr}${suffix}`;
-  };
-
-  // -------------- Functions: Manage persistent cursor position
-  manageCursorPos = (flowName: string, leafID: number) => {
+  //CHECKED AND TESTED
+  // ------ Functions: Manage persistent cursor position
+  manageCursorPos = (flowName: string, leafID: string) => {
     if (this.settings.flows[flowName].activeRegions) {
-      const allTimestamps: number[] = [];
-      Object.keys(this.settings.flows[flowName].activeRegions).forEach(
-        (leaf) => {
-          if (
-            this.settings.flows[flowName].persistentCursors[leaf]?.creationDate
-          ) {
-            const timestamp =
-              this.settings.flows[flowName].persistentCursors[leaf]
-                .creationDate;
-            allTimestamps.push(timestamp);
-          }
-        }
-      );
-
-      const currentLeaf = this.settings.flows[flowName].activeRegions[leafID];
+      const currentLeaf = this.settings.flows[flowName].activeRegions?.[leafID];
 
       // check because of possible undefined
       let regionPath = "";
@@ -1904,13 +1881,8 @@ export default class TextFlowPlugin extends Plugin {
         this.settings.flows[flowName].persistentCursors = {};
       }
       if (!this.settings.flows[flowName].persistentCursors[leafID]) {
-        const creationDateString = this.formatTimestamp(
-          Date.now(),
-          allTimestamps
-        );
         this.settings.flows[flowName].persistentCursors[leafID] = {
-          creationDate: Date.now(),
-          creationDateString: creationDateString,
+          leafContent: `${flowName} (${leafID.slice(0, 5)})`,
           update: Date.now(),
           cursors: [[regionPath, currentCursor]],
         };
@@ -1918,7 +1890,8 @@ export default class TextFlowPlugin extends Plugin {
           this.settings.flows[flowName].persistentCursors
         );
         if (leaves.length > 5) {
-          // Find the leaf with the oldest timestamp
+          // cap at five entries
+          // by finding the leaf with the oldest timestamp using forbidden magic
           const [oldestLeafId] = leaves.reduce((oldest, current) => {
             return current[1].update < oldest[1].update ? current : oldest;
           });
@@ -1927,7 +1900,7 @@ export default class TextFlowPlugin extends Plugin {
         return;
       }
 
-      // Check if there's an entry for the leaf and path and delete if present
+      // Check if there's already an entry for the leaf and region and delete if present
       this.settings.flows[flowName].persistentCursors[leafID].cursors =
         this.settings.flows[flowName].persistentCursors[leafID].cursors.filter(
           (tuple) => tuple[0] !== regionPath
@@ -1938,11 +1911,12 @@ export default class TextFlowPlugin extends Plugin {
         regionPath,
         currentCursor,
       ]);
+
       // update the timestamp
       this.settings.flows[flowName].persistentCursors[leafID].update =
         Date.now();
 
-      // Romove stale entries
+      // Cap at five entries
       if (
         this.settings.flows[flowName].persistentCursors[leafID].cursors.length >
         5
@@ -1952,7 +1926,10 @@ export default class TextFlowPlugin extends Plugin {
     }
   };
 
-  // -------- Restore cursorPos for known and unknown leaves
+  //^CHECKED AND TESTED
+
+  //CHECKED AND TESTED
+  // -------- Restore cursorPos for known and unknown leafIDs
   restoreCursorPos = (flowName: string, view: MarkdownView, leafID: string) => {
     if (
       this.settings.flows[flowName].persistentCursors &&
@@ -2009,31 +1986,31 @@ export default class TextFlowPlugin extends Plugin {
       }
     }
   };
+  //^CHECKED AND TESTED
 
+  //CHECKED AND TESTED
   // --------------- Functions: Flow management: Regions -----------------------------------------
-  private checkActiveRegionCache = async (
+  private checkActiveRegion = async (
     flow: Types.FlowDef,
-    leafID: number,
+    leafID: string,
     cursorOffset: number,
     view: MarkdownView
   ) => {
     const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (!activeView) {
-      console.log("No  found");
       return;
     }
 
     const editor = activeView.editor as ObsidianEditor;
     const cmEditor = editor.cm;
     if (!cmEditor) {
-      console.log("No cmEditor found");
       return;
     }
 
     // Get full document text from CodeMirror state
     const text = cmEditor.state.doc.toString();
 
-    // if this is the initial
+    // if this is the initial call for the leaf, give it a n active region
     if (!flow.activeRegions[leafID]) {
       let activeRegionObject = this.findActiveRegion(
         flow,
@@ -2043,25 +2020,26 @@ export default class TextFlowPlugin extends Plugin {
         text
       );
 
+      // double check because active region could come back undefined
       if (activeRegionObject) {
         flow.activeRegions[leafID] = activeRegionObject;
+        await this.saveSettings();
+        return;
+      } else {
+        new Notice("textFlow: ");
       }
-      await this.saveSettings();
-      return;
-    }
-
-    // if there are values, use those
-    else if (
+    } else if (
+      // if there are values, use those to check if we're still in our known region
       cursorOffset > flow.activeRegions[leafID].startInFlow &&
       cursorOffset < flow.activeRegions[leafID].endInFlow
     ) {
-      //console.log("Cursor still in same region, updating position");
       flow.activeRegions[leafID].currentCursorPos = cursorOffset;
       await this.saveSettings();
       return;
     } else {
-      // console.log("Cursor in new region, finding active region");
+      // new terrain!
       flow.activeRegions[leafID].currentCursorPos = cursorOffset;
+      // Use a map and compass
       let activeRegion = await this.findActiveRegion(
         flow,
         editor,
@@ -2069,34 +2047,37 @@ export default class TextFlowPlugin extends Plugin {
         cursorOffset,
         text
       );
-
       if (activeRegion) {
-        // console.log("New active region found:", activeRegion.path);
         flow.activeRegions[leafID] = activeRegion;
         this.saveSettings();
         if (view.menuBar) {
           view.menuBar.refresh(view.contentEl);
         }
       } else {
-        console.error("No new active region found");
+        // if the compass just cirles, notify the user
+        new Notice(
+          `textFlow: Region tracking error. Please rebuild ${flow.flowName}.\n` +
+            `This may lead to further error messages. Please follow their instructions.`
+        );
       }
-      // console.log("checkActiveRegionCache: ", flow.activeRegions);
       await this.saveSettings();
       return;
     }
   };
-
+  //^CHECKED AND TESTED
+  //CHECKED AND TESTED
   // ------------- region tracking utilities ----------------------
   private findActiveRegion = (
     flow: Types.FlowDef,
     editor: ObsidianEditor,
-    leafID: number,
+    leafID: string,
     cursorOffset: number,
     text: string
   ) => {
     const markerRegex =
       /[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46}<hr>/;
-    // Handle boundary conditions first
+
+    // Handle extreme conditions
     if (cursorOffset === 0) {
       // Get first region from flow map
       const firstRegion = Object.entries(flow.flowMap).find(
@@ -2108,6 +2089,8 @@ export default class TextFlowPlugin extends Plugin {
         // Move cursor to safe position in first region
         const safePos = 1;
         this.flowService.scrollToPos(editor, safePos);
+
+        // then return region data
         return {
           currentCursorPos: safePos,
           type: regionMap.type,
@@ -2134,6 +2117,8 @@ export default class TextFlowPlugin extends Plugin {
         const safePos = text.lastIndexOf(regionMap.UID) - 1;
         this.flowService.scrollToPos(editor, safePos);
         console.log("last region: ", path);
+
+        // and return region data
         return {
           currentCursorPos: safePos,
           type: regionMap.type,
@@ -2148,20 +2133,13 @@ export default class TextFlowPlugin extends Plugin {
       }
     }
 
+    // if we're already in a safe position
     const searchStart = text.slice(cursorOffset);
-
     const matches = searchStart.match(markerRegex);
 
-    let UIDLength = 0;
     if (matches) {
-      UIDLength = matches[0].length - 4;
-      const UUID = matches[0].slice(0, UIDLength);
-
-      // Log all regions and their UIDs
-      Object.entries(flow.flowMap).forEach(([path, region]) => {});
-      UIDLength = matches[0].length - 4;
+      const UIDLength = matches[0].length - 4;
       const UID = matches[0].slice(0, UIDLength);
-
       const foundRegion = Object.entries(flow.flowMap).find(
         ([_, foundRegionMap]) => foundRegionMap.UID === UID
       );
@@ -2169,6 +2147,7 @@ export default class TextFlowPlugin extends Plugin {
       if (foundRegion) {
         const [foundRegionPath, foundRegionMap] = foundRegion;
 
+        // calculate where the region starts
         let newStartInFlow;
         if (foundRegionMap.flowOrder > 1) {
           newStartInFlow =
@@ -2176,8 +2155,11 @@ export default class TextFlowPlugin extends Plugin {
         } else {
           newStartInFlow = 0;
         }
+
+        // calculate where it ends
         const endInFlow = text.indexOf(foundRegionMap.UID) + matches[0].length;
 
+        // put together the object
         const activeRegionObject: Types.ActiveRegion = {
           currentCursorPos: cursorOffset,
           type: foundRegionMap.type,
@@ -2198,21 +2180,22 @@ export default class TextFlowPlugin extends Plugin {
           },
         };
         return activeRegionObject;
-      } else {
-        console.error("No matching region found for UID");
       }
     } else {
       console.error("No marker found in text after cursor");
     }
     return undefined;
   };
+  //^CHECKED AND TESTED
 
+  //CHECKED AND TESTED
   // ------------------
   findStartOfRegion = (
     flow: Types.FlowDef,
     flowOrder: number,
     text: string
   ) => {
+    // this is just math
     const previousRegion = Object.entries(flow.flowMap).find(
       ([previousRegion, previousRegionFlowMapEntry]) =>
         previousRegionFlowMapEntry.flowOrder === flowOrder - 1
@@ -2228,6 +2211,7 @@ export default class TextFlowPlugin extends Plugin {
       return 1;
     }
   };
+  //^CHECKED AND TESTED
 
   // -------------------------------------------------------
   //------------------------- ONLOAD -----------------------
@@ -2235,22 +2219,25 @@ export default class TextFlowPlugin extends Plugin {
   async onload() {
     this.settings = await this.loadSettings();
 
+    // set up the class to access its functions
     this.flowService = new FlowService(this, this.app);
 
-    // -------------------------------------------------------------------
-    // ------------------- ONLOAD: add listeners for cursor and clicks
     // Wait for the file explorer to be available in the DOM
     this.app.workspace.onLayoutReady(async () => {
-      // ---------- Look for TextFlow_SystemFolder
-      this.ensureSystemFolder();
+      // make sure we know where our stuff is
+      await this.ensureSystemFolder();
+
+      // ---- Set up UI
+      // ----------------------------------------------
       if (this.settings.showExplorerDeco) {
         this.decorateSourceNotes("redo");
       }
-      this.flowService.updateScrollbarVisibility();
-      // ----- ONLOAD: set up UI -------------------------
 
-      // ------------------- Flow switcher modal ---------------------
-      // Add status bar item
+      this.flowService.updateScrollbarVisibility();
+
+      this.addSettingTab(new TextFlowSettingsTab(this.app, this));
+
+      // --- Flow switcher modal ---------------------
       if (this.settings.switcherPos === "statusBar") {
         const flowSwitcher = this.addStatusBarItem();
         flowSwitcher.addClass("mod-clickable");
@@ -2269,14 +2256,17 @@ export default class TextFlowPlugin extends Plugin {
           }
         );
       }
-      // Handle temp folder visibility
+
+      // Handle system folder visibility
       if (this.settings.systemFolderHidden) {
         this.discernAndSetSystemFolderState(
           true,
           this.settings.systemFolderPath
         );
       }
-      // -------------------------------
+
+      // ----------- listeners and commands
+      // Listener vor navigation
       this.fileExplorerOpenClickListener();
       const fileExplorer = document.querySelector(".nav-files-container");
       if (fileExplorer && this.boundFileExplorerClick) {
@@ -2292,17 +2282,16 @@ export default class TextFlowPlugin extends Plugin {
           }, 100);
         }
       }
+
+      this.addListeners();
+      this.registerCommands();
     });
 
-    // ----------- ONLOAD: add global listeners ------------------------------------
-
-    this.addListeners();
-    this.registerCommands();
-    this.addSettingTab(new TextFlowSettingsTab(this.app, this));
+    // check if we're done initialising files and wait a moment longer
     this.app.metadataCache.on("resolved", () => {
       setTimeout(() => {
         this.isLoading = false;
-      }, 1000); // Add a small delay to ensure all initial events have fired
+      }, 1000);
     });
   }
 
@@ -2311,28 +2300,29 @@ export default class TextFlowPlugin extends Plugin {
   // -------------------------------------------------------
   onunload() {
     this.saveSettings();
-    // ---------------- Store data for all active flows ----
 
-    // ------------ ONUNLOAD: REMOVE cursor listeners -----------
-    Object.keys(this.listenerBasket).forEach((key) => {
-      const leafID = key.replace("-changes", "");
+    // ------------ Remove listeners -----------
+
+    //------------ REMOVE explorer click listener -----------
+    const fileExplorer = document.querySelector(".nav-files-container");
+    if (fileExplorer && this.boundFileExplorerClick) {
+      fileExplorer.removeEventListener("click", this.boundFileExplorerClick);
+    }
+
+    const iterableLeafIDs = Object.keys(this.listenerBasket);
+    for (let leafID of iterableLeafIDs) {
+      // skip the text change entries (we're removing both listeners anyway)
+      if (leafID.endsWith("-changes")) continue;
 
       const leaves = this.app.workspace.getLeavesOfType("markdown");
       const targetLeaf = leaves.find((leaf) => (leaf as any).id === leafID);
 
       for (const leaf of leaves) {
-        // Check if the leaf's view is a MarkdownView and if its file path matches
         if (targetLeaf?.view instanceof MarkdownView) {
           this.removeCursorListener(targetLeaf.view);
           this.removeTextChangeListener(targetLeaf.view);
         }
       }
-    });
-
-    //------------ ONUNLOAD: REMOVE explorer click listener -----------
-    const fileExplorer = document.querySelector(".nav-files-container");
-    if (fileExplorer && this.boundFileExplorerClick) {
-      fileExplorer.removeEventListener("click", this.boundFileExplorerClick);
     }
 
     // --------------- Remove menu bar ------------------
