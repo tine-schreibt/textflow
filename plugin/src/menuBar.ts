@@ -28,7 +28,6 @@ export class MenuBar {
     type: string;
     handler: EventListener;
   }> = [];
-  flowService: FlowService;
 
   constructor(
     app: App,
@@ -40,7 +39,6 @@ export class MenuBar {
     this.plugin = plugin;
     this.flowName = flow;
     this.associatedView = view;
-    this.flowService = new FlowService(plugin, app);
   }
 
   // ------ uitilities ---------
@@ -218,6 +216,7 @@ export class MenuBar {
 
       // construct text and class for the dropdown entries
       let titleClass = "";
+      let overlapText = "";
       if (path.startsWith("#")) {
         titleClass = `text-emphasis align-off-center`;
       }
@@ -227,6 +226,10 @@ export class MenuBar {
       if (overlap[1].includes(path)) {
         navPath = `${navPath} ⚭`;
         titleClass = `highlighted`;
+        overlapText =
+          overlap[0].join(", ").length > 0
+            ? `Flow overlaps with: ${overlap[0].join(", ")}`
+            : "";
       }
 
       if (this.filterList.length === 0 || this.filterList.includes(path)) {
@@ -234,7 +237,7 @@ export class MenuBar {
           cls: titleClass,
           text: `- ${navPath}`,
           attr: {
-            "aria-label": `Flow overlaps with ${overlap[0].join(", ")}`,
+            "aria-label": overlapText,
           },
         });
 
@@ -255,7 +258,7 @@ export class MenuBar {
           );
 
           if (startPosInFlow) {
-            this.flowService.scrollToPos(editor, startPosInFlow);
+            this.plugin.flowService.scrollToPos(editor, startPosInFlow);
           }
 
           this.filterList = [];
@@ -314,41 +317,42 @@ export class MenuBar {
       // ---------- FUNCTIONS -----------------
 
       // ----------- Preparatory checks
-      let goSave = "neutral";
+      let goSync = "neutral";
       let goRebuild = "neutral";
 
-      // check if there is unsaved stuff for the flow
+      // check if there is unsynced stuff for the flow
       if (
-        this.plugin.settings.flows[this.flowName].unsavedRegionsArray.length > 0
+        this.plugin.settings.flows[this.flowName].unsyncedRegionsArray.length >
+        0
       ) {
         goRebuild = "no-go";
-        goSave = "must"; // must save
+        goSync = "must"; // must sync
       }
       // check if flow is flagged for rebuild
       if (
-        goSave === "neutral" &&
+        goSync === "neutral" &&
         this.plugin.settings.flows[this.flowName].flaggedForRebuild
       ) {
         goRebuild = "must";
-        goSave = "no-go";
+        goSync = "no-go";
       }
 
       const menuBarEl = this.associatedView.contentEl.createDiv({
         cls: `textflow-menu-bar`,
       });
 
-      // ----- SAVE BUTTON -----------
-      const saveButton = new ButtonComponent(menuBarEl);
-      saveButton
+      // ----- SYNC BUTTON -----------
+      const syncButton = new ButtonComponent(menuBarEl);
+      syncButton
         .setIcon("download")
-        .setClass(`menu-bar-button-save-${goSave}`)
+        .setClass(`menu-bar-button-sync-${goSync}`)
         .setClass("spacing")
         .setClass("clickable-icon")
         .onClick(async () => {
-          if (goSave === "neutral" || goSave === "must") {
+          if (goSync === "neutral" || goSync === "must") {
             const syncLeafID = (this.associatedView.leaf as any).id;
             this.plugin.isSyncing = true;
-            await this.plugin.saveBackToSource(
+            await this.plugin.syncBackToSource(
               this.flowName,
               this.associatedView.editor.getValue(),
               syncLeafID
@@ -369,8 +373,9 @@ export class MenuBar {
         .setClass("clickable-icon")
         .onClick(async () => {
           if (goRebuild === "neutral" || goRebuild === "must") {
-            await this.flowService.rebuildFlow(this.flowName, "menuBar");
-            this.plugin.setupFlowView(this.flowName, this.associatedView);
+            this.plugin.toggleEditable(this.associatedView, false);
+            await this.plugin.flowService.rebuildFlow(this.flowName, "menuBar");
+            this.plugin.toggleEditable(this.associatedView, true);
           }
         });
 
@@ -575,7 +580,7 @@ export class MenuBar {
         }
       }
 
-      // the span that holds abobe text, plus the fast travel icon
+      // the span that holds above text, plus the fast travel icon
       cursorHeadline.createSpan({
         cls: "align-off-center",
         text: cursorDropdownHeadline,
@@ -654,7 +659,7 @@ export class MenuBar {
             text: `${
               this.plugin.settings.flows[this.flowName].persistentCursors[
                 cursorLeafID
-              ].creationDateString
+              ].leafContent
             }`,
           });
 
@@ -673,7 +678,7 @@ export class MenuBar {
 
             const cursorDropdownEntryPos = cursorDropdownScrollable.createDiv({
               cls: "blah",
-              text: `${cursorArray[index][1]} - ${this.makeNavPath(data[0])}`,
+              text: `${this.makeNavPath(data[0])} - ${cursorArray[index][1]}`,
             });
             const cursorPos = cursorArray[index][1];
             const editor = this.associatedView.editor as ObsidianEditor;
@@ -681,7 +686,7 @@ export class MenuBar {
               cursorDropdownEntryPos,
               "click",
               (event) => {
-                this.flowService.scrollToPos(editor, cursorPos);
+                this.plugin.flowService.scrollToPos(editor, cursorPos);
               }
             );
           }
@@ -705,7 +710,7 @@ export class MenuBar {
                     cls: `text-emphasis align-off-center`,
                     text: `${
                       this.plugin.settings.flows[this.flowName]
-                        .persistentCursors[leafID].creationDateString
+                        .persistentCursors[leafID].leafContent
                     }`,
                   });
 
@@ -732,7 +737,7 @@ export class MenuBar {
                     (event) => {
                       const editor = this.associatedView
                         .editor as ObsidianEditor;
-                      this.flowService.scrollToPos(editor, cursorPos);
+                      this.plugin.flowService.scrollToPos(editor, cursorPos);
                     }
                   );
                 }
@@ -774,13 +779,13 @@ export class MenuBar {
           .setClass("cursor-target-button") // Add a specific class we can target
           .setTooltip(
             mostRecentCursor != 0 && mostRecentRegion != ""
-              ? `${mostRecentCursor} - ${mostRecentRegion}`
+              ? `${mostRecentRegion} - ${mostRecentCursor}`
               : "No cursor positions stored"
           )
           .onClick(() => {
             const editor = this.associatedView.editor as ObsidianEditor;
             mostRecentCursor
-              ? this.flowService.scrollToPos(editor, mostRecentCursor)
+              ? this.plugin.flowService.scrollToPos(editor, mostRecentCursor)
               : "";
           });
       }
@@ -794,7 +799,7 @@ export class MenuBar {
         .setTooltip("Select active region")
         .onClick(async () => {
           if (activeRegion) {
-            this.flowService.selectActiveRegion(
+            this.plugin.flowService.selectActiveRegion(
               this.flowName,
               activeRegion,
               this.associatedView.editor.getValue(),
@@ -823,9 +828,11 @@ export class MenuBar {
             };
             const cleanContent = stripUUIDs(fileContent);
             const exportedFlowPath = normalizePath(
-              `/${this.flowName}_export.md`
+              `/${
+                this.flowName
+              }_export_${this.plugin.flowService.getTimestamp()}.md`
             );
-            await this.flowService.safeCreateFile(
+            await this.plugin.flowService.safeCreateFile(
               this.app.vault,
               exportedFlowPath,
               cleanContent

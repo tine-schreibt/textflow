@@ -17,7 +17,6 @@ import {
   Compartment,
   EditorState,
   StateEffect,
-  StateField,
   Extension,
 } from "@codemirror/state";
 import * as Types from "./src/types";
@@ -26,7 +25,6 @@ import { MenuBar } from "./src/menuBar";
 import { FlowService } from "./src/flowService";
 import { TEXTFLOW_SYSTEMFOLDER } from "./src/settingsTab";
 import { dirname, basename } from "path";
-import { Mark } from "js-yaml";
 
 // so the menu bar can be kept within the view
 declare module "obsidian" {
@@ -798,7 +796,7 @@ export default class TextFlowPlugin extends Plugin {
     if (!view) {
       return;
     }
-    const leafID: string = (view.leaf as any).id;
+    const leafID: number = (view.leaf as any).id;
     if (!leafID) return;
 
     if (this.listenerBasket[leafID]) {
@@ -1332,15 +1330,18 @@ export default class TextFlowPlugin extends Plugin {
     // this has to happen first so the menuBar can just be set up
     await this.manageActiveFlowObject();
 
+    // add this so we can safely rebuild
+    this.addWriteProtection(view, "sync");
+
     if (this.settings.flows[flowName].flaggedForRebuild) {
-      this.flowService.rebuildFlow(flowName, "setupFlowView");
+      this.toggleEditable(view, false);
+      await this.flowService.rebuildFlow(flowName, "setupFlowView");
+      this.toggleEditable(view, true);
     }
     // now do the menu bar
-    console.log("setupFlowView calling setupMenuBar");
     this.setupMenuBar(view, flowName);
 
-    // set up the editor with its extensions and listeners
-    this.addWriteProtection(view, "sync");
+    // set up the editor with its other extensions and listeners
     this.addWriteProtection(view, "divider");
     this.addCursorListener(view);
     this.addTextChangeListener(view);
@@ -1375,21 +1376,7 @@ export default class TextFlowPlugin extends Plugin {
   //CHECKED AND TESTED
   // ---- handle menuBar setup
   setupMenuBar = (view: MarkdownView, flowName: string) => {
-    console.log("setting up menu bar");
     let menuBar: MenuBar;
-    const filePath = view.file?.path;
-    if (!filePath) return;
-    const leaf = view.leaf as WorkspaceLeaf;
-
-    if (!(view instanceof MarkdownView)) {
-      // reopen note if it's not
-      console.log("reopening leaf");
-      const flowFile = this.app.vault.getAbstractFileByPath(filePath);
-      if (flowFile instanceof TFile) {
-        leaf.openFile(flowFile);
-      }
-    }
-
     // If we got one, check if it belongs to the flow
     if (view.menuBar) {
       if ((view.menuBar as MenuBar).getFlowName() != flowName) {
@@ -1792,7 +1779,6 @@ export default class TextFlowPlugin extends Plugin {
         await this.toggleEditable(view, true);
       })
     );
-    console.log("done syncing, now refreshing");
     this.refreshMenuBars();
     this.isSyncing = false; // unsuspends modify listener
   };
@@ -1992,7 +1978,7 @@ export default class TextFlowPlugin extends Plugin {
   // --------------- Functions: Flow management: Regions -----------------------------------------
   private checkActiveRegion = async (
     flow: Types.FlowDef,
-    leafID: string,
+    leafID: number,
     cursorOffset: number,
     view: MarkdownView
   ) => {
@@ -2040,7 +2026,7 @@ export default class TextFlowPlugin extends Plugin {
       // new terrain!
       flow.activeRegions[leafID].currentCursorPos = cursorOffset;
       // Use a map and compass
-      let activeRegion = await this.findActiveRegion(
+      let activeRegion = this.findActiveRegion(
         flow,
         editor,
         leafID,
@@ -2070,7 +2056,7 @@ export default class TextFlowPlugin extends Plugin {
   private findActiveRegion = (
     flow: Types.FlowDef,
     editor: ObsidianEditor,
-    leafID: string,
+    leafID: number,
     cursorOffset: number,
     text: string
   ) => {
@@ -2138,13 +2124,16 @@ export default class TextFlowPlugin extends Plugin {
     const matches = searchStart.match(markerRegex);
 
     if (matches) {
+      console.log("we got matches");
       const UIDLength = matches[0].length - 4;
       const UID = matches[0].slice(0, UIDLength);
+      console.log("uid", UID)
       const foundRegion = Object.entries(flow.flowMap).find(
         ([_, foundRegionMap]) => foundRegionMap.UID === UID
       );
 
       if (foundRegion) {
+        console.log("found a region");
         const [foundRegionPath, foundRegionMap] = foundRegion;
 
         // calculate where the region starts
@@ -2152,12 +2141,14 @@ export default class TextFlowPlugin extends Plugin {
         if (foundRegionMap.flowOrder > 1) {
           newStartInFlow =
             this.findStartOfRegion(flow, foundRegionMap.flowOrder, text) || 0;
+          console.log("found start", newStartInFlow);
         } else {
           newStartInFlow = 0;
         }
 
         // calculate where it ends
         const endInFlow = text.indexOf(foundRegionMap.UID) + matches[0].length;
+        console.log("found end", endInFlow);
 
         // put together the object
         const activeRegionObject: Types.ActiveRegion = {
@@ -2200,7 +2191,6 @@ export default class TextFlowPlugin extends Plugin {
       ([previousRegion, previousRegionFlowMapEntry]) =>
         previousRegionFlowMapEntry.flowOrder === flowOrder - 1
     );
-
     if (previousRegion) {
       const [previousRegionPath, previousRegionMap] = previousRegion;
       const invisibleUID = previousRegionMap.UID;
@@ -2225,7 +2215,7 @@ export default class TextFlowPlugin extends Plugin {
     // Wait for the file explorer to be available in the DOM
     this.app.workspace.onLayoutReady(async () => {
       // make sure we know where our stuff is
-      await this.ensureSystemFolder();
+      this.ensureSystemFolder();
 
       // ---- Set up UI
       // ----------------------------------------------
@@ -2282,10 +2272,10 @@ export default class TextFlowPlugin extends Plugin {
           }, 100);
         }
       }
-
-      this.addListeners();
-      this.registerCommands();
     });
+
+    this.addListeners();
+    this.registerCommands();
 
     // check if we're done initialising files and wait a moment longer
     this.app.metadataCache.on("resolved", () => {

@@ -223,12 +223,10 @@ export class DeleteFlowDefModal extends Modal {
 //-------- FLOW SWITCHING
 export class FlowSwitcherModal extends Modal {
   private plugin: TextFlowPlugin;
-  flowService: FlowService;
 
   constructor(app: App, plugin: TextFlowPlugin) {
     super(app);
     this.plugin = plugin;
-    this.flowService = new FlowService(plugin, app);
   }
 
   async onOpen() {
@@ -352,7 +350,7 @@ export class FlowSwitcherModal extends Modal {
 
       // check if there is unsynced stuff for the flow
       if (
-        this.plugin.settings.flows[activeFlow].unsavedRegionsArray.length > 0
+        this.plugin.settings.flows[activeFlow].unsyncedRegionsArray.length > 0
       ) {
         goOpen = "neutral";
         goSync = "must"; // must sync
@@ -387,9 +385,7 @@ export class FlowSwitcherModal extends Modal {
               await this.app.workspace.setActiveLeaf(leaf, { focus: true });
               // this is called in setupFlowView, too, but timing matters for the conflict check
               await this.plugin.manageActiveFlowObject();
-              if (this.flowService.checkForActiveFlowConflicts()) {
-                this.plugin.syncAllLeaves();
-              }
+              this.plugin.syncAllLeaves();
             }
           }
         });
@@ -410,9 +406,7 @@ export class FlowSwitcherModal extends Modal {
               leaf.setPinned(true);
               this.app.workspace.setActiveLeaf(leaf, { focus: true });
               await this.plugin.manageActiveFlowObject();
-              if (this.flowService.checkForActiveFlowConflicts()) {
-                this.plugin.syncAllLeaves();
-              }
+              this.plugin.syncAllLeaves();
             }
           }
         });
@@ -434,9 +428,7 @@ export class FlowSwitcherModal extends Modal {
               leaf.setPinned(true);
               this.app.workspace.setActiveLeaf(leaf, { focus: true });
               await this.plugin.manageActiveFlowObject();
-              if (this.flowService.checkForActiveFlowConflicts()) {
-                this.plugin.syncAllLeaves();
-              }
+              this.plugin.syncAllLeaves();
             }
           }
         });
@@ -474,7 +466,7 @@ export class FlowSwitcherModal extends Modal {
                 // so user doesn't type while we rebuild
                 await this.plugin.setupFlowView(activeFlow, view);
             }
-            await this.flowService.rebuildFlow(activeFlow, "switcher");
+            await this.plugin.flowService.rebuildFlow(activeFlow, "switcher");
             await this.plugin.saveSettings();
             await this.display();
           } else if (goRebuild === "no-go") {
@@ -644,25 +636,25 @@ export class FlowSwitcherModal extends Modal {
       // -------- INACTIVE FLOWS HEADER BUTTONS -------
       // ---- conditionals for styling
       let goOpen = "neutral";
-      let goSave = "neutral";
+      let goSync = "neutral";
       let goRebuild = "neutral";
 
-      // check if there is unsaved stuff for the flow
+      // check if there is unsynced stuff for the flow
       if (
-        this.plugin.settings.flows[inactiveFlow].unsavedRegionsArray.length > 0
+        this.plugin.settings.flows[inactiveFlow].unsyncedRegionsArray.length > 0
       ) {
         goOpen = "neutral"; // don't open
         goRebuild = "no-go";
-        goSave = "must"; // must save
+        goSync = "must"; // must sync
       }
       // check if flow is flagged for rebuild
       if (
-        goSave === "neutral" &&
+        goSync === "neutral" &&
         this.plugin.settings.flows[inactiveFlow].flaggedForRebuild
       ) {
         goOpen = "no-go";
         goRebuild = "must";
-        goSave = "no-go";
+        goSync = "no-go";
       }
 
       // ----------- OPEN BUTTON ------------
@@ -722,14 +714,14 @@ export class FlowSwitcherModal extends Modal {
           }
         });
 
-      // ----------- SAVE BUTTON ------------
-      const saveButton = new ButtonComponent(inactiveFlowHeader)
+      // ----------- Sync BUTTON ------------
+      const syncButton = new ButtonComponent(inactiveFlowHeader)
         .setIcon("download")
-        .setClass(`flow-switch-modal-header-button-${goSave}`)
+        .setClass(`flow-switch-modal-header-button-${goSync}`)
         .setClass("clickable-icon")
         .onClick(async () => {
-          if (goSave === "neutral" || goSave === "must") {
-            if (goSave === "neutral" || goSave === "must") {
+          if (goSync === "neutral" || goSync === "must") {
+            if (goSync === "neutral" || goSync === "must") {
               await this.plugin.syncAllLeaves();
               await this.plugin.saveSettings();
               await this.display();
@@ -748,7 +740,7 @@ export class FlowSwitcherModal extends Modal {
         .setClass("clickable-icon")
         .onClick(async () => {
           if (goRebuild === "neutral" || goRebuild === "must") {
-            await this.flowService.rebuildFlow(inactiveFlow, "switcher");
+            await this.plugin.flowService.rebuildFlow(inactiveFlow, "switcher");
             await this.plugin.saveSettings();
             await this.display();
           } else {

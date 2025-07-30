@@ -1,19 +1,3 @@
-/*Functions that are called from this file: 
-
-CHECKED AND TESTED
-- this.flowService.createSystemFolder(path)
-- this.flowService.isValidFlowName()
-- this.flowService.radioButtonManager()
-- this.flowService.updateScrollbarVisibility()
-- this.flowService.debouncedSaveSettings() 
-
-- this.plugin.decorateSourceFiles(); 
-- this.plugin.undecorateSourceFiles();
-- this.plugin.discernAndSetSystemFolderState(folderState, path)
-
-UNCHECKED
-
-*/
 
 import * as Modals from "./modals";
 import {
@@ -26,7 +10,6 @@ import {
   Setting,
 } from "obsidian";
 import TextFlow from "../main";
-import { FlowService } from "./flowService";
 import * as Types from "./types";
 import { dirname } from "path";
 
@@ -35,12 +18,10 @@ export const TEXTFLOW_SYSTEMFOLDER = "TextFlow_SystemFolder";
 // --- The class that defines the settings tab
 export class TextFlowSettingsTab extends PluginSettingTab {
   plugin: TextFlow;
-  flowService: FlowService;
 
   constructor(app: App, plugin: TextFlow) {
     super(app, plugin);
     this.plugin = plugin;
-    this.flowService = new FlowService(plugin, app);
   }
 
   // ----- Helper functions
@@ -62,7 +43,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
     // ###############   SET UP A SYSTEM FOLDER   ###########################
     //CHECKED AND TESTED
-    const systemFolder = this.flowService.checkSystemFolder();
+    const systemFolder = this.plugin.flowService.checkSystemFolder();
     let newSystemFolderParent = ".";
 
     const setSystemFolder = new Setting(setUpTextFlow)
@@ -91,7 +72,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           )
           .onChange(async (value) => {
             newSystemFolderParent = normalizePath(value);
-            await this.flowService.debouncedSaveSettings();
+            await this.plugin.flowService.debouncedSaveSettings();
           })
       )
       .addButton((systemFolderCreateOrMoveButton) => {
@@ -106,7 +87,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
             // Create SystemFolder
             if (!systemFolder) {
-              await this.flowService.createSystemFolder(newPath);
+              await this.plugin.flowService.createSystemFolder(newPath);
 
               // set the folder hidden if appropriate
               this.plugin.discernAndSetSystemFolderState(
@@ -229,11 +210,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     flowModeExplorerDecoHeadline.addEventListener("click", toggleDropdown);
 
     // Create entries
-    const allEntries = [
-      ...this.flowService.flowModeInitalEntryArray,
-      ...this.flowService.flowModeExtendedEntryArray,
-    ];
-    allEntries.forEach((entry) => {
+    const decoArray = this.plugin.flowService.explorereDecoArray;
+    decoArray.forEach((entry) => {
       const explorerDecoEntry = flowModeExplorerDecoContainer.createDiv({
         cls: "explorer-deco-dropdown-entry",
       });
@@ -356,7 +334,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.settings.hideScrollbar = value;
             await this.plugin.saveSettings();
-            this.flowService.updateScrollbarVisibility();
+            this.plugin.flowService.updateScrollbarVisibility();
           });
       });
 
@@ -440,7 +418,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
         setFlowName.onChange(async (value) => {
           this.plugin.settings.flowBuildBasket.flowName = value.trim();
-          this.flowService.debouncedSaveSettings();
+          this.plugin.flowService.debouncedSaveSettings();
         });
       });
     }
@@ -594,7 +572,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         this.plugin.settings.flowBuildBasket.previewUsed = false;
         this.plugin.settings.flowBuildBasket.flowCookbook.bookmarks =
           value.trim();
-        this.flowService.debouncedSaveSettings();
+        this.plugin.flowService.debouncedSaveSettings();
       });
     });
     //^CHECKED
@@ -753,7 +731,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           value === "."
             ? ""
             : value;
-        this.flowService.debouncedSaveSettings();
+        this.plugin.flowService.debouncedSaveSettings();
       });
     });
     //^CHECKED
@@ -787,7 +765,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           this.plugin.settings.flowBuildBasket.flowCookbook.folderExcluded =
             value;
 
-          this.flowService.debouncedSaveSettings();
+          this.plugin.flowService.debouncedSaveSettings();
         });
       });
 
@@ -821,7 +799,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           this.plugin.settings.flowBuildBasket.flowCookbook.tagsIncluded =
             value;
 
-          this.flowService.debouncedSaveSettings();
+          this.plugin.flowService.debouncedSaveSettings();
         });
       });
     //^CHECKED
@@ -852,7 +830,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           // cleanup happens on preview/save
           this.plugin.settings.flowBuildBasket.flowCookbook.tagsExcluded =
             value;
-          this.flowService.debouncedSaveSettings();
+          this.plugin.flowService.debouncedSaveSettings();
         });
       });
     //^CHECKED
@@ -888,7 +866,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           // cleanup happens on preview/save
           this.plugin.settings.flowBuildBasket.flowCookbook.propsIncluded =
             value;
-          this.flowService.debouncedSaveSettings();
+          this.plugin.flowService.debouncedSaveSettings();
         });
       });
     //^CHECKED
@@ -923,7 +901,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           // cleanup happens on preview/save
           this.plugin.settings.flowBuildBasket.flowCookbook.propsExcluded =
             value;
-          this.flowService.debouncedSaveSettings();
+          this.plugin.flowService.debouncedSaveSettings();
         });
       });
     //^CHECKED
@@ -947,7 +925,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         this.plugin.settings.flowBuildBasket.flowCookbook.bookmarksSortOrder
       );
       // update button
-      this.flowService.radioButtonManager(
+      this.plugin.flowService.radioButtonManager(
         buttons.bookmarks,
         buttons.foldersTagsProps
       );
@@ -974,7 +952,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       this.plugin.settings.flowBuildBasket.definitionMode = "foldersTagsProps";
       this.plugin.settings.flowBuildBasket.previewUsed = false;
 
-      this.flowService.radioButtonManager(
+      this.plugin.flowService.radioButtonManager(
         buttons.foldersTagsProps,
         buttons.bookmarks
       );
@@ -999,7 +977,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         this.plugin.settings.flowBuildBasket.success = false;
 
         // Make sure the flow name is okay
-        const validation = await this.flowService.isValidFlowName(
+        const validation = await this.plugin.flowService.isValidFlowName(
           this.plugin.settings.flowBuildBasket.flowName
         );
         if (!validation.valid && validation.reason) {
@@ -1007,7 +985,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           return;
         }
         // do the logic that leads to a list of note paths
-        await this.flowService.createFlowDefinition(
+        await this.plugin.flowService.createFlowDefinition(
           this.plugin.settings.flowBuildBasket
         );
 
@@ -1030,7 +1008,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       .onClick(async (buttonEl: MouseEvent) => {
         // if checks and flow creation haven't been performed by the preview button
         if (!this.plugin.settings.flowBuildBasket.previewUsed) {
-          const validation = await this.flowService.isValidFlowName(
+          const validation = await this.plugin.flowService.isValidFlowName(
             this.plugin.settings.flowBuildBasket.flowName
           );
           if (!validation.valid && validation.reason) {
@@ -1038,7 +1016,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             return;
           }
 
-          await this.flowService.createFlowDefinition(
+          await this.plugin.flowService.createFlowDefinition(
             this.plugin.settings.flowBuildBasket
           );
           if (!this.plugin.settings.flowBuildBasket.success) {
@@ -1047,22 +1025,22 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         }
 
         // write the whole stuff,
-        await this.flowService.writeFlowDef(
+        await this.plugin.flowService.writeFlowDef(
           this.plugin.settings,
           this.plugin.settings.flowBuildBasket
         );
 
         // update conflicts,
-        await this.flowService.syncConflictObjects(
+        await this.plugin.flowService.syncConflictObjects(
           this.plugin.settings.flowBuildBasket
         );
 
         // and clean up the basket.
-        await this.flowService.resetFlowBuildBasket(
+        await this.plugin.flowService.resetFlowBuildBasket(
           this.plugin.settings.flowBuildBasket
         );
 
-        // save
+        //
         this.plugin.saveSettings();
         this.display();
       });
@@ -1076,7 +1054,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       .onClick(async (buttonEl: MouseEvent) => {
         // Clear all input values and reset the basket
         this.plugin.settings.flowBuildBasket.previewUsed = false;
-        this.flowService.resetFlowBuildBasket(
+        this.plugin.flowService.resetFlowBuildBasket(
           this.plugin.settings.flowBuildBasket
         );
         this.plugin.saveSettings();
@@ -1188,7 +1166,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             }
 
             // gather all info for the flowDefinition
-            this.flowService.rebuildFlow(flowName, "settingsTab");
+            this.plugin.flowService.rebuildFlow(flowName, "settingsTab");
+            this.plugin.refreshMenuBars();
             await this.plugin.saveSettings();
             this.display();
           })

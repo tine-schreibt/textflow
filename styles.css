@@ -516,9 +516,9 @@
   padding-right: 5px;
 }
 
-/*subtle highlight for saves*/
+/*subtle highlight for syncs*/
 
-.menu-bar-button-save-neutral {
+.menu-bar-button-sync-neutral {
   background-color: var(--background-primary);
   color: var(--text-normal);
   box-shadow: var(--input-shadow);
@@ -526,7 +526,7 @@
   width: 30px;
 }
 
-.menu-bar-button-save-no-go {
+.menu-bar-button-sync-no-go {
   background-color: var(--background-primary);
   color: var(--text-faint);
   box-shadow: var(--input-shadow);
@@ -534,7 +534,7 @@
   width: 30px;
 }
 
-.menu-bar-button-save-must {
+.menu-bar-button-sync-must {
   background-color: var(--background-primary);
   color: var(--text-normal);
   box-shadow: 0 0 4px 1px var(--text-accent);

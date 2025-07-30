@@ -8,30 +8,10 @@ import { EditorView } from "@codemirror/view";
 //###########################                ############################
 //#######################################################################
 
-export interface FlowNameValidation {
-  valid: boolean;
-  reason?: string;
-}
-
-interface InternalPlugins {
-  plugins: {
-    bookmarks: {
-      instance: {
-        items: BookmarkItem[];
-      };
-    };
-  };
-}
-
-export interface ObsidianApp extends App {
-  internalPlugins: InternalPlugins;
-}
-
+// -------- OUR SETTINGS
 export interface TextFlowSettings {
   firstLaunch: boolean;
-  activeVersion?: string;
   systemFolderPath?: string;
-  advancedToggle: boolean;
   systemFolderHidden: boolean;
   explorerDecoStyle: string[];
   showExplorerDeco: boolean;
@@ -41,19 +21,50 @@ export interface TextFlowSettings {
   switcherPos: string;
   showMenuBar: boolean;
   maxMenuBar: boolean;
-  flowBuildBasket: flowBuildBasket; // For storing preview data
-  activeFlowObject: { [key: string]: number | any };
+  flowBuildBasket: flowBuildBasket;
+  activeFlowObject: { [key: string]: { [key: string]: boolean } }; // flow Name[leafID] = boolean
   flows: { [key: string]: FlowDef };
 }
 
-export type Mode = "flow" | "source";
+// sub-types of TextFlowSettings
 
-export interface ModeSettings {
-  explorerDeco: string[];
+export type DecorationEntry = [
+  symbol1: string,
+  symbol2: string,
+  symbol1Class: string,
+  symbol2Class: string
+];
+
+export interface flowBuildBasket {
+  createOrEdit: string;
+  dataviewSearchPath: string;
+  previewUsed: boolean;
+  success: boolean;
+  flowName: string;
+  definitionMode: string;
+  folderTitles: boolean;
+  flowCookbook: { [key: string]: string };
+  finalRecipe: { [key: string]: string[] };
+  conflictObject: ConflictObject;
+  activeRegions: { [key: number | string]: ActiveRegion };
+  persistentCursors: CursorData;
 }
 
+// ---- subtypes of flowBuildBasket and FlowDef ------------
+export interface ConflictObject {
+  [key: string]: { [key: string]: boolean };
+}
+
+export interface CursorData {
+  [leafID: string]: {
+    leafContent: string;
+    update: number;
+    cursors: [string, number][]; // path, cursorPos
+  };
+}
+// ------------------------------
+
 export interface FlowDef {
-  timestamp: string;
   flowName: string;
   flowFilePath: string;
   definitionMode: string;
@@ -66,15 +77,11 @@ export interface FlowDef {
   conflictObject: ConflictObject;
   activeRegions: { [key: number | string]: ActiveRegion };
   persistentCursors: CursorData;
-  unsavedRegionsArray: string[];
+  unsyncedRegionsArray: string[];
   flowMap: { [key: string]: SourceFileObject };
 }
 
-export interface ConflictObject {
-  //conflictObject[flowName][path] = true;
-  [key: string]: { [key: string]: boolean };
-}
-
+// -------- subtypes of flowDef
 export interface ActiveRegion {
   currentCursorPos: number;
   type: string;
@@ -90,18 +97,6 @@ export interface ActiveRegion {
   };
 }
 
-export interface CursorData {
-  [leafID: string]: {
-    creationDate: number;
-    creationDateString: string;
-    update: number;
-    cursors: [string, number][]; // path, cursorPos
-  };
-}
-
-export type DropdownState = "hide" | "show";
-export type MenuBarDisplayState = "show" | "hide";
-
 export interface SourceFileObject {
   type: "file" | "folder";
   path: string;
@@ -116,7 +111,6 @@ export interface SourceFileObject {
 // --------- them defaults --------------------
 export const DEFAULT_SETTINGS: TextFlowSettings = {
   firstLaunch: true,
-  advancedToggle: false,
   systemFolderHidden: false,
   explorerDecoStyle: [
     "○",
@@ -149,7 +143,7 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
   flows: {},
 };
 
-// ---- flow creation helper object --------
+// ---- flow creation helper objects and utility types ------
 export interface mapValueBasket {
   concatenatedFileContents: string;
   initialIteration: boolean;
@@ -161,35 +155,36 @@ export interface mapValueBasket {
   idDivider: string;
 }
 
-export interface flowBuildBasket {
-  // Processing flags and temporary data
-  createOrEdit: string;
-  dataviewSearchPath: string;
-  previewUsed: boolean;
-  success: boolean;
-  flowName: string;
-  definitionMode: string;
-  folderTitles: boolean;
-  flowCookbook: { [key: string]: string };
-  finalRecipe: { [key: string]: string[] };
-  conflictObject: ConflictObject;
-  activeRegions: { [key: number | string]: ActiveRegion };
-  persistentCursors: CursorData;
-}
-
-// ---------- Flow management
-export type ModalFlowStatus = "on" | "off" | "incompatible";
-
 export type SortOrder = "depthFirst" | "filesFirst" | "custom";
 
-export type DecorationEntry = [
-  symbol1: string,
-  symbol2: string,
-  symbol1Class: string,
-  symbol2Class: string
-];
+// ------ used to get bookmarks (flow creation)
+export interface ObsidianApp extends App {
+  internalPlugins: InternalPlugins;
+}
 
-// ------- Dataview stuff
+interface InternalPlugins {
+  plugins: {
+    bookmarks: {
+      instance: {
+        items: BookmarkItem[];
+      };
+    };
+  };
+}
+
+export interface BookmarkItem {
+  type: "file" | "group";
+  ctime?: number;
+  path?: string;
+  items?: BookmarkItem[];
+  title?: string;
+}
+
+export interface BookmarksData {
+  items: BookmarkItem[];
+}
+
+// ------- Dataview stuff (flow creation)
 export interface DataviewFolder {
   file: {
     folder: string;
@@ -201,45 +196,35 @@ export interface FolderGroup {
   rows: DataviewFolder[];
 }
 
-// -----------------------
-export interface BookmarkItem {
-  type: "file" | "group";
-  ctime?: number;
-  path?: string; // only for type "file"
-  items?: BookmarkItem[]; // only for type "group"
-  title?: string; // only for type "group"
-}
-
-export interface BookmarksData {
-  items: BookmarkItem[];
-}
-
 export type DVNote = {
   file: {
     path: string;
-    tags: string[]; // or string, depending on your Dataview config
-    // ...other file fields if needed
+    tags: string[];
   };
-  // Properties: these are dynamic, so use an index signature
   [key: string]: any;
 };
 
-export type SearchItem = { path: string; displayName: string };
-export type SearchResult = SearchItem | FuseResult<SearchItem>;
+// ---- other assorted types and interfaces
 
-// needed for scoll into view stuff    // needed for scoll into view stuff
+// for the writelock
+export type ProtectionType = "divider" | "sync";
+
+// needed for scoll into view
 export interface ObsidianEditor extends Editor {
   cm?: EditorView;
 }
-interface FlowCookbook {
-  definitionMode: "bookmarks" | "foldersTagsProps";
-  bookmarks?: string;
-  foldersTagsProps?: string;
-  // ... other properties
-}
 
-export type ProtectionType = "divider" | "sync";
-
+// explorer deco
 export type CalculationMode = "redo" | "update";
 
 export type DecoStyle = "neutral" | "unsynced" | "none";
+
+// stuff that's used by the menuBar
+export type DropdownState = "hide" | "show";
+
+export type MenuBarDisplayState = "show" | "hide";
+
+// the nav dropdown
+export type SearchItem = { path: string; displayName: string };
+
+export type SearchResult = SearchItem | FuseResult<SearchItem>;
