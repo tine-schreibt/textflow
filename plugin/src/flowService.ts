@@ -14,7 +14,6 @@ import {
 import { EditorView } from "@codemirror/view";
 import TextFlow from "../main";
 import * as Types from "./types";
-import { basename, dirname, join } from "path";
 
 interface ObsidianEditor extends Editor {
   cm?: EditorView;
@@ -22,22 +21,29 @@ interface ObsidianEditor extends Editor {
 
 // --- A class for the build progress notice (shown when rebuilding from settings tab)
 class ProgressNotice {
+  private plugin: TextFlow;
   private notice: Notice;
-  private progress: number = 0;
   private flowName: string;
+  private symbolEmpty: string;
 
-  constructor(flowName: string) {
+  constructor(flowName: string, plugin: TextFlow) {
+    this.plugin = plugin;
     this.flowName = flowName;
+    this.symbolEmpty = this.plugin.flowService.explorereDecoArray[0][0];
     this.notice = new Notice(
-      `textFlow: Building ${this.flowName}: [▱▱▱▱▱▱▱▱▱▱] 0% \nFirst build might take longer.`,
-      0
-    ); // 0 duration makes it persistent
+      `textFlow: Building ${this.flowName}: [${this.symbolEmpty.repeat(
+        10
+      )}] 0% \nFirst build might take longer.`
+    );
   }
 
   updateProgress(current: number, total: number) {
+    const symbolEmpty = this.plugin.flowService.explorereDecoArray[0][0];
+    const symbolfilled = this.plugin.settings.explorerDecoStyle[1];
     const percent = Math.floor((current / total) * 100);
     const filled = Math.floor(percent / 10);
-    const bar = "[" + "▰".repeat(filled) + "-".repeat(10 - filled) + "]";
+    const bar =
+      "[" + symbolfilled.repeat(filled) + symbolEmpty.repeat(10 - filled) + "]";
     this.notice.setMessage(
       `Building ${this.flowName}: ${bar} ${percent}% \nFirst build might take longer.`
     );
@@ -51,8 +57,9 @@ class ProgressNotice {
 // the overlay for active flows
 class LoadingOverlay {
   private app: App;
-  private container: HTMLElement;
+  private plugin: TextFlow;
   private progressEl: HTMLElement;
+  private container: HTMLElement;
   private progressText: HTMLElement;
   private flowName: string;
 
@@ -61,29 +68,27 @@ class LoadingOverlay {
     this.flowName = flowName;
     console.log("leaf.view constructor:", leaf.view?.constructor?.name);
 
-    if (!(leaf.view instanceof MarkdownView)) {
-      console.log("trick didn't work. aborting");
-      throw new Error("LoadingOverlay: view is not a MarkdownView");
-    }
+    if (leaf.view instanceof MarkdownView)
+      // which we have made certain
+      this.container = leaf.view.contentEl.createDiv({
+        cls: "textflow-loading-container",
+      });
 
-    // Create overlay container
-    this.container = leaf.view.contentEl.createDiv({
-      cls: "textflow-loading-container",
-    });
-
-    //const symbol = this.plugin.settings.flowMode.explorerDeco.symbol
+    const symbol = this.plugin.flowService.explorereDecoArray[0][0];
     this.progressText = this.container.createDiv({
       cls: "textflow-loading-text",
-      text: `Building ${this.flowName}: ${"▰".repeat(
+      text: `Building ${this.flowName}: ${symbol.repeat(
         10
       )} 0% \nFirst build might take longer.`,
     });
   }
 
   updateProgress(current: number, total: number) {
+    const empty = this.plugin.flowService.explorereDecoArray[0][0]; // empty circle
+    const full = this.plugin.settings.explorerDecoStyle[1]; // full version of what the user chose
     const percent = Math.floor((current / total) * 100);
     const filled = Math.floor(percent / 10);
-    const bar = "[" + "▰".repeat(filled) + "-".repeat(10 - filled) + "]";
+    const bar = "[" + full.repeat(filled) + "empty".repeat(10 - filled) + "]";
     const text = `Building ${this.flowName}: ${bar} ${percent}% \nFirst build might take longer.`;
     this.progressText.setText(text);
   }
@@ -946,7 +951,6 @@ export class FlowService {
 
     // -------- CREATE THE FLOW OBJECT -------------------------------
     settings.flows[flowBuildBasket.flowName] = {
-      timestamp: this.getTimestamp(),
       flowName: flowBuildBasket.flowName,
       flowFilePath: normalizePath(
         `${this.plugin.settings.systemFolderPath}/${flowBuildBasket.flowName}.md`
@@ -961,7 +965,7 @@ export class FlowService {
       conflictObject: flowBuildBasket.conflictObject,
       activeRegions: flowBuildBasket.activeRegions,
       persistentCursors: flowBuildBasket.persistentCursors,
-      unsavedRegionsArray: [],
+      unsyncedRegionsArray: [],
       flowMap: {},
     };
     await this.plugin.saveSettings();
@@ -1165,8 +1169,8 @@ export class FlowService {
     // in case the call came from inside the...
     // settingsTab
     let progressToast: ProgressVisualizer | null = null;
-    if (caller === "settingsTab") {
-      progressToast = new ProgressNotice(flowName);
+    if (caller === "settingsTab" || caller === "switcher") {
+      progressToast = new ProgressNotice(flowName, this.plugin);
     }
 
     // Get an object started for the rest of cases
@@ -1375,21 +1379,11 @@ export class FlowService {
         `${this.plugin.settings.systemFolderPath}/${flowName}.md`
       );
 
-      // check, if there's already a file there
-      const existingFile = this.app.vault.getAbstractFileByPath(flowFilePath);
-      if (existingFile instanceof TFile) {
-        // If file exists, modify it
-        await this.app.vault.modify(
-          existingFile,
-          mapValueBasket.concatenatedFileContents
-        );
-      } else {
-        // If file doesn't exist, create it
-        await this.app.vault.create(
-          flowFilePath,
-          mapValueBasket.concatenatedFileContents
-        );
-      }
+      this.safeCreateFile(
+        this.app.vault,
+        flowFilePath,
+        mapValueBasket.concatenatedFileContents
+      );
       // remove the flag
       this.plugin.isRebuilding = false;
       this.plugin.saveSettings();
@@ -1490,37 +1484,6 @@ export class FlowService {
   // ^CHECKED AND TESTED
 
   // CHECKED AND TESTED
-  checkForActiveFlowConflicts = (): boolean => {
-    const ids = Object.keys(this.plugin.settings.activeFlowObject);
-    for (let i = 0; i < ids.length; i++) {
-      const flowA = this.plugin.settings.activeFlowObject[ids[i]];
-      for (let j = i + 1; j < ids.length; j++) {
-        const flowB = this.plugin.settings.activeFlowObject[ids[j]];
-        if (flowA.conflicts?.[flowB.id] || flowB.conflicts?.[flowA.id]) {
-          console.log("open conflicts found");
-          return true;
-        }
-      }
-    }
-    return false;
-  };
-  // ^CHECKED AND TESTED
-
-  //
-  //
-  //
-  //
-  //
-  //
-  //
-  //
-  //
-  //
-  //
-  //
-  //
-  //
-
   scrollToPos(editor: Types.ObsidianEditor, cursorPos: number) {
     const cmEditor = editor.cm;
     let text = "";
@@ -1528,23 +1491,122 @@ export class FlowService {
       text = cmEditor.state.doc.toString();
     }
     if (cursorPos !== undefined && cursorPos >= 0 && cmEditor) {
-      const line = cmEditor.state.doc.lineAt(Math.max(0, cursorPos)); // Ensure position is not negative
-      const targetPos = line.from; // Scroll to the beginning of the line
+      // Ensure position is not negative
+      const line = cmEditor.state.doc.lineAt(Math.max(0, cursorPos));
+      const targetPos = line.from;
       cmEditor.dispatch({
         selection: { anchor: targetPos, head: targetPos },
         effects: EditorView.scrollIntoView(targetPos, {
-          y: "center", // Center in viewport
-          yMargin: 10, // Small margin
+          y: "center",
+          yMargin: 10,
         }),
         userEvent: "select.pointer",
       });
-      cmEditor.focus(); // Explicitly focus the editor
+      // Explicitly focus the editor
+      cmEditor.focus();
+    }
+  }
+  // ^CHECKED AND TESTED
+
+  safeCreateFile = async (vault: Vault, path: string, content: string) => {
+    try {
+      const existingFile = vault.getAbstractFileByPath(path);
+      if (existingFile instanceof TFile) {
+        await vault.modify(existingFile, content);
+      } else {
+        await vault.create(path, content);
+      }
+    } catch (error) {
+      console.error(`Failed to create/modify file at ${path}:`, error);
+      throw error;
+    }
+  };
+
+  //CHECKED AND TESTED
+
+  selectActiveRegion = async (
+    flowName: string,
+    path: string,
+    text: string,
+    editor: Editor
+  ) => {
+    const map = this.plugin.settings.flows[flowName].flowMap;
+
+    const startPos = await this.plugin.findStartOfRegion(
+      this.plugin.settings.flows[flowName],
+      this.plugin.settings.flows[flowName].flowMap[path].flowOrder,
+      text
+    );
+    const endPos = text.indexOf(map[path].UID) - 1; // subtract 1 for the \r before the UID
+
+    if (startPos && endPos) {
+      if ("cm" in editor) {
+        // Type guard for ObsidianEditor
+        const cmEditor = (editor as any).cm;
+        if (cmEditor) {
+          try {
+            cmEditor.dispatch({
+              selection: { anchor: startPos + 1, head: endPos },
+              scrollIntoView: true, // Optional: scroll the selection into view
+            });
+            cmEditor.focus(); // Optional: focus the editor
+          } catch (error) {
+            console.error("Failed to set selection:", error);
+          }
+        }
+      }
+    }
+  };
+
+  updateScrollbarVisibility() {
+    // Handle all leaves
+    // add hider if all are hidden
+    if (this.plugin.settings.hideScrollbar === "all") {
+      const body = document.body;
+      body.classList.remove("hide-scrollbar");
+      body.classList.add("hide-scrollbar");
+    } else {
+      // otherwise remove the hiding
+      const body = document.body;
+      body.classList.remove("hide-scrollbar");
+    }
+
+    // Handle flow leaves
+    // get all the leaves and check they're valid
+    const allLeaves = this.app.workspace.getLeavesOfType("markdown");
+    for (let leaf of allLeaves) {
+      if (leaf.view instanceof MarkdownView && leaf.view.file) {
+        // check if it's a flow
+        const flowName = this.plugin.isFlowFile(leaf.view.file.path);
+        if (!flowName) return;
+
+        // if only flows are hidden, add the hiding
+        if (
+          this.plugin.settings.hideScrollbar === "flows" &&
+          !leaf.view.containerEl.hasClass("hide-scrollbar")
+        ) {
+          leaf.view.containerEl.addClass("hide-scrollbar");
+        } else {
+          // if none or all are hidden, remove it
+          leaf.view.containerEl.removeClass("hide-scrollbar");
+        }
+      }
     }
   }
 
-  // The arrays with the deco stuff
+  getTimestamp = (): string => {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
 
-  flowModeInitalEntryArray: Types.DecorationEntry[] = [
+    return `${year}-${month}-${day}_${hours}-${minutes}`;
+  };
+
+  // The arrays with the deco stuff
+  explorereDecoArray: Types.DecorationEntry[] = [
     ["○", "●", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
     ["○", "●", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
     ["○", "●", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
@@ -1559,9 +1621,7 @@ export class FlowService {
     ["◇", "◆", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
     ["◇", "◆", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
     ["◇", "◆", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
-  ];
 
-  flowModeExtendedEntryArray: Types.DecorationEntry[] = [
     ["✿", "❀", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
     ["✿", "❀", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
     ["✿", "❀", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
@@ -1702,100 +1762,4 @@ export class FlowService {
     ["←", "→", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
     ["←", "→", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
   ];
-
-  safeCreateFile = async (vault: Vault, path: string, content: string) => {
-    try {
-      const existingFile = vault.getAbstractFileByPath(path);
-      if (existingFile instanceof TFile) {
-        await vault.modify(existingFile, content);
-      } else {
-        await vault.create(path, content);
-      }
-    } catch (error) {
-      console.error(`Failed to create/modify file at ${path}:`, error);
-      throw error;
-    }
-  };
-
-  selectActiveRegion = async (
-    flowName: string,
-    path: string,
-    text: string,
-    editor: Editor
-  ) => {
-    const map = this.plugin.settings.flows[flowName].flowMap;
-
-    const startPos = await this.plugin.findStartOfRegion(
-      this.plugin.settings.flows[flowName],
-      this.plugin.settings.flows[flowName].flowMap[path].flowOrder,
-      text
-    );
-    const endPos = text.indexOf(map[path].UID) - 1; // subtract 1 for the \r before the UID
-
-    if (startPos && endPos) {
-      if ("cm" in editor) {
-        // Type guard for ObsidianEditor
-        const cmEditor = (editor as any).cm;
-        if (cmEditor) {
-          try {
-            cmEditor.dispatch({
-              selection: { anchor: startPos + 1, head: endPos },
-              scrollIntoView: true, // Optional: scroll the selection into view
-            });
-            cmEditor.focus(); // Optional: focus the editor
-          } catch (error) {
-            console.error("Failed to set selection:", error);
-          }
-        }
-      }
-    }
-  };
-
-  updateScrollbarVisibility() {
-    // Handle all leaves
-    // add hider if all are hidden
-    if (this.plugin.settings.hideScrollbar === "all") {
-      const body = document.body;
-      body.classList.remove("hide-scrollbar");
-      body.classList.add("hide-scrollbar");
-    } else {
-      // otherwise remove the hiding
-      const body = document.body;
-      body.classList.remove("hide-scrollbar");
-    }
-
-    // Handle flow leaves
-    // get all the leaves and check they're valid
-    const allLeaves = this.app.workspace.getLeavesOfType("markdown");
-    for (let leaf of allLeaves) {
-      if (leaf.view instanceof MarkdownView && leaf.view.file) {
-        // check if it's a flow
-        const flowName = this.plugin.isFlowFile(leaf.view.file.path);
-        if (!flowName) return;
-
-        // if only flows are hidden, add the hiding
-        if (
-          this.plugin.settings.hideScrollbar === "flows" &&
-          !leaf.view.containerEl.hasClass("hide-scrollbar")
-        ) {
-          leaf.view.containerEl.addClass("hide-scrollbar");
-        } else {
-          // if none or all are hidden, remove it
-          leaf.view.containerEl.removeClass("hide-scrollbar");
-        }
-      }
-    }
-  }
-
-  getTimestamp = (): string => {
-    const date = new Date();
-    const weekday = date.toLocaleDateString("en-US", { weekday: "short" });
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-
-    return `${weekday}, ${year}.${month}.${day}, ${hours}:${minutes}`;
-  };
 }
