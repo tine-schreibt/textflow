@@ -9,7 +9,6 @@ import {
   TFile,
 } from "obsidian";
 import { EditorView } from "@codemirror/view";
-import { FlowService } from "./flowService";
 import Fuse, { FuseResult } from "fuse.js";
 import type TextFlowPlugin from "../main";
 
@@ -126,6 +125,7 @@ export class MenuBar {
       );
   }
 
+  // self explanatory
   private setDropdownState(dropdown: string, state: "show" | "hide") {
     const stateLeafID = (this.associatedView.leaf as any).id;
     if (
@@ -243,7 +243,6 @@ export class MenuBar {
 
         this.addManagedListener(dropdownEntry, "click", (event) => {
           // scroll into view
-          // Get the text content of the editor (needed to search for start of region)
           const editor = this.associatedView.editor as ObsidianEditor;
           const cmEditor = editor.cm;
           let text = "";
@@ -294,7 +293,6 @@ export class MenuBar {
   }
 
   // ----------- THE MENU BAR ITSELF
-
   createMenuBarElement(): HTMLElement {
     // If the menuBar is completely HIDDEN
     if (!this.plugin.settings.showMenuBar) {
