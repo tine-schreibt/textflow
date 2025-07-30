@@ -22,22 +22,19 @@ interface ObsidianEditor extends Editor {
 // --- A class for the build progress notice (shown when rebuilding from settings tab)
 class ProgressNotice {
   private notice: Notice;
-  private progress: number = 0;
   private flowName: string;
-  private symbolFilled: string;
-
-  constructor(flowName: string, symbolFilled: string) {
+  constructor(flowName: string) {
     this.flowName = flowName;
-    this.symbolFilled = symbolFilled;
     this.notice = new Notice(
-      `textFlow: Building ${this.flowName}: [▱▱▱▱▱▱▱▱▱▱] 0% \nFirst build might take longer.`
+      `textFlow: Building ${this.flowName}: [oooooooooo] 0% \nFirst build might take longer.`
     );
   }
 
-  updateProgress(current: number, total: number) {
+  updateProgress(current: number, total: number, symbolFilled: string) {
     const percent = Math.floor((current / total) * 100);
     const filled = Math.floor(percent / 10);
-    const bar = "[" + "▰".repeat(filled) + "▱".repeat(10 - filled) + "]";
+    const bar =
+      "[" + symbolFilled.repeat(filled) + "o".repeat(10 - filled) + "]";
     this.notice.setMessage(
       `Building ${this.flowName}: ${bar} ${percent}% \nFirst build might take longer.`
     );
@@ -50,14 +47,18 @@ class ProgressNotice {
 
 // the overlay for active flows
 class LoadingOverlay {
-  private app: App;
+  private plugin: TextFlow;
   private container: HTMLElement;
-  private progressEl: HTMLElement;
   private progressText: HTMLElement;
   private flowName: string;
 
-  constructor(leaf: WorkspaceLeaf, flowName: string, app: App) {
-    this.app = app;
+  constructor(
+    leaf: WorkspaceLeaf,
+    flowName: string,
+    app: App,
+    plugin: TextFlow
+  ) {
+    this.plugin = plugin;
     this.flowName = flowName;
     console.log("leaf.view constructor:", leaf.view?.constructor?.name);
 
@@ -70,51 +71,28 @@ class LoadingOverlay {
       cls: "textflow-loading-container",
     });
 
-    //const symbol = this.plugin.settings.flowMode.explorerDeco.symbol
+    const symbol = this.plugin.flowService.explorereDecoArray[0][0];
     this.progressText = this.container.createDiv({
       cls: "textflow-loading-text",
-      text: `Building ${this.flowName}: ${"▰".repeat(
+      text: `Building ${this.flowName}: ${symbol.repeat(
         10
       )} 0% \nFirst build might take longer.`,
     });
   }
 
-  updateProgress(current: number, total: number) {
+  updateProgress(
+    current: number,
+    total: number,
+    symbolEmpty: string,
+    symbolFilled: string
+  ) {
     const percent = Math.floor((current / total) * 100);
     const filled = Math.floor(percent / 10);
-    const bar = "[" + "▰".repeat(filled) + "-".repeat(10 - filled) + "]";
+    const bar =
+      "[" + symbolFilled.repeat(filled) + symbolEmpty.repeat(10 - filled) + "]";
     const text = `Building ${this.flowName}: ${bar} ${percent}% \nFirst build might take longer.`;
     this.progressText.setText(text);
   }
-
-  ensureMarkdownViewFromLeaf = async (
-    leaf: WorkspaceLeaf
-  ): Promise<MarkdownView> => {
-    if (leaf.view instanceof MarkdownView) return leaf.view;
-
-    // Switch to any other leaf temporarily
-    const leaves: WorkspaceLeaf[] = [];
-    this.app.workspace.iterateAllLeaves((leaf) => {
-      leaves.push(leaf);
-    });
-    const otherLeaf = leaves.find((l: WorkspaceLeaf) => l !== leaf);
-
-    if (otherLeaf) {
-      this.app.workspace.setActiveLeaf(otherLeaf, { focus: true });
-      await sleep(50);
-    }
-
-    this.app.workspace.setActiveLeaf(leaf, { focus: true });
-    await sleep(50);
-
-    if (leaf.view instanceof MarkdownView) return leaf.view;
-
-    throw new Error("Leaf did not resolve to MarkdownView after re-activation");
-  };
-
-  sleep = (ms: number): Promise<void> => {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  };
 
   remove() {
     this.container.remove();
@@ -1163,9 +1141,9 @@ export class FlowService {
     // in case the call came from inside the...
     // settingsTab
     let progressToast: ProgressVisualizer | null = null;
-    if (caller === "settingsTab") {
+    if (caller === "settingsTab" || caller === "switcher") {
       const symbolFilled = this.plugin.settings.explorerDecoStyle[1];
-      progressToast = new ProgressNotice(flowName, symbolFilled);
+      progressToast = new ProgressNotice(flowName);
     }
 
     // Get an object started for the rest of cases
@@ -1190,7 +1168,8 @@ export class FlowService {
               progressOverlays[leafID] = new LoadingOverlay(
                 leaf,
                 flowName,
-                this.app
+                this.app,
+                this.plugin
               );
             }
           }
@@ -1226,19 +1205,28 @@ export class FlowService {
       counter++;
       if (caller === "settingsTab") {
         if (progressToast) {
-          progressToast.updateProgress(counter, total);
+          const symbolFilled = this.plugin.settings.explorerDecoStyle[1];
+          progressToast.updateProgress(counter, total, symbolFilled);
         }
       } else {
+        const symbolEmpty = this.explorereDecoArray[0][0];
+        const symbolFilled = this.plugin.settings.explorerDecoStyle[1];
         Object.keys(progressOverlays).forEach((leafID) => {
-          progressOverlays[leafID].updateProgress(counter, total);
+          progressOverlays[leafID].updateProgress(
+            counter,
+            total,
+            symbolEmpty,
+            symbolFilled
+          );
         });
       }
       if (counter === total) {
-        if (caller === "settingsTab") {
+        if (caller === "settingsTab" || caller === "switcher") {
           if (progressToast) {
             progressToast.close();
           }
-        } else {
+        }
+        if (caller != "settingsTab") {
           Object.keys(progressOverlays).forEach((leafID) => {
             progressOverlays[leafID].remove();
           });
