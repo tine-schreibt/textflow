@@ -1142,7 +1142,6 @@ export class FlowService {
     // settingsTab
     let progressToast: ProgressVisualizer | null = null;
     if (caller === "settingsTab" || caller === "switcher") {
-      const symbolFilled = this.plugin.settings.explorerDecoStyle[1];
       progressToast = new ProgressNotice(flowName);
     }
 
