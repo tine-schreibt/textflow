@@ -2033,7 +2033,9 @@ export default class TextFlowPlugin extends Plugin {
         cursorOffset,
         text
       );
+
       if (activeRegion) {
+        // console.log("New active region found:", activeRegion.path);
         flow.activeRegions[leafID] = activeRegion;
         this.saveSettings();
         if (view.menuBar) {
@@ -2127,13 +2129,12 @@ export default class TextFlowPlugin extends Plugin {
       console.log("we got matches");
       const UIDLength = matches[0].length - 4;
       const UID = matches[0].slice(0, UIDLength);
-      console.log("uid", UID)
+
       const foundRegion = Object.entries(flow.flowMap).find(
         ([_, foundRegionMap]) => foundRegionMap.UID === UID
       );
 
       if (foundRegion) {
-        console.log("found a region");
         const [foundRegionPath, foundRegionMap] = foundRegion;
 
         // calculate where the region starts
@@ -2141,14 +2142,12 @@ export default class TextFlowPlugin extends Plugin {
         if (foundRegionMap.flowOrder > 1) {
           newStartInFlow =
             this.findStartOfRegion(flow, foundRegionMap.flowOrder, text) || 0;
-          console.log("found start", newStartInFlow);
         } else {
           newStartInFlow = 0;
         }
 
         // calculate where it ends
         const endInFlow = text.indexOf(foundRegionMap.UID) + matches[0].length;
-        console.log("found end", endInFlow);
 
         // put together the object
         const activeRegionObject: Types.ActiveRegion = {
@@ -2171,6 +2170,8 @@ export default class TextFlowPlugin extends Plugin {
           },
         };
         return activeRegionObject;
+      } else {
+        console.error("No matching region found for UID");
       }
     } else {
       console.error("No marker found in text after cursor");
@@ -2191,6 +2192,7 @@ export default class TextFlowPlugin extends Plugin {
       ([previousRegion, previousRegionFlowMapEntry]) =>
         previousRegionFlowMapEntry.flowOrder === flowOrder - 1
     );
+
     if (previousRegion) {
       const [previousRegionPath, previousRegionMap] = previousRegion;
       const invisibleUID = previousRegionMap.UID;
@@ -2212,6 +2214,8 @@ export default class TextFlowPlugin extends Plugin {
     // set up the class to access its functions
     this.flowService = new FlowService(this, this.app);
 
+    // -------------------------------------------------------------------
+    // ------------------- ONLOAD: add listeners for cursor and clicks
     // Wait for the file explorer to be available in the DOM
     this.app.workspace.onLayoutReady(async () => {
       // make sure we know where our stuff is
@@ -2274,6 +2278,8 @@ export default class TextFlowPlugin extends Plugin {
       }
     });
 
+    // ----------- ONLOAD: add global listeners ------------------------------------
+
     this.addListeners();
     this.registerCommands();
 
@@ -2308,6 +2314,7 @@ export default class TextFlowPlugin extends Plugin {
       const targetLeaf = leaves.find((leaf) => (leaf as any).id === leafID);
 
       for (const leaf of leaves) {
+        // Check if the leaf's view is a MarkdownView and if its file path matches
         if (targetLeaf?.view instanceof MarkdownView) {
           this.removeCursorListener(targetLeaf.view);
           this.removeTextChangeListener(targetLeaf.view);
