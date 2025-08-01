@@ -12,8 +12,6 @@ import {
   WorkspaceLeaf,
 } from "obsidian";
 import { EditorView } from "@codemirror/view";
-import { history, historyField } from "@codemirror/commands";
-import { StateEffect } from "@codemirror/state";
 import TextFlow from "../main";
 import * as Types from "./types";
 
@@ -1206,8 +1204,6 @@ export class FlowService {
     mapValueBasket: Types.mapValueBasket,
     caller: string
   ): Promise<void> => {
-    // setting this to disable IDDiverder protection, so it doesn't block the editor refresh
-    this.plugin.isRebuilding = true;
     // pre-flight check for SystemFolder
     let systemFolder = this.checkSystemFolder();
     if (!systemFolder) {
@@ -1443,6 +1439,11 @@ export class FlowService {
         `${this.plugin.settings.systemFolderPath}/${flowName}.md`
       );
 
+      // flag to disable IDDiverder protection, so it doesn't block the editor refresh
+      this.plugin.isRebuilding = true;
+      // flag to suspend create listener
+      this.plugin.textFlowOperation = true;
+
       // check, if there's already a file there
       const existingFile = this.app.vault.getAbstractFileByPath(flowFilePath);
       if (existingFile instanceof TFile) {
@@ -1458,8 +1459,9 @@ export class FlowService {
           mapValueBasket.concatenatedFileContents
         );
       }
-      // remove the flag
+      // remove the flags
       this.plugin.isRebuilding = false;
+      this.plugin.textFlowOperation = false;
       this.plugin.saveSettings();
     }
   };

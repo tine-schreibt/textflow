@@ -87,7 +87,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
             // Create SystemFolder
             if (!systemFolder) {
+              this.plugin.textFlowOperation = true;
               await this.plugin.flowService.createSystemFolder(newPath);
+              this.plugin.textFlowOperation = false;
 
               // set the folder hidden if appropriate
               this.plugin.discernAndSetSystemFolderState(
@@ -97,7 +99,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             } else {
               // Move SystemFolder
               try {
+                this.plugin.textFlowOperation = true;
                 await this.app.vault.rename(systemFolder, newPath);
+                this.plugin.textFlowOperation = false;
 
                 // hide if appropriate
                 this.plugin.discernAndSetSystemFolderState(
