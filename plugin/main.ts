@@ -595,6 +595,8 @@ export default class TextFlowPlugin extends Plugin {
     //CHECKED AND TESTED
     this.registerEvent(
       this.app.vault.on("rename", (file: TAbstractFile, oldPath: string) => {
+        if (this.textFlowOperation) return;
+
         let parentFolder = normalizePath(dirname(file.path));
         if (file instanceof TFolder) {
           parentFolder = file.path;
@@ -701,6 +703,7 @@ export default class TextFlowPlugin extends Plugin {
     this.registerEvent(
       this.app.vault.on("create", (file: TAbstractFile) => {
         if (this.isLoading) return;
+        if (this.textFlowOperation) return;
 
         let parentFolder = normalizePath(dirname(file.path));
         if (file instanceof TFolder) {
@@ -768,6 +771,7 @@ export default class TextFlowPlugin extends Plugin {
         }
 
         if (parentFolder.contains(TEXTFLOW_SYSTEMFOLDER)) {
+          // switcher modal makes sure flows with missing file are flagged for rebuild
           this.ensureSystemFolder();
           return;
         }
