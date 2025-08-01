@@ -12,6 +12,8 @@ import {
   WorkspaceLeaf,
 } from "obsidian";
 import { EditorView } from "@codemirror/view";
+import { history, historyField } from "@codemirror/commands";
+import { StateEffect } from "@codemirror/state";
 import TextFlow from "../main";
 import * as Types from "./types";
 
@@ -60,7 +62,6 @@ class LoadingOverlay {
   ) {
     this.plugin = plugin;
     this.flowName = flowName;
-    console.log("leaf.view constructor:", leaf.view?.constructor?.name);
 
     if (!(leaf.view instanceof MarkdownView)) {
       throw new Error("LoadingOverlay: view is not a MarkdownView");
@@ -257,11 +258,12 @@ export class FlowService {
         `${this.plugin.settings.systemFolderPath}/${newFlowName}.md`
       );
       const flowFile = this.app.vault.getAbstractFileByPath(oldFlowPath);
-      this.plugin.textFlowOperation = true;
       // rename file if present; in two steps to make TypeScript happy
       if (flowFile) {
         if (flowFile instanceof TFile) {
+          this.plugin.textFlowOperation = true;
           await this.app.vault.rename(flowFile, newFlowPath);
+          this.plugin.textFlowOperation = false;
         }
       }
 

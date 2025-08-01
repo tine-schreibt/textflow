@@ -648,6 +648,17 @@ export class FlowSwitcherModal extends Modal {
         goRebuild = "no-go";
         goSync = "must"; // must sync
       }
+
+      // if no sync is required, check if there's a file for that flow
+      const flowFile = this.app.vault.getAbstractFileByPath(
+        this.plugin.settings.flows[inactiveFlow].flowFilePath
+      );
+      if (!flowFile) {
+        goOpen = "no-go";
+        goRebuild = "must";
+        goSync = "no-go";
+      }
+
       // check if flow is flagged for rebuild
       if (
         goSync === "neutral" &&

@@ -19,6 +19,7 @@ import {
   StateEffect,
   Extension,
 } from "@codemirror/state";
+import { redo } from "@codemirror/commands";
 import * as Types from "./src/types";
 import * as Modals from "./src/modals";
 import { MenuBar } from "./src/menuBar";
@@ -599,10 +600,52 @@ export default class TextFlowPlugin extends Plugin {
           parentFolder = file.path;
         }
 
-        // Check if the object's path is (or should be) system folder
-        if (parentFolder.contains(TEXTFLOW_SYSTEMFOLDER)) {
-          this.ensureSystemFolder();
+        let oldParentFolder = normalizePath(dirname(oldPath));
+        if (file instanceof TFolder) {
+          oldParentFolder = file.path;
+        }
+
+        // check if they renamed the system folder (check if old path is identical)
+        if (this.settings.systemFolderPath === normalizePath(oldPath)) {
+          if (
+            // but basename differs
+            normalizePath(basename(this.settings.systemFolderPath)) !=
+            normalizePath(basename(file.path))
+          )
+            new Notice(
+              "textFlow: Please don't rename the system folder. You can hide it in settings."
+            );
           return;
+        }
+
+        // check if the user renamed a flow
+        Object.keys(this.settings.flows).forEach(async (flowName) => {
+          if (
+            this.settings.flows[flowName].flowFilePath ===
+            normalizePath(oldPath)
+          ) {
+            new Notice(
+              `textFlow: Please use textFlow settings to rename flows / the export function to get them out of the system folder.\n` +
+                `If you moved the TextFlow_SystemFolder manually, please reload your vault to restore proper syncing.`,
+              0
+            );
+            const flowFile = this.app.vault.getAbstractFileByPath(file.path);
+            if (flowFile) {
+              if (flowFile instanceof TFile) {
+                this.textFlowOperation = true;
+                await this.app.vault.rename(flowFile, oldPath);
+                this.textFlowOperation = false;
+                new Notice("textFlow: Old file name/path has been restored.");
+              }
+            }
+            return;
+          }
+        });
+
+        // Check if the user moved the system folder
+        if (this.settings.systemFolderPath === normalizePath(oldPath)) {
+          // update system folder data
+          this.ensureSystemFolder();
         }
 
         const continuableCheckPaths = Object.keys(this.settings.flows);
@@ -665,6 +708,9 @@ export default class TextFlowPlugin extends Plugin {
         }
 
         if (parentFolder.contains(TEXTFLOW_SYSTEMFOLDER)) {
+          new Notice(
+            "textFlow: You just created a new element in the system folder. Please move it somewhere else."
+          );
           this.ensureSystemFolder();
           return;
         }
@@ -716,6 +762,16 @@ export default class TextFlowPlugin extends Plugin {
     //CHECKED AND TESTED
     this.registerEvent(
       this.app.vault.on("delete", (file: TAbstractFile) => {
+        let parentFolder = normalizePath(dirname(file.path));
+        if (file instanceof TFolder) {
+          parentFolder = normalizePath(file.path);
+        }
+
+        if (parentFolder.contains(TEXTFLOW_SYSTEMFOLDER)) {
+          this.ensureSystemFolder();
+          return;
+        }
+
         if (file instanceof TFile) {
           const continuableCheckPaths = Object.keys(this.settings.flows);
           for (let flowName of continuableCheckPaths) {
@@ -2042,8 +2098,12 @@ export default class TextFlowPlugin extends Plugin {
       } else {
         // if the compass just cirles, notify the user
         new Notice(
-          `textFlow: Region tracking error. Please rebuild ${flow.flowName}.\n` +
-            `This may lead to further error messages. Please follow their instructions.`
+          `textFlow: Region tracking error. \n` +
+            `Your are most likely seeing this because you undid (ctrl+z) your way into the state before a rebuild.\n` +
+            `Please redo (ctrl+shift+z) your way back into the current version of things.\n` +
+            `If that doesn't seem to work, please rebuild ${flow.flowName}.\n` +
+            `This may lead to further error messages. Please follow their instructions.`,
+          0
         );
       }
       await this.saveSettings();
