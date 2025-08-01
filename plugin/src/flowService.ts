@@ -238,6 +238,91 @@ export class FlowService {
   };
   // ^ CHECKED AND TESTED
 
+  renameFlow = async () => {
+    // if the user is renaming the flow, handle that first
+    if (
+      this.plugin.settings.flowBuildBasket.flowName !=
+      this.plugin.settings.flowBuildBasket.oldFlowName
+    ) {
+      const newFlowName = this.plugin.settings.flowBuildBasket.flowName;
+      const oldFlowName = this.plugin.settings.flowBuildBasket.oldFlowName;
+
+      this.plugin.syncAllLeaves();
+
+      // rename the file if it exists
+      const oldFlowPath = normalizePath(
+        `${this.plugin.settings.systemFolderPath}/${oldFlowName}.md`
+      );
+      const newFlowPath = normalizePath(
+        `${this.plugin.settings.systemFolderPath}/${newFlowName}.md`
+      );
+      const flowFile = this.app.vault.getAbstractFileByPath(oldFlowPath);
+      this.plugin.textFlowOperation = true;
+      // rename file if present; in two steps to make TypeScript happy
+      if (flowFile) {
+        if (flowFile instanceof TFile) {
+          await this.app.vault.rename(flowFile, newFlowPath);
+        }
+      }
+
+      // close all active leaves of the flow
+      const leaves = this.app.workspace.getLeavesOfType("markdown");
+      Object.keys(this.plugin.settings.activeFlowObject).forEach(
+        (activeFlow) => {
+          Object.keys(
+            this.plugin.settings.activeFlowObject[activeFlow]
+          ).forEach(async (leafID) => {
+            const targetLeaf = leaves.find(
+              (leaf) => (leaf as any).id === leafID
+            );
+            if (targetLeaf) {
+              await targetLeaf.detach();
+            }
+          });
+        }
+      );
+
+      // delete entry in activeFlowObject
+      delete this.plugin.settings.activeFlowObject[oldFlowName];
+
+      // handle conflictObjects for the flow
+      Object.keys(this.plugin.settings.flows).forEach((otherFlowName) => {
+        if (this.plugin.settings.flows[otherFlowName].conflictObject) {
+          if (
+            this.plugin.settings.flows[otherFlowName].conflictObject[
+              oldFlowName
+            ]
+          ) {
+            this.plugin.settings.flows[otherFlowName].conflictObject[
+              newFlowName
+            ] =
+              this.plugin.settings.flows[otherFlowName].conflictObject[
+                oldFlowName
+              ];
+            delete this.plugin.settings.flows[otherFlowName].conflictObject[
+              oldFlowName
+            ];
+          }
+        }
+      });
+
+      // handle the flow object
+      if (this.plugin.settings.flows[oldFlowName]) {
+        console.log("oldFlowName: ", oldFlowName, "newFlowName: ", newFlowName);
+        this.plugin.settings.flows[newFlowName] =
+          this.plugin.settings.flows[oldFlowName];
+        console.log("deleteing old flow object");
+        delete this.plugin.settings.flows[oldFlowName];
+      }
+
+      // nix the old flow name
+      this.plugin.settings.flowBuildBasket.oldFlowName =
+        this.plugin.settings.flowBuildBasket.flowName;
+
+      await this.plugin.saveSettings();
+    }
+  };
+
   //CHECKED
   createFlowDefinition = async (
     flowBuildBasket: Types.flowBuildBasket
@@ -950,22 +1035,25 @@ export class FlowService {
     const conflictObject: Types.ConflictObject = {};
     const key1 = Object.keys(flowBuildBasket.finalRecipe)[0];
     if (Object.keys(this.plugin.settings.flows).length >= 1) {
-      flowLoop: for (let flowName in this.plugin.settings.flows) {
-        if (flowName != flowBuildBasket.flowName) {
+      flowLoop: for (let referenceFlow in this.plugin.settings.flows) {
+        if (
+          referenceFlow != flowBuildBasket.oldFlowName &&
+          referenceFlow != flowBuildBasket.flowName
+        ) {
           const key2 = Object.keys(
-            this.plugin.settings.flows[flowName].flowRecipe
+            this.plugin.settings.flows[referenceFlow].flowRecipe
           )[0];
           for (let path of flowBuildBasket.finalRecipe[key1]) {
             if (
               !path.startsWith("#") &&
-              this.plugin.settings.flows[flowName].flowRecipe[key2].includes(
-                path
-              )
+              this.plugin.settings.flows[referenceFlow].flowRecipe[
+                key2
+              ].includes(path)
             ) {
-              if (!conflictObject[flowName]) {
-                conflictObject[flowName] = {};
+              if (!conflictObject[referenceFlow]) {
+                conflictObject[referenceFlow] = {};
               }
-              conflictObject[flowName][path] = true;
+              conflictObject[referenceFlow][path] = true;
             }
           }
         }
@@ -1036,6 +1124,7 @@ export class FlowService {
       success: false,
       // properties that will be transferred to the actual flow object
       flowName: this.plugin.settings.flows[flowName].flowName,
+      oldFlowName: this.plugin.settings.flows[flowName].flowName,
       definitionMode: this.plugin.settings.flows[flowName].definitionMode,
       folderTitles: this.plugin.settings.flows[flowName].folderTitles,
       flowCookbook: this.plugin.settings.flows[flowName].flowCookbook,

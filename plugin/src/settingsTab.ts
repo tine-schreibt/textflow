@@ -1,13 +1,13 @@
-
 import * as Modals from "./modals";
 import {
   App,
   ButtonComponent,
-  setIcon,
   normalizePath,
   Notice,
   PluginSettingTab,
+  setIcon,
   Setting,
+  TFile,
 } from "obsidian";
 import TextFlow from "../main";
 import * as Types from "./types";
@@ -386,42 +386,25 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       .setName("Name your flow")
       .setDesc(
         createFragment((desc) => {
-          if (this.plugin.settings.flowBuildBasket.createOrEdit != "edit") {
-            desc.createSpan({
-              text: "The following characters can not be part of your flow name:",
-              cls: "text-emphasis",
-            });
-            desc.createEl("br");
-            desc.createSpan({
-              text: '? : # * < > [ ] / | \\ "  ^ `',
-              cls: "text-emphasis",
-            });
-            desc.createEl("br");
-            desc.createSpan({
-              text: "Also note that the name can not be changed later.",
-            });
-          } else {
-            desc.createSpan({
-              text: `Your flow is called "${this.plugin.settings.flowBuildBasket.flowName}"`,
-            });
-          }
+          desc.createSpan({
+            text: "The following characters can not be part of your flow name:",
+          });
+          desc.createEl("br");
+          desc.createSpan({
+            text: '? : # * < > [ ] / | \\ "  ^ `',
+          });
         })
       );
-    if (this.plugin.settings.flowBuildBasket.createOrEdit != "edit") {
-      chooseFlowName.addText((setFlowName) => {
-        setFlowName.setPlaceholder("Enter a unique name");
-        setFlowName.setValue(
-          this.plugin.settings.flowBuildBasket.createOrEdit != "edit"
-            ? this.plugin.settings.flowBuildBasket.flowName
-            : ""
-        );
+    chooseFlowName.addText((setFlowName) => {
+      setFlowName.setPlaceholder("Enter a unique name");
+      setFlowName.setValue(this.plugin.settings.flowBuildBasket.flowName);
 
-        setFlowName.onChange(async (value) => {
-          this.plugin.settings.flowBuildBasket.flowName = value.trim();
-          this.plugin.flowService.debouncedSaveSettings();
-        });
+      setFlowName.onChange(async (value) => {
+        this.plugin.settings.flowBuildBasket.flowName = value.trim();
+        this.plugin.flowService.debouncedSaveSettings();
       });
-    }
+    });
+
     //^CHECKED AND TESTED
 
     // --------- FOLDER TITLES ------------------
@@ -977,7 +960,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         this.plugin.settings.flowBuildBasket.success = false;
 
         // Make sure the flow name is okay
-        const validation = await this.plugin.flowService.isValidFlowName(
+        const validation = this.plugin.flowService.isValidFlowName(
           this.plugin.settings.flowBuildBasket.flowName
         );
         if (!validation.valid && validation.reason) {
@@ -1006,6 +989,10 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     saveButton
       .setButtonText("Save flow definition")
       .onClick(async (buttonEl: MouseEvent) => {
+        
+        // if the user is renaming the flow:
+        this.plugin.flowService.renameFlow();
+
         // if checks and flow creation haven't been performed by the preview button
         if (!this.plugin.settings.flowBuildBasket.previewUsed) {
           const validation = await this.plugin.flowService.isValidFlowName(
@@ -1183,6 +1170,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               previewUsed: false,
               success: true,
               flowName: shownFlow.flowName,
+              oldFlowName: shownFlow.flowName,
               definitionMode: shownFlow.definitionMode,
               folderTitles: shownFlow.folderTitles,
               flowCookbook: shownFlow.flowCookbook,

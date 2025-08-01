@@ -349,13 +349,13 @@ export class MenuBar {
         .onClick(async () => {
           if (goSync === "neutral" || goSync === "must") {
             const syncLeafID = (this.associatedView.leaf as any).id;
-            this.plugin.isSyncing = true;
+            this.plugin.textFlowOperation = true;
             await this.plugin.syncBackToSource(
               this.flowName,
               this.associatedView.editor.getValue(),
               syncLeafID
             );
-            this.plugin.isSyncing = false;
+            this.plugin.textFlowOperation = false;
             await this.plugin.saveSettings();
             this.refresh(this.associatedView.contentEl);
           } else {

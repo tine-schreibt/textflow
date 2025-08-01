@@ -41,6 +41,7 @@ export interface flowBuildBasket {
   previewUsed: boolean;
   success: boolean;
   flowName: string;
+  oldFlowName: string;
   definitionMode: string;
   folderTitles: boolean;
   flowCookbook: { [key: string]: string };
@@ -131,6 +132,7 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
     previewUsed: false,
     success: false,
     flowName: "",
+    oldFlowName: "",
     definitionMode: "",
     folderTitles: true,
     flowCookbook: {},

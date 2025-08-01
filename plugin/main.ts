@@ -56,11 +56,8 @@ export default class TextFlowPlugin extends Plugin {
   // ---- flag to prevent the leaf-change-listener from interfering with scrolling to source file in flow
   private explorerClickListenerActive: boolean = false;
 
-  // ---- flag to keep textFlow from eating its tail when its own sync triggers vault.modify()
-  isSyncing: boolean = false;
-
-  // ---- flag for the region tracking
-  private hadTrackingError: boolean = false;
+  // ---- flag to keep textFlow from eating its tail when its own file operations trigger a listener
+  textFlowOperation: boolean = false;
 
   // This is used by listeners and setups for proper leaf activation
   private mostRecentActiveFlowLeaf: WorkspaceLeaf | null = null;
@@ -571,12 +568,12 @@ export default class TextFlowPlugin extends Plugin {
   addListeners() {
     // ---------------- File modification -------------------------------
     // This event fires whenever any file in the vault is modified
-    // the isSyncing flag prevents a doom spiral
+    // the textFlowOperation flag prevents a doom spiral
     //CHECKED AND TESTED
 
     this.registerEvent(
       this.app.vault.on("modify", (file: TAbstractFile) => {
-        if (this.isSyncing) return;
+        if (this.textFlowOperation) return;
 
         if (file instanceof TFile) {
           Object.keys(this.settings.flows).forEach((flowName) => {
@@ -1481,17 +1478,18 @@ export default class TextFlowPlugin extends Plugin {
           }
           foundFlowLeaves[flowName].add(leafID);
 
-          // Ensure the acviveFlowObject exists
+          // Ensure the activeFlowObject exists
           if (!this.settings.activeFlowObject[flowName]) {
             this.settings.activeFlowObject[flowName] = {};
           }
           this.settings.activeFlowObject[flowName][leafID] = true;
 
           // Then add region tracking for newly opened leaves
-          if (this.settings.flows[flowName].activeRegions) {
-            if (!this.settings.flows[flowName].activeRegions[leafID]) {
-              this.addRegionTracking(flowName, leafID);
-            }
+          if (!this.settings.flows[flowName].activeRegions) {
+            this.settings.flows[flowName].activeRegions = {};
+          }
+          if (!this.settings.flows[flowName].activeRegions[leafID]) {
+            this.addRegionTracking(flowName, leafID);
           }
         }
       }
@@ -1768,7 +1766,7 @@ export default class TextFlowPlugin extends Plugin {
       }
     }
     // Perform syncs
-    this.isSyncing = true; // suspends modify listener
+    this.textFlowOperation = true; // suspends modify listener
 
     await Promise.all(
       Object.entries(flowLeaves).map(async ([flowName, view]) => {
@@ -1780,7 +1778,7 @@ export default class TextFlowPlugin extends Plugin {
       })
     );
     this.refreshMenuBars();
-    this.isSyncing = false; // unsuspends modify listener
+    this.textFlowOperation = false; // unsuspends modify listener
   };
   // ^CHECKED AND TESTED
 

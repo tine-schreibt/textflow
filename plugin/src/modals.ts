@@ -11,7 +11,6 @@ import {
   TFile,
 } from "obsidian";
 import * as Types from "./types";
-import { FlowService } from "./flowService";
 import { TextFlowSettingsTab } from "./settingsTab";
 import { basename } from "path";
 
@@ -43,22 +42,24 @@ export class previewModal extends Modal {
           desc.createEl("br");
           const flowSpan = desc.createSpan({ text: `Hover for details.` });
           Object.keys(this.flowBuildBasket.conflictObject).forEach((flow) => {
-            // get the paths
-            const conflictingPaths = Object.keys(
-              this.flowBuildBasket.conflictObject[flow]
-            );
-            // make the label
-            const ariaText = `\n-${conflictingPaths.join("\n")}`;
-            // the span itself:
-            desc.createEl("br");
-            const flowSpan = desc.createSpan({
-              text: `- ${flow}`,
-              attr: {
-                "aria-label": `Overlapping notes:\n${Object.keys(
-                  this.flowBuildBasket.conflictObject[flow]
-                ).join("\n")}`,
-              },
-            });
+            if (flow != this.flowBuildBasket.oldFlowName) {
+              // get the paths
+              const conflictingPaths = Object.keys(
+                this.flowBuildBasket.conflictObject[flow]
+              );
+              // make the label
+              const ariaText = `\n-${conflictingPaths.join("\n")}`;
+              // the span itself:
+              desc.createEl("br");
+              const flowSpan = desc.createSpan({
+                text: `- ${flow}`,
+                attr: {
+                  "aria-label": `Overlapping notes:\n${Object.keys(
+                    this.flowBuildBasket.conflictObject[flow]
+                  ).join("\n")}`,
+                },
+              });
+            }
           });
         })
       );
