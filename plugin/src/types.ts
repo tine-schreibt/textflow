@@ -38,7 +38,6 @@ export type DecorationEntry = [
 export interface flowBuildBasket {
   createOrEdit: string;
   dataviewSearchPath: string;
-  previewUsed: boolean;
   success: boolean;
   flowName: string;
   oldFlowName: string;
@@ -129,7 +128,6 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
   flowBuildBasket: {
     createOrEdit: "create",
     dataviewSearchPath: "",
-    previewUsed: false,
     success: false,
     flowName: "",
     oldFlowName: "",

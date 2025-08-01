@@ -552,7 +552,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     );
     chooseBookmarks.addText((setBookmarksGroup) => {
       setBookmarksGroup.onChange(async (value) => {
-        this.plugin.settings.flowBuildBasket.previewUsed = false;
         this.plugin.settings.flowBuildBasket.flowCookbook.bookmarks =
           value.trim();
         this.plugin.flowService.debouncedSaveSettings();
@@ -703,7 +702,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
       folderIncludeInput.onChange(async (value) => {
         // do not normalize because we need those trailing slashes!
-        this.plugin.settings.flowBuildBasket.previewUsed = false;
         // When storing the value; "root/" is handled by getPathsByFoldersTagsProps()
         this.plugin.settings.flowBuildBasket.flowCookbook.folderIncluded =
           !value ||
@@ -742,8 +740,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           this.plugin.settings.flowBuildBasket.flowCookbook.folderExcluded
         );
         chooseExcludedFolders.onChange(async (value) => {
-          this.plugin.settings.flowBuildBasket.previewUsed = false;
-
           // cleanup happens on preview/save
           this.plugin.settings.flowBuildBasket.flowCookbook.folderExcluded =
             value;
@@ -776,8 +772,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           this.plugin.settings.flowBuildBasket.flowCookbook.tagsIncluded
         );
         chooseIncludedTags.onChange(async (value) => {
-          this.plugin.settings.flowBuildBasket.previewUsed = false;
-
           // cleanup happens on preview/save
           this.plugin.settings.flowBuildBasket.flowCookbook.tagsIncluded =
             value;
@@ -808,8 +802,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           this.plugin.settings.flowBuildBasket.flowCookbook.tagsExcluded
         );
         chooseExcludedTags.onChange(async (value) => {
-          this.plugin.settings.flowBuildBasket.previewUsed = false;
-
           // cleanup happens on preview/save
           this.plugin.settings.flowBuildBasket.flowCookbook.tagsExcluded =
             value;
@@ -844,8 +836,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           this.plugin.settings.flowBuildBasket.flowCookbook.propsIncluded
         );
         chooseIncludedProperties.onChange(async (value) => {
-          this.plugin.settings.flowBuildBasket.previewUsed = false;
-
           // cleanup happens on preview/save
           this.plugin.settings.flowBuildBasket.flowCookbook.propsIncluded =
             value;
@@ -879,8 +869,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           this.plugin.settings.flowBuildBasket.flowCookbook.propsExcluded
         );
         chooseExcludedProperties.onChange(async (value) => {
-          this.plugin.settings.flowBuildBasket.previewUsed = false;
-
           // cleanup happens on preview/save
           this.plugin.settings.flowBuildBasket.flowCookbook.propsExcluded =
             value;
@@ -902,8 +890,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     buttons.bookmarks.onClick(() => {
       // set correct definition mode and show/hide correct elements
       this.plugin.settings.flowBuildBasket.definitionMode = "bookmarks";
-      this.plugin.settings.flowBuildBasket.previewUsed = false;
-
       console.log(
         this.plugin.settings.flowBuildBasket.flowCookbook.bookmarksSortOrder
       );
@@ -933,8 +919,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     // onClick for the foldersTagsProps button
     buttons.foldersTagsProps.onClick(() => {
       this.plugin.settings.flowBuildBasket.definitionMode = "foldersTagsProps";
-      this.plugin.settings.flowBuildBasket.previewUsed = false;
-
       this.plugin.flowService.radioButtonManager(
         buttons.foldersTagsProps,
         buttons.bookmarks
@@ -955,7 +939,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       .setButtonText("Preview your flow structure")
       .onClick(async (buttonEl: MouseEvent) => {
         // set up missing values
-        this.plugin.settings.flowBuildBasket.previewUsed = true;
         this.plugin.settings.flowBuildBasket.dataviewSearchPath = "";
         this.plugin.settings.flowBuildBasket.success = false;
 
@@ -989,26 +972,23 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     saveButton
       .setButtonText("Save flow definition")
       .onClick(async (buttonEl: MouseEvent) => {
-        
         // if the user is renaming the flow:
         this.plugin.flowService.renameFlow();
 
         // if checks and flow creation haven't been performed by the preview button
-        if (!this.plugin.settings.flowBuildBasket.previewUsed) {
-          const validation = await this.plugin.flowService.isValidFlowName(
-            this.plugin.settings.flowBuildBasket.flowName
-          );
-          if (!validation.valid && validation.reason) {
-            new Notice(validation.reason);
-            return;
-          }
+        const validation = await this.plugin.flowService.isValidFlowName(
+          this.plugin.settings.flowBuildBasket.flowName
+        );
+        if (!validation.valid && validation.reason) {
+          new Notice(validation.reason);
+          return;
+        }
 
-          await this.plugin.flowService.createFlowDefinition(
-            this.plugin.settings.flowBuildBasket
-          );
-          if (!this.plugin.settings.flowBuildBasket.success) {
-            return;
-          }
+        await this.plugin.flowService.createFlowDefinition(
+          this.plugin.settings.flowBuildBasket
+        );
+        if (!this.plugin.settings.flowBuildBasket.success) {
+          return;
         }
 
         // write the whole stuff,
@@ -1040,7 +1020,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       .setButtonText("Clear values")
       .onClick(async (buttonEl: MouseEvent) => {
         // Clear all input values and reset the basket
-        this.plugin.settings.flowBuildBasket.previewUsed = false;
         this.plugin.flowService.resetFlowBuildBasket(
           this.plugin.settings.flowBuildBasket
         );
@@ -1167,7 +1146,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             this.plugin.settings.flowBuildBasket = {
               createOrEdit: "edit",
               dataviewSearchPath: "",
-              previewUsed: false,
               success: true,
               flowName: shownFlow.flowName,
               oldFlowName: shownFlow.flowName,

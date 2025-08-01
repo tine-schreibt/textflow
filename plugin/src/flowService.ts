@@ -1101,7 +1101,6 @@ export class FlowService {
   ) => {
     resetFlowBuildBasket.createOrEdit = "create";
     resetFlowBuildBasket.dataviewSearchPath = "";
-    resetFlowBuildBasket.previewUsed = false;
     resetFlowBuildBasket.success = false;
     resetFlowBuildBasket.flowName = "";
     resetFlowBuildBasket.definitionMode = "";
@@ -1120,7 +1119,6 @@ export class FlowService {
       // rebuild specific properties
       createOrEdit: "",
       dataviewSearchPath: "",
-      previewUsed: false,
       success: false,
       // properties that will be transferred to the actual flow object
       flowName: this.plugin.settings.flows[flowName].flowName,
