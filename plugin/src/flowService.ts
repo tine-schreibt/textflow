@@ -265,7 +265,7 @@ export class FlowService {
         }
       }
 
-      // close all active leaves of the flow
+      // reset all active leaves of the flow
       const leaves = this.app.workspace.getLeavesOfType("markdown");
       Object.keys(this.plugin.settings.activeFlowObject).forEach(
         (activeFlow) => {
@@ -281,8 +281,10 @@ export class FlowService {
           });
         }
       );
+      // nix the flow's activeRegions
+      this.plugin.settings.flows[oldFlowName].activeRegions = {};
 
-      // delete entry in activeFlowObject
+      // delete its entry in activeFlowObject
       delete this.plugin.settings.activeFlowObject[oldFlowName];
 
       // handle conflictObjects for the flow
@@ -306,18 +308,8 @@ export class FlowService {
         }
       });
 
-      // handle the flow object
-      if (this.plugin.settings.flows[oldFlowName]) {
-        console.log("oldFlowName: ", oldFlowName, "newFlowName: ", newFlowName);
-        this.plugin.settings.flows[newFlowName] =
-          this.plugin.settings.flows[oldFlowName];
-        console.log("deleteing old flow object");
-        delete this.plugin.settings.flows[oldFlowName];
-      }
-
-      // nix the old flow name
-      this.plugin.settings.flowBuildBasket.oldFlowName =
-        this.plugin.settings.flowBuildBasket.flowName;
+      // finally, delete the old object
+      delete this.plugin.settings.flows[oldFlowName];
 
       await this.plugin.saveSettings();
     }
@@ -1018,7 +1010,7 @@ export class FlowService {
       folderTitles: flowBuildBasket.folderTitles,
       isFreshBuild: true,
       flowBuilt: false,
-      flaggedForRebuild: false,
+      flaggedForRebuild: true,
       conflictObject: flowBuildBasket.conflictObject,
       activeRegions: flowBuildBasket.activeRegions,
       persistentCursors: flowBuildBasket.persistentCursors,
@@ -1103,6 +1095,7 @@ export class FlowService {
     resetFlowBuildBasket.dataviewSearchPath = "";
     resetFlowBuildBasket.success = false;
     resetFlowBuildBasket.flowName = "";
+    resetFlowBuildBasket.oldFlowName = "";
     resetFlowBuildBasket.definitionMode = "";
     resetFlowBuildBasket.folderTitles = true;
     resetFlowBuildBasket.flowCookbook = {};

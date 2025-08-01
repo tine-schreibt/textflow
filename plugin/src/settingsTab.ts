@@ -991,7 +991,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           return;
         }
 
-        // write the whole stuff,
+        // write the whole stuff (also flags for rebuild)
         await this.plugin.flowService.writeFlowDef(
           this.plugin.settings,
           this.plugin.settings.flowBuildBasket
