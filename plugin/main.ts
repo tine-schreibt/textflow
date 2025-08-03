@@ -1,6 +1,7 @@
 import {
   Editor,
   MarkdownView,
+  moment,
   normalizePath,
   Notice,
   Plugin,
@@ -19,7 +20,6 @@ import {
   StateEffect,
   Extension,
 } from "@codemirror/state";
-import { redo } from "@codemirror/commands";
 import * as Types from "./src/types";
 import * as Modals from "./src/modals";
 import { MenuBar } from "./src/menuBar";
@@ -53,6 +53,9 @@ export default class TextFlowPlugin extends Plugin {
   isLoading: boolean = true; // suspend create listener while we're setting up
 
   // ---------------- Global objects and variables -------------------------
+
+  // localisation
+  private i18n: Record<string, any> = {};
 
   // ---- flag to prevent the leaf-change-listener from interfering with scrolling to source file in flow
   private explorerClickListenerActive: boolean = false;
@@ -124,6 +127,47 @@ export default class TextFlowPlugin extends Plugin {
 
   // ---------------- Functions: Utilities: UI/UX -------------------------
 
+  // -------- Localisation (this part was quite obviously written by Claude 4 Sonnet)
+  // Prepare translation
+  private loadLanguage = async () => {
+    const locale = moment.locale() || "en";
+
+    try {
+      // make the path
+      const pluginDir = `${this.app.vault.configDir}/plugins/${this.manifest.id}`;
+      const langPath = `${pluginDir}/lang/${locale}.json`;
+
+      const langFile = await this.app.vault.adapter.read(langPath);
+
+      // Try to load the user's locale
+      this.i18n = JSON.parse(langFile);
+    } catch (error) {
+      // Fallback to English if the locale file doesn't exist
+      const fallbackFile = await this.app.vault.adapter.read(
+        `./src/lang/en.json`
+      );
+      this.i18n = JSON.parse(fallbackFile);
+    }
+  };
+
+  // the wrapper function to use for translations
+  t = (key: string, variables?: Record<string, string>): string => {
+    let value = this.i18n[key];
+
+    if (typeof value !== "string") {
+      return key; // Return the key if translation not found
+    }
+
+    // Handle variable substitution
+    if (variables) {
+      return value.replace(/\$\{(\w+)\}/g, (match: string, varName: string) => {
+        return variables[varName] || match;
+      });
+    }
+
+    return value;
+  };
+
   // cleanup for the menu bar
   // creation happens in setupFlowView, using menuBar.ts
   //CHECKED AND TESTED
@@ -165,22 +209,6 @@ export default class TextFlowPlugin extends Plugin {
         this.settings.explorerListener
           ? (this.settings.explorerListener = false)
           : (this.settings.explorerListener = true);
-        this.saveSettings();
-      },
-    });
-
-    // hide explorer deco
-    this.addCommand({
-      id: "toggle-explorer-deco",
-      name: `Toggle explorer decoration`,
-      callback: () => {
-        if (this.settings.showExplorerDeco) {
-          this.settings.showExplorerDeco = false;
-          this.unDecorateSourceNotes();
-        } else {
-          this.settings.showExplorerDeco = true;
-          this.decorateSourceNotes("redo");
-        }
         this.saveSettings();
       },
     });
@@ -615,7 +643,7 @@ export default class TextFlowPlugin extends Plugin {
             normalizePath(basename(file.path))
           )
             new Notice(
-              "textFlow: Please don't rename the system folder. You can hide it in settings."
+              this.t("main.renameListener.notice don't rename system folder")
             );
           return;
         }
@@ -627,8 +655,9 @@ export default class TextFlowPlugin extends Plugin {
             normalizePath(oldPath)
           ) {
             new Notice(
-              `textFlow: Please use textFlow settings to rename flows / the export function to get them out of the system folder.\n` +
-                `If you moved the TextFlow_SystemFolder manually, please reload your vault to restore proper syncing.`,
+              this.t(
+                "main.renameListener.notice use settings to rename / export to export"
+              ),
               0
             );
             const flowFile = this.app.vault.getAbstractFileByPath(file.path);
@@ -637,7 +666,11 @@ export default class TextFlowPlugin extends Plugin {
                 this.textFlowOperation = true;
                 await this.app.vault.rename(flowFile, oldPath);
                 this.textFlowOperation = false;
-                new Notice("textFlow: Old file name/path has been restored.");
+                new Notice(
+                  this.t(
+                    "main.renameListener.notice old file name was restored"
+                  )
+                );
               }
             }
             return;
@@ -712,7 +745,9 @@ export default class TextFlowPlugin extends Plugin {
 
         if (parentFolder.contains(TEXTFLOW_SYSTEMFOLDER)) {
           new Notice(
-            "textFlow: You just created a new element in the system folder. Please move it somewhere else."
+            this.t(
+              "main.renameListener.notice new element created in system folder; please remove"
+            )
           );
           this.ensureSystemFolder();
           return;
@@ -765,6 +800,7 @@ export default class TextFlowPlugin extends Plugin {
     //CHECKED AND TESTED
     this.registerEvent(
       this.app.vault.on("delete", (file: TAbstractFile) => {
+        const normalisedPath = normalizePath(file.path);
         let parentFolder = normalizePath(dirname(file.path));
         if (file instanceof TFolder) {
           parentFolder = normalizePath(file.path);
@@ -779,13 +815,27 @@ export default class TextFlowPlugin extends Plugin {
         if (file instanceof TFile) {
           const continuableCheckPaths = Object.keys(this.settings.flows);
           for (let flowName of continuableCheckPaths) {
-            if (
-              !this.settings.flows[flowName].flaggedForRebuild &&
-              this.settings.flows[flowName].flowMap[normalizePath(file.path)]
-            ) {
-              this.settings.flows[flowName].flaggedForRebuild = true;
-              this.saveSettings();
-              continue;
+            // make sure the user doesn't end up stuck with an error
+            if (this.settings.flows[flowName].flowMap[normalisedPath]) {
+              if (
+                this.settings.flows[flowName].unsyncedRegionsArray.includes(
+                  normalizePath(file.path)
+                )
+              ) {
+                const cleanedArray = this.settings.flows[
+                  flowName
+                ].unsyncedRegionsArray.filter(
+                  (path) => path !== normalisedPath
+                );
+                this.settings.flows[flowName].unsyncedRegionsArray =
+                  cleanedArray;
+              }
+              // now check if we need to flag
+              if (!this.settings.flows[flowName].flaggedForRebuild) {
+                this.settings.flows[flowName].flaggedForRebuild = true;
+                this.saveSettings();
+                continue;
+              }
             }
           }
         }
@@ -937,10 +987,7 @@ export default class TextFlowPlugin extends Plugin {
     } catch (error) {
       delete this.listenerBasket[leafID];
       new Notice(
-        "textFlow:\n " +
-          `Cursor tracking failed for ${flowName}!\n` +
-          "Please close and reopen the flow.\n" +
-          "If this error persists, reload your vault.",
+        this.t("main.cursorListener.notice tracking failed"),
         20000 // Show for 5 seconds
       );
     }
@@ -1067,11 +1114,6 @@ export default class TextFlowPlugin extends Plugin {
             delete plugin.listenerBasket[`${leafID}-changes`];
           } catch (error) {
             console.error("Error cleaning up change listener:", error);
-            new Notice(
-              "textFlow Plugin: Error during cleanup of change listener.\n" +
-                "Please reload the plugin to ensure proper operation.",
-              10000
-            );
           }
         }
       }
@@ -1092,8 +1134,7 @@ export default class TextFlowPlugin extends Plugin {
         delete this.listenerBasket[`${leafID}-changes`];
       }
       new Notice(
-        "textFlow Plugin: Error setting up change tracking.\n" +
-          "Please report this issue on github.",
+        this.t("accTExtCHangeListener.notice error setting up listener"),
         10000
       );
     }
@@ -1383,7 +1424,6 @@ export default class TextFlowPlugin extends Plugin {
     const leafID = (view.leaf as any).id;
     let editor = view.editor as any;
 
-    console.log("setting up flow");
     // this has to happen first so the menuBar can just be set up
     await this.manageActiveFlowObject();
 
@@ -1412,7 +1452,9 @@ export default class TextFlowPlugin extends Plugin {
     this.flowService.updateScrollbarVisibility();
 
     // put the cursor back to its last known location
-    this.restoreCursorPos(flowName, view, leafID);
+    if (this.settings.restoreCursor) {
+      this.restoreCursorPos(flowName, view, leafID);
+    }
 
     // Do a blanket refresh of all the menu bars involved with the flow
     const allLeaves = this.app.workspace.getLeavesOfType("markdown");
@@ -1486,7 +1528,12 @@ export default class TextFlowPlugin extends Plugin {
   async activateFlow(flowName: string) {
     const flow = this.settings.flows[flowName];
     if (!flow) {
-      new Notice(`textFlow: No flow with name ${flowName} found.`, 10000);
+      new Notice(
+        this.t("activateFlow.notice flow name not found", {
+          flowName: flowName,
+        }),
+        10000
+      );
       return;
     }
     // Get the file
@@ -1508,8 +1555,9 @@ export default class TextFlowPlugin extends Plugin {
       }
     } else {
       new Notice(
-        `textFlow: Flow file not found: ${flow.flowFilePath}\n` +
-          `Try clicking the 'Move' button for the TextFlow_SystemFolder location.`,
+        this.t("activateFlow.notice flow file not found", {
+          flow_flowFilePath: flow.flowFilePath,
+        }),
         10000
       );
     }
@@ -1579,7 +1627,10 @@ export default class TextFlowPlugin extends Plugin {
                   const note = this.app.vault.getAbstractFileByPath(path);
                   if (!note) {
                     new Notice(
-                      `textFlow: The note at ${path} couldn't be found.`
+                      this.t(
+                        "manageActiveFlowObject.notice sync upon closing flow failed",
+                        { path: path }
+                      )
                     );
                   }
                   if (note instanceof TFile) {
@@ -1703,7 +1754,7 @@ export default class TextFlowPlugin extends Plugin {
       // store compartment so we can reuse it to toggle on/off
       this.editableCompartments[leafId] = [protectSyncCompartment, true];
 
-      // Initialize
+      // Initialise
       editor.cm.dispatch({
         effects: StateEffect.appendConfig.of([
           protectSyncCompartment.of(
@@ -1760,7 +1811,7 @@ export default class TextFlowPlugin extends Plugin {
 
       // Create new compartment
       const protectDividerCompartment = new Compartment();
-      // Initialize
+      // Initialise
       editor.cm.dispatch({
         effects: StateEffect.appendConfig.of([
           protectDividerCompartment.of([preventEdit]),
@@ -1852,7 +1903,11 @@ export default class TextFlowPlugin extends Plugin {
         for (const path of this.settings.flows[flowName].unsyncedRegionsArray) {
           const sourceFile = await this.app.vault.getFileByPath(path);
           if (!sourceFile) {
-            console.error(`File not found at path: ${path}`);
+            new Notice(
+              this.t("syncBackToSource.notice sync failed source note", {
+                path: path,
+              })
+            );
             return;
           }
           let startOfRegion = await this.findStartOfRegion(
@@ -1868,7 +1923,11 @@ export default class TextFlowPlugin extends Plugin {
           );
 
           if (!flowFile) {
-            new Notice(`textFlow: File not found at path: ${path}`);
+            new Notice(
+              this.t("syncBackToSource.notice sync failed flow note", {
+                path: path,
+              })
+            );
             return;
           } else if (sourceFile instanceof TFile && startOfRegion) {
             const regionSlice = text.slice(startOfRegion + 1, endOfRegion);
@@ -1886,7 +1945,10 @@ export default class TextFlowPlugin extends Plugin {
             } catch (error) {
               remainingPaths.push(path);
               new Notice(
-                `textFlow: An error occurred while trying to sync to ${path}. Please try again in a second. If the error persists, consult the 'Fixing problems' section of the readme.`
+                this.t("syncBackToSource.notice other random error", {
+                  flowName: flowName,
+                  path: path,
+                })
               );
 
               // console.error(`Failed to sync changes to ${file.path}:`, error);
@@ -1920,7 +1982,7 @@ export default class TextFlowPlugin extends Plugin {
       }
 
       const currentCursor = currentLeaf.currentCursorPos;
-      // Initialize if doesn't exist
+      // Initialise if doesn't exist
       if (!this.settings.flows[flowName].persistentCursors) {
         this.settings.flows[flowName].persistentCursors = {};
       }
@@ -2069,8 +2131,6 @@ export default class TextFlowPlugin extends Plugin {
         flow.activeRegions[leafID] = activeRegionObject;
         await this.saveSettings();
         return;
-      } else {
-        new Notice("textFlow: ");
       }
     } else if (
       // if there are values, use those to check if we're still in our known region
@@ -2102,11 +2162,9 @@ export default class TextFlowPlugin extends Plugin {
       } else {
         // if the compass just cirles, notify the user
         new Notice(
-          `textFlow: Region tracking error. \n` +
-            `Your are most likely seeing this because you undid (ctrl+z) your way into the state before a rebuild.\n` +
-            `Please redo (ctrl+shift+z) your way back into the current version of things.\n` +
-            `If that doesn't seem to work, please rebuild ${flow.flowName}.\n` +
-            `This may lead to further error messages. Please follow their instructions.`,
+          this.t("checkActiveRegion.notice region tracking error", {
+            flow_flowName: flow.flowName,
+          }),
           0
         );
       }
@@ -2188,7 +2246,6 @@ export default class TextFlowPlugin extends Plugin {
     const matches = searchStart.match(markerRegex);
 
     if (matches) {
-      console.log("we got matches");
       const UIDLength = matches[0].length - 4;
       const UID = matches[0].slice(0, UIDLength);
 
@@ -2272,6 +2329,7 @@ export default class TextFlowPlugin extends Plugin {
   // -------------------------------------------------------
   async onload() {
     this.settings = await this.loadSettings();
+    await this.loadLanguage();
 
     // set up the class to access its functions
     this.flowService = new FlowService(this, this.app);

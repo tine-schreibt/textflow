@@ -379,22 +379,14 @@ export class MenuBar {
 
       // ----------- NAVIGATION DROPDOWN ------
       // compute text for initial dropdown headline
-      const hasActiveRegions =
-        Object.keys(this.plugin.settings.flows[this.flowName].activeRegions)
-          .length > 0;
-
       // get the path of the currently active region via the leafID
       const navLeafID = (this.associatedView.leaf as any).id;
       // Pacify the Red Squiggle Demon's wrath at 'path' being explicitly typed as string | undefined
       let activeRegion: string | undefined = "";
-      if (
-        hasActiveRegions &&
-        navLeafID &&
-        this.plugin.settings.flows[this.flowName].activeRegions[navLeafID].path
-      ) {
-        activeRegion =
-          this.plugin.settings.flows[this.flowName].activeRegions[navLeafID]
-            .path;
+      // some optional chaining because I don't know how to make stairs work here
+      const flow = this.plugin.settings.flows?.[this.flowName];
+      if (flow?.activeRegions?.[navLeafID]?.path) {
+        activeRegion = flow.activeRegions[navLeafID].path;
       }
 
       let activeRegionNoteName = "";
@@ -416,7 +408,7 @@ export class MenuBar {
         this.plugin.settings.flows[this.flowName].flowRecipe[key][0];
       const firstThingNoteName = this.makeNavPath(firstThing);
 
-      // --------- The actual dropdown component ----------
+      // --------- THE ACTUAL DROPDOWN COMPONENT ----------
 
       const navigationDropdown = menuBarEl.createDiv({
         cls: `menu-bar-navigation-dropdown spacing`,
@@ -493,14 +485,6 @@ export class MenuBar {
 
         this.addManagedListener(searchInput, "input", (event) => {
           const query = (event.target as HTMLInputElement).value;
-          console.log(
-            "Query value:",
-            query,
-            "Length:",
-            query.length,
-            "Type:",
-            typeof query
-          );
 
           // If no query (yet), return all paths
           if (!query) {
@@ -794,7 +778,9 @@ export class MenuBar {
         .setIcon("text-select")
         .setClass("spacing")
         .setClass("clickable-icon")
-        .setTooltip("Select active region")
+        .setTooltip(
+          this.plugin.t("menuBar.selectButton.setTooltip select active region")
+        )
         .onClick(async () => {
           if (activeRegion) {
             this.plugin.flowService.selectActiveRegion(
@@ -812,7 +798,9 @@ export class MenuBar {
         .setIcon("file-up")
         .setClass("spacing")
         .setClass("clickable-icon")
-        .setTooltip("Export flow")
+        .setTooltip(
+          this.plugin.t("menuBar.selectButton.setTooltip export flow")
+        )
         .onClick(async () => {
           const path = this.plugin.settings.flows[this.flowName].flowFilePath;
           const file = this.app.vault.getAbstractFileByPath(path);
@@ -825,18 +813,20 @@ export class MenuBar {
               return result;
             };
             const cleanContent = stripUUIDs(fileContent);
+            console.log("flowName: ", this.flowName);
             const exportedFlowPath = normalizePath(
-              `/${
+              `${
                 this.flowName
               }_export_${this.plugin.flowService.getTimestamp()}.md`
             );
+            console.log("exportedFlowPath ", exportedFlowPath);
             await this.plugin.flowService.safeCreateFile(
               this.app.vault,
               exportedFlowPath,
               cleanContent
             );
             new Notice(
-              `textFlow: Your flow has been exported to ${exportedFlowPath}.`
+              this.plugin.t("menubar.selectButton.notice successful export", {exportedFlowPath: exportedFlowPath})
             );
           }
         });

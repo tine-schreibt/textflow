@@ -23,20 +23,37 @@ interface ObsidianEditor extends Editor {
 class ProgressNotice {
   private notice: Notice;
   private flowName: string;
-  constructor(flowName: string) {
+  private t: (key: string, variables?: Record<string, string>) => string;
+  constructor(
+    flowName: string,
+    translation: (key: string, variables?: Record<string, string>) => string
+  ) {
     this.flowName = flowName;
+    this.t = translation;
     this.notice = new Notice(
-      `textFlow: Building ${this.flowName}: [oooooooooo] 0% \nFirst build might take longer.`
+      this.t("flowService.progressNotice.notice initial notice", {
+        this_flowName: this.flowName,
+      })
     );
   }
 
-  updateProgress(current: number, total: number, symbolFilled: string) {
+  updateProgress(
+    current: number,
+    total: number,
+    symbolFilled: string,
+    t: (key: string, variables?: Record<string, string>) => string
+  ) {
     const percent = Math.floor((current / total) * 100);
+    const percentString = percent.toString();
     const filled = Math.floor(percent / 10);
     const bar =
       "[" + symbolFilled.repeat(filled) + "o".repeat(10 - filled) + "]";
     this.notice.setMessage(
-      `Building ${this.flowName}: ${bar} ${percent}% \nFirst build might take longer.`
+      t("flowService.progressNotice.notice updated notice", {
+        this_flowName: this.flowName,
+        bar: bar,
+        percent: percentString,
+      })
     );
   }
 
@@ -51,15 +68,18 @@ class LoadingOverlay {
   private container: HTMLElement;
   private progressText: HTMLElement;
   private flowName: string;
+  private t: (key: string, variables?: Record<string, string>) => string;
 
   constructor(
     leaf: WorkspaceLeaf,
     flowName: string,
     app: App,
-    plugin: TextFlow
+    plugin: TextFlow,
+    translate: (key: string, variables?: Record<string, string>) => string
   ) {
     this.plugin = plugin;
     this.flowName = flowName;
+    this.t = translate;
 
     if (!(leaf.view instanceof MarkdownView)) {
       throw new Error("LoadingOverlay: view is not a MarkdownView");
@@ -73,9 +93,9 @@ class LoadingOverlay {
     const symbol = this.plugin.flowService.explorereDecoArray[0][0];
     this.progressText = this.container.createDiv({
       cls: "textflow-loading-text",
-      text: `Building ${this.flowName}: ${symbol.repeat(
-        10
-      )} 0% \nFirst build might take longer.`,
+      text: this.t("flowService.progressNotice.notice initial notice", {
+        this_flowName: this.flowName,
+      }),
     });
   }
 
@@ -86,10 +106,15 @@ class LoadingOverlay {
     symbolFilled: string
   ) {
     const percent = Math.floor((current / total) * 100);
+    const percentString = percent.toString();
     const filled = Math.floor(percent / 10);
     const bar =
       "[" + symbolFilled.repeat(filled) + symbolEmpty.repeat(10 - filled) + "]";
-    const text = `Building ${this.flowName}: ${bar} ${percent}% \nFirst build might take longer.`;
+    const text = this.t("flowService.progressNotice.notice updated notice", {
+      this_flowName: this.flowName,
+      bar: bar,
+      percent: percentString,
+    });
     this.progressText.setText(text);
   }
 
@@ -127,7 +152,9 @@ export class FlowService {
       if (!newSystemFolder) {
         await this.app.vault.createFolder(newSystemFolderPath);
         new Notice(
-          `textFlow: TextFlow_SystemFolder created at ${newSystemFolderPath}`
+          this.plugin.t("createSystemFolder.notice folder created", {
+            newSystemFolderPath: newSystemFolderPath,
+          })
         );
       } else if (!(newSystemFolder instanceof TFolder)) {
         throw new Error(`"${newSystemFolderPath}" exists but is not a folder.`);
@@ -282,7 +309,11 @@ export class FlowService {
         }
       );
       // nix the flow's activeRegions
-      this.plugin.settings.flows[oldFlowName].activeRegions = {};
+      if (this.plugin.settings.flows[oldFlowName]) {
+        if (this.plugin.settings.flows[oldFlowName].activeRegions) {
+          this.plugin.settings.flows[oldFlowName].activeRegions = {};
+        }
+      }
 
       // delete its entry in activeFlowObject
       delete this.plugin.settings.activeFlowObject[oldFlowName];
@@ -327,7 +358,9 @@ export class FlowService {
           flowBuildBasket.flowCookbook.bookmarks === undefined ||
           flowBuildBasket.flowCookbook.bookmarks === ""
         ) {
-          new Notice("textFlow: Please enter a bookmark group.");
+          new Notice(
+            this.plugin.t("createFlowDefinition.notice enter bookmark group")
+          );
           flowBuildBasket.success = false;
           return Promise.reject(Error);
         } else {
@@ -355,7 +388,9 @@ export class FlowService {
           flowBuildBasket.finalRecipe.foldersTagsProps.length === 0)
       ) {
         new Notice(
-          "textFlow: Your definition leads to an empty flow. Please check for typos or make your criteria less restrictive."
+          this.plugin.t(
+            "createFlowDefinition.notice definition leads to empty flow"
+          )
         );
         flowBuildBasket.success = false;
       }
@@ -364,7 +399,9 @@ export class FlowService {
       flowBuildBasket.success = true;
     } catch (error) {
       new Notice(
-        "textFlow: An error occurred while creating the finalRecipe for your flow. Please check the console for details."
+        this.plugin.t(
+          "createFlowDefinition.notice random error, please check console"
+        )
       );
       flowBuildBasket.success = false;
     }
@@ -606,7 +643,7 @@ export class FlowService {
       }
     } else {
       new Notice(
-        "textFlow: Please check the name of the bookmark group you submitted"
+        this.plugin.t("createFlowDefinition.notice bookmark group not found")
       );
       return Promise.reject(Error);
     }
@@ -648,7 +685,9 @@ export class FlowService {
     const dv = getAPI();
     if (!dv) {
       new Notice(
-        "textFlow: Dataview API not available. Please make sure you have installed the dataview plugin."
+        this.plugin.t(
+          "getPathsByFoldersTagsProps.notice dataview not installed"
+        )
       );
       return Promise.reject(Error);
     }
@@ -662,7 +701,9 @@ export class FlowService {
     let excludeSubfolders = false;
     if (folderInclusionArray.length > 1) {
       new Notice(
-        "textFlow: Folder inclusion can only contain a single folder."
+        this.plugin.t(
+          "getPathsByFoldersTagsProps.notice only one inclusion folder please"
+        )
       );
     } else {
       // Clean up the whole "" and \ stuff we have to add for Dataview so rebuilds don't accumulate it
@@ -678,7 +719,7 @@ export class FlowService {
       ) {
         excludeSubfolders = cleanInclusionPath.endsWith("/");
       }
-      // Normalize
+      // Normalise
       cleanInclusionPath = normalizePath(cleanInclusionPath);
       // and because all that cleaning STILL doesn't get rid of "//":
       if (shCookbook.folderIncluded === "//") {
@@ -895,9 +936,6 @@ export class FlowService {
             const [key, value] = property;
             return note[key] === value;
           }
-          new Notice(
-            "textFlow: Please check your included properties for typos."
-          );
           return false;
         }) &&
         // exclude properties
@@ -909,9 +947,6 @@ export class FlowService {
             const [key, value] = property;
             return note[key] === value;
           }
-          new Notice(
-            "textFlow: Please check your excluded properties for typos."
-          );
           return false;
         })
       );
@@ -1207,7 +1242,7 @@ export class FlowService {
     // pre-flight check for SystemFolder
     let systemFolder = this.checkSystemFolder();
     if (!systemFolder) {
-      new Notice("textFlow: TextFlow_SystemFolder not found.");
+      new Notice(this.plugin.t("flowBuilder.notice system folder not found"));
       return;
     }
 
@@ -1220,7 +1255,7 @@ export class FlowService {
     // settingsTab
     let progressToast: ProgressVisualizer | null = null;
     if (caller === "settingsTab" || caller === "switcher") {
-      progressToast = new ProgressNotice(flowName);
+      progressToast = new ProgressNotice(flowName, this.plugin.t);
     }
 
     // Get an object started for the rest of cases
@@ -1246,7 +1281,8 @@ export class FlowService {
                 leaf,
                 flowName,
                 this.app,
-                this.plugin
+                this.plugin,
+                this.plugin.t
               );
             }
           }
@@ -1268,7 +1304,6 @@ export class FlowService {
           0,
           frontmatterPosition.end.offset + 1
         );
-        console.log("Extracted frontmatter:", frontmatter);
         // put it in the basket
         mapValueBasket.concatenatedFileContents = frontmatter + "\n";
       }
@@ -1283,7 +1318,12 @@ export class FlowService {
       if (caller === "settingsTab") {
         if (progressToast) {
           const symbolFilled = this.plugin.settings.explorerDecoStyle[1];
-          progressToast.updateProgress(counter, total, symbolFilled);
+          progressToast.updateProgress(
+            counter,
+            total,
+            symbolFilled,
+            this.plugin.t
+          );
         }
       } else {
         const symbolEmpty = this.explorereDecoArray[0][0];
@@ -1323,7 +1363,7 @@ export class FlowService {
         mapValueBasket.idDivider = divider.replace(/\\r/g, "\r");
 
         // stripping # so Outline will look as expected
-        const ingredientName = ingredient.replace("#", "");
+        const ingredientName = ingredient.replace("#", "# ");
 
         // The object that holds the info about the folder/group
         flow.flowMap[ingredient] = {
@@ -1340,7 +1380,7 @@ export class FlowService {
         mapValueBasket.initialIteration = false;
 
         // Add content with marker before divider
-        mapValueBasket.concatenatedFileContents += `<center><b>${ingredientName}</b></center>${mapValueBasket.idDivider}`;
+        mapValueBasket.concatenatedFileContents += `${ingredientName}${mapValueBasket.idDivider}`;
       }
       // if the ingredient is a path
       else {
@@ -1355,9 +1395,14 @@ export class FlowService {
         // get the note
         const note = this.app.vault.getAbstractFileByPath(ingredient);
         if (!note) {
-          new Notice(`textFlow: The note at ${ingredient} couldn't be found.`);
+          new Notice(
+            this.plugin.t("flowBuilder.notice ingredient not found", {
+              ingredient: ingredient,
+            })
+          );
           return;
         }
+
         // type check
         if (note instanceof TFile) {
           const modificationTimestamp = Date.now();
@@ -1370,18 +1415,10 @@ export class FlowService {
 
           if ((match = regex.exec(fileContent) !== null)) {
             new Notice(
-              `textFlow: The note\n` +
-                `${ingredient}\n` +
-                `of flow\n` +
-                `${flowName}\n` +
-                `contains at least one UUID.\n` +
-                `This can come about due to sync errors.\n` +
-                `How to proceed now: \n` +
-                `1. Export ${flowName} to prevent any loss of edits and backup your vault, just to be safe.\n` +
-                `2. Check the mentioned note (search for '<hr>') for any copied over regions and cut them out.\n` +
-                `3. Check the source notes of these regions to make sure they are up to date; if they aren't, copy/paste the latest version from the flow.\n` +
-                `To make all of this easier, turn off navigation via file explorer (in the settings tab or command palette).\n` +
-                `Afterwards try another rebuild.\n`,
+              this.plugin.t("flowBUilder.notice UUID found in source note", {
+                ingredient: ingredient,
+                flowName: flowName,
+              }),
               0
             );
 
@@ -1675,7 +1712,7 @@ export class FlowService {
     const hours = String(date.getHours()).padStart(2, "0");
     const minutes = String(date.getMinutes()).padStart(2, "0");
 
-    return `${weekday}, ${year}.${month}.${day}, ${hours}:${minutes}`;
+    return `${year}-${month}-${day}_${hours}-${minutes}`;
   };
 
   // The arrays with the deco stuff

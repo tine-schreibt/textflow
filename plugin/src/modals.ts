@@ -8,11 +8,177 @@ import {
   Modal,
   normalizePath,
   Setting,
+  TextAreaComponent,
   TFile,
 } from "obsidian";
 import * as Types from "./types";
 import { TextFlowSettingsTab } from "./settingsTab";
 import { basename } from "path";
+
+export class ExportModal extends Modal {
+  constructor(app: App, private plugin: TextFlowPlugin) {
+    super(app);
+    this.plugin = plugin;
+  }
+  onOpen() {
+    const { contentEl } = this;
+
+    new Setting(contentEl)
+      .setName(`Export settings for textFlow`)
+      .then((setting) => {
+        const exportObj = structuredClone(this.plugin.settings);
+
+        // clean out activeFlowObject:
+        exportObj.activeFlowObject = {};
+
+        // Clean up each flow
+        Object.values(exportObj.flows).forEach((flow) => {
+          flow.flowRecipe = {};
+          flow.flaggedForRebuild = true;
+          flow.flowMap = {};
+        });
+
+        const output = JSON.stringify(exportObj, null, 2);
+
+        // Build a copy to clipboard link
+        setting.controlEl.createEl(
+          "a",
+          {
+            cls: "style-settings-copy",
+            text: "Copy to clipboard",
+            href: "#",
+          },
+          (copyButton) => {
+            new TextAreaComponent(contentEl)
+              .setValue(output)
+              .then((textarea) => {
+                copyButton.addEventListener("click", async (e) => {
+                  e.preventDefault();
+
+                  try {
+                    // Use the Clipboard API to copy the value directly
+                    await navigator.clipboard.writeText(textarea.inputEl.value);
+
+                    // Add a success class to the button for feedback
+                    copyButton.addClass("success");
+                  } catch (err) {
+                    console.error("Failed to copy to clipboard", err);
+                  }
+                });
+              });
+            setTimeout(() => {
+              // If the button is still in the dom, remove the success class
+              if (copyButton.parentNode) {
+                copyButton.removeClass("success");
+              }
+            }, 2000);
+          }
+        );
+      });
+  }
+
+  onClose() {
+    this.contentEl.empty();
+  }
+}
+
+//
+//
+//
+//
+//
+
+export class ImportModal extends Modal {
+  constructor(app: App, private plugin: TextFlowPlugin) {
+    super(app);
+    this.plugin = plugin;
+  }
+  onOpen() {
+    const { contentEl } = this;
+
+    new Setting(contentEl).then((setting) => {
+      // Build an error message container
+      const errorSpan = createSpan({
+        cls: "style-settings-import-error",
+        text: "Error importing config",
+      });
+
+      setting.nameEl.appendChild(errorSpan);
+
+      // Attempt to parse the imported data and close if successful
+      const importAndClose = async (str: string) => {
+        if (str) {
+          try {
+            const importedSettings = JSON.parse(str);
+            Object.assign(this.plugin.settings, importedSettings);
+            await this.plugin.saveSettings();
+            this.plugin.settingsTab.display();
+            this.close();
+          } catch (e) {
+            errorSpan.addClass("active");
+            errorSpan.setText(`Error importing confic`);
+          }
+        } else {
+          errorSpan.addClass("active");
+          errorSpan.setText(`Error importing config: config is empty`);
+        }
+      };
+
+      // Build a file input
+      setting.controlEl.createEl(
+        "input",
+        {
+          cls: "style-settings-import-input",
+          attr: {
+            id: "style-settings-import-input",
+            name: "style-settings-import-input",
+            type: "file",
+            accept: ".json",
+          },
+        },
+        (importInput) => {
+          // Set up a FileReader so we can parse the file contents
+          importInput.addEventListener("change", (e) => {
+            const reader = new FileReader();
+            reader.onload = async (e: ProgressEvent<FileReader>) => {
+              if (e.target?.result) {
+                await importAndClose(
+                  e.target && e.target.result.toString().trim()
+                );
+              }
+            };
+            let files = (e.target as HTMLInputElement).files;
+            if (files?.length) reader.readAsText(files[0]);
+          });
+        }
+      );
+
+      // Build a label we will style as a link
+      setting.controlEl.createEl("label", {
+        cls: "style-settings-import-label",
+        text: "Import from file",
+        attr: {
+          for: "style-settings-import-input",
+        },
+      });
+
+      new TextAreaComponent(contentEl)
+        .setPlaceholder("Paste config here...")
+        .then((ta) => {
+          new ButtonComponent(contentEl)
+            .setButtonText("Save")
+            .onClick(async () => {
+              await importAndClose(ta.getValue().trim());
+            });
+        });
+    });
+  }
+
+  onClose() {
+    let { contentEl } = this;
+    contentEl.empty();
+  }
+}
 
 //CHECKED AND TESTED
 export class previewModal extends Modal {
@@ -29,7 +195,9 @@ export class previewModal extends Modal {
     const { contentEl } = this;
 
     const modalTitle = contentEl.createEl("h2", {
-      text: `Preview for flow ${this.flowBuildBasket.flowName}.`,
+      text: this.plugin.t("previewModal.modalTitle preview for flow", {
+        this_flowBuildBasket_flowName: this.flowBuildBasket.flowName,
+      }),
     });
 
     // Show found overlaps
@@ -37,10 +205,14 @@ export class previewModal extends Modal {
       const conflictText = new Setting(contentEl).setDesc(
         createFragment((desc) => {
           desc.createSpan({
-            text: `The following flows overlap with ${this.flowBuildBasket.flowName}:`,
+            text: this.plugin.t("previewModal.modalTitle overlap for flow", {
+              this_flowBuildBasket_flowName: this.flowBuildBasket.flowName,
+            }),
           });
           desc.createEl("br");
-          const flowSpan = desc.createSpan({ text: `Hover for details.` });
+          const flowSpan = desc.createSpan({
+            text: this.plugin.t("previewModal.modalTitle hover for details"),
+          });
           Object.keys(this.flowBuildBasket.conflictObject).forEach((flow) => {
             if (flow != this.flowBuildBasket.oldFlowName) {
               // get the paths
@@ -50,13 +222,18 @@ export class previewModal extends Modal {
               // make the label
               const ariaText = `\n-${conflictingPaths.join("\n")}`;
               // the span itself:
+              const overlapList = Object.keys(
+                this.flowBuildBasket.conflictObject[flow]
+              ).join("\n");
+
               desc.createEl("br");
               const flowSpan = desc.createSpan({
                 text: `- ${flow}`,
                 attr: {
-                  "aria-label": `Overlapping notes:\n${Object.keys(
-                    this.flowBuildBasket.conflictObject[flow]
-                  ).join("\n")}`,
+                  "aria-label": this.plugin.t(
+                    "previewModal.modalTitle overlapping notes",
+                    { overlapList: overlapList }
+                  ),
                 },
               });
             }
@@ -74,7 +251,9 @@ export class previewModal extends Modal {
     const recipeItems = this.flowBuildBasket.finalRecipe[key] ?? [];
     if (recipeItems.length === 0) {
       previewContainer.setText(
-        "Your criteria yielded an empty list. Check them for typos and/or make them less restrictive."
+        this.plugin.t(
+          "previewModal.modalTitle.info your criteria yielded an empty list"
+        )
       );
     } else {
       // Format the elements of the array for display
@@ -107,16 +286,20 @@ export class previewModal extends Modal {
     const closeModal = new Setting(contentEl).setDesc(
       createFragment((desc) => {
         desc.createSpan({
-          text: "After closing this modal you can either edit or save your flow definition.",
+          text: this.plugin.t(
+            "previewModal.modalTitle.info what happens after closing the modal"
+          ),
         });
         desc.createEl("br");
         desc.createSpan({
-          text: "Flow creation happens in the next step.",
+          text: this.plugin.t(
+            "previewModal.text when does flow creation happen"
+          ),
         });
       })
     );
     const editButton = new ButtonComponent(closeModal.controlEl)
-      .setButtonText("Close preview")
+      .setButtonText(this.plugin.t("previewModal.button close preview"))
       .onClick(() => {
         this.close();
       });
@@ -147,7 +330,9 @@ export class DeleteFlowDefModal extends Modal {
       text: `Delete the definition for "${this.flowName}"`,
     });
     const helperText = contentEl.createEl("p", {
-      text: `This will also delete the related flowFile.`,
+      text: this.plugin.t(
+        "deleteModal.createEl.text this will delete flow file"
+      ),
       cls: "Tag-modal-helper",
     });
 
@@ -194,7 +379,9 @@ export class DeleteFlowDefModal extends Modal {
         }
       });
       new Notice(
-        `textFlow: The definition and flowFile of "${this.flowName}" were deleted!`
+        this.plugin.t("deleteModal.notice successful deletion", {
+          this_flowName: this.flowName,
+        })
       );
 
       // if the user was about to edit this flow, unlock the name input field
@@ -211,7 +398,9 @@ export class DeleteFlowDefModal extends Modal {
     cancelButton.setClass("action-button");
     cancelButton.setClass("action-button-cancel");
     cancelButton.setCta();
-    cancelButton.setTooltip("Cancel.");
+    cancelButton.setTooltip(
+      this.plugin.t("deleteModal.cancelButton cancel deletion")
+    );
     cancelButton.setIcon("x-circle");
     cancelButton.onClick(async () => {
       this.settingsTab.display();
@@ -244,7 +433,7 @@ export class FlowSwitcherModal extends Modal {
     // ----------------------------------------------------------
     // ---- PREPARE ACTIVE REGIONS ---------------
     // object to make flow info easier to grab
-    // activeFlowInfoObject: {flowName: {leafID: regionName}}
+    // activeFlowInfoObject: {flowName: {leafID: regionName}
     const activeFlowInfoObject: { [key: string]: { [key: string]: string } } =
       {};
 
@@ -319,7 +508,10 @@ export class FlowSwitcherModal extends Modal {
     // ---- DISPLAY ACTIVE FLOWS -----------
     // sub-container that holds only active flows
     const activeFlowContainer = mainContainer.createDiv({
-      text: sortActiveRegionsArray.length > 0 ? "" : "No active flows found",
+      text:
+        sortActiveRegionsArray.length > 0
+          ? ""
+          : this.plugin.t("switcherModal.info no active flows found"),
       cls: "textflow-switcher-active-container textflow-switcher-border-rounded-accent",
     });
 
@@ -550,6 +742,7 @@ export class FlowSwitcherModal extends Modal {
         });
 
         if (overlap === "⚭") {
+          const overlapString = overlapArray.join(", ");
           const regionName = flowRegion.createSpan({
             text: `${activeFlowInfoObject[activeFlow][leafID].replace(
               "#",
@@ -557,9 +750,10 @@ export class FlowSwitcherModal extends Modal {
             )} ${overlap}`,
             cls: "flow-switch-modal-active-region-name",
             attr: {
-              "aria-label": `This region also occurs in other flows: ${overlapArray.join(
-                ", "
-              )}`,
+              "aria-label": this.plugin.t(
+                "switcherModal.info overlapping regions",
+                { overlapString: overlapString }
+              ),
             },
           });
         } else {
@@ -609,7 +803,10 @@ export class FlowSwitcherModal extends Modal {
 
     // ---- DISPLAY INACTIVE FLOWS -----------
     const inactiveFlowContainer = mainContainer.createDiv({
-      text: sortedInactiveFlowArray.length > 0 ? "" : "No inactive flows found",
+      text:
+        sortedInactiveFlowArray.length > 0
+          ? ""
+          : this.plugin.t("switcherModal.info no inactive flows found"),
       cls: "textflow-switcher-INactive-container textflow-switcher-border-rounded-faint",
     });
 

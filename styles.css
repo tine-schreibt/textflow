@@ -27,6 +27,22 @@
   display: none;
 }
 
+/* import and export link*/
+
+.import-export-wrapper {
+  right: 0;
+  position: absolute;
+  padding: 0 3em;
+}
+
+.import-export-wrapper.import-link {
+  margin-right: 0.3em; /* Creates space between the links */
+}
+
+.headline-container {
+  padding-top: 15px;
+}
+
 /* --------- RADIO BUTTONS -----------*/
 .settings-radio-button {
   display: flex;

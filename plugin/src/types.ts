@@ -18,6 +18,7 @@ export interface TextFlowSettings {
   explorerDecoDropdownOpen: boolean;
   explorerListener: boolean;
   hideScrollbar: string;
+  restoreCursor: boolean;
   switcherPos: string;
   showMenuBar: boolean;
   maxMenuBar: boolean;
@@ -122,6 +123,7 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
   explorerDecoDropdownOpen: false,
   explorerListener: true,
   hideScrollbar: "none",
+  restoreCursor: true,
   switcherPos: "statusBar",
   showMenuBar: true,
   maxMenuBar: true,
