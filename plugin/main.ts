@@ -346,12 +346,35 @@ export default class TextFlowPlugin extends Plugin {
   // ----- DECORATE SOURCE NOTES IN FILE EXPLORER -----------
   // CHECKED AND TESTED
   decorateSourceNotes = async (mode: Types.CalculationMode) => {
-    if (!this.settings.showExplorerDeco) return;
-
     let path = "";
     let handledPathsArray: string[] = [];
     const unsyncedPathsArray: string[] = [];
     let decoStyle = "";
+
+    // This is code to add another symbol to the active region item, but I can't
+    // decide which symbol to choose, so for now it will remain dormant.
+    // find the active region path
+    let activeRegionPath: string | undefined = "";
+    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (activeView) {
+      if (activeView.file) {
+        const activeLeafPath = activeView.file.path;
+
+        if (activeLeafPath) {
+          const flowName = this.isFlowFile(activeLeafPath);
+          if (flowName) {
+            const leafID = (activeView.leaf as any).id;
+            const flowNameArray = Object.keys(this.settings.activeFlowObject);
+            for (let flowName of flowNameArray) {
+              if (this.settings.flows[flowName].activeRegions[leafID]) {
+                activeRegionPath =
+                  this.settings.flows[flowName].activeRegions[leafID].path;
+              }
+            }
+          }
+        }
+      }
+    }
 
     // ------ all the helper functions used -------
     const handlePath = (path: string, decoStyle: Types.DecoStyle) => {
@@ -404,22 +427,54 @@ export default class TextFlowPlugin extends Plugin {
       style.setAttribute(`data-textflow-${decoStyle}`, "true");
 
       // the decoration symbol which we fetch from an array of options
-      let neutralSymbol = this.settings.explorerDecoStyle[0];
-      let unsyncedSymbol = this.settings.explorerDecoStyle[1];
+      let neutralSymbol = "";
+      let unsyncedSymbol = "";
+
+      if (this.settings.showExplorerDeco) {
+        // show these symbols only when deco is activated
+        neutralSymbol = this.settings.explorerDecoStyle[0];
+        unsyncedSymbol = this.settings.explorerDecoStyle[1];
+      }
       const neutralStyle = this.settings.explorerDecoStyle[2];
       const unsyncedStyle = this.settings.explorerDecoStyle[3];
+
+      let activeColour = "";
+      if (activeRegionPath === path) {
+        activeColour = `var(--color-accent)`;
+      }
 
       let styleContent = "";
 
       // style for neutral stuff
       if (decoStyle === "neutral") {
         styleContent = `
+                  div[data-path='${this.escapeSelector(cleanPath)}'] {
+    position: relative !important;
+  }
+  div[data-path='${this.escapeSelector(cleanPath)}']::before {
+    content: "" !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background-color: ${activeColour} !important;
+    opacity: 0.1 !important;
+    pointer-events: none !important;
+    z-index: 1 !important;
+  }
+  div[data-path='${this.escapeSelector(cleanPath)}'] .nav-file-title-content,
+  div[data-path='${this.escapeSelector(cleanPath)}'] .nav-folder-title-content {
+    position: relative !important;
+    z-index: 2 !important;
+  }
   div[data-path='${this.escapeSelector(
     cleanPath
   )}'] .nav-file-title-content::after,
   div[data-path='${this.escapeSelector(
     cleanPath
-  )}'] .nav-folder-title-content::after {
+  )}'] .nav-folder-title-content::after 
+  {
   content: " ${neutralSymbol}" !important;
   --nav-item-color: ${
     neutralStyle.includes("high") ? "var(--text-muted)" : "var(--text-faint)"
@@ -431,27 +486,62 @@ export default class TextFlowPlugin extends Plugin {
   font-size: ${neutralStyle.includes("large") ? "1.2em" : "1em"} !important;
   font-family: monospace !important;
   vertical-align: middle !important;
+  };
+    div[data-path='${this.escapeSelector(
+      cleanPath
+    )}'] .tree-item-self.nav-file-title,
+  div[data-path='${this.escapeSelector(
+    cleanPath
+  )}'] .tree-item-self.nav-folder-title {
+    background-color: var(--nav-item-background-active) !important;
   }
   `;
       }
       // Style for unsynced stuff
       if (decoStyle === "unsynced") {
         styleContent = `
-  div[data-path='${this.escapeSelector(
-    cleanPath
-  )}'] .nav-file-title-content::after,
-  div[data-path='${this.escapeSelector(
-    cleanPath
-  )}'] .nav-folder-title-content::after {
-  content: " ${unsyncedSymbol}" !important;
-  --nav-item-color: var(--color-accent) !important;
-  color: var(--color-accent) !important;
-  opacity: ${unsyncedStyle.includes("high") ? "1" : "0.6"} !important;
-  font-size: ${unsyncedStyle.includes("large") ? "1.2em" : "1em"} !important;
-  font-family: monospace !important; // prevents emojis
-  vertical-align: middle !important;
+          div[data-path='${this.escapeSelector(cleanPath)}'] {
+    position: relative !important;
   }
-  `;
+  div[data-path='${this.escapeSelector(cleanPath)}']::before {
+    content: "" !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background-color: ${activeColour} !important;
+    opacity: 0.1 !important;
+    pointer-events: none !important;
+    z-index: 1 !important;
+  }
+  div[data-path='${this.escapeSelector(cleanPath)}'] .nav-file-title-content,
+  div[data-path='${this.escapeSelector(cleanPath)}'] .nav-folder-title-content {
+    position: relative !important;
+    z-index: 2 !important;
+  }
+        div[data-path='${this.escapeSelector(
+          cleanPath
+        )}'] .tree-item-self.nav-file-title,
+        div[data-path='${this.escapeSelector(
+          cleanPath
+        )}'] .tree-item-self.nav-folder-title {
+          background-color: var(--nav-item-background-active) !important;
+        }
+        div[data-path='${this.escapeSelector(
+          cleanPath
+        )}'] .nav-file-title-content::after,
+        div[data-path='${this.escapeSelector(
+          cleanPath
+        )}'] .nav-folder-title-content::after {
+          content: " ${unsyncedSymbol}" !important;
+          color: var(--text-muted) !important;
+          opacity: 1 !important;
+          font-size: 1em !important;
+          font-family: monospace !important;
+          vertical-align: middle !important;
+        }
+      `;
       }
       style.textContent = styleContent;
       document.head.appendChild(style);
@@ -2132,6 +2222,7 @@ export default class TextFlowPlugin extends Plugin {
         flow.activeRegions[leafID] = activeRegionObject;
         // then check if the active region overlaps and sent a notice
         if (activeRegionObject.path) {
+          this.decorateSourceNotes("update");
           this.notifyOfOverlap(activeRegionObject.path, flow.flowName);
         }
 
@@ -2162,6 +2253,7 @@ export default class TextFlowPlugin extends Plugin {
         // console.log("New active region found:", activeRegion.path);
         flow.activeRegions[leafID] = activeRegion;
         this.saveSettings();
+        this.decorateSourceNotes("update");
         if (view.menuBar) {
           view.menuBar.refresh(view.contentEl);
         }
