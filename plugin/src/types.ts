@@ -217,9 +217,9 @@ export interface ObsidianEditor extends Editor {
 }
 
 // explorer deco
-export type CalculationMode = "redo" | "update";
+export type CalculationMode = "redo" | "update" | "single";
 
-export type DecoStyle = "neutral" | "unsynced" | "none";
+export type DecoStyle = "neutral" | "unsynced" | "none" | "active";
 
 // stuff that's used by the menuBar
 export type DropdownState = "hide" | "show";

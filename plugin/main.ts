@@ -345,10 +345,13 @@ export default class TextFlowPlugin extends Plugin {
 
   // ----- DECORATE SOURCE NOTES IN FILE EXPLORER -----------
   // CHECKED AND TESTED
-  decorateSourceNotes = async (mode: Types.CalculationMode) => {
+  decorateSourceNotes = async (
+    mode: Types.CalculationMode,
+    givenPath?: string
+  ) => {
     if (!this.settings.showExplorerDeco) return;
 
-    let path = "";
+    let generatedPath = "";
     let handledPathsArray: string[] = [];
     const unsyncedPathsArray: string[] = [];
     let decoStyle = "";
@@ -364,22 +367,37 @@ export default class TextFlowPlugin extends Plugin {
         }
         if (!handledPathsArray.includes(successivePath)) {
           handledPathsArray.push(successivePath);
-          updateStyles(successivePath, decoStyle);
+          updateStyles(mode, successivePath, decoStyle);
         }
       }
     };
 
-    const updateStyles = (path: string, decoStyle: Types.DecoStyle) => {
+    const updateStyles = (
+      mode: Types.CalculationMode,
+      path: string,
+      decoStyle: Types.DecoStyle
+    ) => {
       // Remove trailing slash for files (if it exists)
       const cleanPath = path.endsWith("/") ? path.slice(0, -1) : path;
 
-      // First remove any existing styles for this path
-      const existingStyles = document.head.querySelectorAll(
+      // remove the styles we are handling
+      let existingStyles: NodeListOf<HTMLStyleElement>;
+      if (mode === "single") {
+        existingStyles = document.head.querySelectorAll(
+          "style[data-textflow-active]"
+        );
+        // remove the style from all paths to reset
+        document
+          .querySelectorAll("style[data-textflow-active]")
+          .forEach((style) => style.remove());
+      }
+      // remove neutral and unsynced styles if present
+      existingStyles = document.head.querySelectorAll(
         "style[data-textflow-neutral], style[data-textflow-unsynced]"
       );
+      // only remove for specific path
       existingStyles.forEach((style) => {
         const styleContent = style.textContent || "";
-        // Only remove if it's for this specific path
         if (
           styleContent.includes(`data-path='${this.escapeSelector(cleanPath)}'`)
         ) {
@@ -411,8 +429,31 @@ export default class TextFlowPlugin extends Plugin {
 
       let styleContent = "";
 
-      // style for neutral stuff
+      // style for active
+      if (decoStyle == "active") {
+        const penSymbol = "✎";
+        styleContent = `
+  div[data-path='${this.escapeSelector(
+    cleanPath
+  )}'] .nav-file-title-content::after,
+  div[data-path='${this.escapeSelector(
+    cleanPath
+  )}'] .nav-folder-title-content::after {
+  content: " ${unsyncedSymbol}" !important;
+  --nav-item-color: var(--color-accent) !important;
+  color: var(--color-accent) !important;
+  opacity: ${unsyncedStyle.includes("high") ? "1" : "0.6"} !important;
+  font-size: ${unsyncedStyle.includes("large") ? "1.2em" : "1em"} !important;
+  font-family: monospace !important; // prevents emojis
+  vertical-align: middle !important;
+  }
+  `;
+        console.log("Style content:", styleContent);
+        console.log("Style element added:", style);
+      }
+
       if (decoStyle === "neutral") {
+        // style for neutral stuff
         styleContent = `
   div[data-path='${this.escapeSelector(
     cleanPath
@@ -458,6 +499,14 @@ export default class TextFlowPlugin extends Plugin {
     };
 
     // -------- THE LOGIC -----------------
+
+    // first check if we're just dealing with a single path
+    if (mode === "single" && givenPath) {
+      await updateStyles(mode, givenPath, "active");
+      console.log("updating style for ", givenPath);
+      return;
+    }
+
     // handle general paths
     const handledPaths: { [key: string]: boolean } = {};
     let flowArray: string[] = [];
@@ -465,7 +514,7 @@ export default class TextFlowPlugin extends Plugin {
     // if we redo, we need all flows, else we just need the active ones
     if (mode === "redo") {
       flowArray = Object.keys(this.settings.flows);
-    } else {
+    } else if (mode === "update") {
       flowArray = Object.keys(this.settings.activeFlowObject);
     }
 
@@ -475,42 +524,44 @@ export default class TextFlowPlugin extends Plugin {
         ? "bookmarks"
         : "foldersTagsProps";
 
-      for (path of this.settings.flows[flowName].flowRecipe[key]) {
+      for (generatedPath of this.settings.flows[flowName].flowRecipe[key]) {
         // exclude folder titles
-        if (path.startsWith("#")) continue;
+        if (generatedPath.startsWith("#")) continue;
 
         // and we only need to do this if we redo the whole shebang
         if (mode === "redo") {
           // if we're handling a flow that is active, track the path
           if (this.settings.activeFlowObject[flowName]) {
-            handledPaths[path] = true;
+            handledPaths[generatedPath] = true;
           }
           // if we're handling a non-active flow, protect the known active paths
           if (!this.settings.activeFlowObject[flowName]) {
-            if (handledPaths[path]) continue;
+            if (handledPaths[generatedPath]) continue;
             decoStyle = "none";
-            handlePath(path, decoStyle as Types.DecoStyle);
+            handlePath(generatedPath, decoStyle as Types.DecoStyle);
             continue;
           }
         }
         // handle the path
         if (
           this.settings.activeFlowObject[flowName] &&
-          !this.settings.flows[flowName].unsyncedRegionsArray.includes(path)
+          !this.settings.flows[flowName].unsyncedRegionsArray.includes(
+            generatedPath
+          )
         ) {
           decoStyle = "neutral";
-          handlePath(path, decoStyle as Types.DecoStyle);
+          handlePath(generatedPath, decoStyle as Types.DecoStyle);
         } else {
-          unsyncedPathsArray.push(path);
+          unsyncedPathsArray.push(generatedPath);
         }
       }
     }
 
     // handle unsynced paths - null handled paths array
     // because we may need to override some general styles
-    for (path of unsyncedPathsArray) {
+    for (generatedPath of unsyncedPathsArray) {
       decoStyle = "unsynced";
-      handlePath(path, decoStyle as Types.DecoStyle);
+      handlePath(generatedPath, decoStyle as Types.DecoStyle);
     }
   };
 
@@ -2116,7 +2167,7 @@ export default class TextFlowPlugin extends Plugin {
     // Get full document text from CodeMirror state
     const text = cmEditor.state.doc.toString();
 
-    // if this is the initial call for the leaf, give it a n active region
+    // if this is the initial call for the leaf, give it an active region
     if (!flow.activeRegions[leafID]) {
       let activeRegionObject = this.findActiveRegion(
         flow,
@@ -2126,10 +2177,12 @@ export default class TextFlowPlugin extends Plugin {
         text
       );
 
-      // double check because active region could come back undefined
+      // confirm existence because active region could come back undefined
       if (activeRegionObject) {
         flow.activeRegions[leafID] = activeRegionObject;
         await this.saveSettings();
+        // highlight the source note
+        this.decorateSourceNotes("single", activeRegionObject.path);
         return;
       }
     } else if (
@@ -2156,6 +2209,7 @@ export default class TextFlowPlugin extends Plugin {
         // console.log("New active region found:", activeRegion.path);
         flow.activeRegions[leafID] = activeRegion;
         this.saveSettings();
+        this.decorateSourceNotes("single", activeRegion.path);
         if (view.menuBar) {
           view.menuBar.refresh(view.contentEl);
         }
