@@ -27,17 +27,20 @@ export class MenuBar {
     type: string;
     handler: EventListener;
   }> = [];
+  private leafID: string;
 
   constructor(
     app: App,
     plugin: TextFlowPlugin,
     flow: string,
-    view: MarkdownView
+    view: MarkdownView,
+    leafID: string
   ) {
     this.app = app;
     this.plugin = plugin;
     this.flowName = flow;
     this.associatedView = view;
+    this.leafID = leafID;
   }
 
   // ------ uitilities ---------
@@ -110,40 +113,37 @@ export class MenuBar {
 
   // functions to set/get dropdown state, because the address is so fucking long
   private getDropdownState(dropdown: string) {
-    const stateLeafID = (this.associatedView.leaf as any).id;
-
     if (dropdown === "nav") {
       return (
-        this.plugin.settings.flows[this.flowName].activeRegions[stateLeafID]
+        this.plugin.settings.flows[this.flowName].activeRegions[this.leafID]
           .leafMenuBarSettings.navDropdownState ?? "show"
       );
     }
     if (dropdown === "cursor")
       return (
-        this.plugin.settings.flows[this.flowName].activeRegions[stateLeafID]
+        this.plugin.settings.flows[this.flowName].activeRegions[this.leafID]
           .leafMenuBarSettings.cursorDropdownState ?? "show"
       );
   }
 
   // self explanatory
   private setDropdownState(dropdown: string, state: "show" | "hide") {
-    const stateLeafID = (this.associatedView.leaf as any).id;
     if (
       dropdown === "nav" &&
-      this.plugin.settings.flows[this.flowName].activeRegions[stateLeafID]
+      this.plugin.settings.flows[this.flowName].activeRegions[this.leafID]
     ) {
       this.plugin.settings.flows[this.flowName].activeRegions[
-        stateLeafID
+        this.leafID
       ].leafMenuBarSettings.navDropdownState = state;
 
       this.plugin.saveSettings();
     }
     if (
       dropdown === "cursor" &&
-      this.plugin.settings.flows[this.flowName].activeRegions[stateLeafID]
+      this.plugin.settings.flows[this.flowName].activeRegions[this.leafID]
     ) {
       this.plugin.settings.flows[this.flowName].activeRegions[
-        stateLeafID
+        this.leafID
       ].leafMenuBarSettings.cursorDropdownState = state;
 
       this.plugin.saveSettings();
@@ -201,22 +201,37 @@ export class MenuBar {
   // handling the creation of entries
   private createNavDropdownEntry(path: string, dropdownEntries: HTMLElement) {
     // get flowOrder (also to search for start of region)
-
     if (path === "No results") {
       const dropdownEntry = dropdownEntries.createDiv({
         cls: "menu-bar-navigation-dropdown-entries",
         text: "No results",
       });
     } else {
+      // set up a bunch of variables we'll need later
       let flowOrder = 0;
+      let titleClass = "";
+      let overlapText = "";
+      let isActiveRegion = false;
+
+      // find the flow order and check active state while we're at it
       if (this.plugin.settings.flows[this.flowName].flowMap[path]) {
+        // the flow order part
         flowOrder =
           this.plugin.settings.flows[this.flowName].flowMap[path].flowOrder;
+        if (
+          this.plugin.settings.flows[this.flowName].activeRegions[this.leafID]
+        ) {
+          if (
+            this.plugin.settings.flows[this.flowName].activeRegions[this.leafID]
+              .path === path
+          ) {
+            // the active region part
+            isActiveRegion = true;
+          }
+        }
       }
 
       // construct text and class for the dropdown entries
-      let titleClass = "";
-      let overlapText = "";
       if (path.startsWith("#")) {
         titleClass = `text-emphasis align-off-center`;
       }
@@ -230,6 +245,10 @@ export class MenuBar {
           overlap[0].join(", ").length > 0
             ? `Flow overlaps with: ${overlap[0].join(", ")}`
             : "";
+      }
+
+      if (isActiveRegion) {
+        titleClass += ` active`;
       }
 
       if (this.filterList.length === 0 || this.filterList.includes(path)) {
@@ -348,12 +367,11 @@ export class MenuBar {
         .setClass("clickable-icon")
         .onClick(async () => {
           if (goSync === "neutral" || goSync === "must") {
-            const syncLeafID = (this.associatedView.leaf as any).id;
             this.plugin.textFlowOperation = true;
             await this.plugin.syncBackToSource(
               this.flowName,
               this.associatedView.editor.getValue(),
-              syncLeafID
+              this.leafID
             );
             this.plugin.textFlowOperation = false;
             await this.plugin.saveSettings();
@@ -380,13 +398,13 @@ export class MenuBar {
       // ----------- NAVIGATION DROPDOWN ------
       // compute text for initial dropdown headline
       // get the path of the currently active region via the leafID
-      const navLeafID = (this.associatedView.leaf as any).id;
+
       // Pacify the Red Squiggle Demon's wrath at 'path' being explicitly typed as string | undefined
       let activeRegion: string | undefined = "";
       // some optional chaining because I don't know how to make stairs work here
       const flow = this.plugin.settings.flows?.[this.flowName];
-      if (flow?.activeRegions?.[navLeafID]?.path) {
-        activeRegion = flow.activeRegions[navLeafID].path;
+      if (flow.activeRegions[this.leafID].path) {
+        activeRegion = flow.activeRegions[this.leafID].path;
       }
 
       let activeRegionNoteName = "";
@@ -628,11 +646,10 @@ export class MenuBar {
         timestampArray.sort((a, b) => b - a);
 
         // Find out if we have data for the active leaf so we can show it at the top
-        const cursorLeafID = (this.associatedView.leaf as any).id;
 
         if (
           this.plugin.settings.flows[this.flowName].persistentCursors[
-            cursorLeafID
+            this.leafID
           ]
         ) {
           // create headline entry that's not clickable
@@ -640,7 +657,7 @@ export class MenuBar {
             cls: `text-emphasis align-off-center`,
             text: `${
               this.plugin.settings.flows[this.flowName].persistentCursors[
-                cursorLeafID
+                this.leafID
               ].leafContent
             }`,
           });
@@ -648,14 +665,14 @@ export class MenuBar {
           // now iterate through the cursor positions that belong to the leaf
           const cursorArray =
             this.plugin.settings.flows[this.flowName].persistentCursors[
-              cursorLeafID
+              this.leafID
             ].cursors;
 
           // create a div for each
           for (const [index, data] of cursorArray.entries()) {
             const textTimestamp =
               this.plugin.settings.flows[this.flowName].persistentCursors[
-                cursorLeafID
+                this.leafID
               ].update;
 
             const cursorDropdownEntryPos = cursorDropdownScrollable.createDiv({
@@ -680,7 +697,7 @@ export class MenuBar {
             this.plugin.settings.flows[this.flowName].persistentCursors
           ).forEach((leafID) => {
             // skip the active leaf if present
-            if (leafID != cursorLeafID) {
+            if (leafID != this.leafID) {
               if (
                 this.plugin.settings.flows[this.flowName].persistentCursors[
                   leafID
@@ -819,14 +836,15 @@ export class MenuBar {
                 this.flowName
               }_export_${this.plugin.flowService.getTimestamp()}.md`
             );
-            console.log("exportedFlowPath ", exportedFlowPath);
             await this.plugin.flowService.safeCreateFile(
               this.app.vault,
               exportedFlowPath,
               cleanContent
             );
             new Notice(
-              this.plugin.t("menubar.selectButton.notice successful export", {exportedFlowPath: exportedFlowPath})
+              this.plugin.t("menubar.selectButton.notice successful export", {
+                exportedFlowPath: exportedFlowPath,
+              })
             );
           }
         });

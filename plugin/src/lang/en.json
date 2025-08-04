@@ -187,6 +187,7 @@
   "syncBackToSource.notice other random error": "textFlow: An error occurred while trying to sync from ${flowName} to ${path}. Please try again in a second. If the error persists, consult the 'Fixing problems' section of the readme.",
 
   "checkActiveRegion.notice region tracking error": "textFlow: Region tracking error.\nYour are most likely seeing this because you undid (ctrl+z) your way into the state before a rebuild.\nPlease redo (ctrl+shift+z) your way back into the current version of things.\nIf that doesn't seem to work, please rebuild ${flow.flowName}.\nThis may lead to further error messages. Please follow their instructions.",
+  "checkActiveRegion.notice overlap detected": "The current region &{regionName} overlaps with the following flow(s): ${overlapString}",
 
   "---------- FLOW SERVICE": "A class that holds most of the functionality for the settings tab and related stuff",
   "flowService.progressNotice.notice initial notice": "textFlow: Building ${this_flowName}: [oooooooooo] 0% \nFirst build might take longer.",

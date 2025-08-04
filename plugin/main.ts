@@ -347,14 +347,34 @@ export default class TextFlowPlugin extends Plugin {
   // CHECKED AND TESTED
   decorateSourceNotes = async (
     mode: Types.CalculationMode,
-    givenPath?: string
+    leafID?: string
   ) => {
     if (!this.settings.showExplorerDeco) return;
 
-    let generatedPath = "";
+    // so we can check if we need to add an 'active' symbol to a path
+    let activeRegionPath: string | undefined = "";
+    if (leafID) {
+      const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+      if (activeView) {
+        if (activeView.file) {
+          const activeLeafPath = activeView.file.path;
+          const isFlowFile = this.isFlowFile(activeLeafPath);
+          if (isFlowFile) {
+            const activeFlowName = isFlowFile;
+            if (this.settings.activeFlowObject[activeFlowName]) {
+              if (this.settings.flows[activeFlowName].activeRegions[leafID]) {
+                activeRegionPath =
+                  this.settings.flows[activeFlowName].activeRegions[leafID]
+                    .path;
+              }
+            }
+          }
+        }
+      }
+    }
+
     let handledPathsArray: string[] = [];
     const unsyncedPathsArray: string[] = [];
-    let decoStyle = "";
 
     // ------ all the helper functions used -------
     const handlePath = (path: string, decoStyle: Types.DecoStyle) => {
@@ -367,94 +387,68 @@ export default class TextFlowPlugin extends Plugin {
         }
         if (!handledPathsArray.includes(successivePath)) {
           handledPathsArray.push(successivePath);
-          updateStyles(mode, successivePath, decoStyle);
+          updateStyles(successivePath, decoStyle);
         }
       }
     };
 
     const updateStyles = (
-      mode: Types.CalculationMode,
-      path: string,
+      path: string | undefined,
       decoStyle: Types.DecoStyle
     ) => {
-      // Remove trailing slash for files (if it exists)
-      const cleanPath = path.endsWith("/") ? path.slice(0, -1) : path;
+      if (path) {
+        // Remove trailing slash for files (if it exists)
+        const cleanPath = path.endsWith("/") ? path.slice(0, -1) : path;
 
-      // remove the styles we are handling
-      let existingStyles: NodeListOf<HTMLStyleElement>;
-      if (mode === "single") {
-        existingStyles = document.head.querySelectorAll(
-          "style[data-textflow-active]"
+        // First remove any existing styles for this path
+        const existingStyles = document.head.querySelectorAll(
+          "style[data-textflow-neutral], style[data-textflow-unsynced]"
         );
-        // remove the style from all paths to reset
-        document
-          .querySelectorAll("style[data-textflow-active]")
-          .forEach((style) => style.remove());
-      }
-      // remove neutral and unsynced styles if present
-      existingStyles = document.head.querySelectorAll(
-        "style[data-textflow-neutral], style[data-textflow-unsynced]"
-      );
-      // only remove for specific path
-      existingStyles.forEach((style) => {
-        const styleContent = style.textContent || "";
-        if (
-          styleContent.includes(`data-path='${this.escapeSelector(cleanPath)}'`)
-        ) {
-          style.remove();
+        existingStyles.forEach((style) => {
+          const styleContent = style.textContent || "";
+          // Only remove if it's for this specific path
+          if (
+            styleContent.includes(
+              `data-path='${this.escapeSelector(cleanPath)}'`
+            )
+          ) {
+            style.remove();
+          }
+        });
+
+        // Return early if we're just removing styles
+        if (decoStyle === "none") {
+          return;
         }
-      });
 
-      // Return early if we're just removing styles
-      if (decoStyle === "none") {
-        return;
-      }
+        const fileElement = document.querySelector(
+          `div[data-path='${this.escapeSelector(cleanPath)}']`
+        );
+        const folderElement = document.querySelector(
+          `div[data-path='${this.escapeSelector(cleanPath)}'] .nav-folder-title`
+        );
 
-      const fileElement = document.querySelector(
-        `div[data-path='${this.escapeSelector(cleanPath)}']`
-      );
-      const folderElement = document.querySelector(
-        `div[data-path='${this.escapeSelector(cleanPath)}'] .nav-folder-title`
-      );
+        let style = document.createElement("style");
 
-      let style = document.createElement("style");
+        style.setAttribute(`data-textflow-${decoStyle}`, "true");
 
-      style.setAttribute(`data-textflow-${decoStyle}`, "true");
+        // the decoration symbol which we fetch from an array of options
+        let neutralSymbol = this.settings.explorerDecoStyle[0];
+        let unsyncedSymbol = this.settings.explorerDecoStyle[1];
+        const neutralStyle = this.settings.explorerDecoStyle[2];
+        const unsyncedStyle = this.settings.explorerDecoStyle[3];
 
-      // the decoration symbol which we fetch from an array of options
-      let neutralSymbol = this.settings.explorerDecoStyle[0];
-      let unsyncedSymbol = this.settings.explorerDecoStyle[1];
-      const neutralStyle = this.settings.explorerDecoStyle[2];
-      const unsyncedStyle = this.settings.explorerDecoStyle[3];
+        // if the path is of the active leaf, we add another symbol
+        if (path === activeRegionPath) {
+          neutralSymbol = neutralSymbol + `✎`;
+          unsyncedSymbol = unsyncedSymbol + `✎`;
+        }
 
-      let styleContent = "";
+        let styleContent = "";
 
-      // style for active
-      if (decoStyle == "active") {
-        const penSymbol = "✎";
-        styleContent = `
-  div[data-path='${this.escapeSelector(
-    cleanPath
-  )}'] .nav-file-title-content::after,
-  div[data-path='${this.escapeSelector(
-    cleanPath
-  )}'] .nav-folder-title-content::after {
-  content: " ${unsyncedSymbol}" !important;
-  --nav-item-color: var(--color-accent) !important;
-  color: var(--color-accent) !important;
-  opacity: ${unsyncedStyle.includes("high") ? "1" : "0.6"} !important;
-  font-size: ${unsyncedStyle.includes("large") ? "1.2em" : "1em"} !important;
-  font-family: monospace !important; // prevents emojis
-  vertical-align: middle !important;
-  }
-  `;
-        console.log("Style content:", styleContent);
-        console.log("Style element added:", style);
-      }
-
-      if (decoStyle === "neutral") {
         // style for neutral stuff
-        styleContent = `
+        if (decoStyle === "neutral") {
+          styleContent = `
   div[data-path='${this.escapeSelector(
     cleanPath
   )}'] .nav-file-title-content::after,
@@ -474,10 +468,10 @@ export default class TextFlowPlugin extends Plugin {
   vertical-align: middle !important;
   }
   `;
-      }
-      // Style for unsynced stuff
-      if (decoStyle === "unsynced") {
-        styleContent = `
+        }
+        // Style for unsynced stuff
+        if (decoStyle === "unsynced") {
+          styleContent = `
   div[data-path='${this.escapeSelector(
     cleanPath
   )}'] .nav-file-title-content::after,
@@ -493,78 +487,71 @@ export default class TextFlowPlugin extends Plugin {
   vertical-align: middle !important;
   }
   `;
+        }
+        style.textContent = styleContent;
+        document.head.appendChild(style);
       }
-      style.textContent = styleContent;
-      document.head.appendChild(style);
+
+      // -------- THE LOGIC -----------------
+      // handle general paths
+      const handledPaths: { [key: string]: boolean } = {};
+      let flowArray: string[] = [];
+
+      // if we redo, we need all flows, else we just need the active ones
+      if (mode === "redo") {
+        flowArray = Object.keys(this.settings.flows);
+      } else {
+        flowArray = Object.keys(this.settings.activeFlowObject);
+      }
+
+      for (let flowName of flowArray) {
+        // get the file list
+        let key = this.settings.flows[flowName].flowRecipe.bookmarks
+          ? "bookmarks"
+          : "foldersTagsProps";
+
+        for (path of this.settings.flows[flowName].flowRecipe[key]) {
+          // exclude folder titles
+          if (path.startsWith("#")) continue;
+
+          // and we only need to do this if we redo the whole shebang
+          if (mode === "redo") {
+            // if we're handling a flow that is active, track the path
+            if (this.settings.activeFlowObject[flowName]) {
+              handledPaths[path] = true;
+            }
+            // if we're handling a non-active flow, protect the known active paths
+            if (!this.settings.activeFlowObject[flowName]) {
+              if (handledPaths[path]) continue;
+              decoStyle = "none";
+              handlePath(path, decoStyle as Types.DecoStyle);
+              continue;
+            }
+          }
+          // handle the path
+          if (
+            this.settings.activeFlowObject[flowName] &&
+            !this.settings.flows[flowName].unsyncedRegionsArray.includes(path)
+          ) {
+            decoStyle = "neutral";
+            if (leafID) {
+              handlePath(path, decoStyle as Types.DecoStyle), leafID;
+            } else {
+              handlePath(path, decoStyle as Types.DecoStyle);
+            }
+          } else {
+            unsyncedPathsArray.push(path);
+          }
+        }
+      }
+
+      // handle unsynced paths - null handled paths array
+      // because we may need to override some general styles
+      for (path of unsyncedPathsArray) {
+        decoStyle = "unsynced";
+      }
     };
-
-    // -------- THE LOGIC -----------------
-
-    // first check if we're just dealing with a single path
-    if (mode === "single" && givenPath) {
-      await updateStyles(mode, givenPath, "active");
-      console.log("updating style for ", givenPath);
-      return;
-    }
-
-    // handle general paths
-    const handledPaths: { [key: string]: boolean } = {};
-    let flowArray: string[] = [];
-
-    // if we redo, we need all flows, else we just need the active ones
-    if (mode === "redo") {
-      flowArray = Object.keys(this.settings.flows);
-    } else if (mode === "update") {
-      flowArray = Object.keys(this.settings.activeFlowObject);
-    }
-
-    for (let flowName of flowArray) {
-      // get the file list
-      let key = this.settings.flows[flowName].flowRecipe.bookmarks
-        ? "bookmarks"
-        : "foldersTagsProps";
-
-      for (generatedPath of this.settings.flows[flowName].flowRecipe[key]) {
-        // exclude folder titles
-        if (generatedPath.startsWith("#")) continue;
-
-        // and we only need to do this if we redo the whole shebang
-        if (mode === "redo") {
-          // if we're handling a flow that is active, track the path
-          if (this.settings.activeFlowObject[flowName]) {
-            handledPaths[generatedPath] = true;
-          }
-          // if we're handling a non-active flow, protect the known active paths
-          if (!this.settings.activeFlowObject[flowName]) {
-            if (handledPaths[generatedPath]) continue;
-            decoStyle = "none";
-            handlePath(generatedPath, decoStyle as Types.DecoStyle);
-            continue;
-          }
-        }
-        // handle the path
-        if (
-          this.settings.activeFlowObject[flowName] &&
-          !this.settings.flows[flowName].unsyncedRegionsArray.includes(
-            generatedPath
-          )
-        ) {
-          decoStyle = "neutral";
-          handlePath(generatedPath, decoStyle as Types.DecoStyle);
-        } else {
-          unsyncedPathsArray.push(generatedPath);
-        }
-      }
-    }
-
-    // handle unsynced paths - null handled paths array
-    // because we may need to override some general styles
-    for (generatedPath of unsyncedPathsArray) {
-      decoStyle = "unsynced";
-      handlePath(generatedPath, decoStyle as Types.DecoStyle);
-    }
   };
-
   //^CHECKED AND TESTED
 
   // removing all styles on deactivation
@@ -954,7 +941,7 @@ export default class TextFlowPlugin extends Plugin {
     if (!view) {
       return;
     }
-    const leafID: number = (view.leaf as any).id;
+    const leafID: string = (view.leaf as any).id;
     if (!leafID) return;
 
     if (this.listenerBasket[leafID]) {
@@ -1070,7 +1057,7 @@ export default class TextFlowPlugin extends Plugin {
   private addTextChangeListener = (view: MarkdownView | null) => {
     if (!view) return;
 
-    const leafID: number = (view.leaf as any).id;
+    const leafID: string = (view.leaf as any).id;
     if (!leafID) return;
 
     if (this.listenerBasket[`${leafID}-changes`]) {
@@ -1151,7 +1138,7 @@ export default class TextFlowPlugin extends Plugin {
 
               // update source decoration
               if (plugin.settings.showExplorerDeco) {
-                plugin.decorateSourceNotes("update");
+                plugin.decorateSourceNotes("update", leafID);
               }
             }
           }, 250);
@@ -1527,6 +1514,7 @@ export default class TextFlowPlugin extends Plugin {
   // ---- handle menuBar setup
   setupMenuBar = (view: MarkdownView, flowName: string) => {
     let menuBar: MenuBar;
+    const leafID = (view.leaf as any).id;
     // If we got one, check if it belongs to the flow
     if (view.menuBar) {
       if ((view.menuBar as MenuBar).getFlowName() != flowName) {
@@ -1536,7 +1524,7 @@ export default class TextFlowPlugin extends Plugin {
     }
     // not in an else because it also needs to catch when we delete the menu bar
     if (!view.menuBar) {
-      menuBar = new MenuBar(this.app, this, flowName, view);
+      menuBar = new MenuBar(this.app, this, flowName, view, leafID);
       menuBar.attach(view.contentEl);
       view.menuBar = menuBar;
     }
@@ -1624,8 +1612,9 @@ export default class TextFlowPlugin extends Plugin {
     this.app.workspace.iterateAllLeaves((leaf) => {
       // get info for all leaves' contents, initalised or not
       const leafViewState = leaf.getViewState();
+      const staticLeafID: string = (leaf as any).id;
+
       if (leafViewState.type === "markdown" && leafViewState.state?.file) {
-        const leafID = (leaf as any).id;
         const leafPath = leafViewState.state?.file;
         if (typeof leafPath != "string") return; // behaves like 'continue' in this callback
 
@@ -1635,20 +1624,20 @@ export default class TextFlowPlugin extends Plugin {
           if (!foundFlowLeaves[flowName]) {
             foundFlowLeaves[flowName] = new Set();
           }
-          foundFlowLeaves[flowName].add(leafID);
+          foundFlowLeaves[flowName].add(staticLeafID);
 
           // Ensure the activeFlowObject exists
           if (!this.settings.activeFlowObject[flowName]) {
             this.settings.activeFlowObject[flowName] = {};
           }
-          this.settings.activeFlowObject[flowName][leafID] = true;
+          this.settings.activeFlowObject[flowName][staticLeafID] = true;
 
           // Then add region tracking for newly opened leaves
           if (!this.settings.flows[flowName].activeRegions) {
             this.settings.flows[flowName].activeRegions = {};
           }
-          if (!this.settings.flows[flowName].activeRegions[leafID]) {
-            this.addRegionTracking(flowName, leafID);
+          if (!this.settings.flows[flowName].activeRegions[staticLeafID]) {
+            this.addRegionTracking(flowName, staticLeafID);
           }
         }
       }
@@ -1713,7 +1702,6 @@ export default class TextFlowPlugin extends Plugin {
           }
         }
         // And now update all decoration and refresh the menu bars
-        this.decorateSourceNotes("redo");
         const allLeaves = this.app.workspace.getLeavesOfType("markdown");
         for (const leaf of allLeaves) {
           const view = leaf.view as MarkdownView;
@@ -1722,6 +1710,9 @@ export default class TextFlowPlugin extends Plugin {
 
           const flowName = this.isFlowFile(filePath);
           if (!flowName) continue;
+
+          const leafID: string = (leaf as any).id;
+          this.decorateSourceNotes("redo", leafID);
 
           view.menuBar?.refresh(view.contentEl);
         }
@@ -2013,7 +2004,7 @@ export default class TextFlowPlugin extends Plugin {
       this.manageCursorPos(flowName, leafID);
       this.saveSettings();
       if (this.settings.showExplorerDeco) {
-        this.decorateSourceNotes("update");
+        this.decorateSourceNotes("update", leafID);
       }
     }
   };
@@ -2149,7 +2140,7 @@ export default class TextFlowPlugin extends Plugin {
   // --------------- Functions: Flow management: Regions -----------------------------------------
   private checkActiveRegion = async (
     flow: Types.FlowDef,
-    leafID: number,
+    leafID: string,
     cursorOffset: number,
     view: MarkdownView
   ) => {
@@ -2167,7 +2158,7 @@ export default class TextFlowPlugin extends Plugin {
     // Get full document text from CodeMirror state
     const text = cmEditor.state.doc.toString();
 
-    // if this is the initial call for the leaf, give it an active region
+    // if this is the initial call for the leaf, give it a n active region
     if (!flow.activeRegions[leafID]) {
       let activeRegionObject = this.findActiveRegion(
         flow,
@@ -2177,12 +2168,16 @@ export default class TextFlowPlugin extends Plugin {
         text
       );
 
-      // confirm existence because active region could come back undefined
+      // double check because active region could come back undefined
       if (activeRegionObject) {
         flow.activeRegions[leafID] = activeRegionObject;
+        // then check if the active region overlaps and sent a notice
+        if (activeRegionObject.path) {
+          this.notifyOfOverlap(activeRegionObject.path, flow.flowName);
+          this.decorateSourceNotes("update", leafID);
+        }
+
         await this.saveSettings();
-        // highlight the source note
-        this.decorateSourceNotes("single", activeRegionObject.path);
         return;
       }
     } else if (
@@ -2209,9 +2204,12 @@ export default class TextFlowPlugin extends Plugin {
         // console.log("New active region found:", activeRegion.path);
         flow.activeRegions[leafID] = activeRegion;
         this.saveSettings();
-        this.decorateSourceNotes("single", activeRegion.path);
         if (view.menuBar) {
           view.menuBar.refresh(view.contentEl);
+        }
+        if (activeRegion.path) {
+          this.notifyOfOverlap(activeRegion.path, flow.flowName);
+          this.decorateSourceNotes("update", leafID);
         }
       } else {
         // if the compass just cirles, notify the user
@@ -2232,7 +2230,7 @@ export default class TextFlowPlugin extends Plugin {
   private findActiveRegion = (
     flow: Types.FlowDef,
     editor: ObsidianEditor,
-    leafID: number,
+    leafID: string,
     cursorOffset: number,
     text: string
   ) => {
@@ -2377,6 +2375,32 @@ export default class TextFlowPlugin extends Plugin {
     }
   };
   //^CHECKED AND TESTED
+
+  notifyOfOverlap = (path: string, activeFlow: string) => {
+    if (!this.settings.showMenuBar || !this.settings.maxMenuBar) {
+      const overlapArray = Object.keys(this.settings.activeFlowObject);
+      let overlappingFlows: string[] = [];
+      for (let flowName in overlapArray) {
+        if (flowName != activeFlow) {
+          const pathArray = Object.keys(this.settings.flows[flowName].flowMap);
+          if (pathArray.includes(path)) {
+            overlappingFlows.push(flowName);
+            continue;
+          }
+        }
+      }
+      if (overlappingFlows.length > 0) {
+        const overlapString = overlapArray.join(", ");
+        const regionName = basename(path);
+        new Notice(
+          this.t("checkActiveRegion.notice overlap detected", {
+            regionName: regionName,
+            overlapString: overlapString,
+          })
+        );
+      }
+    }
+  };
 
   // -------------------------------------------------------
   //------------------------- ONLOAD -----------------------

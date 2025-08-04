@@ -5,6 +5,8 @@
 !plugin/**
 !src/
 !src/*+
+!lang/
+!lang/**
 # and also: 
 !manifest.json
 !styles.css
