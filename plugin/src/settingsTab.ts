@@ -40,7 +40,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     importExportEl.createEl(
       "a",
       {
-        cls: "dynamic-highlighter-import-export import-link",
+        cls: "align-right-space",
         text: "Import ",
         href: "#",
       },
@@ -54,7 +54,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     importExportEl.createEl(
       "a",
       {
-        cls: "dynamic-highlighter-import-export export-link",
+        cls: "align-right",
         text: " Export",
         href: "#",
       },
@@ -327,6 +327,47 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
     // --- And we're back to my own beginner style, though Claude still helps me to get better at this -.-
 
+    const sourceHighlight = new Setting(setUpTextFlow)
+      .setName(
+        this.plugin.t(
+          "activeRegionDeco.setName choose highlight type for active region"
+        )
+      )
+      .setDesc(
+        createFragment((desc) => {
+          desc.createSpan({
+            text: this.plugin.t("activeRegionDeco.setDesc what does this do?"),
+          });
+        })
+      )
+      .addDropdown((highlightDropdown) => {
+        highlightDropdown
+          .addOption(
+            "bgAccent",
+            this.plugin.t(
+              "activeRegionDeco.addOption.1 background accent colour"
+            )
+          )
+          .addOption(
+            "bgMuted",
+            this.plugin.t("activeRegionDeco.addOption.2 background text muted")
+          )
+          .addOption(
+            "olText",
+            this.plugin.t("activeRegionDeco.addOption.4 outline full")
+          )
+          .addOption(
+            "olMuted",
+            this.plugin.t("activeRegionDeco.addOption.3 outline muted")
+          )
+          .setValue(this.plugin.settings.activeRegionHighlight)
+          .onChange(async (value) => {
+            this.plugin.settings.activeRegionHighlight = value;
+            await this.plugin.saveSettings();
+            this.plugin.decorateSourceNotes("update");
+          });
+      });
+
     // ------------ The Quality of Life stuff
     const qol = setUpTextFlow.createEl("details", {
       cls: "advancedSettings-container",
@@ -349,7 +390,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         createFragment((desc) => {
           desc.createSpan({
             text: this.plugin.t(
-              "qol.hideExplorerDeco.setDesc what is this for"
+              "qol.hideExplorerDeco.setDesc what is deco for"
             ),
           });
         })
@@ -517,7 +558,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         createFragment((desc) => {
           desc.createSpan({
             text: this.plugin.t(
-              "createFlows.chooseFlowName.setName some characters can't be part of a flow name"
+              "createFlows.chooseFlowName.setDesc some characters can't be part of a flow name"
             ),
           });
           desc.createEl("br");
@@ -552,7 +593,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       )
       .setDesc(
         this.plugin.t(
-          "toggleFolderTitles.setName will also turn off titles in nav dropdown"
+          "toggleFolderTitles.setDesc will also turn off titles in nav dropdown"
         )
       )
       .addToggle((sortToggle) => {
@@ -574,7 +615,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         createFragment((desc) => {
           desc.createSpan({
             text: this.plugin.t(
-              "defineFlow.setDesc only active method will be used"
+              "defineFlow.setDesc.1 only active method will be used"
             ),
           });
           desc.createEl("br");
@@ -1351,7 +1392,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         .setDesc(
           createFragment((desc) => {
             desc.createSpan({
-              text: this.plugin.t("flowDisplay.flowShow.setDesc. source", {
+              text: this.plugin.t("flowDisplay.flowShow.setDesc.1 source", {
                 source: source,
               }),
             });

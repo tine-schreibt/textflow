@@ -15,6 +15,7 @@ export interface TextFlowSettings {
   systemFolderHidden: boolean;
   explorerDecoStyle: string[];
   showExplorerDeco: boolean;
+  activeRegionHighlight: string;
   explorerDecoDropdownOpen: boolean;
   explorerListener: boolean;
   hideScrollbar: string;
@@ -35,6 +36,12 @@ export type DecorationEntry = [
   symbol1Class: string,
   symbol2Class: string
 ];
+
+export type ActiveRegionHighlight =
+  | "bgAccent"
+  | "bgMuted"
+  | "olText"
+  | "olMuted";
 
 export interface flowBuildBasket {
   createOrEdit: string;
@@ -120,6 +127,7 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
     "font-size: 1.2em; color: var(--text-accent); font-family: monospace;",
   ],
   showExplorerDeco: true,
+  activeRegionHighlight: "accent",
   explorerDecoDropdownOpen: false,
   explorerListener: true,
   hideScrollbar: "none",
@@ -230,3 +238,16 @@ export type MenuBarDisplayState = "show" | "hide";
 export type SearchItem = { path: string; displayName: string };
 
 export type SearchResult = SearchItem | FuseResult<SearchItem>;
+
+// the nav suggest modal
+export interface SuggestionItem {
+  type: SuggestionType;
+  flowName: string;
+  path?: string | undefined;
+  searchableText: string;
+}
+
+export type SuggestionType =
+  | "active-flow-path"
+  | "other-flow-path"
+  | "flow-name";

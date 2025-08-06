@@ -20,7 +20,7 @@
 }
 
 .active {
-  background-color: color-mix(in srgb, var(--color-accent) 20%, transparent);
+  background-color: color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
 
 .textflow-menu-bar-div .setting-item.no-border {
@@ -34,13 +34,12 @@
 /* import and export link*/
 
 .import-export-wrapper {
-  right: 0;
-  position: absolute;
-  padding: 0 3em;
+  display: flex;
+  justify-content: flex-end; /* This will align items to the right */
 }
 
-.import-export-wrapper.import-link {
-  margin-right: 0.3em; /* Creates space between the links */
+.align-right-space {
+  margin-right: 0.3em; /* This creates space between the links */
 }
 
 .headline-container {
@@ -701,6 +700,13 @@
 .cursor-target-button {
   padding: 4px;
   width: 30px;
+}
+
+/* Fuzzy suggest Modal - flows and paths */
+
+.suggestion-flair-active-flow {
+  background-color: var(--color-accent);
+  opacity: 0.1;
 }
 
 /* ------------ to make read-only visible ----------------*/

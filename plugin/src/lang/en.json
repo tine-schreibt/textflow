@@ -23,10 +23,18 @@
   "switcherModalPosition.addDropdown.addOption.alt command palette only": "Command palette only",
 
   "------ EXPLORER DECORATION": "Choose unicode characters to decorate source notes in file explorer ----------------",
-  "explorerDeco.setName.1 choose deco": "Choose file explorer decoration",
+  "explorerDeco.setName.1 choose deco": "Choose a file explorer decoration",
   "explorerDeco.setDesc.2 what does deco do": "Marks the source notes of all currently active (opened) flows.",
   "explorerDeco.setDesc.3 what do symbols mean": "First symbol: up to date; second symbol: waiting for sync.",
   "explorerDeco.setDesc.4 how to set colour": "The colour is the accent you chose in Obsidian's 'Appearance' settings.",
+
+  "-------- ACTIVE REGION HIGHLIGHT": "Choose a decoration style for the active region's source note",
+  "activeRegionDeco.setName choose highlight type for active region": "Choose active region highlight style",
+  "activeRegionDeco.setDesc what does this do?": "How do you want the active region's source note to be highlighted?",
+  "activeRegionDeco.addOption.1 background accent colour": "Background: Accent colour.",
+  "activeRegionDeco.addOption.2 background text muted": "Background: Muted text colour.",
+  "activeRegionDeco.addOption.3 outline muted": "Outline: Muted text colour.",
+  "activeRegionDeco.addOption.4 outline full": "Outline: Text colour. ",
 
   "-------- QUALITY OF LIVE SETTINGS": "Some settings to clean up/debug the UI",
   "qol.createSpan.text quality of life settings": "Some quality of life settings",
@@ -55,14 +63,16 @@
   "-------- CREATE FLOWS": "Here the user can define flows-------------------------------------",
   "createFlows.createEl.text create a new flow": "Create a new flow",
   "createFlows.chooseFlowName.setName name your flow": "Name your flow",
+  "createFlows.chooseFlowName.setDesc some characters can't be part of a flow name": "Some characters can't be part of a flow name:",
+
   "createFlows.chooseFlowName.setPlaceholder enter a unique name": "Enter a unique name",
 
-  "toggleFolderTitles.setDesc include folder / bookmark group titles": "Include folder / bookmark group titles in flow",
-  "toggleFolderTitles.setName will also turn off titles in nav dropdown": "This will also turn off folder titles in the flow navigation dropdown.",
+  "toggleFolderTitles.setName include folder / bookmark group titles": "Include folder / bookmark group titles in flow",
+  "toggleFolderTitles.setDesc will also turn off titles in nav dropdown": "This will also turn off folder titles in the flow navigation dropdown.",
 
   "defineFlow.setName define your flow": "Define your flow...",
   "defineFlow.setDesc.1 only active method will be used": "Only the active definition method will be used for your definition.",
-  "defineFlow.setDesc.2 if no criteria, whole vault will be used": "If you don't enter any criteria, your enitre vault will be included in your flow.",
+  "defineFlow.setDesc.2 if no criteria, whole vault will be used": "If you don't enter any criteria, your entire vault will be included in your flow.",
 
   "buttons.bookmarks.setButtonText by bookmark group": "... by a bookmark group",
   "buttons.foldersTagsProps.setButtonText by folders, tags, props": "... by folders, tags, properties",

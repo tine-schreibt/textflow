@@ -2,6 +2,9 @@ import TextFlowPlugin from "../main";
 import {
   App,
   ButtonComponent,
+  FuzzyMatch,
+  FuzzySuggestModal,
+  prepareFuzzySearch,
   Notice,
   setIcon,
   MarkdownView,
@@ -963,5 +966,131 @@ export class FlowSwitcherModal extends Modal {
     this.plugin.unregisterModalUpdateCallback();
     const { contentEl } = this;
     contentEl.empty();
+  }
+}
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+// This modal was mostly written by Claude 3.5 Sonnet, but I did all the debugging and implementation
+// of Claude's disjointed, out-of-context suggestions
+export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
+  constructor(
+    app: App,
+    private settings: Types.TextFlowSettings,
+    private activeFlowName?: string
+  ) {
+    super(app);
+  }
+
+  getItems(): Types.SuggestionItem[] {
+    const items: Types.SuggestionItem[] = [];
+    const activeFlowItems: Types.SuggestionItem[] = [];
+    const otherFlowItems: Types.SuggestionItem[] = [];
+    const flowNames: Types.SuggestionItem[] = [];
+
+    // Tier 1: Active flow paths (if there's an active flow)
+    Object.keys(this.settings.flows).forEach((flowName) => {
+      if (flowName === this.activeFlowName) {
+        Object.keys(this.settings.flows[flowName].flowMap).forEach((path) => {
+          activeFlowItems.push({
+            type: "active-flow-path",
+            flowName: flowName,
+            path,
+            searchableText: `${path}`,
+          });
+        });
+      }
+    });
+
+    // Tier 2: Other flow paths
+    Object.keys(this.settings.flows).forEach((flowName) => {
+      if (flowName != this.activeFlowName) {
+        Object.keys(this.settings.flows[flowName].flowMap).forEach((path) => {
+          otherFlowItems.push({
+            type: "other-flow-path",
+            flowName: flowName,
+            path,
+            searchableText: `${path}`,
+          });
+        });
+      }
+    });
+
+    // Tier 3: Flow names
+    Object.keys(this.settings.flows).forEach((flowName) => {
+      if (this.activeFlowName != flowName)
+        flowNames.push({
+          type: "flow-name",
+          flowName,
+          searchableText: `${flowName}`,
+        });
+    });
+
+    return [...activeFlowItems, ...otherFlowItems, ...flowNames];
+  }
+
+  getItemText(item: Types.SuggestionItem): string {
+    return item.searchableText;
+  }
+
+  renderSuggestion(
+    fuzzyMatch: FuzzyMatch<Types.SuggestionItem>,
+    el: HTMLElement
+  ) {
+    const suggestionItem = fuzzyMatch.item;
+
+    const matchedChars = this.inputEl.value.toLowerCase();
+    const searchText = suggestionItem.searchableText;
+    const searchQuery = this.inputEl.value;
+    const contentEl = el.createDiv({ cls: "suggestion-content" });
+
+    if (suggestionItem.type != "flow-name") {
+      contentEl.createSpan({
+        cls: "suggestion-highlight",
+        text: `${suggestionItem.flowName}: `,
+      });
+    }
+    // Use Obsidian's built-in suggestion highlighting
+    const matchElements = fuzzyMatch.match.matches;
+    let lastIndex = 0;
+
+    for (const [start, end] of matchElements) {
+      // Add non-matching text
+      if (start > lastIndex) {
+        contentEl.createSpan().setText(searchText.slice(lastIndex, start));
+      }
+      // Add matching text with Obsidian's built-in highlight class
+      contentEl
+        .createSpan({ cls: "suggestion-highlight" })
+        .setText(searchText.slice(start, end));
+      lastIndex = end;
+    }
+
+    // Add any remaining text
+    if (lastIndex < searchText.length) {
+      contentEl.createSpan().setText(searchText.slice(lastIndex));
+    }
+  }
+
+  onChooseItem(item: Types.SuggestionItem, evt: MouseEvent | KeyboardEvent) {
+    if (item.type === "flow-name") {
+      // Handle flow selection
+      console.log("Selected flow:", item.flowName);
+    } else {
+      // Handle path selection
+      console.log("Selected path:", item.path, "in flow:", item.flowName);
+    }
   }
 }
