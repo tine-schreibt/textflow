@@ -201,6 +201,25 @@ export default class TextFlowPlugin extends Plugin {
       },
     });
 
+    this.addCommand({
+      id: "open-fuzzy-nav-modal",
+      name: "Open fuzzy navigation modal",
+      callback: async () => {
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        let flowName: string | null = "";
+        if (view) {
+          if (view.file) {
+            flowName = this.isFlowFile(view.file.path);
+          }
+        }
+        if (flowName) {
+          new Modals.FuzzyNavModal(this.app, this.settings, flowName).open();
+        } else {
+          new Modals.FuzzyNavModal(this.app, this.settings).open();
+        }
+      },
+    });
+
     // turn off explorer navigation so multi-select works as expected
     this.addCommand({
       id: "toggle-explorer-listener",
@@ -351,8 +370,6 @@ export default class TextFlowPlugin extends Plugin {
     const unsyncedPathsArray: string[] = [];
     let decoStyle = "";
 
-    // This is code to add another symbol to the active region item, but I can't
-    // decide which symbol to choose, so for now it will remain dormant.
     // find the active region path
     let activeRegionPath: string | undefined = "";
     const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
@@ -438,9 +455,74 @@ export default class TextFlowPlugin extends Plugin {
       const neutralStyle = this.settings.explorerDecoStyle[2];
       const unsyncedStyle = this.settings.explorerDecoStyle[3];
 
+      let pseudoElement = "";
       let activeColour = "";
+      let opacity = "";
+
       if (activeRegionPath === path) {
-        activeColour = `var(--color-accent)`;
+        // if the user would like their active source notes highlighted with a background
+        if (
+          this.settings.activeRegionHighlight === "bgAccent" ||
+          this.settings.activeRegionHighlight === "bgMuted"
+        ) {
+          // check the colour
+          activeColour =
+            this.settings.activeRegionHighlight === "bgAccent"
+              ? `var(--color-accent)`
+              : `var(--nav-item-color)`;
+
+          pseudoElement = `position: relative !important;
+      }
+      div[data-path='${this.escapeSelector(cleanPath)}']::before {
+        content: "" !important;
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        background-color: ${activeColour} !important;
+        opacity: 0.1 !important;
+        pointer-events: none !important;
+        z-index: 1 !important;
+      }
+      div[data-path='${this.escapeSelector(
+        cleanPath
+      )}'] .nav-file-title-content,
+      div[data-path='${this.escapeSelector(
+        cleanPath
+      )}'] .nav-folder-title-content {
+        position: relative !important;
+        z-index: 2 !important;`;
+        } else {
+          // If they want an outline instead...
+          // check the colour
+          activeColour = `var(--nav-item-color)`;
+          opacity =
+            this.settings.activeRegionHighlight === "olText" ? `0.5` : `0.2`;
+
+          pseudoElement = `position: relative !important;
+        }
+        div[data-path='${this.escapeSelector(cleanPath)}']::before {
+          content: "" !important;
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          bottom: 0 !important;
+          box-shadow: inset 0 0 0 2px ${activeColour} !important;
+          opacity: ${opacity} !important;
+          border-radius: 3px !important;
+          pointer-events: none !important;
+          z-index: 1 !important;
+        div[data-path='${this.escapeSelector(
+          cleanPath
+        )}'] .nav-file-title-content,
+        div[data-path='${this.escapeSelector(
+          cleanPath
+        )}'] .nav-folder-title-content {
+          position: relative !important;
+          z-index: 2 !important;`;
+        }
       }
 
       let styleContent = "";
@@ -449,24 +531,7 @@ export default class TextFlowPlugin extends Plugin {
       if (decoStyle === "neutral") {
         styleContent = `
                   div[data-path='${this.escapeSelector(cleanPath)}'] {
-    position: relative !important;
-  }
-  div[data-path='${this.escapeSelector(cleanPath)}']::before {
-    content: "" !important;
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    background-color: ${activeColour} !important;
-    opacity: 0.1 !important;
-    pointer-events: none !important;
-    z-index: 1 !important;
-  }
-  div[data-path='${this.escapeSelector(cleanPath)}'] .nav-file-title-content,
-  div[data-path='${this.escapeSelector(cleanPath)}'] .nav-folder-title-content {
-    position: relative !important;
-    z-index: 2 !important;
+${pseudoElement}
   }
   div[data-path='${this.escapeSelector(
     cleanPath
