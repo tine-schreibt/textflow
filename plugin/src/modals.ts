@@ -2,9 +2,9 @@ import TextFlowPlugin from "../main";
 import {
   App,
   ButtonComponent,
+  Editor,
   FuzzyMatch,
   FuzzySuggestModal,
-  prepareFuzzySearch,
   Notice,
   setIcon,
   MarkdownView,
@@ -13,10 +13,15 @@ import {
   Setting,
   TextAreaComponent,
   TFile,
+  WorkspaceLeaf,
 } from "obsidian";
 import * as Types from "./types";
+import TextFlow from "../main";
 import { TextFlowSettingsTab } from "./settingsTab";
 import { basename } from "path";
+import { FlowService } from "./flowService";
+import { EditorView } from "@codemirror/view";
+import { identifierToKeywordKind } from "typescript";
 
 export class ExportModal extends Modal {
   constructor(app: App, private plugin: TextFlowPlugin) {
@@ -968,73 +973,94 @@ export class FlowSwitcherModal extends Modal {
     contentEl.empty();
   }
 }
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-// This modal was mostly written by Claude 3.5 Sonnet, but I did all the debugging and implementation
-// of Claude's disjointed, out-of-context suggestions
+
+// This modal was largely written by Claude 3.5 Sonnet,
+// but I put it all together and debugged it
 export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
   constructor(
     app: App,
+    private plugin: TextFlow,
     private settings: Types.TextFlowSettings,
+    private flowService: FlowService,
     private activeFlowName?: string
   ) {
     super(app);
+    this.flowService = flowService;
+  }
+
+  onOpen() {
+    super.onOpen();
+
+    // Set placeholder text in the search input
+    this.setPlaceholder("Search for flows and paths...");
+
+    // Add instructions below the search box
+    this.setInstructions([
+      { command: "prefix ^", purpose: "for active flow" },
+      { command: "prefix |", purpose: "for other flows" },
+      { command: "prefix [", purpose: "for flow names" },
+      { command: "prefix #", purpose: "for titles" },
+      // Add any other custom shortcuts you plan to implement
+    ]);
   }
 
   getItems(): Types.SuggestionItem[] {
-    const items: Types.SuggestionItem[] = [];
     const activeFlowItems: Types.SuggestionItem[] = [];
     const otherFlowItems: Types.SuggestionItem[] = [];
     const flowNames: Types.SuggestionItem[] = [];
 
-    // Tier 1: Active flow paths (if there's an active flow)
+    // the next three bits are my code
+    // Contents of the flow in the active leaf if it exists
     Object.keys(this.settings.flows).forEach((flowName) => {
       if (flowName === this.activeFlowName) {
-        Object.keys(this.settings.flows[flowName].flowMap).forEach((path) => {
-          activeFlowItems.push({
-            type: "active-flow-path",
-            flowName: flowName,
-            path,
-            searchableText: `${path}`,
-          });
-        });
+        Object.keys(this.settings.flows[flowName].flowMap).forEach(
+          (identifier) => {
+            const filePath =
+              this.settings.flows[flowName].flowMap[identifier].path;
+
+            activeFlowItems.push({
+              type: "active-flow-path",
+              flowName: flowName,
+              identifier: identifier,
+              path: filePath,
+              searchableText: `^ ${identifier}`,
+            });
+          }
+        );
       }
     });
 
-    // Tier 2: Other flow paths
+    // contents of flows that are not in the active leaf
     Object.keys(this.settings.flows).forEach((flowName) => {
       if (flowName != this.activeFlowName) {
-        Object.keys(this.settings.flows[flowName].flowMap).forEach((path) => {
-          otherFlowItems.push({
-            type: "other-flow-path",
-            flowName: flowName,
-            path,
-            searchableText: `${path}`,
-          });
-        });
+        Object.keys(this.settings.flows[flowName].flowMap).forEach(
+          (identifier) => {
+            const filePath =
+              this.settings.flows[flowName].flowMap[identifier].path;
+
+            otherFlowItems.push({
+              type: "other-flow-path",
+              flowName: flowName,
+              identifier: identifier,
+              path: filePath,
+              searchableText: `| ${identifier}`,
+            });
+          }
+        );
       }
     });
 
-    // Tier 3: Flow names
+    // all the flow names
     Object.keys(this.settings.flows).forEach((flowName) => {
+      const filePath = this.settings.flows[flowName].flowFilePath;
+
       if (this.activeFlowName != flowName)
         flowNames.push({
           type: "flow-name",
-          flowName,
-          searchableText: `${flowName}`,
+          flowName: flowName,
+          identifier: "",
+          path: filePath,
+          searchableText: `[ ${flowName}`,
         });
     });
 
@@ -1050,47 +1076,132 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
     el: HTMLElement
   ) {
     const suggestionItem = fuzzyMatch.item;
-
-    const matchedChars = this.inputEl.value.toLowerCase();
     const searchText = suggestionItem.searchableText;
-    const searchQuery = this.inputEl.value;
+
+    // make the container
     const contentEl = el.createDiv({ cls: "suggestion-content" });
 
-    if (suggestionItem.type != "flow-name") {
-      contentEl.createSpan({
-        cls: "suggestion-highlight",
-        text: `${suggestionItem.flowName}: `,
-      });
-    }
-    // Use Obsidian's built-in suggestion highlighting
+    // this is the flow name, in fat print to stand out
+    contentEl.createSpan({
+      cls: "suggestion-highlight",
+      text: `${suggestionItem.flowName}: `,
+    });
+
+    // Now do another fuzzy match to find and highlight the search term within the results
+    // Claude 3.5 Sonnet wrote this and I don't really understand it, but it works, so...
     const matchElements = fuzzyMatch.match.matches;
     let lastIndex = 0;
-
     for (const [start, end] of matchElements) {
-      // Add non-matching text
       if (start > lastIndex) {
         contentEl.createSpan().setText(searchText.slice(lastIndex, start));
       }
-      // Add matching text with Obsidian's built-in highlight class
       contentEl
         .createSpan({ cls: "suggestion-highlight" })
         .setText(searchText.slice(start, end));
       lastIndex = end;
     }
-
-    // Add any remaining text
     if (lastIndex < searchText.length) {
       contentEl.createSpan().setText(searchText.slice(lastIndex));
     }
   }
 
   onChooseItem(item: Types.SuggestionItem, evt: MouseEvent | KeyboardEvent) {
-    if (item.type === "flow-name") {
-      // Handle flow selection
-      console.log("Selected flow:", item.flowName);
-    } else {
-      // Handle path selection
-      console.log("Selected path:", item.path, "in flow:", item.flowName);
+    interface ObsidianEditor extends Editor {
+      cm?: EditorView;
+    }
+
+    // this is all my own code again
+    const findFlowLeaf = (item: Types.SuggestionItem) => {
+      if (this.plugin.settings.activeFlowObject[item.flowName]) {
+        const activeLeafArray = Object.keys(
+          this.plugin.settings.flows[item.flowName].activeRegions
+        );
+        const leafID = activeLeafArray[0];
+        return leafID;
+      }
+      return null;
+    };
+
+    const scrollToTarget = (item: Types.SuggestionItem) => {
+      const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+      const editor = view?.editor as ObsidianEditor | null;
+      if (editor) {
+        const cmEditor = editor.cm;
+        let text = "";
+        if (cmEditor) {
+          text = cmEditor.state.doc.toString();
+        }
+        const flowOrder =
+          this.plugin.settings.flows[item.flowName].flowMap[item.identifier]
+            .flowOrder;
+
+        const startPosInFlow = this.plugin.findStartOfRegion(
+          this.settings.flows[item.flowName],
+          flowOrder,
+          text
+        );
+
+        if (startPosInFlow) {
+          // then we call scrollToPos
+          this.plugin.flowService.scrollToPos(editor, startPosInFlow);
+          // it also automatically focuses the editor
+        }
+      }
+    };
+
+    // pacify the squiggle demon because it doesn't infer existence
+    if (this.activeFlowName && item.path && item.type === "active-flow-path") {
+      console.log("item is part of the active flow");
+      // IF WE'RE LOOKING INTO A FLOW IN THE ACTIVE LEAF
+      scrollToTarget(item);
+    } else if (item.type === "other-flow-path") {
+      console.log("item is part of a different flow");
+      // IF THE FLOW IS NOT IN THE ACTIVE LEAF
+      // see if we got it elsewhere open
+      const leafID = findFlowLeaf(item);
+      if (leafID) {
+        // if we do, focus it, before we scroll
+        const leaves = this.app.workspace.getLeavesOfType("markdown");
+        const targetLeaf = leaves.find((leaf) => (leaf as any).id === leafID);
+        if (targetLeaf) {
+          this.app.workspace.setActiveLeaf(targetLeaf, { focus: true });
+        }
+      } else {
+        // if we don't, open and focus the flow first
+        const file = this.app.vault.getAbstractFileByPath(
+          this.plugin.settings.flows[item.flowName].flowFilePath
+        );
+        if (file instanceof TFile) {
+          const leaf = this.app.workspace.getLeaf("tab");
+          leaf.openFile(file);
+          leaf.setPinned(true);
+          this.app.workspace.setActiveLeaf(leaf, { focus: true });
+        }
+        // the scroll
+        scrollToTarget(item);
+      }
+    } else if (item.type === "flow-name") {
+      // IF WE'RE LOOKING FOR A FLOW, see if it's already open
+      const leafID = findFlowLeaf(item);
+      if (leafID) {
+        // if we do, focus it, before we scroll
+        const leaves = this.app.workspace.getLeavesOfType("markdown");
+        const targetLeaf = leaves.find((leaf) => (leaf as any).id === leafID);
+        if (targetLeaf) {
+          this.app.workspace.setActiveLeaf(targetLeaf, { focus: true });
+        }
+      } else {
+        // if not....
+        const file = this.app.vault.getAbstractFileByPath(
+          this.plugin.settings.flows[item.flowName].flowFilePath
+        );
+        if (file instanceof TFile) {
+          const leaf = this.app.workspace.getLeaf("tab");
+          leaf.openFile(file);
+          leaf.setPinned(true);
+          this.app.workspace.setActiveLeaf(leaf, { focus: true });
+        }
+      }
     }
   }
 }

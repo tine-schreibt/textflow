@@ -243,6 +243,7 @@ export type SearchResult = SearchItem | FuseResult<SearchItem>;
 export interface SuggestionItem {
   type: SuggestionType;
   flowName: string;
+  identifier: string;
   path?: string | undefined;
   searchableText: string;
 }
@@ -250,4 +251,5 @@ export interface SuggestionItem {
 export type SuggestionType =
   | "active-flow-path"
   | "other-flow-path"
-  | "flow-name";
+  | "flow-name"
+  | "header";

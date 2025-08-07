@@ -213,9 +213,20 @@ export default class TextFlowPlugin extends Plugin {
           }
         }
         if (flowName) {
-          new Modals.FuzzyNavModal(this.app, this.settings, flowName).open();
+          new Modals.FuzzyNavModal(
+            this.app,
+            this,
+            this.settings,
+            this.flowService,
+            flowName
+          ).open();
         } else {
-          new Modals.FuzzyNavModal(this.app, this.settings).open();
+          new Modals.FuzzyNavModal(
+            this.app,
+            this,
+            this.settings,
+            this.flowService
+          ).open();
         }
       },
     });
@@ -1682,8 +1693,7 @@ ${pseudoElement}
   //CHECKED AND TESTED
   // ---- Make sure flows are set up when they are activated
   async activateFlow(flowName: string) {
-    const flow = this.settings.flows[flowName];
-    if (!flow) {
+    if (!this.settings.flows[flowName]) {
       new Notice(
         this.t("activateFlow.notice flow name not found", {
           flowName: flowName,
@@ -1693,16 +1703,22 @@ ${pseudoElement}
       return;
     }
     // Get the file
-    const flowFile = this.app.vault.getAbstractFileByPath(flow.flowFilePath);
+    console.log(
+      "getting file for flow ",
+      this.settings.flows[flowName],
+      this.settings.flows[flowName].flowFilePath
+    );
+    const flowFile = this.app.vault.getAbstractFileByPath(
+      this.settings.flows[flowName].flowFilePath
+    );
 
     if (flowFile instanceof TFile) {
       // make a leaf and put the file into it
-      const leaf = this.app.workspace.getLeaf("tab"); // Prefer opening in a new split if creating
+      const leaf = this.app.workspace.getLeaf("tab"); // Prefer opening in a tab
       await leaf.openFile(flowFile);
 
       // now set it up and focus it
       if (leaf.view instanceof MarkdownView) {
-        this.setupFlowView(flowName, leaf.view);
         this.app.workspace.setActiveLeaf(leaf, { focus: true }); // Make sure to activate the leaf with focus
       } else {
         console.error(
@@ -1712,7 +1728,7 @@ ${pseudoElement}
     } else {
       new Notice(
         this.t("activateFlow.notice flow file not found", {
-          flow_flowFilePath: flow.flowFilePath,
+          flow_flowFilePath: this.settings.flows[flowName].flowFilePath,
         }),
         10000
       );
