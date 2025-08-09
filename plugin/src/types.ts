@@ -55,6 +55,7 @@ export interface flowBuildBasket {
   finalRecipe: { [key: string]: string[] };
   conflictObject: ConflictObject;
   activeRegions: { [key: number | string]: ActiveRegion };
+  lastActiveLeaf: string;
   persistentCursors: CursorData;
 }
 
@@ -65,7 +66,7 @@ export interface ConflictObject {
 
 export interface CursorData {
   [leafID: string]: {
-    leafContent: string;
+    leafNickname: string;
     update: number;
     cursors: [string, number][]; // path, cursorPos
   };
@@ -85,6 +86,7 @@ export interface FlowDef {
   conflictObject: ConflictObject;
   activeRegions: { [key: number | string]: ActiveRegion };
   persistentCursors: CursorData;
+  lastActiveLeaf: string;
   unsyncedRegionsArray: string[];
   flowMap: { [key: string]: SourceFileObject };
 }
@@ -94,7 +96,7 @@ export interface ActiveRegion {
   currentCursorPos: number;
   type: string;
   path?: string;
-  UID: string;
+  invisibleUUID: string;
   flowOrder: number;
   startInFlow: number;
   endInFlow: number;
@@ -109,8 +111,8 @@ export interface SourceFileObject {
   type: "file" | "folder";
   path: string;
   itemName: string;
-  UID: string;
-  identifier: string;
+  basicUUID: string;
+  invisibleUUID: string;
   flowOrder: number;
   minLength: number;
   lengthPlusDividers: number;
@@ -147,6 +149,7 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
     finalRecipe: {},
     conflictObject: {},
     activeRegions: {},
+    lastActiveLeaf: "",
     persistentCursors: {},
   },
   activeFlowObject: {},
@@ -157,9 +160,9 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
 export interface mapValueBasket {
   concatenatedFileContents: string;
   initialIteration: boolean;
-  identifier: string;
+  basicUUID: string;
+  invisibleUUID: string;
   flowOrder: number;
-  UID: string;
   singleFileContent: string;
   currentEnd: number;
   idDivider: string;
@@ -243,13 +246,18 @@ export type SearchResult = SearchItem | FuseResult<SearchItem>;
 export interface SuggestionItem {
   type: SuggestionType;
   flowName: string;
-  identifier: string;
+  region: string | undefined;
+  cursorPos?: number;
+  leafID?: string;
   path?: string | undefined;
   searchableText: string;
 }
 
 export type SuggestionType =
+  | "header"
   | "active-flow-path"
+  | "active-flow-cursor"
   | "other-flow-path"
+  | "other-flow-cursor"
   | "flow-name"
-  | "header";
+  | "active-region";

@@ -1048,6 +1048,7 @@ export class FlowService {
       flaggedForRebuild: true,
       conflictObject: flowBuildBasket.conflictObject,
       activeRegions: flowBuildBasket.activeRegions,
+      lastActiveLeaf: flowBuildBasket.lastActiveLeaf,
       persistentCursors: flowBuildBasket.persistentCursors,
       unsyncedRegionsArray: [],
       flowMap: {},
@@ -1157,6 +1158,7 @@ export class FlowService {
       finalRecipe: {},
       conflictObject: this.plugin.settings.flows[flowName].conflictObject,
       activeRegions: this.plugin.settings.flows[flowName].activeRegions,
+      lastActiveLeaf: this.plugin.settings.flows[flowName].lastActiveLeaf,
       persistentCursors: this.plugin.settings.flows[flowName].persistentCursors,
     };
 
@@ -1188,9 +1190,9 @@ export class FlowService {
     let mapValueBasket: Types.mapValueBasket = {
       concatenatedFileContents: "",
       initialIteration: true,
-      identifier: "0",
+      basicUUID: "0",
+      invisibleUUID: "",
       flowOrder: 0,
-      UID: "",
       singleFileContent: "",
       currentEnd: 0,
       idDivider: "",
@@ -1218,9 +1220,9 @@ export class FlowService {
     mapValueBasket = {
       concatenatedFileContents: "",
       initialIteration: true,
-      identifier: "0",
+      basicUUID: "0",
+      invisibleUUID: "",
       flowOrder: 0,
-      UID: "",
       singleFileContent: "",
       currentEnd: 0,
       idDivider: "",
@@ -1269,6 +1271,7 @@ export class FlowService {
               (newLeaf) => (newLeaf as any).id === leafID
             );
             if (leaf) {
+              // check if the leaf has ben properly initialised
               if (!(leaf instanceof MarkdownView)) {
                 const flowFile = this.app.vault.getAbstractFileByPath(
                   this.plugin.settings.flows[flowName].flowFilePath
@@ -1356,7 +1359,7 @@ export class FlowService {
         mapValueBasket.flowOrder++;
         await this.createInvisibleUID(mapValueBasket);
         // make the proper divider
-        const divider = `\r${mapValueBasket.UID}<hr>\r\r`;
+        const divider = `\r${mapValueBasket.invisibleUUID}<hr>\r\r`;
 
         // unencoded divider for debugging purposes (there's also debugUID())
         // const divider = `\r${mapValueBasket.identifier}<hr>\r\r`;
@@ -1370,8 +1373,8 @@ export class FlowService {
           type: "folder",
           path: ingredient,
           itemName: ingredientName,
-          UID: mapValueBasket.UID,
-          identifier: mapValueBasket.identifier,
+          basicUUID: mapValueBasket.basicUUID,
+          invisibleUUID: mapValueBasket.invisibleUUID,
           flowOrder: mapValueBasket.flowOrder,
           minLength: ingredientName.length,
           lengthPlusDividers:
@@ -1389,7 +1392,7 @@ export class FlowService {
 
         // unencoded divider for debugging purposes (there's also debugUID())
         // const divider = `\r${mapValueBasket.identifier}<hr>\r\r`;
-        const divider = `\r${mapValueBasket.UID}<hr>\r\r`;
+        const divider = `\r${mapValueBasket.invisibleUUID}<hr>\r\r`;
         mapValueBasket.idDivider = divider.replace(/\\r/g, "\r");
 
         // get the note
@@ -1445,8 +1448,8 @@ export class FlowService {
             type: "file",
             path: ingredient,
             itemName: note.name,
-            UID: mapValueBasket.UID,
-            identifier: mapValueBasket.identifier,
+            basicUUID: mapValueBasket.basicUUID,
+            invisibleUUID: mapValueBasket.invisibleUUID,
             flowOrder: mapValueBasket.flowOrder,
             minLength: fileContent.length,
             lengthPlusDividers:
@@ -1550,8 +1553,8 @@ export class FlowService {
     const paddedBase9Identifier = base9Transform(UUID);
 
     // put both versions in the basket
-    mapValueBasket.identifier = UUID;
-    mapValueBasket.UID = paddedBase9Identifier;
+    mapValueBasket.basicUUID = UUID;
+    mapValueBasket.invisibleUUID = paddedBase9Identifier;
   };
 
   // ^CHECKED AND TESTED
@@ -1646,7 +1649,7 @@ export class FlowService {
       this.plugin.settings.flows[flowName].flowMap[path].flowOrder,
       text
     );
-    const endPos = text.indexOf(map[path].UID) - 1; // subtract 1 for the \r before the UID
+    const endPos = text.indexOf(map[path].invisibleUUID) - 1; // subtract 1 for the \r before the UID
 
     if (startPos && endPos) {
       if ("cm" in editor) {
@@ -1733,10 +1736,10 @@ export class FlowService {
     ["◇", "◆", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
     ["◇", "◆", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
 
-    ["✿", "❀", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
-    ["✿", "❀", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
-    ["✿", "❀", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
-    ["✿", "❀", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+    ["❀", "✿", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    ["❀", "✿", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    ["❀", "✿", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    ["❀", "✿", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
 
     ["❄", "❆", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
     ["❄", "❆", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
@@ -1848,10 +1851,15 @@ export class FlowService {
     ["=", "≠", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
     ["=", "≠", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
 
-    ["!", "?", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
-    ["!", "?", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
-    ["!", "?", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
-    ["!", "?", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+    [".", "?", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    [".", "?", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    [".", "?", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    [".", "?", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
+
+    [".", "!", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
+    [".", "!", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
+    [".", "!", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
+    [".", "!", "small-low-contrast-neutral", "small-low-contrast-unsynced"],
 
     ["#", "#", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
     ["#", "#", "large-low-contrast-neutral", "large-low-contrast-unsynced"],

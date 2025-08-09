@@ -325,7 +325,6 @@ export class DeleteFlowDefModal extends Modal {
     app: App,
     private plugin: TextFlowPlugin,
     private settingsTab: TextFlowSettingsTab,
-
     private flowName: string
   ) {
     super(app);
@@ -421,10 +420,14 @@ export class DeleteFlowDefModal extends Modal {
 //-------- FLOW SWITCHING
 export class FlowSwitcherModal extends Modal {
   private plugin: TextFlowPlugin;
+  private currentActiveLeafID: string;
+  private rebuildString: string | undefined;
 
-  constructor(app: App, plugin: TextFlowPlugin) {
+  constructor(app: App, plugin: TextFlowPlugin, currentActiveLeafID: string) {
     super(app);
     this.plugin = plugin;
+    this.currentActiveLeafID = currentActiveLeafID;
+    this.rebuildString = "";
   }
 
   async onOpen() {
@@ -702,13 +705,16 @@ export class FlowSwitcherModal extends Modal {
       let activeRegionBorderColorCounter = 0;
 
       Object.keys(activeFlowInfoObject[activeFlow]).forEach((leafID) => {
+        // check if the leaf is the active one, so we can highlight it
+        const active = leafID === this.currentActiveLeafID ? "active" : "nope";
+
         activeRegionBorderColorCounter += 1;
         let activeRegionBorderColorCalculator =
           activeRegionBorderColorCounter % 2;
 
         // region container
         const flowRegion = activeFlowEntry.createDiv({
-          cls: `flow-switch-modal-active-region textflow-switcher-border-bottom-${activeRegionBorderColorCalculator}`,
+          cls: `flow-switch-modal-active-region textflow-switcher-border-bottom-${activeRegionBorderColorCalculator} ${active}`,
         });
 
         // region icon
@@ -749,30 +755,24 @@ export class FlowSwitcherModal extends Modal {
           }
         });
 
+        let overlapAriaLabel = ``;
         if (overlap === "⚭") {
           const overlapString = overlapArray.join(", ");
-          const regionName = flowRegion.createSpan({
-            text: `${activeFlowInfoObject[activeFlow][leafID].replace(
-              "#",
-              ""
-            )} ${overlap}`,
-            cls: "flow-switch-modal-active-region-name",
-            attr: {
-              "aria-label": this.plugin.t(
-                "switcherModal.info overlapping regions",
-                { overlapString: overlapString }
-              ),
-            },
-          });
-        } else {
-          const regionName = flowRegion.createSpan({
-            text: `${activeFlowInfoObject[activeFlow][leafID].replace(
-              "#",
-              ""
-            )} ${overlap}`,
-            cls: "flow-switch-modal-active-region-name",
-          });
+          overlapAriaLabel = this.plugin.t(
+            "switcherModal.info overlapping regions",
+            { overlapString: overlapString }
+          );
         }
+
+        const regionName = flowRegion.createSpan({
+          text: `${
+            activeFlowInfoObject[activeFlow][leafID]
+          } ${overlap} (${leafID.slice(0, 5)})`,
+          cls: "flow-switch-modal-active-region-name",
+          attr: {
+            "aria-label": `${overlapAriaLabel}`,
+          },
+        });
 
         // ----------- GOTO BUTTON ------------
         const navGotoButton = new ButtonComponent(flowRegion)
@@ -786,6 +786,8 @@ export class FlowSwitcherModal extends Modal {
             );
             if (targetLeaf) {
               this.app.workspace.setActiveLeaf(targetLeaf, { focus: true });
+              this.currentActiveLeafID = (targetLeaf as any).id;
+              this.display();
             }
           });
 
@@ -974,6 +976,7 @@ export class FlowSwitcherModal extends Modal {
   }
 }
 
+// ------------------------ FUZZY NAVIGATON MODAL ------------------------
 // This modal was largely written by Claude 3.5 Sonnet,
 // but I put it all together and debugged it
 export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
@@ -981,25 +984,69 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
     app: App,
     private plugin: TextFlow,
     private settings: Types.TextFlowSettings,
-    private flowService: FlowService,
     private activeFlowName?: string
   ) {
     super(app);
-    this.flowService = flowService;
   }
 
   onOpen() {
     super.onOpen();
 
     // Set placeholder text in the search input
-    this.setPlaceholder("Search for flows and paths...");
+
+    let placeholderText = "Search for flows and paths...";
+    if (this.activeFlowName) {
+      const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+      if (!view) {
+        const currentActiveleafID = "";
+      } else {
+        const currentActiveleafID = (view.leaf as any).id;
+        let activePath: string | undefined = "";
+        let activeCursorPos: string | number = "";
+        if (
+          this.plugin.settings.flows[this.activeFlowName].activeRegions[
+            currentActiveleafID
+          ]
+        ) {
+          activePath =
+            this.plugin.settings.flows[this.activeFlowName].activeRegions[
+              currentActiveleafID
+            ].path;
+          activeCursorPos =
+            this.plugin.settings.flows[this.activeFlowName].activeRegions[
+              currentActiveleafID
+            ].currentCursorPos;
+        }
+        placeholderText = `^ ${
+          this.activeFlowName
+        }: ${activePath} - (${currentActiveleafID.slice(
+          0,
+          5
+        )}) - crs ${activeCursorPos} `;
+      }
+    }
+    this.setPlaceholder(`${placeholderText}`);
 
     // Add instructions below the search box
     this.setInstructions([
-      { command: "prefix ^", purpose: "for active flow" },
-      { command: "prefix |", purpose: "for other flows" },
-      { command: "prefix [", purpose: "for flow names" },
-      { command: "prefix #", purpose: "for titles" },
+      {
+        command: "^",
+        purpose: this.plugin.t(
+          "fuzzyNavigabiotnModal.info flow in active leaf"
+        ),
+      },
+      {
+        command: "|",
+        purpose: this.plugin.t("fuzzyNavigabiotnModal.info other flows"),
+      },
+      {
+        command: "[",
+        purpose: this.plugin.t("fuzzyNavigabiotnModal.info flow names"),
+      },
+      {
+        command: "#",
+        purpose: this.plugin.t("fuzzyNavigabiotnModal.info titles"),
+      },
       // Add any other custom shortcuts you plan to implement
     ]);
   }
@@ -1009,59 +1056,120 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
     const otherFlowItems: Types.SuggestionItem[] = [];
     const flowNames: Types.SuggestionItem[] = [];
 
-    // the next three bits are my code
-    // Contents of the flow in the active leaf if it exists
+    // the rest is my code
+
+    // Contents of the flow in the ACTIVE LEAF if it exists
     Object.keys(this.settings.flows).forEach((flowName) => {
       if (flowName === this.activeFlowName) {
-        Object.keys(this.settings.flows[flowName].flowMap).forEach(
-          (identifier) => {
-            const filePath =
-              this.settings.flows[flowName].flowMap[identifier].path;
+        Object.keys(this.settings.flows[flowName].flowMap).forEach((region) => {
+          const filePath = this.settings.flows[flowName].flowMap[region].path;
 
-            activeFlowItems.push({
-              type: "active-flow-path",
-              flowName: flowName,
-              identifier: identifier,
-              path: filePath,
-              searchableText: `^ ${identifier}`,
-            });
+          otherFlowItems.push({
+            type: "active-flow-path",
+            flowName: flowName,
+            region: region,
+            path: filePath,
+            searchableText: `^ ${region}`,
+          });
+        });
+
+        Object.keys(this.settings.flows[flowName].persistentCursors).forEach(
+          (iteratorLeafID) => {
+            let leafNickname =
+              this.settings.flows[flowName].persistentCursors[iteratorLeafID]
+                .leafNickname;
+            const cursors =
+              this.settings.flows[flowName].persistentCursors[iteratorLeafID]
+                .cursors;
+            for (let cursorTuple of cursors) {
+              activeFlowItems.push({
+                type: "active-flow-cursor",
+                flowName: flowName,
+                region: cursorTuple[0],
+                cursorPos: cursorTuple[1],
+                leafID: iteratorLeafID,
+                path: cursorTuple[0],
+                searchableText: `^ ${cursorTuple[0]} - (${leafNickname}) - crs ${cursorTuple[1]}`,
+              });
+            }
           }
         );
       }
     });
 
-    // contents of flows that are not in the active leaf
+    // contents of flows that are NOT IN THE ACTIVE LEAF
     Object.keys(this.settings.flows).forEach((flowName) => {
       if (flowName != this.activeFlowName) {
-        Object.keys(this.settings.flows[flowName].flowMap).forEach(
-          (identifier) => {
-            const filePath =
-              this.settings.flows[flowName].flowMap[identifier].path;
+        Object.keys(this.settings.flows[flowName].flowMap).forEach((region) => {
+          const filePath = this.settings.flows[flowName].flowMap[region].path;
 
-            otherFlowItems.push({
-              type: "other-flow-path",
-              flowName: flowName,
-              identifier: identifier,
-              path: filePath,
-              searchableText: `| ${identifier}`,
-            });
+          otherFlowItems.push({
+            type: "other-flow-path",
+            flowName: flowName,
+            region: region,
+            path: filePath,
+            searchableText: `| ${region}`,
+          });
+        });
+
+        Object.keys(this.settings.flows[flowName].persistentCursors).forEach(
+          (iteratorLeafID) => {
+            const leafNickname =
+              this.settings.flows[flowName].persistentCursors[iteratorLeafID]
+                .leafNickname;
+            const cursors =
+              this.settings.flows[flowName].persistentCursors[iteratorLeafID]
+                .cursors;
+            for (let cursorTuple of cursors) {
+              activeFlowItems.push({
+                type: "other-flow-cursor",
+                flowName: flowName,
+                region: cursorTuple[0],
+                cursorPos: cursorTuple[1],
+                leafID: iteratorLeafID,
+                path: cursorTuple[0],
+                searchableText: `| ${cursorTuple[0]} - (${leafNickname}) - crs  ${cursorTuple[1]}`,
+              });
+            }
           }
         );
       }
     });
 
-    // all the flow names
+    // all the FLOW NAMES
     Object.keys(this.settings.flows).forEach((flowName) => {
       const filePath = this.settings.flows[flowName].flowFilePath;
 
-      if (this.activeFlowName != flowName)
-        flowNames.push({
-          type: "flow-name",
-          flowName: flowName,
-          identifier: "",
-          path: filePath,
-          searchableText: `[ ${flowName}`,
-        });
+      flowNames.push({
+        type: "flow-name",
+        flowName: flowName,
+        region: "",
+        path: filePath,
+        searchableText: `[ ${flowName}`,
+      });
+
+      if (this.settings.flows[flowName].activeRegions) {
+        Object.keys(this.settings.flows[flowName].activeRegions).forEach(
+          (iteratorLeafID) => {
+            flowNames.push({
+              type: "active-region",
+              flowName: flowName,
+              leafID: iteratorLeafID,
+              region:
+                this.settings.flows[flowName].activeRegions[iteratorLeafID]
+                  .path,
+              path: this.settings.flows[flowName].activeRegions[iteratorLeafID]
+                .path,
+              searchableText: `[ ${flowName} - ${iteratorLeafID.slice(
+                0,
+                5
+              )} - ${
+                this.settings.flows[flowName].activeRegions[iteratorLeafID].path
+              }`,
+            });
+          }
+        );
+      }
     });
 
     return [...activeFlowItems, ...otherFlowItems, ...flowNames];
@@ -1081,13 +1189,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
     // make the container
     const contentEl = el.createDiv({ cls: "suggestion-content" });
 
-    // this is the flow name, in fat print to stand out
-    contentEl.createSpan({
-      cls: "suggestion-highlight",
-      text: `${suggestionItem.flowName}: `,
-    });
-
-    // Now do another fuzzy match to find and highlight the search term within the results
+    // Now do another fuzzy match to find and HIGHLIGHT THE SEARCHED CHARS WITHIN RESULTS
     // Claude 3.5 Sonnet wrote this and I don't really understand it, but it works, so...
     const matchElements = fuzzyMatch.match.matches;
     let lastIndex = 0;
@@ -1111,97 +1213,94 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
     }
 
     // this is all my own code again
-    const findFlowLeaf = (item: Types.SuggestionItem) => {
-      if (this.plugin.settings.activeFlowObject[item.flowName]) {
-        const activeLeafArray = Object.keys(
-          this.plugin.settings.flows[item.flowName].activeRegions
-        );
-        const leafID = activeLeafArray[0];
-        return leafID;
+
+    // ------------- HELPER FUNCTIONS --------------
+    const prepareFlowLeafAndCallScroll = async (item: Types.SuggestionItem) => {
+      let leafID = "";
+
+      // if we have open leaves for the flow
+      if (this.plugin.settings.flows[item.flowName].activeRegions) {
+        if (
+          // if we have a leafID we want and it's still valid
+          item.leafID &&
+          this.plugin.settings.flows[item.flowName].activeRegions[item.leafID]
+        ) {
+          leafID = item.leafID;
+        } else {
+          // if it's stale or we don't want a particular leafID
+          leafID = this.plugin.settings.flows[item.flowName].lastActiveLeaf;
+        }
+        // Now get that leaf and do the thing
+        const leaves = this.app.workspace.getLeavesOfType("markdown");
+        const targetLeaf = leaves.find((leaf) => (leaf as any).id === leafID);
+        if (targetLeaf) {
+          this.app.workspace.setActiveLeaf(targetLeaf, { focus: true });
+          scrollToTarget(item);
+          return;
+        }
       }
-      return null;
+
+      // if there are no active leaves we could target, open a new one
+      const file = this.app.vault.getAbstractFileByPath(
+        this.plugin.settings.flows[item.flowName].flowFilePath
+      );
+      if (file instanceof TFile) {
+        const leaf = this.app.workspace.getLeaf("tab");
+        await leaf.openFile(file);
+        leaf.setPinned(true);
+        this.app.workspace.setActiveLeaf(leaf, { focus: true });
+      }
     };
 
+    // this only ever cares about the active view, which is why above we make sure to open, activate and focus
     const scrollToTarget = (item: Types.SuggestionItem) => {
       const view = this.app.workspace.getActiveViewOfType(MarkdownView);
       const editor = view?.editor as ObsidianEditor | null;
       if (editor) {
         const cmEditor = editor.cm;
-        let text = "";
-        if (cmEditor) {
-          text = cmEditor.state.doc.toString();
-        }
-        const flowOrder =
-          this.plugin.settings.flows[item.flowName].flowMap[item.identifier]
-            .flowOrder;
 
-        const startPosInFlow = this.plugin.findStartOfRegion(
-          this.settings.flows[item.flowName],
-          flowOrder,
-          text
-        );
+        // if we have a cursor pos, just scroll there
+        if (item.cursorPos) {
+          this.plugin.flowService.scrollToPos(editor, item.cursorPos);
+        } else {
+          // IF WE DON'T HAVE ONE find a cursor pos to scroll to
+          let text = "";
+          if (cmEditor) {
+            text = cmEditor.state.doc.toString();
+          }
+          let flowOrder = 0;
+          if (item.region) {
+            flowOrder =
+              this.plugin.settings.flows[item.flowName].flowMap[item.region]
+                .flowOrder;
+          }
 
-        if (startPosInFlow) {
-          // then we call scrollToPos
-          this.plugin.flowService.scrollToPos(editor, startPosInFlow);
-          // it also automatically focuses the editor
+          const startPosInFlow = this.plugin.findStartOfRegion(
+            this.settings.flows[item.flowName],
+            flowOrder,
+            text
+          );
+
+          if (startPosInFlow) {
+            // then we call scrollToPos
+            this.plugin.flowService.scrollToPos(editor, startPosInFlow);
+            // it also automatically focuses the editor
+          }
         }
       }
     };
 
-    // pacify the squiggle demon because it doesn't infer existence
-    if (this.activeFlowName && item.path && item.type === "active-flow-path") {
-      console.log("item is part of the active flow");
-      // IF WE'RE LOOKING INTO A FLOW IN THE ACTIVE LEAF
+    // -------- DOING STUFF WITH THE HELPER FUNCTIONS --------------
+
+    if (
+      this.activeFlowName &&
+      (item.type === "active-flow-path" || item.type === "active-flow-cursor")
+    ) {
+      // If we're looking at the active leaf, just scroll
       scrollToTarget(item);
-    } else if (item.type === "other-flow-path") {
-      console.log("item is part of a different flow");
-      // IF THE FLOW IS NOT IN THE ACTIVE LEAF
-      // see if we got it elsewhere open
-      const leafID = findFlowLeaf(item);
-      if (leafID) {
-        // if we do, focus it, before we scroll
-        const leaves = this.app.workspace.getLeavesOfType("markdown");
-        const targetLeaf = leaves.find((leaf) => (leaf as any).id === leafID);
-        if (targetLeaf) {
-          this.app.workspace.setActiveLeaf(targetLeaf, { focus: true });
-        }
-      } else {
-        // if we don't, open and focus the flow first
-        const file = this.app.vault.getAbstractFileByPath(
-          this.plugin.settings.flows[item.flowName].flowFilePath
-        );
-        if (file instanceof TFile) {
-          const leaf = this.app.workspace.getLeaf("tab");
-          leaf.openFile(file);
-          leaf.setPinned(true);
-          this.app.workspace.setActiveLeaf(leaf, { focus: true });
-        }
-        // the scroll
-        scrollToTarget(item);
-      }
-    } else if (item.type === "flow-name") {
-      // IF WE'RE LOOKING FOR A FLOW, see if it's already open
-      const leafID = findFlowLeaf(item);
-      if (leafID) {
-        // if we do, focus it, before we scroll
-        const leaves = this.app.workspace.getLeavesOfType("markdown");
-        const targetLeaf = leaves.find((leaf) => (leaf as any).id === leafID);
-        if (targetLeaf) {
-          this.app.workspace.setActiveLeaf(targetLeaf, { focus: true });
-        }
-      } else {
-        // if not....
-        const file = this.app.vault.getAbstractFileByPath(
-          this.plugin.settings.flows[item.flowName].flowFilePath
-        );
-        if (file instanceof TFile) {
-          const leaf = this.app.workspace.getLeaf("tab");
-          leaf.openFile(file);
-          leaf.setPinned(true);
-          this.app.workspace.setActiveLeaf(leaf, { focus: true });
-        }
-      }
+    } else {
+      // if not...
+      prepareFlowLeafAndCallScroll(item);
     }
   }
 }

@@ -1467,6 +1467,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
                 finalRecipe: shownFlow.flowRecipe,
                 conflictObject: shownFlow.conflictObject,
                 activeRegions: shownFlow.activeRegions,
+                lastActiveLeaf: shownFlow.lastActiveLeaf,
                 persistentCursors: shownFlow.persistentCursors,
               };
 

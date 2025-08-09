@@ -253,7 +253,7 @@
 .large-low-contrast-unsynced {
   font-size: 1.2em;
   color: var(--color-accent);
-  opacity: 0.6;
+  opacity: 0.7;
   font-family: monospace;
 }
 .small-high-contrast-neutral {
@@ -274,7 +274,7 @@
 .small-low-contrast-unsynced {
   font-size: 1em;
   color: var(--color-accent);
-  opacity: 0.6;
+  opacity: 0.7;
   font-family: monospace;
 }
 

@@ -658,7 +658,7 @@ export class MenuBar {
             text: `${
               this.plugin.settings.flows[this.flowName].persistentCursors[
                 this.leafID
-              ].leafContent
+              ].leafNickname
             }`,
           });
 
@@ -709,7 +709,7 @@ export class MenuBar {
                     cls: `text-emphasis align-off-center`,
                     text: `${
                       this.plugin.settings.flows[this.flowName]
-                        .persistentCursors[leafID].leafContent
+                        .persistentCursors[leafID].leafNickname
                     }`,
                   });
 
