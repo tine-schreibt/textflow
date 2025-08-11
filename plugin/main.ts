@@ -279,6 +279,22 @@ export default class TextFlowPlugin extends Plugin {
       },
     });
 
+    // export active flow
+
+    this.addCommand({
+      id: "text-flow-export-flow",
+      name: this.t("main.registerCommand export active flow"),
+      callback: () => {
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!view) return;
+
+        const leafID = (view.leaf as any).id;
+        const flowName = this.isFlowFile(leafID.view.path);
+        if (!flowName) return;
+        this.flowService.exportFlow(flowName);
+      },
+    });
+
     // select active region
     this.addCommand({
       id: "text-flow-select-active-region",
