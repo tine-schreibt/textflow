@@ -183,51 +183,27 @@ export default class TextFlowPlugin extends Plugin {
   registerCommands() {
     // Command for syncing
     this.addCommand({
-      id: `text-flow-sync`,
-      name: this.t("main.registerCommand sync all leaves"),
+      id: `sync-text-flow`,
+      name: `Sync all modified regions.`,
       callback: async () => {
         await this.syncAllLeaves();
         await this.saveSettings();
       },
     });
 
-    this.addCommand({
-      id: `text-flow-flag-rebuild`,
-      name: this.t("main.registerCommand flag for rebuild"),
-      callback: async () => {
-        // flag for rebuild
-        Object.keys(this.settings.flows).forEach((flowName) => {
-          this.settings.flows[flowName].flaggedForRebuild = true;
-          this.saveSettings();
-        });
-        // refresh menu bars
-        const allLeaves = this.app.workspace.getLeavesOfType("markdown");
-        for (const leaf of allLeaves) {
-          const view = leaf.view as MarkdownView;
-          if (!view.menuBar) continue;
-          view.menuBar.refresh(view.contentEl);
-        }
-      },
-    });
-
     // Open the switcher modal
     this.addCommand({
-      id: "text-flow-open-switcher",
-      name: this.t("main.registerCommand open switcher"),
+      id: "open-flowswitcher",
+      name: "Open flow switcher modal",
       callback: async () => {
         // toggle
-        // also get the active leafID, so we can highlight the leaf
-        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (!view) return;
-        const leafID = (view.leaf as any).id;
-
-        new Modals.FlowSwitcherModal(this.app, this, leafID).open();
+        new Modals.FlowSwitcherModal(this.app, this).open();
       },
     });
 
     this.addCommand({
-      id: "text-flow-open-fuzzy-nav-modal",
-      name: this.t("main.registerCommand open fuzzy navigation"),
+      id: "open-fuzzy-nav-modal",
+      name: "Open fuzzy navigation modal",
       callback: async () => {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
         let flowName: string | null = "";
@@ -241,18 +217,24 @@ export default class TextFlowPlugin extends Plugin {
             this.app,
             this,
             this.settings,
+            this.flowService,
             flowName
           ).open();
         } else {
-          new Modals.FuzzyNavModal(this.app, this, this.settings).open();
+          new Modals.FuzzyNavModal(
+            this.app,
+            this,
+            this.settings,
+            this.flowService
+          ).open();
         }
       },
     });
 
     // turn off explorer navigation so multi-select works as expected
     this.addCommand({
-      id: "text-flow-toggle-explorer-listener",
-      name: this.t("main.registerCommand toggle explorer navigation"),
+      id: "toggle-explorer-listener",
+      name: `Toggle explorer navigation`,
       callback: () => {
         this.settings.explorerListener
           ? (this.settings.explorerListener = false)
@@ -263,8 +245,8 @@ export default class TextFlowPlugin extends Plugin {
 
     // hide menu bar
     this.addCommand({
-      id: "text-flow-toggle-menu-bar",
-      name: this.t("main.registerCommand toggle menu bar"),
+      id: "toggle-menu-bar",
+      name: `Toggle menu bar`,
       callback: () => {
         this.settings.showMenuBar
           ? (this.settings.showMenuBar = false)
@@ -272,33 +254,16 @@ export default class TextFlowPlugin extends Plugin {
         this.settings.maxMenuBar = true;
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (!view) return;
-        if (!view.menuBar) return;
 
-        view.menuBar.refresh(view.contentEl);
+        view.menuBar?.refresh(view.contentEl);
         this.saveSettings();
-      },
-    });
-
-    // export active flow
-
-    this.addCommand({
-      id: "text-flow-export-flow",
-      name: this.t("main.registerCommand export active flow"),
-      callback: () => {
-        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (!view) return;
-
-        const leafID = (view.leaf as any).id;
-        const flowName = this.isFlowFile(leafID.view.path);
-        if (!flowName) return;
-        this.flowService.exportFlow(flowName);
       },
     });
 
     // select active region
     this.addCommand({
-      id: "text-flow-select-active-region",
-      name: this.t("main.registerCommand select active region"),
+      id: "select-active-region",
+      name: "Select active region",
       callback: () => {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (!view) return;
@@ -326,8 +291,8 @@ export default class TextFlowPlugin extends Plugin {
 
     // restore cursor position
     this.addCommand({
-      id: "text-flow-restore-cursor",
-      name: this.t("main.registerCommand restore most recent cursor"),
+      id: "restore-cursor",
+      name: `Restore most recent cursor position`,
       callback: async () => {
         const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (!activeView || !activeView.file) {
@@ -349,8 +314,8 @@ export default class TextFlowPlugin extends Plugin {
 
     // toggle scrollbar visibility
     this.addCommand({
-      id: "text-flow-toggle-scroll-bar",
-      name: this.t("main.registerCommand toggle scroll bar"),
+      id: "toggle-scroll-bar",
+      name: `Toggle scroll bar`,
       callback: async () => {
         if (this.settings.hideScrollbar === "none") {
           this.settings.hideScrollbar = "all";
@@ -427,7 +392,6 @@ export default class TextFlowPlugin extends Plugin {
           const flowName = this.isFlowFile(activeLeafPath);
           if (flowName) {
             const leafID = (activeView.leaf as any).id;
-
             const flowNameArray = Object.keys(this.settings.activeFlowObject);
             for (let flowName of flowNameArray) {
               if (this.settings.flows[flowName].activeRegions[leafID]) {
@@ -646,21 +610,12 @@ ${pseudoElement}
         div[data-path='${this.escapeSelector(
           cleanPath
         )}'] .nav-folder-title-content::after {
-  content: " ${unsyncedSymbol}" !important;
-  --nav-item-color: ${
-    neutralStyle.includes("high")
-      ? "var(--color-accent);"
-      : "color-mix(in srgb, var(--color-accent) 80%, transparent)"
-  } !important;
-  color: ${
-    neutralStyle.includes("high")
-      ? "var(--color-accent);"
-      : "color-mix(in srgb, var(--color-accent) 80%, transparent)"
-  } !important;
-  opacity: 1;
-  font-size: ${neutralStyle.includes("large") ? "1.2em" : "1em"} !important;
-  font-family: monospace !important;
-  vertical-align: middle !important;
+          content: " ${unsyncedSymbol}" !important;
+          color: var(--text-muted) !important;
+          opacity: 1 !important;
+          font-size: 1em !important;
+          font-family: monospace !important;
+          vertical-align: middle !important;
         }
       `;
       }
@@ -806,68 +761,6 @@ ${pseudoElement}
 
   // ---------------- Functions: Listeners: Global -----------------
   addListeners() {
-    // the context menu for rebuild flagging
-    this.registerEvent(
-      this.app.workspace.on("file-menu", (menu, file) => {
-        const baseName = basename(file.path);
-        menu.addItem((item) => {
-          item
-            .setTitle(
-              this.t("main.fileMenuListener.context flag flows for rebuild", {
-                baseName: baseName,
-              })
-            )
-            .setIcon("rotate-cw")
-            .onClick(() => {
-              const normalisedPath = normalizePath(file.path);
-
-              if (file instanceof TFile) {
-                // if it's a file, search for the path
-                Object.keys(this.settings.flows).forEach((flowName) => {
-                  if (
-                    !this.settings.flows[flowName].flaggedForRebuild &&
-                    this.settings.flows[flowName].flowMap[normalisedPath]
-                  ) {
-                    this.settings.flows[flowName].flaggedForRebuild = true;
-                    this.saveSettings();
-                  }
-                });
-              } else {
-                // if it's a flolder
-                const continuableFlowNameArray = Object.keys(
-                  this.settings.flows
-                );
-                flowNameLoop: for (let flowName of continuableFlowNameArray) {
-                  const continuablePathArray = Object.keys(
-                    this.settings.flows[flowName].flowMap
-                  );
-                  pathLoop: for (let path of continuablePathArray) {
-                    if (!this.settings.flows[flowName].flaggedForRebuild) {
-                      for (let path of continuablePathArray) {
-                        if (path.startsWith(normalisedPath)) {
-                          this.settings.flows[flowName].flaggedForRebuild =
-                            true;
-                          this.saveSettings();
-                          // we just need one path, so let's move on to the next flow
-                          continue flowNameLoop;
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-              // then refresh all the menu bars
-              const allLeaves = this.app.workspace.getLeavesOfType("markdown");
-              for (const leaf of allLeaves) {
-                const view = leaf.view as MarkdownView;
-                if (!view.menuBar) continue;
-                view.menuBar.refresh(view.contentEl);
-              }
-            });
-        });
-      })
-    );
-
     // ---------------- File modification -------------------------------
     // This event fires whenever any file in the vault is modified
     // the textFlowOperation flag prevents a doom spiral
@@ -1292,7 +1185,7 @@ ${pseudoElement}
   private addTextChangeListener = (view: MarkdownView | null) => {
     if (!view) return;
 
-    const leafID: string = (view.leaf as any).id;
+    const leafID: number = (view.leaf as any).id;
     if (!leafID) return;
 
     if (this.listenerBasket[`${leafID}-changes`]) {
@@ -1365,16 +1258,16 @@ ${pseudoElement}
                 activeRegionPath
               );
               plugin.saveSettings();
-            }
 
-            // update the menu bar to show unsynced status
-            if (view.menuBar) {
-              view.menuBar.refresh(view.contentEl);
-            }
+              // update the menu bar to show unsynced status
+              if (view.menuBar) {
+                view.menuBar.refresh(view.contentEl);
+              }
 
-            // update source decoration
-            if (plugin.settings.showExplorerDeco) {
-              plugin.decorateSourceNotes("update");
+              // update source decoration
+              if (plugin.settings.showExplorerDeco) {
+                plugin.decorateSourceNotes("update");
+              }
             }
           }, 250);
         }
@@ -1695,9 +1588,7 @@ ${pseudoElement}
   // The big bundle that centralises flow management
   async setupFlowView(flowName: string, view: MarkdownView) {
     const leafID = (view.leaf as any).id;
-
-    // Keep track of the last active leaf for the fuzzNav
-    this.settings.flows[flowName].lastActiveLeaf = leafID;
+    let editor = view.editor as any;
 
     // this has to happen first so the menuBar can just be set up
     await this.manageActiveFlowObject();
@@ -1895,9 +1786,6 @@ ${pseudoElement}
               if (!foundFlowLeaves[flowName]?.has(leafID)) {
                 delete this.settings.flows[flowName].activeRegions[leafID];
               }
-              // reset this for the fuzzNav modal
-              this.settings.flows[flowName].lastActiveLeaf = "";
-
               // then, if a flow is all closed, we sync it, because all other syncs
               // only care for active leaves
               if (
@@ -1945,25 +1833,22 @@ ${pseudoElement}
             );
           }
         }
+        // And now update all decoration and refresh the menu bars
+        this.decorateSourceNotes("redo");
+        const allLeaves = this.app.workspace.getLeavesOfType("markdown");
+        for (const leaf of allLeaves) {
+          const view = leaf.view as MarkdownView;
+          const filePath = view.file?.path;
+          if (!filePath) continue;
+
+          const flowName = this.isFlowFile(filePath);
+          if (!flowName) continue;
+
+          view.menuBar?.refresh(view.contentEl);
+        }
       }
     });
-
-    // write that shit down
     await this.saveSettings();
-
-    // And finally redraw the decoration and refresh the menu bars
-    this.decorateSourceNotes("redo");
-    const allLeaves = this.app.workspace.getLeavesOfType("markdown");
-    for (const leaf of allLeaves) {
-      const view = leaf.view as MarkdownView;
-      const filePath = view.file?.path;
-      if (!filePath) continue;
-
-      const flowName = this.isFlowFile(filePath);
-      if (!flowName) continue;
-
-      view.menuBar?.refresh(view.contentEl);
-    }
   };
   //^CHECKED AND TESTED
 
@@ -1975,13 +1860,12 @@ ${pseudoElement}
         ([_, obj]) => obj.flowOrder === 1
       ) || [];
     if (targetObject) {
-      const { type, invisibleUUID, flowOrder, lengthPlusDividers } =
-        targetObject;
+      const { type, UID, flowOrder, lengthPlusDividers } = targetObject;
       this.settings.flows[flowName].activeRegions[leafID] = {
         currentCursorPos: 0,
         type: targetObject.type,
         path: path,
-        invisibleUUID: targetObject.invisibleUUID,
+        UID: targetObject.UID,
         flowOrder: 1,
         startInFlow: 0,
         endInFlow: targetObject.lengthPlusDividers,
@@ -2204,7 +2088,7 @@ ${pseudoElement}
             text
           );
 
-          const endOfRegion = text.indexOf(map[path].invisibleUUID) - 1; // subtract 1 for the \r before the UID
+          const endOfRegion = text.indexOf(map[path].UID) - 1; // subtract 1 for the \r before the UID
 
           const flowFile = await this.app.vault.getFileByPath(
             this.settings.flows[flowName].flowFilePath
@@ -2261,7 +2145,7 @@ ${pseudoElement}
   // ------ Functions: Manage persistent cursor position
   manageCursorPos = (flowName: string, leafID: string) => {
     if (this.settings.flows[flowName].activeRegions) {
-      const currentLeaf = this.settings.flows[flowName].activeRegions[leafID];
+      const currentLeaf = this.settings.flows[flowName].activeRegions?.[leafID];
 
       // check because of possible undefined
       let regionPath = "";
@@ -2276,7 +2160,7 @@ ${pseudoElement}
       }
       if (!this.settings.flows[flowName].persistentCursors[leafID]) {
         this.settings.flows[flowName].persistentCursors[leafID] = {
-          leafNickname: `${leafID.slice(0, 5)}`,
+          leafContent: `${flowName} (${leafID.slice(0, 5)})`,
           update: Date.now(),
           cursors: [[regionPath, currentCursor]],
         };
@@ -2501,13 +2385,10 @@ ${pseudoElement}
           currentCursorPos: safePos,
           type: regionMap.type,
           path: path,
-          invisibleUUID: regionMap.invisibleUUID,
+          UID: regionMap.UID,
           flowOrder: 1,
           startInFlow: 0,
-          endInFlow:
-            text.indexOf(regionMap.invisibleUUID) +
-            regionMap.invisibleUUID.length +
-            4,
+          endInFlow: text.indexOf(regionMap.UID) + regionMap.UID.length + 4,
           leafMenuBarSettings: flow.activeRegions[leafID].leafMenuBarSettings,
         };
       }
@@ -2523,7 +2404,7 @@ ${pseudoElement}
       if (lastRegion) {
         const [path, regionMap] = lastRegion;
         // Move cursor to safe position in last region
-        const safePos = text.lastIndexOf(regionMap.invisibleUUID) - 1;
+        const safePos = text.lastIndexOf(regionMap.UID) - 1;
         this.flowService.scrollToPos(editor, safePos);
         console.log("last region: ", path);
 
@@ -2532,14 +2413,11 @@ ${pseudoElement}
           currentCursorPos: safePos,
           type: regionMap.type,
           path: path,
-          invisibleUUID: regionMap.invisibleUUID,
+          UID: regionMap.UID,
           flowOrder: regionMap.flowOrder,
           startInFlow:
             this.findStartOfRegion(flow, regionMap.flowOrder, text) || 0,
-          endInFlow:
-            text.lastIndexOf(regionMap.invisibleUUID) +
-            regionMap.invisibleUUID.length +
-            4,
+          endInFlow: text.lastIndexOf(regionMap.UID) + regionMap.UID.length + 4,
           leafMenuBarSettings: flow.activeRegions[leafID].leafMenuBarSettings,
         };
       }
@@ -2554,7 +2432,7 @@ ${pseudoElement}
       const UID = matches[0].slice(0, UIDLength);
 
       const foundRegion = Object.entries(flow.flowMap).find(
-        ([_, foundRegionMap]) => foundRegionMap.invisibleUUID === UID
+        ([_, foundRegionMap]) => foundRegionMap.UID === UID
       );
 
       if (foundRegion) {
@@ -2570,15 +2448,14 @@ ${pseudoElement}
         }
 
         // calculate where it ends
-        const endInFlow =
-          text.indexOf(foundRegionMap.invisibleUUID) + matches[0].length;
+        const endInFlow = text.indexOf(foundRegionMap.UID) + matches[0].length;
 
         // put together the object
         const activeRegionObject: Types.ActiveRegion = {
           currentCursorPos: cursorOffset,
           type: foundRegionMap.type,
           path: foundRegionPath,
-          invisibleUUID: UID,
+          UID: UID,
           flowOrder: foundRegionMap.flowOrder,
           startInFlow: newStartInFlow,
           endInFlow: endInFlow,
@@ -2619,7 +2496,7 @@ ${pseudoElement}
 
     if (previousRegion) {
       const [previousRegionPath, previousRegionMap] = previousRegion;
-      const invisibleUID = previousRegionMap.invisibleUUID;
+      const invisibleUID = previousRegionMap.UID;
       const index = text.indexOf(invisibleUID);
       const startPos = index + (invisibleUID + "<hr>").length + 1;
       return startPos;
@@ -2633,21 +2510,16 @@ ${pseudoElement}
     if (!this.settings.showMenuBar || !this.settings.maxMenuBar) {
       const overlapArray = Object.keys(this.settings.activeFlowObject);
       let overlappingFlows: string[] = [];
-      for (let flowName of overlapArray) {
+      for (let flowName in overlapArray) {
         if (flowName != activeFlow) {
-          if (this.settings.flows[flowName].flowMap) {
-            const pathArray = Object.keys(
-              this.settings.flows[flowName].flowMap
-            );
-            if (pathArray.includes(path)) {
-              overlappingFlows.push(flowName);
-              continue;
-            }
+          const pathArray = Object.keys(this.settings.flows[flowName].flowMap);
+          if (pathArray.includes(path)) {
+            overlappingFlows.push(flowName);
+            continue;
           }
         }
       }
       if (overlappingFlows.length > 0) {
-        console.log(overlappingFlows);
         const overlapString = overlapArray.join(", ");
         const regionName = basename(path);
         new Notice(
@@ -2695,24 +2567,14 @@ ${pseudoElement}
         setIcon(iconContainer, "scroll-text");
 
         flowSwitcher.addEventListener("click", () => {
-          // also get the active leafID, so we can highlight the leaf
-          const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-          if (!view) return;
-          const leafID = (view.leaf as any).id;
-          console.log("leafID at call: ", leafID);
-          new Modals.FlowSwitcherModal(this.app, this, leafID).open();
+          new Modals.FlowSwitcherModal(this.app, this).open();
         });
       } else if (this.settings.switcherPos === "ribbon") {
         this.addRibbonIcon(
           "scroll-text",
           "Open flowSwitcher",
           (evt: MouseEvent) => {
-            // also get the active leafID, so we can highlight the leaf
-            const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-            if (!view) return;
-            const leafID = (view.leaf as any).id;
-
-            new Modals.FlowSwitcherModal(this.app, this, leafID).open();
+            new Modals.FlowSwitcherModal(this.app, this).open();
           }
         );
       }
