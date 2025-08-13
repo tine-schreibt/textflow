@@ -13,7 +13,7 @@ export interface TextFlowSettings {
   firstLaunch: boolean;
   systemFolderPath?: string;
   systemFolderHidden: boolean;
-  checkExternalEdits: string;
+  checkExternalEdits: ExternalEditsType;
   hashes: { [key: string]: string }; // path: hash
   explorerDecoStyle: string[];
   showExplorerDeco: boolean;
@@ -30,6 +30,8 @@ export interface TextFlowSettings {
 }
 
 // sub-types of TextFlowSettings
+
+export type ExternalEditsType = "no" | "mtime" | "xxhash";
 
 export type DecorationEntry = [
   symbol1: string,
@@ -124,7 +126,7 @@ export interface SourceFileObject {
 export const DEFAULT_SETTINGS: TextFlowSettings = {
   firstLaunch: true,
   systemFolderHidden: true,
-  checkExternalEdits: "off",
+  checkExternalEdits: "no",
   hashes: {},
   explorerDecoStyle: [
     "○",

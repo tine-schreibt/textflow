@@ -52,6 +52,8 @@ export default class TextFlowPlugin extends Plugin {
   isRebuilding: boolean = false; // to prevent superfluous feedback
   isLoading: boolean = true; // suspend create listener while we're setting up
   textFlowOperation: boolean = false; // set mostly when syncing to prevent doom spiral of the modify listener
+  lastActivity: number = Date.now();
+  inactivityThreshold: number = 5 * 60 * 1000; // five minutes
 
   // ---------------- Global objects and variables -------------------------
 
@@ -192,24 +194,51 @@ export default class TextFlowPlugin extends Plugin {
       },
     });
 
-    this.addCommand({
-      id: `text-flow-flag-rebuild`,
-      name: this.t("main.registerCommand flag for rebuild"),
-      callback: async () => {
-        // flag for rebuild
-        Object.keys(this.settings.flows).forEach((flowName) => {
-          this.settings.flows[flowName].flaggedForRebuild = true;
-          this.saveSettings();
-        });
-        // refresh menu bars
-        const allLeaves = this.app.workspace.getLeavesOfType("markdown");
-        for (const leaf of allLeaves) {
-          const view = leaf.view as MarkdownView;
-          if (!view.menuBar) continue;
-          view.menuBar.refresh(view.contentEl);
-        }
-      },
-    });
+    if (this.settings.checkExternalEdits === "no") {
+      this.addCommand({
+        id: `text-flow-flag-rebuild`,
+        name: this.t("main.registerCommand flag for rebuild"),
+        callback: async () => {
+          // flag for rebuild
+          Object.keys(this.settings.flows).forEach((flowName) => {
+            this.settings.flows[flowName].flaggedForRebuild = true;
+            this.saveSettings();
+          });
+          // refresh menu bars
+          const allLeaves = this.app.workspace.getLeavesOfType("markdown");
+          for (const leaf of allLeaves) {
+            const view = leaf.view as MarkdownView;
+            if (!view.menuBar) continue;
+            view.menuBar.refresh(view.contentEl);
+          }
+        },
+      });
+    } else {
+      this.addCommand({
+        id: `text-flow-check-stats`,
+        name: this.t("main.registerCommand check stats"),
+        callback: () => {
+          // flag for rebuild
+          let editsDetected = false;
+          Object.keys(this.settings.flows).forEach(async (flowName) => {
+            const check = await this.checkStatsForFlow(flowName);
+            if (check) {
+              editsDetected = check;
+            }
+          });
+          if (!editsDetected) {
+            new Notice(this.t("main.checkStats no changes"));
+          }
+          // refresh menu bars
+          const allLeaves = this.app.workspace.getLeavesOfType("markdown");
+          for (const leaf of allLeaves) {
+            const view = leaf.view as MarkdownView;
+            if (!view.menuBar) continue;
+            view.menuBar.refresh(view.contentEl);
+          }
+        },
+      });
+    }
 
     // Open the switcher modal
     this.addCommand({
@@ -219,10 +248,12 @@ export default class TextFlowPlugin extends Plugin {
         // toggle
         // also get the active leafID, so we can highlight the leaf
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (!view) return;
-        const leafID = (view.leaf as any).id;
-
-        new Modals.FlowSwitcherModal(this.app, this, leafID).open();
+        if (!view) {
+          new Modals.FlowSwitcherModal(this.app, this).open();
+        } else {
+          const leafID = (view.leaf as any).id;
+          new Modals.FlowSwitcherModal(this.app, this, leafID).open();
+        }
       },
     });
 
@@ -808,6 +839,8 @@ ${pseudoElement}
     // the context menu for rebuild flagging
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file) => {
+        this.lastActivity = Date.now();
+        if (this.settings.checkExternalEdits != "no") return;
         const baseName = basename(file.path);
         menu.addItem((item) => {
           item
@@ -1083,6 +1116,20 @@ ${pseudoElement}
     // ----------------- Auto-sync on blur  -------------------------------
     this.registerDomEvent(window, "blur", async () => {
       await this.syncAllLeaves();
+      Object.keys(this.settings.activeFlowObject).forEach(async (flowName) => {
+        await this.checkStatsForFlow(flowName);
+      });
+    });
+
+    this.registerDomEvent(window, "focus", async () => {
+      const now = Date.now();
+      if (now - this.lastActivity > this.inactivityThreshold) {
+        Object.keys(this.settings.activeFlowObject).forEach(
+          async (flowName) => {
+            await this.checkStatsForFlow(flowName);
+          }
+        );
+      }
     });
     //^CHECKED AND TESTED
 
@@ -1100,14 +1147,14 @@ ${pseudoElement}
           const view = leaf.view;
           const activeLeafPath = leaf.view.file?.path;
           if (activeLeafPath) {
-            // if active leaf is flow, set it up
+            // if active leaf is flow, set it up; hash check happens in setup
             const isFlow = this.isFlowFile(activeLeafPath);
             if (isFlow) {
               await this.setupFlowView(isFlow, leaf.view);
               this.mostRecentActiveFlowLeaf = leaf;
               return;
             }
-            // otherwise strip the flow stuff
+            // otherwise strip the flow stuff; hash check happens in closeFlow
             this.closeFlow(view);
           }
         }
@@ -1119,6 +1166,7 @@ ${pseudoElement}
     //CHECKED AND TESTED
     this.registerEvent(
       this.app.workspace.on("layout-change", () => {
+        this.lastActivity = Date.now();
         if (this.app.workspace.getLeavesOfType("markdown").length === 0) {
           // We're definitely in the "empty leaf" state
           this.manageActiveFlowObject();
@@ -1370,7 +1418,7 @@ ${pseudoElement}
         delete this.listenerBasket[`${leafID}-changes`];
       }
       new Notice(
-        this.t("accTExtCHangeListener.notice error setting up listener"),
+        this.t("TextChangeListener.notice error setting up listener"),
         10000
       );
     }
@@ -1461,6 +1509,7 @@ ${pseudoElement}
         return;
       }
 
+      this.lastActivity = Date.now();
       // Prevent Obsidian's default click action immediately.
       event.preventDefault();
       event.stopPropagation();
@@ -1666,7 +1715,8 @@ ${pseudoElement}
     this.addWriteProtection(view, "sync");
 
     // check if the flow needs a rebuild due to changes from outside
-    await this.checkStats(flowName);
+    await this.checkStatsForFlow(flowName);
+    this.lastActivity = Date.now();
     if (this.settings.flows[flowName].flaggedForRebuild) {
       this.toggleEditable(view, false);
       await this.flowService.rebuildFlow(flowName, "setupFlowView");
@@ -1951,6 +2001,7 @@ ${pseudoElement}
   // CHECKED AND TESTED
   // if a flow is replaced by a non-flow
   closeFlow = async (view: MarkdownView) => {
+    this.lastActivity = Date.now();
     await this.syncAllLeaves();
     this.removeCursorListener(view);
     this.removeTextChangeListener(view);
@@ -2182,6 +2233,20 @@ ${pseudoElement}
             );
             return;
           } else if (sourceFile instanceof TFile && startOfRegion) {
+            const fileHasEdits = await this.checkStatsForNote(flowName, path);
+            if (fileHasEdits) {
+              const timestamp = this.flowService.getTimestamp(
+                sourceFile.stat.mtime
+              );
+              new Notice(
+                this.t("syncBackToSource.notice", {
+                  path: path,
+                  flowName: flowName,
+                  timestamp: timestamp,
+                })
+              );
+              return;
+            }
             const regionSlice = text.slice(startOfRegion + 1, endOfRegion);
             try {
               // Read existing content
@@ -2206,7 +2271,6 @@ ${pseudoElement}
             }
           }
           await this.updateStats(flowName, path, sourceFile);
-          this.saveSettings();
         }
       }
       this.settings.flows[flowName].unsyncedRegionsArray = remainingPaths;
@@ -2226,21 +2290,27 @@ ${pseudoElement}
       this.settings.flows[flowName].flowMap[path].mtime = file.stat.mtime;
       this.saveSettings();
     }
+    if (this.settings.checkExternalEdits === "xxhash") {
+      let fileContent: string = await this.app.vault.read(file);
+      const newHash = this.makeHash(fileContent);
+      this.settings.hashes[path] = newHash;
+      this.saveSettings();
+    }
   };
 
   // a robot said I should do it like this, and who am I to question a robot?
   MTIME_EPSILON = 2000;
 
-  // forgive the banana, but the only thing worse than nesting is having to hand over 6 arguments
-  // just for the sake of making a function less nested
-  checkStats = async (flowName: string) => {
-    if (this.settings.checkExternalEdits === "off") return;
+  // check stats for an entire flow's source notes
+  checkStatsForFlow = async (flowName: string) => {
+    if (this.settings.checkExternalEdits === "no") return;
+    if (this.settings.flows[flowName].flaggedForRebuild) return;
     let changed = false;
     let didInitialHashing = false;
-    const interrruptablePathArray = Object.keys(
+    const interruptablePathArray = Object.keys(
       this.settings.flows[flowName].flowMap
     );
-    for (let path of interrruptablePathArray) {
+    for (let path of interruptablePathArray) {
       const sourceFile = this.app.vault.getFileByPath(path);
       if (!(sourceFile instanceof TFile)) continue;
       // get the mtimes to compare
@@ -2252,6 +2322,11 @@ ${pseudoElement}
         if (this.settings.checkExternalEdits === "mtime") {
           // if user is fine with false positives, flag here
           this.settings.flows[flowName].flaggedForRebuild = true;
+          new Notice(
+            this.t("main.checkStats check stats feedback", {
+              path: path,
+            })
+          );
           changed = true;
         } else {
           let fileContent: string = await this.app.vault.read(sourceFile);
@@ -2268,6 +2343,11 @@ ${pseudoElement}
           } else {
             // if there's been an actual edit to the content, flag the flow
             this.settings.flows[flowName].flaggedForRebuild = true;
+            new Notice(
+              this.t("main.checkStats check stats feedback", {
+                path: path,
+              })
+            );
             this.settings.hashes[path] = newHash;
             changed = true;
           }
@@ -2275,7 +2355,78 @@ ${pseudoElement}
       }
     }
     this.saveSettings();
+    this.lastActivity = Date.now();
+    return changed;
+  };
 
+  checkStatsForNote = async (flowName: string, path: string) => {
+    if (this.settings.checkExternalEdits === "no") return;
+
+    if (this.settings.flows[flowName].flaggedForRebuild) return;
+    let changed = false;
+    let didInitialHashing = false;
+    const sourceFile = this.app.vault.getFileByPath(path);
+    if (!(sourceFile instanceof TFile)) return;
+    // get the mtimes to compare
+    const oldMtime = this.settings.flows[flowName].flowMap[path].mtime;
+    const newMtime = sourceFile.stat.mtime;
+
+    // leave some leniency because some OS aren't that accurate
+    if (Math.abs(newMtime - oldMtime) > this.MTIME_EPSILON) {
+      // if user chose to just check mtime, flag here
+      if (this.settings.checkExternalEdits === "mtime") {
+        Object.keys(this.settings.flows).forEach((flowName) => {
+          if (!this.settings.flows[flowName].flaggedForRebuild) {
+            if (this.settings.flows[flowName].flowMap[path]) {
+              this.settings.flows[flowName].flaggedForRebuild = true;
+            }
+          }
+        });
+        this.settings.flows[flowName].flaggedForRebuild = true;
+        new Notice(
+          this.t("main.checkStats check stats feedback", {
+            path: path,
+          })
+        );
+        changed = true;
+      } else {
+        // if they want the hash check, do that
+        let fileContent: string = await this.app.vault.read(sourceFile);
+        const newHash = this.makeHash(fileContent);
+
+        // if there's no hash yet, it's because user just activated hashing
+        // so do a quick once-over for the flow
+        if (!this.settings.hashes[path] && !didInitialHashing) {
+          await this.initialHashing(flowName);
+          didInitialHashing = true;
+        }
+
+        // if contents are the same, just update mtime
+        if (newHash === this.settings.hashes[path]) {
+          this.settings.flows[flowName].flowMap[path].mtime = newMtime;
+        } else {
+          // if there's been an actual edit to the content, flag the flow
+          Object.keys(this.settings.flows).forEach((flowName) => {
+            if (!this.settings.flows[flowName].flaggedForRebuild) {
+              if (this.settings.flows[flowName].flowMap[path]) {
+                this.settings.flows[flowName].flaggedForRebuild = true;
+              }
+            }
+          });
+          this.settings.flows[flowName].flaggedForRebuild = true;
+          new Notice(
+            this.t("main.checkStats check stats feedback", {
+              path: path,
+            })
+          );
+          this.settings.hashes[path] = newHash;
+          changed = true;
+        }
+      }
+    }
+
+    this.saveSettings();
+    this.lastActivity = Date.now();
     return changed;
   };
 
@@ -2459,6 +2610,15 @@ ${pseudoElement}
 
       // double check because active region could come back undefined
       if (activeRegionObject) {
+        // if the user wants checks, do checks, if there's been inactivity
+        if (this.settings.checkExternalEdits != "no") {
+          const now = Date.now();
+          if (now - this.lastActivity > this.inactivityThreshold) {
+            this.checkStatsForFlow(flow.flowName);
+          }
+          this.lastActivity = Date.now();
+        }
+
         flow.activeRegions[leafID] = activeRegionObject;
         // then check if the active region overlaps and sent a notice
         if (activeRegionObject.path) {
@@ -2709,7 +2869,6 @@ ${pseudoElement}
 
     // set up the class to access its functions
     this.flowService = new FlowService(this, this.app);
-    this.discernAndSetSystemFolderState();
 
     // -------------------------------------------------------------------
     // ------------------- ONLOAD: add listeners for cursor and clicks
@@ -2717,6 +2876,16 @@ ${pseudoElement}
     this.app.workspace.onLayoutReady(async () => {
       // make sure we know where our stuff is
       this.ensureSystemFolder();
+      this.discernAndSetSystemFolderState();
+
+      // check for external edits
+      if (this.settings.checkExternalEdits != "no") {
+        Object.keys(this.settings.activeFlowObject).forEach((flowName) => {
+          this.checkStatsForFlow(flowName);
+        });
+      }
+      this.lastActivity = Date.now();
+
       // ---- Set up UI
       // ----------------------------------------------
       if (this.settings.showExplorerDeco) {
@@ -2737,9 +2906,12 @@ ${pseudoElement}
         flowSwitcher.addEventListener("click", () => {
           // also get the active leafID, so we can highlight the leaf
           const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-          if (!view) return;
-          const leafID = (view.leaf as any).id;
-          new Modals.FlowSwitcherModal(this.app, this, leafID).open();
+          if (!view) {
+            new Modals.FlowSwitcherModal(this.app, this).open();
+          } else {
+            const leafID = (view.leaf as any).id;
+            new Modals.FlowSwitcherModal(this.app, this, leafID).open();
+          }
         });
       } else if (this.settings.switcherPos === "ribbon") {
         this.addRibbonIcon(
@@ -2748,10 +2920,12 @@ ${pseudoElement}
           (evt: MouseEvent) => {
             // also get the active leafID, so we can highlight the leaf
             const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-            if (!view) return;
-            const leafID = (view.leaf as any).id;
-
-            new Modals.FlowSwitcherModal(this.app, this, leafID).open();
+            if (!view) {
+              new Modals.FlowSwitcherModal(this.app, this).open();
+            } else {
+              const leafID = (view.leaf as any).id;
+              new Modals.FlowSwitcherModal(this.app, this, leafID).open();
+            }
           }
         );
       }

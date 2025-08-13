@@ -198,6 +198,7 @@
 
   "main.registerCommand sync all leaves": "Alle leaves synchronisieren",
   "main.registerCommand flag for rebuild": "Alle Flows für Neubau markieren.",
+  "main.registerCommand check stats": "Prüfe Vault auf externe Edits.",
   "main.registerCommand open switcher": "Flow-Switcher öffnen",
   "main.registerCommand open fuzzy navigation": "Fuzzy-Navigation öffnen",
   "main.registerCommand toggle explorer navigation": "Dateiexplorer-Navigation umschalten",
@@ -213,9 +214,12 @@
   "main.renameListener.notice old file name was restored": "textFlow: Der alte Dateiname/Pfad wurde wiederhergestellt.",
   "main.renameListener.notice new element created in system folder; please remove": "textFlow: Gerade wurde ein neues Element in textFlows Systemordner erstellt.",
 
+  "main.checkStats check stats feedback": "textFlow: Externe Bearbeitung festegestellt für ${path}; Flows wurden für Neubau geflaggt.",
+  "main.checkStats no changes": "textFlow: Es wurden keine externen Bearbeitungen festgestellt.",
+
   "main.cursorListener.notice tracking failed": "textFlow:\n Cursor-Tracking für ${flowName} fehlgeschlagen!\nBitte schließe und öffne den Flow erneut.\nWenn dieser Fehler weiterhin auftritt, lade deinen Vault neu.",
 
-  "accTExtCHangeListener.notice error setting up listener": "textFlow Plugin: Fehler beim Einrichten des Änderungstrackings.\nBitte melde dieses Problem auf github.",
+  "TextChangeListener.notice error setting up listener": "textFlow Plugin: Fehler beim Einrichten des Änderungstrackings.\nBitte melde dieses Problem auf github.",
 
   "activateFlow.notice flow name not found": "textFlow: Keinen Flow mit Namen ${flowName} gefunden.",
   "activateFlow.notice flow file not found": "textFlow: Flow-Datei nicht gefunden: ${flow.flowFilePath}\nBitte klicke in den Settings auf den 'Verschieben' Button für textFlows Systemordner.",
@@ -225,6 +229,7 @@
   "syncBackToSource.notice sync failed source note": "textFlow: Quellnotiz ${path} nicht gefunden.",
   "syncBackToSource.notice sync failed flow note": "textFlow: Sync fehlgeschlagen. Der Flow ${path} konnte nicht gefunden werden.",
   "syncBackToSource.notice other random error": "textFlow: Ein Fehler ist aufgetreten, während versucht wurde, ${flowName} zu ${path} zu synchronisieren. \nBitte versuche es in einer Sekunde erneut. \nWenn der Fehler weiterhin auftritt, lies die 'Fehlerbehebung' Sektion des Readmes.",
+  "syncBackToSource.notice hash interrupt": "textFlow: Die Notiz ${path} wurde zum Zeitpunkt ${timestamp} extern bearbeitet, also nachdem du den Flow ${flowName} (neu)gebaut hast. \nBitte prüfe, ob du sie überschreiben willst. \nVorgehen zum Überschreiben: \n1. Kopiere die Änderungen, die du gerade gemacht hast. \n2. Baue den Flow neu. \n3. Füge die Änderungen an ihrem alten Platz ein. \n4. Synchronisiere den Flow.",
 
   "checkActiveRegion.notice region tracking error": "textFlow: Fehler beim Tracken der aktiven Region. \nDu siehst diesen Fehler wahrscheinlich, weil du durch (ctrl+z) in den Zustand vor einem Neubau zurückgesprungen bist. \nBitte drücke ctrl+shift+z, bis du wieder im Zustand nach dem Neubau angekommen bist. \nWenn das nicht funktioniert, nimm einen Neubau an ${flow.flowName} vor. \nDies kann zu weiteren Fehlermeldungen führen. Bitte folge ihren Anweisungen.",
   "checkActiveRegion.notice overlap detected": "Die aktuelle Region \"&{basename(path)}\" überschneidet sich mit den folgenden Flows: \n${overlapString}",

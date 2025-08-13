@@ -468,14 +468,15 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       .addDropdown((dropdown) => {
         dropdown
           .addOption(
-            "off",
+            "no",
             this.plugin.t("qol.hash.addDropdown.addOption.1 don't check")
           )
           .addOption("mtime", "mtime")
           .addOption("xxhash", "xxhash")
           .setValue(this.plugin.settings.checkExternalEdits)
           .onChange(async (value) => {
-            this.plugin.settings.checkExternalEdits = value;
+            this.plugin.settings.checkExternalEdits =
+              value as Types.ExternalEditsType;
             await this.plugin.saveSettings();
           });
       });
@@ -1497,6 +1498,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             });
         });
     }
+    /*
     const restoreSettings = new Setting(flowDisplay)
       .setName(this.plugin.t("restoreSettings.setName restore definitions"))
       .addButton((rebuildButton) =>
@@ -1508,6 +1510,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             await this.plugin.saveSettings();
             this.display();
           })
-      );
+      );*/
   }
 }

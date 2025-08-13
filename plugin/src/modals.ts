@@ -415,7 +415,8 @@ export class DeleteFlowDefModal extends Modal {
   }
 }
 // ^CHECKED AND TESTED
-//----------- FLOW DEF DELETION
+/*
+//----------- RESTORE FLOW DEFS
 export class RestoreFlowDefModal extends Modal {
   constructor(
     app: App,
@@ -429,96 +430,166 @@ export class RestoreFlowDefModal extends Modal {
   }
   onOpen() {
     const { contentEl } = this;
-    contentEl.createEl("h2", {
-      text: `Delete the definition for "${this.flowName}"`,
+    const flowDisplay = contentEl.createDiv({
+      cls: "headline-container",
     });
-    const helperText = contentEl.createEl("p", {
-      text: this.plugin.t(
-        "deleteModal.createEl.text this will delete flow file"
-      ),
-      cls: "Tag-modal-helper",
+    flowDisplay.createEl("h3", {
+      text: this.plugin.t("flowDisplay.createEl.text your flow definitions"),
+      cls: "headline-text",
     });
 
-    const deleteButton = new ButtonComponent(contentEl);
-    deleteButton.setClass("action-button");
-    deleteButton.setClass("action-button-delete-modal");
-    deleteButton.setWarning();
-    deleteButton.setTooltip(`Delete "${this.flowName}".`);
-    deleteButton.setIcon("trash");
-    deleteButton.onClick(async () => {
-      // sync all, just to be thorough
-      this.plugin.syncAllLeaves();
+    const flowSorted: string[] = [];
+    Object.keys(this.plugin.settings.flows).forEach((flowName) => {
+      flowSorted.push(flowName);
+    });
 
-      // Get the file path
-      const flowFilePath = normalizePath(
-        `${this.plugin.settings.systemFolderPath}/${this.flowName}.md`
-      );
+    flowSorted.sort();
 
-      const flowFile = this.app.vault.getAbstractFileByPath(flowFilePath);
+    for (let flowName of flowSorted) {
+      const shownFlow = this.plugin.settings.flows[flowName];
 
-      // delete file if present; in two steps to make TypeScript happy
-      if (flowFile) {
-        if (flowFile instanceof TFile) {
-          await this.app.vault.delete(flowFile);
-        }
+      // --- DISPLAY PREPARATIONS ----------------------------------
+      // Set up strings to display flow criteria
+
+      // SOURCE
+      let source = "";
+      if (shownFlow.flowCookbook.bookmarks) {
+        source += this.plugin.t("flowDisplay.source.alt bookmark group", {
+          shownFlow_flowCookbook_bookmarks: shownFlow.flowCookbook.bookmarks,
+        });
+      } else if (
+        shownFlow.flowCookbook.folderIncluded === "" ||
+        shownFlow.flowCookbook.folderIncluded === "/"
+      ) {
+        source += "/";
+      } else {
+        source += `/${shownFlow.flowCookbook.folderIncluded}`;
       }
 
-      // delete flowObject
-      delete this.plugin.settings.flows[this.flowName];
-
-      // delete entry from activeFlowObject
-      delete this.plugin.settings.activeFlowObject[this.flowName];
-
-      // delete conflictObjects for the flow
-      Object.keys(this.plugin.settings.flows).forEach((flowName) => {
-        if (this.plugin.settings.flows[flowName].conflictObject) {
-          if (
-            this.plugin.settings.flows[flowName].conflictObject[this.flowName]
-          ) {
-            delete this.plugin.settings.flows[flowName].conflictObject[
-              this.flowName
-            ];
-          }
-        }
-      });
-      new Notice(
-        this.plugin.t("deleteModal.notice successful deletion", {
-          this_flowName: this.flowName,
-        })
-      );
-
-      // if the user was about to edit this flow, unlock the name input field
-      if (this.plugin.settings.flowBuildBasket.flowName === this.flowName) {
-        this.plugin.settings.flowBuildBasket.createOrEdit = "create";
+      // INCLUSION
+      const included: string[] = [];
+      if (shownFlow.flowCookbook.tagsIncluded?.trim()) {
+        included.push(
+          this.plugin.t("flowDisplay.included tags", {
+            shownFlow_flowCookbook_tagsIncluded:
+              shownFlow.flowCookbook.tagsIncluded,
+          })
+        );
       }
+      if (shownFlow.flowCookbook.propsIncluded?.trim()) {
+        included.push(
+          this.plugin.t("flowDisplay.included props", {
+            shownFlow_flowCookbook_propsIncluded:
+              shownFlow.flowCookbook.propsIncluded,
+          })
+        );
+      }
+      const inclusionString = included.length > 0 ? included.join(" / ") : "";
 
-      await this.plugin.saveSettings();
+      // EXCLUSION
+      const excluded: string[] = [];
+      if (
+        !shownFlow.flowCookbook.bookmarks &&
+        shownFlow.flowCookbook.folderExcluded?.trim()
+      ) {
+        excluded.push(
+          this.plugin.t("flowDisplay.excluded folders", {
+            shownFlow_flowCookbook_folderExcluded:
+              shownFlow.flowCookbook.folderExcluded,
+          })
+        );
+      }
+      if (shownFlow.flowCookbook.tagsExcluded?.trim()) {
+        excluded.push(
+          this.plugin.t("flowDisplay.excluded tags", {
+            shownFlow_flowCookbook_tagsExcluded:
+              shownFlow.flowCookbook.tagsExcluded,
+          })
+        );
+      }
+      if (shownFlow.flowCookbook.propsExcluded?.trim()) {
+        excluded.push(
+          this.plugin.t("flowDisplay.excluded props", {
+            shownFlow_flowCookbook_propsExcluded:
+              shownFlow.flowCookbook.propsExcluded,
+          })
+        );
+      }
+      const exclusionString = excluded.length > 0 ? excluded.join(" / ") : "";
+
+      // --- THE DISPLAY ITSELF -------------------------------
+      const flowShow = new Setting(flowDisplay);
+      flowShow
+        .setName(`${shownFlow.flowName}`)
+        .setDesc(
+          createFragment((desc) => {
+            desc.createSpan({
+              text: this.plugin.t("flowDisplay.flowShow.setDesc.1 source", {
+                source: source,
+              }),
+            });
+            if (inclusionString != "" && inclusionString != undefined) {
+              desc.createEl("br");
+              desc.createSpan({
+                text: this.plugin.t(
+                  "flowDisplay.flowShow.setDesc.2 inclusion criteria",
+                  { inclusionString: inclusionString }
+                ),
+              });
+            }
+            if (exclusionString != "" && exclusionString != undefined) {
+              desc.createEl("br");
+              desc.createSpan({
+                text: this.plugin.t(
+                  "flowDisplay.flowShow.setDesc.3 exclusion criteria",
+                  { exclusionString: exclusionString }
+                ),
+              });
+            }
+          })
+        )
+        //^CHECKED
+        //CHECKED  AND TESTED
+        .addButton((rebuildButton) =>
+          rebuildButton
+            .setButtonText(
+              this.plugin.t("flowDisplay.rebuildButton.setButtonText (re)build")
+            )
+            .onClick(async () => {
+              // delete unneeded flowDef information
+              if (
+                shownFlow.definitionMode === "bookmarks" &&
+                shownFlow.flowCookbook.foldersTagsProps
+              ) {
+                delete shownFlow.flowCookbook.foldersTagsProps;
+                delete shownFlow.flowCookbook.foldersTagsPropsSortOrder;
+              } else if (
+                shownFlow.definitionMode === "foldersTagsProps" &&
+                shownFlow.flowCookbook.bookmarks
+              ) {
+                delete shownFlow.flowCookbook.bookmarks;
+                delete shownFlow.flowCookbook.bookmarksSortOrder;
+              }
+
+              // gather all info for the flowDefinition
+              this.plugin.flowService.rebuildFlow(flowName, "settingsTab");
+              this.plugin.refreshMenuBars();
+              await this.plugin.saveSettings();
+            })
+        );
       this.settingsTab.display();
       this.close();
-    });
-
-    const cancelButton = new ButtonComponent(contentEl);
-    cancelButton.setClass("action-button");
-    cancelButton.setClass("action-button-cancel");
-    cancelButton.setCta();
-    cancelButton.setTooltip(
-      this.plugin.t("deleteModal.cancelButton cancel deletion")
-    );
-    cancelButton.setIcon("x-circle");
-    cancelButton.onClick(async () => {
-      this.settingsTab.display();
-      this.close();
-    });
+    }
   }
-}
+}*/
 
 //-------- FLOW SWITCHING
 export class FlowSwitcherModal extends Modal {
   private plugin: TextFlowPlugin;
-  private currentActiveLeafID: string;
+  private currentActiveLeafID: string | undefined;
   private rebuildString: string | undefined;
 
-  constructor(app: App, plugin: TextFlowPlugin, currentActiveLeafID: string) {
+  constructor(app: App, plugin: TextFlowPlugin, currentActiveLeafID?: string) {
     super(app);
     this.plugin = plugin;
     this.currentActiveLeafID = currentActiveLeafID;
@@ -700,10 +771,6 @@ export class FlowSwitcherModal extends Modal {
             const file = this.app.vault.getAbstractFileByPath(
               this.plugin.settings.flows[activeFlow].flowFilePath
             );
-            const needsRebuild = await this.plugin.checkStats(activeFlow);
-            if (needsRebuild === true) {
-              await this.plugin.flowService.rebuildFlow(activeFlow, "switcher");
-            }
             if (file instanceof TFile) {
               const leaf = this.app.workspace.getLeaf("split");
               await leaf.openFile(file);
@@ -726,10 +793,6 @@ export class FlowSwitcherModal extends Modal {
             const file = this.app.vault.getAbstractFileByPath(
               this.plugin.settings.flows[activeFlow].flowFilePath
             );
-            const needsRebuild = await this.plugin.checkStats(activeFlow);
-            if (needsRebuild === true) {
-              await this.plugin.flowService.rebuildFlow(activeFlow, "switcher");
-            }
             if (file instanceof TFile) {
               const leaf = this.app.workspace.getLeaf("split", "horizontal");
               await leaf.openFile(file);
@@ -991,13 +1054,6 @@ export class FlowSwitcherModal extends Modal {
               this.plugin.settings.flows[inactiveFlow].flowFilePath
             );
 
-            const needsRebuild = await this.plugin.checkStats(inactiveFlow);
-            if (needsRebuild === true) {
-              await this.plugin.flowService.rebuildFlow(
-                inactiveFlow,
-                "switcher"
-              );
-            }
             if (file instanceof TFile) {
               const leaf = this.app.workspace.getLeaf("tab");
               await leaf.openFile(file);
@@ -1351,11 +1407,6 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
       const file = this.app.vault.getAbstractFileByPath(
         this.plugin.settings.flows[item.flowName].flowFilePath
       );
-
-      const needsRebuild = await this.plugin.checkStats(item.flowName);
-      if (needsRebuild === true) {
-        await this.plugin.flowService.rebuildFlow(item.flowName, "switcher");
-      }
       if (file instanceof TFile) {
         const leaf = this.app.workspace.getLeaf("tab");
         await leaf.openFile(file);

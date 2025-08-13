@@ -198,6 +198,7 @@
 
   "main.registerCommand sync all leaves": "Sync all leaves",
   "main.registerCommand flag for rebuild": "Flag all flows for rebuild.",
+  "main.registerCommand check stats": "Check vault for external edits.",
   "main.registerCommand open switcher": "Open flow switcher modal",
   "main.registerCommand open fuzzy navigation": "Open fuzzy navigation modal",
   "main.registerCommand toggle explorer navigation": "Toggle explorer navigation",
@@ -216,7 +217,10 @@
 
   "main.cursorListener.notice tracking failed": "textFlow:\n Cursor tracking failed for ${flowName}!\nPlease close and reopen the flow.\nIf this error persists, reload your vault.",
 
-  "accTExtCHangeListener.notice error setting up listener": "textFlow Plugin: Error setting up change tracking.\nPlease report this issue on github.",
+  "main.checkStats check stats feedback": "textFlow: External edit detected for ${path}; flows have been flagged for rebuild.",
+  "main.checkStats no changes": "textFlow: No external edits have been detected.",
+
+  "TextChangeListener.notice error setting up listener": "textFlow Plugin: Error setting up change tracking.\nPlease report this issue on github.",
 
   "activateFlow.notice flow name not found": "textFlow: No flow with name ${flowName} found.",
   "activateFlow.notice flow file not found": "textFlow: Flow file not found: ${flow.flowFilePath}\nTry clicking the 'Move' button for the system folder location (in settings).",
@@ -226,6 +230,7 @@
   "syncBackToSource.notice sync failed source note": "textFlow: Source file not found at path: ${path}",
   "syncBackToSource.notice sync failed flow note": "textFlow: Sync failed. The flow at ${path} couldn't be found.",
   "syncBackToSource.notice other random error": "textFlow: An error occurred while trying to sync from ${flowName} to ${path}. \nPlease try again in a second. \nIf the error persists, consult the 'Fixing problems' section of the readme.",
+  "syncBackToSource.notice hash interrupt": "textFlow: The note at ${path} has been externally edited at ${timestamp}, which is after you last (re)built flow ${flowName}. \nPlease check if you really want to overwrite it. \nProcedure to overwrite: \n1. Copy the edit you just made.\n2. Rebuild the flow. \n3. Paste the edit back into its spot. \n 4. Sync the flow.",
 
   "checkActiveRegion.notice region tracking error": "textFlow: Region tracking error.\nYour are most likely seeing this because you undid (ctrl+z) your way into the state before a rebuild.\nPlease redo (ctrl+shift+z) your way back into the current version of things.\nIf that doesn't seem to work, please rebuild ${flow.flowName}.\nThis may lead to further error messages. Please follow their instructions.",
   "checkActiveRegion.notice overlap detected": "The current region ${regionName} is overlapping with the following flow(s): ${overlapString}",

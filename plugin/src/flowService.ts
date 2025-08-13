@@ -1413,7 +1413,7 @@ export class FlowService {
           let fileContent: string = await this.app.vault.read(note);
 
           // make a hash if we don't have one yet
-          if (this.plugin.settings.checkExternalEdits === "hash") {
+          if (this.plugin.settings.checkExternalEdits === "xxhash") {
             if (!this.plugin.settings.hashes[ingredient]) {
               const hash = this.plugin.makeHash(fileContent);
               this.plugin.settings.hashes[ingredient] = hash;
@@ -1452,8 +1452,8 @@ export class FlowService {
             .replace(/^---\n[\s\S]*?\n---\n*/, "")
             .trim();
 
+          // get mtime regardless of user settings
           const mtime = note.stat.mtime;
-          const size = note.stat.size;
 
           // put all info in the note object
           flow.flowMap[ingredient] = {
@@ -1801,9 +1801,10 @@ export class FlowService {
     }
   }
 
-  getTimestamp = (): string => {
-    const date = new Date();
-    const weekday = date.toLocaleDateString("en-US", { weekday: "short" });
+  // this was written by Claude 3.5 Sonnet
+  getTimestamp = (timestamp?: number): string => {
+    const date = new Date(timestamp || Date.now());
+
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
@@ -1813,8 +1814,7 @@ export class FlowService {
     return `${year}-${month}-${day}_${hours}-${minutes}`;
   };
 
-  // The arrays with the deco stuff
-
+  // The arrays with the deco stuff, which I made, by hand. I like pain sometimes.
   explorereDecoArray: Types.DecorationEntry[] = [
     ["○", "●", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
     ["○", "●", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
