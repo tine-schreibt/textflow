@@ -596,6 +596,27 @@ export class FlowSwitcherModal extends Modal {
     this.rebuildString = "";
   }
 
+  // the shitload of functions involved when cracking open a flow
+  private flowOpeningStuff = async (leaf: WorkspaceLeaf, file: TFile) => {
+    await leaf.openFile(file);
+    leaf.setPinned(true);
+    this.app.workspace.setActiveLeaf(leaf, { focus: true });
+    await this.plugin.manageActiveFlowObject(); // this is called anyway, but timing matters, so we do it again
+    this.updateActiveLeafID();
+    this.display();
+    this.plugin.syncAllLeaves();
+  };
+
+  // so we can highlight the active leaf's entry
+  private updateActiveLeafID = () => {
+    if (!this.currentActiveLeafID) {
+      const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+      if (view) {
+        this.currentActiveLeafID = (view.leaf as any).id;
+      }
+    }
+  };
+
   async onOpen() {
     await this.display();
     this.plugin.registerModalUpdateCallback(async () => await this.display());
@@ -752,11 +773,7 @@ export class FlowSwitcherModal extends Modal {
             );
             if (file instanceof TFile) {
               const leaf = this.app.workspace.getLeaf("tab");
-              await leaf.openFile(file);
-              leaf.setPinned(true);
-              await this.app.workspace.setActiveLeaf(leaf, { focus: true });
-              // this is called in setupFlowView, too, but timing matters for the conflict check
-              await this.plugin.manageActiveFlowObject();
+              this.flowOpeningStuff(leaf, file);
             }
           }
         });
@@ -773,11 +790,7 @@ export class FlowSwitcherModal extends Modal {
             );
             if (file instanceof TFile) {
               const leaf = this.app.workspace.getLeaf("split");
-              await leaf.openFile(file);
-              leaf.setPinned(true);
-              this.app.workspace.setActiveLeaf(leaf, { focus: true });
-              await this.plugin.manageActiveFlowObject();
-              this.plugin.syncAllLeaves();
+              this.flowOpeningStuff(leaf, file);
             }
           }
         });
@@ -795,11 +808,6 @@ export class FlowSwitcherModal extends Modal {
             );
             if (file instanceof TFile) {
               const leaf = this.app.workspace.getLeaf("split", "horizontal");
-              await leaf.openFile(file);
-              leaf.setPinned(true);
-              this.app.workspace.setActiveLeaf(leaf, { focus: true });
-              await this.plugin.manageActiveFlowObject();
-              this.plugin.syncAllLeaves();
             }
           }
         });
@@ -861,6 +869,7 @@ export class FlowSwitcherModal extends Modal {
                 await targetLeaf.detach();
                 this.plugin.manageActiveFlowObject();
                 await this.plugin.saveSettings();
+                this.updateActiveLeafID();
                 await this.display();
               }
             }
@@ -874,7 +883,6 @@ export class FlowSwitcherModal extends Modal {
       Object.keys(activeFlowInfoObject[activeFlow]).forEach((leafID) => {
         // check if the leaf is the active one, so we can highlight it
         const active = leafID === this.currentActiveLeafID ? "active" : "nope";
-
         activeRegionBorderColorCounter += 1;
         let activeRegionBorderColorCalculator =
           activeRegionBorderColorCounter % 2;
@@ -972,6 +980,7 @@ export class FlowSwitcherModal extends Modal {
               await targetLeaf.detach();
               this.plugin.manageActiveFlowObject();
               await this.plugin.saveSettings();
+              this.updateActiveLeafID();
               await this.display();
             }
           });
@@ -1056,9 +1065,7 @@ export class FlowSwitcherModal extends Modal {
 
             if (file instanceof TFile) {
               const leaf = this.app.workspace.getLeaf("tab");
-              await leaf.openFile(file);
-              leaf.setPinned(true);
-              this.app.workspace.setActiveLeaf(leaf, { focus: true });
+              await this.flowOpeningStuff(leaf, file);
             }
           }
         });
@@ -1074,9 +1081,7 @@ export class FlowSwitcherModal extends Modal {
             );
             if (file instanceof TFile) {
               const leaf = this.app.workspace.getLeaf("split");
-              await leaf.openFile(file);
-              leaf.setPinned(true);
-              this.app.workspace.setActiveLeaf(leaf, { focus: true });
+              this.flowOpeningStuff(leaf, file);
             }
           }
         });
@@ -1093,9 +1098,7 @@ export class FlowSwitcherModal extends Modal {
             );
             if (file instanceof TFile) {
               const leaf = this.app.workspace.getLeaf("split", "horizontal");
-              await leaf.openFile(file);
-              leaf.setPinned(true);
-              this.app.workspace.setActiveLeaf(leaf, { focus: true });
+              this.flowOpeningStuff(leaf, file);
             }
           }
         });
