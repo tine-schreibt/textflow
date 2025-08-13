@@ -160,8 +160,8 @@
   "flowDisplay.editButton.setButtonText edit": "Bearbeiten",
   "flowDisplay.deleteButton.setButtonText delete definition": "Definition löschen",
 
-  "restoreSettings.setName restore definitions": "Stelle alte Definitionen wieder her",
-  "restoreSettings.setButtonText restore definitions": "Zeige gespeicherte Definitionen",
+  "restoreSettings.setName restore definitions": "Stelle alte Settings wieder her",
+  "restoreSettings.setButtonText restore definitions": "Zeige Backups",
 
   "-------- MENU BAR": "The menu bar.-------------",
   "menuBar.selectButton.setTooltip select active region": "Aktive Region auswählen",

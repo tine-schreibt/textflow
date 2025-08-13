@@ -281,10 +281,10 @@ export class FlowService {
 
       // rename the file if it exists
       const oldFlowPath = normalizePath(
-        `${this.app.vault.configDir}/plugins/${this.plugin.manifest.id}/flows/${oldFlowName}.md`
+        `${this.plugin.settings.systemFolderPath}/${oldFlowName}.md`
       );
       const newFlowPath = normalizePath(
-        `${this.app.vault.configDir}/plugins/${this.plugin.manifest.id}/flows/${newFlowName}.md`
+        `${this.plugin.settings.systemFolderPath}/${newFlowName}.md`
       );
       const flowFile = this.app.vault.getAbstractFileByPath(oldFlowPath);
       // rename file if present; in two steps to make TypeScript happy
@@ -1034,7 +1034,7 @@ export class FlowService {
     settings.flows[flowBuildBasket.flowName] = {
       flowName: flowBuildBasket.flowName,
       flowFilePath: normalizePath(
-        `${this.app.vault.configDir}/plugins/${this.plugin.manifest.id}/flows/${flowBuildBasket.flowName}.md`
+        `${this.plugin.settings.systemFolderPath}/${flowBuildBasket.flowName}.md`
       ),
       definitionMode: flowBuildBasket.definitionMode,
       flowCookbook: flowBuildBasket.flowCookbook,
@@ -1491,30 +1491,14 @@ export class FlowService {
         `${this.plugin.settings.systemFolderPath}/${flowName}.md`
       );
 
-      // flag to disable IDDiverder protection, so it doesn't block the editor refresh
-      this.plugin.isRebuilding = true;
-      // flag to suspend create listener
-      this.plugin.textFlowOperation = true;
+      // this also takes care of flags for write protection and listeners
+      await this.plugin.flowService.safeCreateFile(
+        this.app.vault,
+        flowFilePath,
+        mapValueBasket.concatenatedFileContents
+      );
 
-      // check, if there's already a file there
-      const existingFile = this.app.vault.getAbstractFileByPath(flowFilePath);
-
-      if (existingFile instanceof TFile) {
-        // If file exists, modify it
-        await this.app.vault.modify(
-          existingFile,
-          mapValueBasket.concatenatedFileContents
-        );
-      } else {
-        // If file doesn't exist, create it
-        await this.app.vault.create(
-          flowFilePath,
-          mapValueBasket.concatenatedFileContents
-        );
-      }
       // remove the flags
-      this.plugin.isRebuilding = false;
-      this.plugin.textFlowOperation = false;
       this.plugin.saveSettings();
     }
   };
@@ -1637,12 +1621,19 @@ export class FlowService {
 
   safeCreateFile = async (vault: Vault, path: string, content: string) => {
     try {
+      console.log("trying to create ", path);
       const existingFile = vault.getAbstractFileByPath(path);
+      this.plugin.isRebuilding = true;
+      this.plugin.textFlowOperation = true;
+
       if (existingFile instanceof TFile) {
         await vault.modify(existingFile, content);
       } else {
         await vault.create(path, content);
       }
+
+      this.plugin.isRebuilding = false;
+      this.plugin.textFlowOperation = false;
     } catch (error) {
       console.error(`Failed to create/modify file at ${path}:`, error);
       throw error;
@@ -1664,7 +1655,7 @@ export class FlowService {
 
     // check if we got a backup file
     const backupPath = normalizePath(
-      `${this.app.vault.configDir}/plugins/${this.plugin.manifest.id}/backup.json`
+      `${this.plugin.settings.systemFolderPath}/textFlowSettingsBackup.json`
     );
     const backupFile = this.app.vault.getAbstractFileByPath(backupPath);
 

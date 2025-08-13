@@ -354,7 +354,7 @@ export class DeleteFlowDefModal extends Modal {
 
       // Get the file path
       const flowFilePath = normalizePath(
-        `${this.app.vault.configDir}/plugins/${this.plugin.manifest.id}/flows/${this.flowName}.md`
+        `${this.plugin.settings.systemFolderPath}/${this.flowName}.md`
       );
 
       const flowFile = this.app.vault.getAbstractFileByPath(flowFilePath);
@@ -451,7 +451,7 @@ export class RestoreFlowDefModal extends Modal {
 
       // Get the file path
       const flowFilePath = normalizePath(
-        `${this.app.vault.configDir}/plugins/${this.plugin.manifest.id}/flows/${this.flowName}.md`
+        `${this.plugin.settings.systemFolderPath}/${this.flowName}.md`
       );
 
       const flowFile = this.app.vault.getAbstractFileByPath(flowFilePath);

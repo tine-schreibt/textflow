@@ -39,7 +39,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     // ###############   SET UP A SYSTEM FOLDER   ###########################
     //CHECKED AND TESTED
     const systemFolder = this.plugin.flowService.checkSystemFolder();
-    let newSystemFolderParent = ".";
+    let newSystemFolderParent = "";
 
     const setSystemFolder = new Setting(setUpTextFlow)
       .setName(
