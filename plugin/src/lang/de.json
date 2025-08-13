@@ -1,0 +1,248 @@
+{
+  "COMMENT": {
+    "Keys": "Key bestehen aus setting/class/function, wrapper function, prefix und Beschreibung",
+    "prefixes": "Zahlen für fragments, alt für conditionals"
+  },
+
+  "-------- SETTINGS TAB": "Die class für die settings.-------------",
+
+  "------ SET SYSTEM FOLDER": "Here the user chooses which path the system folder should have ----------------",
+  "setSystemFolder.setName choose existing folder": "Wähle einen bestehenden Ordner, in dem textFlows Systemordner - ${textFlowSystemFolderName} - erzeugt werden soll.",
+  "setSystemFolder.setDesc.1 what is system folder used for": "TextFlow braucht einen (versteckten) Ordner, um deine Flows darin zu speichern",
+  "setSystemFolder.setDesc.2 how to enter root": "Gib / oder . ein, um den Root-Ordner auszuwählen.",
+  "setSystemFolder.addButton.setButtonText.alt create": "Erzeugen",
+  "setSystemFolder.addButton.setButtonText.alt move": "Verschieben",
+  "setSystemFolder.addButton.notice folder successfully moved": "text Flow: ${textFlowSystemFolderName} wurde nach ${newSystemFolderParent} verschoben.",
+  "setSystemFolder.addButton.notice failed to move folder": "textFlow: Verschieben des Ordners fehlgeschagen: ${error_message}",
+
+  "------ SWITCHER MODAL POSITION": "How do they want to access the flow switcher modal? ----------------",
+  "switcherModalPosition.setName access flow switcher via": "Öffne den Flow-Switcher per...",
+  "switcherModalPosition.setDesc changes need reload to take effect": "Änderungen treten erst nach einem Neustart in Kraft.",
+  "switcherModalPosition.addDropdown.addOption.alt Status bar": "Statusleiste",
+  "switcherModalPosition.addDropdown.addOption.alt ribbon": "Menüband",
+  "switcherModalPosition.addDropdown.addOption.alt command palette only": "nur Befehlspalette",
+
+  "------ EXPLORER DECORATION": "Choose unicode characters to decorate source notes in file explorer ----------------",
+  "explorerDeco.setName.1 choose deco": "Wähle eine Dekoration für den Dateiexplorer.",
+  "explorerDeco.setDesc.2 what does deco do": "Kennzeichnet die Quellnotizen aller aktiven (geöffneten) Flows.",
+  "explorerDeco.setDesc.3 what do symbols mean": "Erstes Symbol: Aktuell; zweites Symbol: Wartet auf Synchronisation.",
+  "explorerDeco.setDesc.4 how to set colour": "Die Farbe ist der Akzent, den du in Obsidians Einstellungen unter 'Darstellung' augewählt hast.",
+
+  "-------- ACTIVE REGION HIGHLIGHT": "Choose a decoration style for the active region's source note",
+  "activeRegionDeco.setName choose highlight type for active region": "Wähle ein Highlight für die aktive Region",
+  "activeRegionDeco.setDesc what does this do?": "Wie soll die aktive Region hervorgehoben werden? ?",
+  "activeRegionDeco.addOption.1 background accent colour": "Hintergrund: Akzentfarbe.",
+  "activeRegionDeco.addOption.2 background text muted": "Hintergrund: Gedeckte Textfarbe.",
+  "activeRegionDeco.addOption.3 outline full": "Umriss: Textfarbe.",
+  "activeRegionDeco.addOption.4 outline muted": "Umriss: Gedeckte Textfarbe.",
+
+  "-------- QUALITY OF LIVE SETTINGS": "Ein paar Settings, die die UI verbessern",
+  "qol.createSpan.text quality of life settings": "Ein paar Einstellungen für die Lebensqualität.",
+
+  "qol.hideExplorerDeco.setName hide explorer deco": "Verstecke DateiExplorer-Deco",
+
+  "qol.navListener.setName disable explorer nav": "Navigation per Dateiexplorer ausschalten.",
+  "qol.navListener.setDesc what is disable explorer nav for": "Falls du die Multi-Auswahl brauchst. Es gibt auch einen Befehl dafür.",
+
+  "qol.scrollbar.setName hide scoll bar": "Scrollbar verstecken",
+  "qol.scrollbar.setName.1 what is hide scoll bar for": "Wenn lange Notizen/Abschnitte dargestellt werden, fängt die Scrollbar an zu zucken. Falls dich das nervt, kannst du sie verstecken",
+  "qol.scrollbar.setName.2 there's a toggle, too": "Es gibt auch einen Befehl, um zwischen 'verstecke überall' und 'nicht verstecken' zu wechseln.",
+  "qol.scrollbar.addDropdown.addOption.1 hide only in flows": "Nur für Flows verstecken",
+  "qol.scrollbar.addDropdown.addOption.2 hide everywhere": "Überall verstecken",
+  "qol.scrollbar.addDropdown.addOption.3 don't hide": "Nicht verstecken",
+
+  "qol.hash.setName hash?": "Prüfe auf externe Bearbeitung",
+  "qol.hash.setDesc.1 when should you check?": "Falls du diesen Vault oft auf Geräten bearbeitest, auf denen textFlow nicht funktioniert (dein Handy) solltest du das hier anschalten.",
+  "qol.hash.setDesc.2 mtime": "Wählst du mtime, wird die Modifikationszeit deiner Notizen als Vergleichspunkt gewählt.",
+  "qol.hash.setDesc.3 xxhash": "Falls 'mtime' dir zu viele falsch positive Ergebnisse beschert (unnötiges Neubauen), wähle 'xxhash', damit textFlow auch den gehashten Inhalt der Notiz vergleicht.",
+  "qol.hash.addDropdown.addOption.1 don't check": "Nicht prüfen.",
+
+  "qol.hidesystemFolder.setName hide system folder": "${textFlowSystemFolderName} verstecken",
+  "qol.hidesystemFolder.setDesc.1 hiding is recommended": "Es wird empfohlen, diesen Ordner versteckt zu halten, um seine Inhalte zu schützen, aber letztendlich ist es eine ästhetische/praktische Entscheidung.",
+  "qol.hidesystemFolder.setDesc.2 edits are still tracked": "Wenn du einen Flow direkt aus diesem Ordner heraus öffnest, wird er ebenfalls getrackt und hat Schreibschutz usw.",
+  "qol.hidesystemFolder.setDesc.3 unhiding needs vault reload": "Es braucht einen Neustart, um den Ordner nicht mehr zu verstecken.",
+
+  "-------- CREATE FLOWS": "Here the user can define flows-------------------------------------",
+  "createFlows.createEl.text create a new flow": "Baue einen neuen Flow",
+  "createFlows.chooseFlowName.setName name your flow": "Gib deinem Flow einen Namen",
+  "createFlows.chooseFlowName.setDesc some characters can't be part of a flow name": "Folgende Zeichen dürfen nicht in einem Flow-Namen vorkommen:",
+  "createFlows.chooseFlowName.setPlaceholder enter a unique name": "Einzigartiger Name",
+  "validFlowNameCheck.error.1 missing flow name": "Bitte gib deinem Flow einen Namen.",
+  "validFlowNameCheck.error.2 flow already exists": "textFlow: Ein Flow namens ${flowName} existiert bereits. Bitte wähle einen anderen.",
+
+  "toggleFolderTitles.setName include folder / bookmark group titles": "Füge Gruppen-/Ordnertitel in den Flow ein",
+  "toggleFolderTitles.setDesc will also turn off titles in nav dropdown": "Dieses Setting legt auch fest, ob Titel im Navigationsdropdown zu sehen sind.",
+
+  "defineFlow.setName define your flow": "Definiere deinen Flow...",
+  "defineFlow.setDesc.1 only active method will be used": "Nur die aktive Definitionsmethode wird verwendet.",
+  "defineFlow.setDesc.2 if no criteria, whole vault will be used": "Wenn du keine Methode auswählst, wird dein gesamter Vault in den Flow geschrieben.",
+
+  "buttons.bookmarks.setButtonText by bookmark group": "... per Lesezeichengruppe",
+  "buttons.foldersTagsProps.setButtonText by folders, tags, props": "... per Ordner/Tag/Property",
+
+  "bookmarksSortOrder.setName sort order": "Sortierreihenfolge",
+  "bookmarksSortOrder.setDesc.1 depth first": "Tiefe zuerst: ",
+  "bookmarksSortOrder.setDesc.2 description of depth first": "Notizen bestimmen die Reihenfolge. Am besten für flache Hierarchien (und ohne Titel).",
+  "bookmarksSortOrder.setDesc.3 notes first": "Notizen zuerst: ",
+  "bookmarksSortOrder.setDesc.4 description of notes first": "Gruppen bestimmen die Reihenfolge. Am besten für tiefe Hierarchien (und mit Titeln)",
+  "bookmarksSortOrder.setDesc.5 custom": "Gemischte Reihenfolge:",
+  "bookmarksSortOrder.setDesc.6 description of custom": "Notizen und Gruppen erscheinen in der exakten Reihenfolge wie im Dateiexplorer. Am besten für freie Sortierung (und ohne Titel).",
+  "bookmarksSortOrder.setDesc.7 test them all out": "Probier alle Optionen in der Vorschau aus, um zu sehen, welche am besten für dlch funktioniert.",
+  "bookmarksSortOrder.addDropdown.addOption.1 depth first": "Tiefe zuerst",
+  "bookmarksSortOrder.addDropdown.addOption.2 files first": "Notizen zuerst",
+  "bookmarksSortOrder.addDropdown.addOption.3 custom": "Manuell",
+
+  "chooseBookmarks.setDesc.1 input the name of a bookmarks group": "Gib den Namen einer Lesezeichengruppe ein",
+  "chooseBookmarks.setDesc.2 how to choose a subgroup": "Um eine Untergruppe zu wählen, gib den Pfad so ein:",
+  "chooseBookmarks.setDesc.3 example path": "Hauptgruppe/Untergruppe/Unteruntergruppe",
+  "chooseBookmarks.setDesc.4 how to exclude subgroup": "Um die Untergruppen einer Guppe auszuschließen, beende ihren Pfad mit /",
+
+  "sortFlowPathsTagsProperties.setName sort order": "Sortierreihenfolge",
+  "sortFlowPathsTagsProperties.setDesc.1 depth first": "Tiefe zuerst: ",
+  "sortFlowPathsTagsProperties.setDesc.2 description of depth first": "Notizen bestimmen die Reihenfolge. Am besten für flache Hierarchien (und ohne Titel).",
+  "sortFlowPathsTagsProperties.setDesc.3 notes first": "Notizen zuerst: ",
+  "sortFlowPathsTagsProperties.setDesc.4 description of notes first": "Ordner bestimmen die Reihenfolge. Am besten für tiefe Hierarchien (und mit Titeln)",
+  "sortFlowPathsTagsProperties.setDesc.5 test them all out": "Teste alle Optionen in der Vorschau aus, um zu sehen, welche am besten für dich passt",
+  "sortFlowPathsTagsProperties.addDropdown.addOption.1 depth first": "Tiefe zuerst",
+  "sortFlowPathsTagsProperties.addDropdown.addOption.2 files first": "Notizen zuerst",
+
+  "headlineChoosePathsTagsProperties.setDesc.1 inputs are optional, explanation of logic": "Alle Inputs sind optional. Bei der Inklusion müssen ALLE gegebenen Kriterien wahr sein; für Exklusion muss nur EIN Kriterium falsch sein.",
+  "headlineChoosePathsTagsProperties.setDesc.2 use dataview for complex logic": "Falls du komplexere Logik brauchst, kannst du deinen Flow mit einer Dataview-Abfrage definieren und die Ergebnisse mit deinem Flow-Namen taggen.",
+
+  "folderIncludeInput.setDesc.1 choose single folder": "Wähle einen einzelnen Quellordner.",
+  "folderIncludeInput.setDesc.2 default is root": "Ist das Feld leer, wird der Root-Ordner verwendet.",
+  "folderIncludeInput.setDesc.3 how to exlude subfolders": "Beende den Pfad mit / um Unterordner auszuschließen.",
+  "folderIncludeInput.setPlaceholder": "root",
+
+  "folderExcludeInput.setDesc.1 choose paths to exclude": "Schließe Ordner per PFAD AUS.",
+  "folderExcludeInput.setPlaceholder": "Kapitel04/Szene09, Kapitel05",
+
+  "tagsIncludeInput.setDesc.1 choose tags to include": "Schließe per #TAG EIN.",
+  "folderExcludeInput.setDesc.2 comma separated list": "Füge eine kommagetrennte Liste ein.",
+  "tagsIncludeInput.setPlaceholder": "#Kuschelszene, #Überarbeitung02",
+
+  "tagsExcludeInput.setDesc.1 choose tags to exclude": "Schließe per #TAG AUS.",
+  "tagsIncludeInput.setDesc.2 comma separated list": "Füge eine kommagetrennte Liste ein.",
+  "tagsExcludeInput.setPlaceholder": "#Entwurf, #unfertig",
+
+  "propertiesIncludeInput.setDesc.1 choose properties to include": "Schließe per PROPERTY EIN.",
+  "tagsExcludeInput.setDesc.2 comma separated list": "Füge eine kommagetrennte Liste ein.",
+  "propertiesIncludeInput.setDesc.3 property = value is valid": "Du kannst property = \"value\" verwenden",
+  "propertiesIncludeInput.setPlaceholder": "Kampfsezenen, Erzählstrang = \"Im Wald\"",
+
+  "propertiesExcludeInput.setDesc.1 choose properties to exclude": "Schließe per PROPERTY AUS.",
+  "propertiesExcludeInput.setDesc.2 comma separated list": "Füge eine kommagetrennte Liste ein.",
+  "propertiesExcludeInput.setDesc.3 property = value is valid": "Du kannst property = \"value\" verwenden",
+  "propertiesExcludeInput.setPlaceholder": "Datum = 2125-08-11",
+
+  "previewButton.setButtonText preview your flow structure": "Vorschau deines Flows",
+
+  "saveButton.setButtonText save flow def": "Speichere Flow-Definition",
+
+  "clearValues.setButtonText clear values": "Verwerfe Eingaben",
+
+  "-------- FLOW DISPLAY": "All the user's flows-------------------------------------",
+  "flowDisplay.createEl.text your flow definitions": "Deine Flow-Definitionen",
+  "flowDisplay.source.alt bookmark group": "Lesezeichengruppe \"${shownFlow_flowCookbook_bookmarks}\"",
+
+  "flowDisplay.included tags": "Tags: ${shownFlow_flowCookbook_tagsIncluded}",
+  "flowDisplay.included props": "Properties: ${shownFlow_flowCookbook_propsIncluded}",
+
+  "flowDisplay.excluded folders": "Ordner: ${shownFlow_flowCookbook_folderExcluded}",
+  "flowDisplay.excluded tags": "Tags: ${shownFlow_flowCookbook_tagsExcluded}",
+  "flowDisplay.excluded props": "Properties: ${shownFlow_flowCookbook_propsExcluded}",
+
+  "flowDisplay.flowShow.setDesc.1 source": "Quelle: ${source}",
+  "flowDisplay.flowShow.setDesc.2 inclusion criteria": "Einschlusskriterien: ${inclusionString}",
+  "flowDisplay.flowShow.setDesc.3 exclusion criteria": "Ausschlusskriterien: ${exclusionString}",
+
+  "flowDisplay.rebuildButton.setButtonText (re)build": "(Neu)bauen",
+  "flowDisplay.editButton.setButtonText edit": "Bearbeiten",
+  "flowDisplay.deleteButton.setButtonText delete definition": "Definition löschen",
+
+  "restoreSettings.setName restore definitions": "Stelle alte Definitionen wieder her",
+  "restoreSettings.setButtonText restore definitions": "Zeige gespeicherte Definitionen",
+
+  "-------- MENU BAR": "The menu bar.-------------",
+  "menuBar.selectButton.setTooltip select active region": "Aktive Region auswählen",
+  "menuBar.selectButton.setTooltip export flow": "Flow exportieren",
+  "menubar.selectButton.notice successful export": "textFlow: Dein Flow wurde nach ${exportedFlowPath} exportiert.",
+
+  "----------- PREVIEW MODAL": "Modal that shows the users the structure of their flow---------",
+  "previewModal.modalTitle preview for flow": "Vorschau für Flow ${this_flowBuildBasket_flowName}.",
+  "previewModal.modalTitle overlap for flow": "Die folgenden Flows überschneiden sich mit ${this_flowBuildBasket_flowName}:",
+  "previewModal.modalTitle hover for details": "Mit der Maus darüber fahren, um Details zu sehen.",
+  "previewModal.modalTitle overlapping notes": "Überschneidende Notizen:\n ${overlapList}",
+  "previewModal.modalTitle.info your criteria yielded an empty list": "Deine Kriterien führten zu einer leeren Liste. Bitte überprüfe sie auf Tippfehler und/oder gestalte sie weniger restriktiv.",
+  "previewModal.modalTitle.info what happens after closing the modal": "Wenn du diese Vorschau geschlossen hast, kannst du deine Flowdefinition entweder bearbeiten oder speichern.",
+  "previewModal.text when does flow creation happen": "Das Bauen des Flows erfolgt im nächsten Schritt.",
+  "previewModal.button close preview": "Vorschau schließen",
+
+  "-------- DELETE MODAL": "Modal zum Bestätigen der Löschung von Flow-Definitionen----------",
+  "deleteModal.createEl.text this will delete flow file": "Dies wird auch die zugehörige Flow-Datei löschen.",
+  "deleteModal.notice successful deletion": "textFlow: Die Definition und die Flow-Datei von ${this_flowName} wurden gelöscht.",
+  "deleteModal.cancelButton cancel deletion": "Löschen abbrechen.",
+
+  "-------------- FLOW SWITCHER MODAL": "Modal for opening and closing flows--------",
+  "switcherModal.info no active flows found": "Keine aktiven Flows gefunden",
+  "switcherModal.info overlapping regions": "Diese Region ist auch in anderen Flows enthalten: ${overlapString}",
+  "switcherModal.info no inactive flows found": "Keine inaktiven Flows gefunden",
+
+  "-------------- FUZZY NAVIGATION MODAL": "Tastaturfreundliches Modal für das Öffnen und Schließen von Flows --------",
+  "fuzzyNavigabiotnModal.info flow in active leaf": "Flow im aktiven leaf",
+  "fuzzyNavigabiotnModal.info other flows": "andere Flows",
+  "fuzzyNavigabiotnModal.info flow names": "Flow-Namen",
+  "fuzzyNavigabiotnModal.info titles": "Titel",
+
+  "--------- MAIN": "Die Hauptdatei, die Funktionen für das Flow-Handling enthält",
+
+  "main.registerCommand sync all leaves": "Alle leaves synchronisieren",
+  "main.registerCommand flag for rebuild": "Alle Flows für Neubau markieren.",
+  "main.registerCommand open switcher": "Flow-Switcher öffnen",
+  "main.registerCommand open fuzzy navigation": "Fuzzy-Navigation öffnen",
+  "main.registerCommand toggle explorer navigation": "Dateiexplorer-Navigation umschalten",
+  "main.registerCommand toggle menu bar": "Menüleiste umschalten",
+  "main.registerCommand select active region": "Aktive Region auswählen",
+  "main.registerCommand restore most recent cursor": "Letzte Cursorposition wiederherstellen",
+  "main.registerCommand toggle scroll bar": "Scrollbar umschalten",
+
+  "main.fileMenuListener.context flag flows for rebuild": "textFlow: Flagge alle Flows, die \"${baseName}\" enthalten, für Neubau",
+
+  "main.renameListener.notice don't rename system folder": "textFlow: Bitte nicht textFlows Systemordner umbenennen. Du kannst ihn in den Einstellungen verstecken.",
+  "main.renameListener.notice use settings to rename / export to export": "textFlow: Bitte verwende die TextFlow-Einstellungen, um Flows umzubenennen / die Export-Funktion, um sie aus textFlows Systemordner zu bekommen.\nWenn du textFlows Systemordner manuell verschoben hast, bitte deinen Vault neu laden, um die ordnungsgemäße Synchronisation zu gewährleisten.",
+  "main.renameListener.notice old file name was restored": "textFlow: Der alte Dateiname/Pfad wurde wiederhergestellt.",
+  "main.renameListener.notice new element created in system folder; please remove": "textFlow: Gerade wurde ein neues Element in textFlows Systemordner erstellt.",
+
+  "main.cursorListener.notice tracking failed": "textFlow:\n Cursor-Tracking für ${flowName} fehlgeschlagen!\nBitte schließe und öffne den Flow erneut.\nWenn dieser Fehler weiterhin auftritt, lade deinen Vault neu.",
+
+  "accTExtCHangeListener.notice error setting up listener": "textFlow Plugin: Fehler beim Einrichten des Änderungstrackings.\nBitte melde dieses Problem auf github.",
+
+  "activateFlow.notice flow name not found": "textFlow: Keinen Flow mit Namen ${flowName} gefunden.",
+  "activateFlow.notice flow file not found": "textFlow: Flow-Datei nicht gefunden: ${flow.flowFilePath}\nBitte klicke in den Settings auf den 'Verschieben' Button für textFlows Systemordner.",
+
+  "manageActiveFlowObject.notice sync upon closing flow failed": "textFlow: Sync fehlgeschlagen. Die Notiz ${path} konnte nicht gefunden werden.",
+
+  "syncBackToSource.notice sync failed source note": "textFlow: Quellnotiz ${path} nicht gefunden.",
+  "syncBackToSource.notice sync failed flow note": "textFlow: Sync fehlgeschlagen. Der Flow ${path} konnte nicht gefunden werden.",
+  "syncBackToSource.notice other random error": "textFlow: Ein Fehler ist aufgetreten, während versucht wurde, ${flowName} zu ${path} zu synchronisieren. \nBitte versuche es in einer Sekunde erneut. \nWenn der Fehler weiterhin auftritt, lies die 'Fehlerbehebung' Sektion des Readmes.",
+
+  "checkActiveRegion.notice region tracking error": "textFlow: Fehler beim Tracken der aktiven Region. \nDu siehst diesen Fehler wahrscheinlich, weil du durch (ctrl+z) in den Zustand vor einem Neubau zurückgesprungen bist. \nBitte drücke ctrl+shift+z, bis du wieder im Zustand nach dem Neubau angekommen bist. \nWenn das nicht funktioniert, nimm einen Neubau an ${flow.flowName} vor. \nDies kann zu weiteren Fehlermeldungen führen. Bitte folge ihren Anweisungen.",
+  "checkActiveRegion.notice overlap detected": "Die aktuelle Region \"&{basename(path)}\" überschneidet sich mit den folgenden Flows: \n${overlapString}",
+
+  "---------- FLOW SERVICE": "Eine Klasse die die meiste Funktionalität rund um den Settingstab usw. enthält",
+  "flowService.progressNotice.notice initial notice": "textFlow: Baue ${this_flowName}: [oooooooooo] 0%",
+  "flowService.progressNotice.notice updated notice": "Baue ${this_flowName}: ${bar} ${percent}%",
+
+  "createSystemFolder.notice folder created": "textFlow: Systemordner wurde an folgendem Ort erzeugt: ${newSystemFolderPath}",
+
+  "createFlowDefinition.notice enter bookmark group": "textFlow: Bitte gib eine Lesezeichengruppe ein.",
+  "createFlowDefinition.notice definition leads to empty flow": "textFlow: Deine Kriterien erzeugt einen leeren Flow. Bitte prüfe sie auf Vertipper und/oder gestalte sie weniger restriktiv.",
+  "createFlowDefinition.notice random error, please check console": "textFlow: Ein Fehler ist aufgetreten, während das finalReceipe für deinen Flow erzeugt wurde. Bitte sieh in die Konsole (ctrl+alt+i), um Details zu erfahren.",
+  "createFlowDefinition.notice bookmark group not found": "textFlow: Bitte prüfe den Namen der eingegebenen Lesezeichengruppe.",
+  "getPathsByFoldersTagsProps.notice dataview not installed": "textFlow: Dataview API nicht verfügbar. Bitte stelle sicher, dass du das Dataview-Plugin installiert hast (Einstellungen > Externe Plugins > Durchsuchen)",
+  "getPathsByFoldersTagsProps.notice only one inclusion folder please": "textFlow: Bei der Ordner-Inklusion darf nur ein einzelner Ordner angegeben werden.",
+
+  "flowBuilder.notice system folder not found": "textFlow: ${textFlowSystemFolderName} konnte nicht gefunden werden.",
+  "flowBuilder.notice ingredient not found": "textFlow: Die Notiz ${ingredient} konnte nicht gefunden werden.",
+  "flowBUilder.notice UUID found in source note": "textFlow: Die Notiz\n ${ingredient}\n für Flow\n ${flowName}\n enthält mindestens eine UUID.\nDas kann durch Synchronisationsfehler verursacht werden.\n Die nächsten Schritte: \n . Exportiere ${flowName}, um den Verlust von Änderungen zu verhindern - erstelle ein Backup deines Vaults, nur um sicher zu sein. \n2. Prüfe die erwähnte Quellnotiz, ob zusätzliche Regionen hineinkopiert wurden (suche nach '<hr>'), und schneide sie aus.\n3. Prüfe die Quellnotizen dieser Regionen, um sicher zu sein, dass sie aktuell sind; falls nicht, copy/past die letzte Version aus deinem exportierten Flow.\nMach es dir einfacher, indem du Navigation per Dateiexplorer abschaltest (Settings-Tab oder Befehlspalette).\nVersuche danach noch mal einen Neubau."
+}

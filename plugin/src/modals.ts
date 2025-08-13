@@ -21,7 +21,6 @@ import { TextFlowSettingsTab } from "./settingsTab";
 import { basename } from "path";
 import { FlowService } from "./flowService";
 import { EditorView } from "@codemirror/view";
-import { identifierToKeywordKind } from "typescript";
 
 export class ExportModal extends Modal {
   constructor(app: App, private plugin: TextFlowPlugin) {
@@ -355,7 +354,7 @@ export class DeleteFlowDefModal extends Modal {
 
       // Get the file path
       const flowFilePath = normalizePath(
-        `${this.plugin.settings.systemFolderPath}/${this.flowName}.md`
+        `${this.app.vault.configDir}/plugins/${this.plugin.manifest.id}/flows/${this.flowName}.md`
       );
 
       const flowFile = this.app.vault.getAbstractFileByPath(flowFilePath);
@@ -416,6 +415,102 @@ export class DeleteFlowDefModal extends Modal {
   }
 }
 // ^CHECKED AND TESTED
+//----------- FLOW DEF DELETION
+export class RestoreFlowDefModal extends Modal {
+  constructor(
+    app: App,
+    private plugin: TextFlowPlugin,
+    private settingsTab: TextFlowSettingsTab,
+    private flowName: string
+  ) {
+    super(app);
+    this.settingsTab = settingsTab;
+    this.flowName = flowName;
+  }
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.createEl("h2", {
+      text: `Delete the definition for "${this.flowName}"`,
+    });
+    const helperText = contentEl.createEl("p", {
+      text: this.plugin.t(
+        "deleteModal.createEl.text this will delete flow file"
+      ),
+      cls: "Tag-modal-helper",
+    });
+
+    const deleteButton = new ButtonComponent(contentEl);
+    deleteButton.setClass("action-button");
+    deleteButton.setClass("action-button-delete-modal");
+    deleteButton.setWarning();
+    deleteButton.setTooltip(`Delete "${this.flowName}".`);
+    deleteButton.setIcon("trash");
+    deleteButton.onClick(async () => {
+      // sync all, just to be thorough
+      this.plugin.syncAllLeaves();
+
+      // Get the file path
+      const flowFilePath = normalizePath(
+        `${this.app.vault.configDir}/plugins/${this.plugin.manifest.id}/flows/${this.flowName}.md`
+      );
+
+      const flowFile = this.app.vault.getAbstractFileByPath(flowFilePath);
+
+      // delete file if present; in two steps to make TypeScript happy
+      if (flowFile) {
+        if (flowFile instanceof TFile) {
+          await this.app.vault.delete(flowFile);
+        }
+      }
+
+      // delete flowObject
+      delete this.plugin.settings.flows[this.flowName];
+
+      // delete entry from activeFlowObject
+      delete this.plugin.settings.activeFlowObject[this.flowName];
+
+      // delete conflictObjects for the flow
+      Object.keys(this.plugin.settings.flows).forEach((flowName) => {
+        if (this.plugin.settings.flows[flowName].conflictObject) {
+          if (
+            this.plugin.settings.flows[flowName].conflictObject[this.flowName]
+          ) {
+            delete this.plugin.settings.flows[flowName].conflictObject[
+              this.flowName
+            ];
+          }
+        }
+      });
+      new Notice(
+        this.plugin.t("deleteModal.notice successful deletion", {
+          this_flowName: this.flowName,
+        })
+      );
+
+      // if the user was about to edit this flow, unlock the name input field
+      if (this.plugin.settings.flowBuildBasket.flowName === this.flowName) {
+        this.plugin.settings.flowBuildBasket.createOrEdit = "create";
+      }
+
+      await this.plugin.saveSettings();
+      this.settingsTab.display();
+      this.close();
+    });
+
+    const cancelButton = new ButtonComponent(contentEl);
+    cancelButton.setClass("action-button");
+    cancelButton.setClass("action-button-cancel");
+    cancelButton.setCta();
+    cancelButton.setTooltip(
+      this.plugin.t("deleteModal.cancelButton cancel deletion")
+    );
+    cancelButton.setIcon("x-circle");
+    cancelButton.onClick(async () => {
+      this.settingsTab.display();
+      this.close();
+    });
+  }
+}
 
 //-------- FLOW SWITCHING
 export class FlowSwitcherModal extends Modal {
@@ -579,6 +674,8 @@ export class FlowSwitcherModal extends Modal {
         .setClass("clickable-icon")
         .onClick(async () => {
           if (goOpen === "neutral" || goOpen === "must") {
+            await this.plugin.syncAllLeaves();
+
             const file = this.app.vault.getAbstractFileByPath(
               this.plugin.settings.flows[activeFlow].flowFilePath
             );
@@ -589,7 +686,6 @@ export class FlowSwitcherModal extends Modal {
               await this.app.workspace.setActiveLeaf(leaf, { focus: true });
               // this is called in setupFlowView, too, but timing matters for the conflict check
               await this.plugin.manageActiveFlowObject();
-              this.plugin.syncAllLeaves();
             }
           }
         });
@@ -604,6 +700,10 @@ export class FlowSwitcherModal extends Modal {
             const file = this.app.vault.getAbstractFileByPath(
               this.plugin.settings.flows[activeFlow].flowFilePath
             );
+            const needsRebuild = await this.plugin.checkStats(activeFlow);
+            if (needsRebuild === true) {
+              await this.plugin.flowService.rebuildFlow(activeFlow, "switcher");
+            }
             if (file instanceof TFile) {
               const leaf = this.app.workspace.getLeaf("split");
               await leaf.openFile(file);
@@ -626,6 +726,10 @@ export class FlowSwitcherModal extends Modal {
             const file = this.app.vault.getAbstractFileByPath(
               this.plugin.settings.flows[activeFlow].flowFilePath
             );
+            const needsRebuild = await this.plugin.checkStats(activeFlow);
+            if (needsRebuild === true) {
+              await this.plugin.flowService.rebuildFlow(activeFlow, "switcher");
+            }
             if (file instanceof TFile) {
               const leaf = this.app.workspace.getLeaf("split", "horizontal");
               await leaf.openFile(file);
@@ -887,6 +991,13 @@ export class FlowSwitcherModal extends Modal {
               this.plugin.settings.flows[inactiveFlow].flowFilePath
             );
 
+            const needsRebuild = await this.plugin.checkStats(inactiveFlow);
+            if (needsRebuild === true) {
+              await this.plugin.flowService.rebuildFlow(
+                inactiveFlow,
+                "switcher"
+              );
+            }
             if (file instanceof TFile) {
               const leaf = this.app.workspace.getLeaf("tab");
               await leaf.openFile(file);
@@ -1017,7 +1128,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
               currentActiveleafID
             ].currentCursorPos;
         }
-        placeholderText = `^ ${
+        placeholderText = `? ${
           this.activeFlowName
         }: ${activePath} - (${currentActiveleafID.slice(
           0,
@@ -1030,22 +1141,18 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
     // Add instructions below the search box
     this.setInstructions([
       {
-        command: "^",
+        command: "?",
         purpose: this.plugin.t(
           "fuzzyNavigabiotnModal.info flow in active leaf"
         ),
       },
       {
-        command: "|",
+        command: "*",
         purpose: this.plugin.t("fuzzyNavigabiotnModal.info other flows"),
       },
       {
-        command: "[",
+        command: ":",
         purpose: this.plugin.t("fuzzyNavigabiotnModal.info flow names"),
-      },
-      {
-        command: "#",
-        purpose: this.plugin.t("fuzzyNavigabiotnModal.info titles"),
       },
       // Add any other custom shortcuts you plan to implement
     ]);
@@ -1069,7 +1176,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
             flowName: flowName,
             region: region,
             path: filePath,
-            searchableText: `^ ${region}`,
+            searchableText: `? ${region}`,
           });
         });
 
@@ -1089,7 +1196,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
                 cursorPos: cursorTuple[1],
                 leafID: iteratorLeafID,
                 path: cursorTuple[0],
-                searchableText: `^ ${cursorTuple[0]} - (${leafNickname}) - crs ${cursorTuple[1]}`,
+                searchableText: `? ${cursorTuple[0]} - (${leafNickname}) - crs ${cursorTuple[1]}`,
               });
             }
           }
@@ -1108,7 +1215,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
             flowName: flowName,
             region: region,
             path: filePath,
-            searchableText: `| ${region}`,
+            searchableText: `* ${region}`,
           });
         });
 
@@ -1128,7 +1235,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
                 cursorPos: cursorTuple[1],
                 leafID: iteratorLeafID,
                 path: cursorTuple[0],
-                searchableText: `| ${cursorTuple[0]} - (${leafNickname}) - crs  ${cursorTuple[1]}`,
+                searchableText: `* ${cursorTuple[0]} - (${leafNickname}) - crs  ${cursorTuple[1]}`,
               });
             }
           }
@@ -1145,7 +1252,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
         flowName: flowName,
         region: "",
         path: filePath,
-        searchableText: `[ ${flowName}`,
+        searchableText: `: ${flowName}`,
       });
 
       if (this.settings.flows[flowName].activeRegions) {
@@ -1160,7 +1267,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
                   .path,
               path: this.settings.flows[flowName].activeRegions[iteratorLeafID]
                 .path,
-              searchableText: `[ ${flowName} - ${iteratorLeafID.slice(
+              searchableText: `: ${flowName} - ${iteratorLeafID.slice(
                 0,
                 5
               )} - ${
@@ -1244,6 +1351,11 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
       const file = this.app.vault.getAbstractFileByPath(
         this.plugin.settings.flows[item.flowName].flowFilePath
       );
+
+      const needsRebuild = await this.plugin.checkStats(item.flowName);
+      if (needsRebuild === true) {
+        await this.plugin.flowService.rebuildFlow(item.flowName, "switcher");
+      }
       if (file instanceof TFile) {
         const leaf = this.app.workspace.getLeaf("tab");
         await leaf.openFile(file);
@@ -1296,10 +1408,10 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
       this.activeFlowName &&
       (item.type === "active-flow-path" || item.type === "active-flow-cursor")
     ) {
-      // If we're looking at the active leaf, just scroll
+      // If we're looking at the active leaf, just target that
       scrollToTarget(item);
     } else {
-      // if not...
+      // if not, go on a little journey...
       prepareFlowLeafAndCallScroll(item);
     }
   }

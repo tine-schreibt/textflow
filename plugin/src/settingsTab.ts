@@ -7,12 +7,11 @@ import {
   PluginSettingTab,
   setIcon,
   Setting,
+  TFile,
 } from "obsidian";
 import TextFlow from "../main";
 import * as Types from "./types";
 import { dirname } from "path";
-
-export const TEXTFLOW_SYSTEMFOLDER = "TextFlow_SystemFolder";
 
 // --- The class that defines the settings tab
 export class TextFlowSettingsTab extends PluginSettingTab {
@@ -33,39 +32,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    this.plugin.settings.firstLaunch = false;
-    this.plugin.saveSettings();
-
-    const importExportEl = containerEl.createDiv("import-export-wrapper");
-    importExportEl.createEl(
-      "a",
-      {
-        cls: "align-right-space",
-        text: "Import ",
-        href: "#",
-      },
-      (el) => {
-        el.addEventListener("click", (e) => {
-          e.preventDefault();
-          new Modals.ImportModal(this.plugin.app, this.plugin).open();
-        });
-      }
-    );
-    importExportEl.createEl(
-      "a",
-      {
-        cls: "align-right",
-        text: " Export",
-        href: "#",
-      },
-      (el) => {
-        el.addEventListener("click", (e) => {
-          e.preventDefault();
-          new Modals.ExportModal(this.plugin.app, this.plugin).open();
-        });
-      }
-    );
-
     const setUpTextFlow = containerEl.createDiv({
       cls: "headline-container",
     });
@@ -76,7 +42,11 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     let newSystemFolderParent = ".";
 
     const setSystemFolder = new Setting(setUpTextFlow)
-      .setName(this.plugin.t("setSystemFolder.setName choose existing folder"))
+      .setName(
+        this.plugin.t("setSystemFolder.setName choose existing folder", {
+          textFlowSystemFolderName: this.plugin.textFlowSystemFolderName,
+        })
+      )
       .setDesc(
         createFragment((desc) => {
           desc.createSpan({
@@ -119,7 +89,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           )
           .onClick(async () => {
             const newPath = normalizePath(
-              `${newSystemFolderParent}/${TEXTFLOW_SYSTEMFOLDER}`
+              `${newSystemFolderParent}/${this.plugin.textFlowSystemFolderName}`
             );
             this.plugin.settings.systemFolderPath = newPath;
             await this.plugin.saveSettings();
@@ -163,7 +133,11 @@ export class TextFlowSettingsTab extends PluginSettingTab {
                 new Notice(
                   this.plugin.t(
                     "setSystemFolder.addButton.notice folder successfully moved",
-                    { newSystemFolderParent: newSystemFolderParent }
+                    {
+                      textFlowSystemFolderName:
+                        this.plugin.textFlowSystemFolderName,
+                      newSystemFolderParent: newSystemFolderParent,
+                    }
                   )
                 );
               } catch (error) {
@@ -354,11 +328,11 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           )
           .addOption(
             "olText",
-            this.plugin.t("activeRegionDeco.addOption.4 outline full")
+            this.plugin.t("activeRegionDeco.addOption.3 outline full")
           )
           .addOption(
             "olMuted",
-            this.plugin.t("activeRegionDeco.addOption.3 outline muted")
+            this.plugin.t("activeRegionDeco.addOption.4 outline muted")
           )
           .setValue(this.plugin.settings.activeRegionHighlight)
           .onChange(async (value) => {
@@ -386,15 +360,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     // hide explorer deco
     const hideExplorerDeco = new Setting(qol)
       .setName(this.plugin.t("qol.hideExplorerDeco.setName hide explorer deco"))
-      .setDesc(
-        createFragment((desc) => {
-          desc.createSpan({
-            text: this.plugin.t(
-              "qol.hideExplorerDeco.setDesc what is deco for"
-            ),
-          });
-        })
-      )
       .addToggle((decoToggle) => {
         decoToggle
           .setValue(!this.plugin.settings.showExplorerDeco)
@@ -474,70 +439,86 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           });
       });
 
-    // -----------   cursor restoration  ---------------
-
-    const dontRestoreCursor = new Setting(qol)
-      .setName(
-        this.plugin.t(
-          "qol.dontRestoreCursor.setName don't auto-restore cursor pos"
-        )
-      )
+    // -----------   hash  ---------------
+    const hash = new Setting(qol)
+      .setName(this.plugin.t("qol.hash.setName hash?"))
       .setDesc(
         createFragment((desc) => {
           desc.createSpan({
-            text: this.plugin.t(
-              "qol.dontRestoreCursor.setDesc what is don't restore for"
-            ),
+            text: this.plugin.t("qol.hash.setDesc.1 when should you check?"),
+          });
+          desc.createEl("br");
+          desc.createSpan({
+            text: "mtime: ",
+            cls: "text-emphasis",
+          });
+          desc.createSpan({
+            text: this.plugin.t("qol.hash.setDesc.2 mtime"),
+          });
+          desc.createEl("br");
+          desc.createSpan({
+            text: "xxhash: ",
+            cls: "text-emphasis",
+          });
+          desc.createSpan({
+            text: this.plugin.t("qol.hash.setDesc.3 xxhash"),
           });
         })
       )
-      .addToggle((decoToggle) => {
-        decoToggle
-          .setValue(!this.plugin.settings.restoreCursor)
+      .addDropdown((dropdown) => {
+        dropdown
+          .addOption(
+            "off",
+            this.plugin.t("qol.hash.addDropdown.addOption.1 don't check")
+          )
+          .addOption("mtime", "mtime")
+          .addOption("xxhash", "xxhash")
+          .setValue(this.plugin.settings.checkExternalEdits)
           .onChange(async (value) => {
-            this.plugin.settings.restoreCursor = !value;
+            this.plugin.settings.checkExternalEdits = value;
             await this.plugin.saveSettings();
           });
       });
 
-    // -----------   hide system folder  ---------------
+       // -----------   hide system folder  ---------------
     const hidesystemFolder = new Setting(qol)
-      .setName(this.plugin.t("qol.hidesystemFolder.setName hide system folder"))
-      .setDesc(
-        createFragment((desc) => {
-          desc.createSpan({
-            text: this.plugin.t(
-              "qol.hidesystemFolder.setDesc.1 hiding is recommended"
-            ),
-          });
-          desc.createEl("br");
-          desc.createSpan({
-            text: this.plugin.t(
-              "qol.hidesystemFolder.setDesc.2 edits are still tracked"
-            ),
-          });
-          desc.createEl("br");
-          desc.createSpan({
-            text: this.plugin.t(
-              "qol.hidesystemFolder.setDesc.3 unhiding needs vault reload"
-            ),
-          });
-        })
-      )
-      .addToggle((hideSystemFolderToggle) => {
-        hideSystemFolderToggle
-          .setValue(this.plugin.settings.systemFolderHidden)
-          .onChange(async (value) => {
-            this.plugin.settings.systemFolderHidden = value;
-            if (this.plugin.settings.systemFolderPath) {
-              this.plugin.discernAndSetSystemFolderState(
-                value,
-                normalizePath(this.plugin.settings.systemFolderPath)
-              );
-            }
-            await this.plugin.saveSettings();
-          });
-      });
+    .setName(this.plugin.t("qol.hidesystemFolder.setName hide system folder", {textFlowSystemFolderName: this.plugin.textFlowSystemFolderName}))
+    .setDesc(
+      createFragment((desc) => {
+        desc.createSpan({
+          text: this.plugin.t(
+            "qol.hidesystemFolder.setDesc.1 hiding is recommended"
+          ),
+        });
+        desc.createEl("br");
+        desc.createSpan({
+          text: this.plugin.t(
+            "qol.hidesystemFolder.setDesc.2 edits are still tracked"
+          ),
+        });
+        desc.createEl("br");
+        desc.createSpan({
+          text: this.plugin.t(
+            "qol.hidesystemFolder.setDesc.3 unhiding needs vault reload"
+          ),
+        });
+      })
+    )
+    .addToggle((hideSystemFolderToggle) => {
+      hideSystemFolderToggle
+        .setValue(this.plugin.settings.systemFolderHidden)
+        .onChange(async (value) => {
+          this.plugin.settings.systemFolderHidden = value;
+          if (this.plugin.settings.systemFolderPath) {
+            this.plugin.discernAndSetSystemFolderState(
+              value,
+              normalizePath(this.plugin.settings.systemFolderPath)
+            );
+          }
+          await this.plugin.saveSettings();
+        });
+    });
+
     //^CHECKED
     // --------   CREATE / EDIT FLOWS   ----------------
     const createFlows = containerEl.createDiv({
@@ -617,13 +598,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             text: this.plugin.t(
               "defineFlow.setDesc.1 only active method will be used"
             ),
-          });
-          desc.createEl("br");
-          desc.createSpan({
-            text: this.plugin.t(
-              "defineFlow.setDesc.2 if no criteria, whole vault will be used"
-            ),
-            cls: "text-emphasis",
           });
         })
       );
@@ -938,6 +912,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       ) {
         delete this.plugin.settings.flowBuildBasket.flowCookbook.folderIncluded;
       }
+      folderIncludeInput.setPlaceholder(
+        this.plugin.t("folderIncludeInput.setPlaceholder")
+      );
       // When displaying the value
       folderIncludeInput.setValue(
         this.plugin.settings.flowBuildBasket.flowCookbook.folderIncluded
@@ -983,6 +960,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         })
       )
       .addText((chooseExcludedFolders) => {
+        chooseExcludedFolders.setPlaceholder(
+          this.plugin.t("folderExcludeInput.setPlaceholder")
+        );
         chooseExcludedFolders.setValue(
           this.plugin.settings.flowBuildBasket.flowCookbook.folderExcluded
         );
@@ -1019,6 +999,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         })
       )
       .addText((chooseIncludedTags) => {
+        chooseIncludedTags.setPlaceholder(
+          this.plugin.t("tagsIncludeInput.setPlaceholder")
+        );
         chooseIncludedTags.setValue(
           this.plugin.settings.flowBuildBasket.flowCookbook.tagsIncluded
         );
@@ -1053,6 +1036,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         })
       )
       .addText((chooseExcludedTags) => {
+        chooseExcludedTags.setPlaceholder(
+          this.plugin.t("tagsExcludeInput.setPlaceholder")
+        );
         chooseExcludedTags.setValue(
           this.plugin.settings.flowBuildBasket.flowCookbook.tagsExcluded
         );
@@ -1093,6 +1079,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         })
       )
       .addText((chooseIncludedProperties) => {
+        chooseIncludedProperties.setPlaceholder(
+          this.plugin.t("propertiesIncludeInput.setPlaceholder")
+        );
         chooseIncludedProperties.setValue(
           this.plugin.settings.flowBuildBasket.flowCookbook.propsIncluded
         );
@@ -1132,6 +1121,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         })
       )
       .addText((chooseExcludedProperties) => {
+        chooseExcludedProperties.setPlaceholder(
+          this.plugin.t("propertiesExcludeInput.setPlaceholder")
+        );
         chooseExcludedProperties.setValue(
           this.plugin.settings.flowBuildBasket.flowCookbook.propsExcluded
         );
@@ -1157,9 +1149,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     buttons.bookmarks.onClick(() => {
       // set correct definition mode and show/hide correct elements
       this.plugin.settings.flowBuildBasket.definitionMode = "bookmarks";
-      console.log(
-        this.plugin.settings.flowBuildBasket.flowCookbook.bookmarksSortOrder
-      );
       // update button
       this.plugin.flowService.radioButtonManager(
         buttons.bookmarks,
@@ -1271,13 +1260,19 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           this.plugin.settings.flowBuildBasket
         );
 
+        // save so we can pull our backup
+        this.plugin.saveSettings();
+        this.plugin.flowService.backupFlowDef(
+          this.plugin.settings.flowBuildBasket.flowName
+        );
+
         // and clean up the basket.
         await this.plugin.flowService.resetFlowBuildBasket(
           this.plugin.settings.flowBuildBasket
         );
 
-        //
         this.plugin.saveSettings();
+
         this.display();
       });
     //^CHECKED
@@ -1451,7 +1446,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         .addButton((editFlow) => {
           editFlow
             .setButtonText(
-              this.plugin.t("flowDisplay.rebuildButton.setButtonText edit")
+              this.plugin.t("flowDisplay.editButton.setButtonText edit")
             )
             .onClick(async () => {
               // putting values in the flowBuildBasket
@@ -1485,7 +1480,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           deleteDef
             .setButtonText(
               this.plugin.t(
-                "flowDisplay.rebuildButton.setButtonText delete definition"
+                "flowDisplay.deleteButton.setButtonText delete definition"
               )
             )
             .onClick(async () => {
@@ -1499,5 +1494,17 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             });
         });
     }
+    const restoreSettings = new Setting(flowDisplay)
+      .setName(this.plugin.t("restoreSettings.setName restore definitions"))
+      .addButton((rebuildButton) =>
+        rebuildButton
+          .setButtonText(
+            this.plugin.t("restoreSettings.setButtonText restore definitions")
+          )
+          .onClick(async () => {
+            await this.plugin.saveSettings();
+            this.display();
+          })
+      );
   }
 }

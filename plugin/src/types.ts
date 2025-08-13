@@ -13,13 +13,14 @@ export interface TextFlowSettings {
   firstLaunch: boolean;
   systemFolderPath?: string;
   systemFolderHidden: boolean;
+  checkExternalEdits: string;
+  hashes: { [key: string]: string }; // path: hash
   explorerDecoStyle: string[];
   showExplorerDeco: boolean;
   activeRegionHighlight: string;
   explorerDecoDropdownOpen: boolean;
   explorerListener: boolean;
   hideScrollbar: string;
-  restoreCursor: boolean;
   switcherPos: string;
   showMenuBar: boolean;
   maxMenuBar: boolean;
@@ -109,6 +110,7 @@ export interface ActiveRegion {
 
 export interface SourceFileObject {
   type: "file" | "folder";
+  mtime: number;
   path: string;
   itemName: string;
   basicUUID: string;
@@ -121,19 +123,20 @@ export interface SourceFileObject {
 // --------- them defaults --------------------
 export const DEFAULT_SETTINGS: TextFlowSettings = {
   firstLaunch: true,
-  systemFolderHidden: false,
+  systemFolderHidden: true,
+  checkExternalEdits: "off",
+  hashes: {},
   explorerDecoStyle: [
     "○",
     "●",
-    "font-size: 1.2em; color: var(--text-normal); font-family: monospace;",
-    "font-size: 1.2em; color: var(--text-accent); font-family: monospace;",
+    "large-high-contrast-neutral",
+    "large-high-contrast-unsynced",
   ],
   showExplorerDeco: true,
-  activeRegionHighlight: "accent",
+  activeRegionHighlight: "bgAccent",
   explorerDecoDropdownOpen: false,
   explorerListener: true,
   hideScrollbar: "none",
-  restoreCursor: true,
   switcherPos: "statusBar",
   showMenuBar: true,
   maxMenuBar: true,

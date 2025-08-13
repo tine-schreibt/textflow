@@ -92,11 +92,11 @@
 
 /* Make input fields wider */
 .input-width-400 .setting-item-control input {
-  width: 400px; /* or whatever width you prefer */
+  width: 300px; /* or whatever width you prefer */
 }
 
 .input-width-200 .setting-item-control input {
-  width: 300px; /* or whatever width you prefer */
+  width: 200px; /* or whatever width you prefer */
 }
 
 .advancedSettings-container {

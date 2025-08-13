@@ -131,14 +131,16 @@ export class FlowService {
 
   // stuff is sorted in the order in which it is being called from settingsTab
 
-  // -------- see if a system folder already -------
+  // -------- see if a system folder already exists -------
+  //CHECKED AND TESTED
   //CHECKED AND TESTED
   checkSystemFolder = () => {
     const systemFolder = this.app.vault
       .getAllLoadedFiles()
       .find(
         (file) =>
-          file instanceof TFolder && file.name === "TextFlow_SystemFolder"
+          file instanceof TFolder &&
+          file.name === this.plugin.textFlowSystemFolderName
       );
     return systemFolder instanceof TFolder ? systemFolder : null;
   };
@@ -196,7 +198,7 @@ export class FlowService {
     if (!name) {
       return {
         valid: false,
-        reason: "textFlow: Please give your flow a name.",
+        reason: this.plugin.t("validFlowNameCheck.error.1 missing flow name"),
       };
     }
     // if we're creating and a flow with the chosen name already exists
@@ -206,8 +208,10 @@ export class FlowService {
     ) {
       return {
         valid: false,
-        reason:
-          "textFlow: A flow by this name already exists. Please rename your new flow or delete the old one.",
+        reason: this.plugin.t(
+          "validFlowNameCheck.error.2 flow already exists",
+          { flowName: name }
+        ),
       };
     }
 
@@ -277,10 +281,10 @@ export class FlowService {
 
       // rename the file if it exists
       const oldFlowPath = normalizePath(
-        `${this.plugin.settings.systemFolderPath}/${oldFlowName}.md`
+        `${this.app.vault.configDir}/plugins/${this.plugin.manifest.id}/flows/${oldFlowName}.md`
       );
       const newFlowPath = normalizePath(
-        `${this.plugin.settings.systemFolderPath}/${newFlowName}.md`
+        `${this.app.vault.configDir}/plugins/${this.plugin.manifest.id}/flows/${newFlowName}.md`
       );
       const flowFile = this.app.vault.getAbstractFileByPath(oldFlowPath);
       // rename file if present; in two steps to make TypeScript happy
@@ -345,6 +349,8 @@ export class FlowService {
       await this.plugin.saveSettings();
     }
   };
+
+  // ^ CHECKED AND TESTED
 
   //CHECKED
   createFlowDefinition = async (
@@ -903,15 +909,6 @@ export class FlowService {
     }
 
     const filteredNotes = allNotes.where((note: Types.DVNote) => {
-      // First ensure that TextFlow_SystemFolder is always excluded; don't want to create an ourobouros
-      if (
-        this.plugin.settings.systemFolderPath &&
-        !cleanFolderExclusionArray.includes(
-          this.plugin.settings.systemFolderPath
-        )
-      ) {
-        cleanFolderExclusionArray.push(this.plugin.settings.systemFolderPath);
-      }
       return (
         // exlude folders
         !cleanFolderExclusionArray.some((path) =>
@@ -1037,7 +1034,7 @@ export class FlowService {
     settings.flows[flowBuildBasket.flowName] = {
       flowName: flowBuildBasket.flowName,
       flowFilePath: normalizePath(
-        `${this.plugin.settings.systemFolderPath}/${flowBuildBasket.flowName}.md`
+        `${this.app.vault.configDir}/plugins/${this.plugin.manifest.id}/flows/${flowBuildBasket.flowName}.md`
       ),
       definitionMode: flowBuildBasket.definitionMode,
       flowCookbook: flowBuildBasket.flowCookbook,
@@ -1190,7 +1187,7 @@ export class FlowService {
     let mapValueBasket: Types.mapValueBasket = {
       concatenatedFileContents: "",
       initialIteration: true,
-      basicUUID: "0",
+      basicUUID: "",
       invisibleUUID: "",
       flowOrder: 0,
       singleFileContent: "",
@@ -1220,7 +1217,7 @@ export class FlowService {
     mapValueBasket = {
       concatenatedFileContents: "",
       initialIteration: true,
-      basicUUID: "0",
+      basicUUID: "",
       invisibleUUID: "",
       flowOrder: 0,
       singleFileContent: "",
@@ -1244,7 +1241,11 @@ export class FlowService {
     // pre-flight check for SystemFolder
     let systemFolder = this.checkSystemFolder();
     if (!systemFolder) {
-      new Notice(this.plugin.t("flowBuilder.notice system folder not found"));
+      new Notice(
+        this.plugin.t("flowBuilder.notice system folder not found", {
+          textFlowSystemFolderName: this.plugin.textFlowSystemFolderName,
+        })
+      );
       return;
     }
 
@@ -1271,7 +1272,7 @@ export class FlowService {
               (newLeaf) => (newLeaf as any).id === leafID
             );
             if (leaf) {
-              // check if the leaf has ben properly initialised
+              // make sure the leaf has ben properly initialised
               if (!(leaf instanceof MarkdownView)) {
                 const flowFile = this.app.vault.getAbstractFileByPath(
                   this.plugin.settings.flows[flowName].flowFilePath
@@ -1408,8 +1409,15 @@ export class FlowService {
 
         // type check
         if (note instanceof TFile) {
-          const modificationTimestamp = Date.now();
           let fileContent: string = await this.app.vault.read(note);
+
+          // make a hash if we don't have one yet
+          if (this.plugin.settings.checkExternalEdits === "hash") {
+            if (!this.plugin.settings.hashes[ingredient]) {
+              const hash = this.plugin.makeHash(fileContent);
+              this.plugin.settings.hashes[ingredient] = hash;
+            }
+          }
 
           // check if there are UUIDs in there due to a sync fuckup
           let match;
@@ -1443,9 +1451,13 @@ export class FlowService {
             .replace(/^---\n[\s\S]*?\n---\n*/, "")
             .trim();
 
+          const mtime = note.stat.mtime;
+          const size = note.stat.size;
+
           // put all info in the note object
           flow.flowMap[ingredient] = {
             type: "file",
+            mtime: mtime,
             path: ingredient,
             itemName: note.name,
             basicUUID: mapValueBasket.basicUUID,
@@ -1486,6 +1498,7 @@ export class FlowService {
 
       // check, if there's already a file there
       const existingFile = this.app.vault.getAbstractFileByPath(flowFilePath);
+
       if (existingFile instanceof TFile) {
         // If file exists, modify it
         await this.app.vault.modify(
@@ -1633,6 +1646,96 @@ export class FlowService {
     } catch (error) {
       console.error(`Failed to create/modify file at ${path}:`, error);
       throw error;
+    }
+  };
+
+  backupFlowDef = async (flowName: string) => {
+    // make a clone of the flow, clean it and package it
+    const currentDate = this.getTimestamp();
+    const backupName = `${flowName} ${currentDate}`;
+    const exportObj: { [key: string]: Types.FlowDef } = {};
+    exportObj[backupName] = structuredClone(
+      this.plugin.settings.flows[flowName]
+    );
+    exportObj[backupName].flowRecipe = {};
+    exportObj[backupName].flaggedForRebuild = true;
+    exportObj[backupName].flowMap = {};
+    const output = JSON.stringify(exportObj, null, 2);
+
+    // check if we got a backup file
+    const backupPath = normalizePath(
+      `${this.app.vault.configDir}/plugins/${this.plugin.manifest.id}/backup.json`
+    );
+    const backupFile = this.app.vault.getAbstractFileByPath(backupPath);
+
+    if (!(backupFile instanceof TFile)) {
+      // if we don't, just dump the backup in
+      await this.app.vault.create(backupPath, output);
+    } else {
+      // if we do, process it so we can add stuff
+      const rawContents = await this.app.vault.read(backupFile);
+      let parsedJson;
+      try {
+        parsedJson = JSON.parse(rawContents);
+      } catch (e) {
+        console.error("Invalid JSON in backup file:", e);
+        return;
+      }
+
+      // add our backup data to the object
+      parsedJson[backupName] = exportObj[backupName];
+
+      //delete old entries
+      const flowArray = Object.keys(this.plugin.settings.flows);
+      for (let flowName of flowArray) {
+        let counter = 0;
+        const backupArray = Object.keys(parsedJson);
+        const sortedBackups = backupArray.sort();
+        for (let backup of sortedBackups) {
+          if (backup.startsWith(flowName)) {
+            counter++;
+          }
+          if (counter >= 4) {
+            delete parsedJson.backup;
+          }
+        }
+      }
+
+      // write the object back to our file
+      await this.app.vault.modify(
+        backupFile,
+        JSON.stringify(parsedJson, null, 2)
+      );
+    }
+  };
+
+  // export active flow
+
+  exportFlow = async (flowName: string) => {
+    const path = this.plugin.settings.flows[flowName].flowFilePath;
+    const file = this.app.vault.getAbstractFileByPath(path);
+    if (file instanceof TFile) {
+      const fileContent: string = await this.app.vault.read(file);
+      const stripUUIDs = (text: string): string => {
+        const uuidPattern =
+          /[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46}/g;
+        const result = text.replace(uuidPattern, "\n");
+        return result;
+      };
+      const cleanContent = stripUUIDs(fileContent);
+      const exportedFlowPath = normalizePath(
+        `${flowName}_export_${this.plugin.flowService.getTimestamp()}.md`
+      );
+      await this.plugin.flowService.safeCreateFile(
+        this.app.vault,
+        exportedFlowPath,
+        cleanContent
+      );
+      new Notice(
+        this.plugin.t("menubar.selectButton.notice successful export", {
+          exportedFlowPath: exportedFlowPath,
+        })
+      );
     }
   };
 

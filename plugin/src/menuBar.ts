@@ -819,34 +819,7 @@ export class MenuBar {
           this.plugin.t("menuBar.selectButton.setTooltip export flow")
         )
         .onClick(async () => {
-          const path = this.plugin.settings.flows[this.flowName].flowFilePath;
-          const file = this.app.vault.getAbstractFileByPath(path);
-          if (file instanceof TFile) {
-            const fileContent: string = await this.app.vault.read(file);
-            const stripUUIDs = (text: string): string => {
-              const uuidPattern =
-                /[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46}/g;
-              const result = text.replace(uuidPattern, "\n");
-              return result;
-            };
-            const cleanContent = stripUUIDs(fileContent);
-            console.log("flowName: ", this.flowName);
-            const exportedFlowPath = normalizePath(
-              `${
-                this.flowName
-              }_export_${this.plugin.flowService.getTimestamp()}.md`
-            );
-            await this.plugin.flowService.safeCreateFile(
-              this.app.vault,
-              exportedFlowPath,
-              cleanContent
-            );
-            new Notice(
-              this.plugin.t("menubar.selectButton.notice successful export", {
-                exportedFlowPath: exportedFlowPath,
-              })
-            );
-          }
+          this.plugin.flowService.exportFlow(this.flowName)
         });
 
       // a chevron to minimise
