@@ -270,6 +270,7 @@ export class FlowService {
 
   renameFlow = async () => {
     // if the user is renaming the flow, handle that first
+    this.plugin.textFlowOperation = true;
     if (
       this.plugin.settings.flowBuildBasket.flowName !=
       this.plugin.settings.flowBuildBasket.oldFlowName

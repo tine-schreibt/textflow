@@ -907,35 +907,6 @@ ${pseudoElement}
           oldParentFolder = file.path;
         }
 
-        // check if the user renamed a flow
-        Object.keys(this.settings.flows).forEach(async (flowName) => {
-          if (
-            this.settings.flows[flowName].flowFilePath ===
-            normalizePath(oldPath)
-          ) {
-            new Notice(
-              this.t(
-                "main.renameListener.notice use settings to rename / export to export"
-              ),
-              0
-            );
-            const flowFile = this.app.vault.getAbstractFileByPath(file.path);
-            if (flowFile) {
-              if (flowFile instanceof TFile) {
-                this.textFlowOperation = true;
-                await this.app.vault.rename(flowFile, oldPath);
-                this.textFlowOperation = false;
-                new Notice(
-                  this.t(
-                    "main.renameListener.notice old file name was restored"
-                  )
-                );
-              }
-            }
-            return;
-          }
-        });
-
         // Check if the user moved the system folder
         if (this.settings.systemFolderPath === normalizePath(oldPath)) {
           // update system folder data
@@ -2330,6 +2301,9 @@ ${pseudoElement}
   // ------ Functions: Manage persistent cursor position
   manageCursorPos = (flowName: string, leafID: string) => {
     if (this.settings.flows[flowName].activeRegions) {
+      if (!this.settings.flows[flowName].activeRegions[leafID]) {
+        return;
+      }
       const currentLeaf = this.settings.flows[flowName].activeRegions[leafID];
 
       // check because of possible undefined

@@ -480,44 +480,48 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           });
       });
 
-       // -----------   hide system folder  ---------------
+    // -----------   hide system folder  ---------------
     const hidesystemFolder = new Setting(qol)
-    .setName(this.plugin.t("qol.hidesystemFolder.setName hide system folder", {textFlowSystemFolderName: this.plugin.textFlowSystemFolderName}))
-    .setDesc(
-      createFragment((desc) => {
-        desc.createSpan({
-          text: this.plugin.t(
-            "qol.hidesystemFolder.setDesc.1 hiding is recommended"
-          ),
-        });
-        desc.createEl("br");
-        desc.createSpan({
-          text: this.plugin.t(
-            "qol.hidesystemFolder.setDesc.2 edits are still tracked"
-          ),
-        });
-        desc.createEl("br");
-        desc.createSpan({
-          text: this.plugin.t(
-            "qol.hidesystemFolder.setDesc.3 unhiding needs vault reload"
-          ),
-        });
-      })
-    )
-    .addToggle((hideSystemFolderToggle) => {
-      hideSystemFolderToggle
-        .setValue(this.plugin.settings.systemFolderHidden)
-        .onChange(async (value) => {
-          this.plugin.settings.systemFolderHidden = value;
-          if (this.plugin.settings.systemFolderPath) {
-            this.plugin.discernAndSetSystemFolderState(
-              value,
-              normalizePath(this.plugin.settings.systemFolderPath)
-            );
-          }
-          await this.plugin.saveSettings();
-        });
-    });
+      .setName(
+        this.plugin.t("qol.hidesystemFolder.setName hide system folder", {
+          textFlowSystemFolderName: this.plugin.textFlowSystemFolderName,
+        })
+      )
+      .setDesc(
+        createFragment((desc) => {
+          desc.createSpan({
+            text: this.plugin.t(
+              "qol.hidesystemFolder.setDesc.1 hiding is recommended"
+            ),
+          });
+          desc.createEl("br");
+          desc.createSpan({
+            text: this.plugin.t(
+              "qol.hidesystemFolder.setDesc.2 edits are still tracked"
+            ),
+          });
+          desc.createEl("br");
+          desc.createSpan({
+            text: this.plugin.t(
+              "qol.hidesystemFolder.setDesc.3 unhiding needs vault reload"
+            ),
+          });
+        })
+      )
+      .addToggle((hideSystemFolderToggle) => {
+        hideSystemFolderToggle
+          .setValue(this.plugin.settings.systemFolderHidden)
+          .onChange(async (value) => {
+            this.plugin.settings.systemFolderHidden = value;
+            if (this.plugin.settings.systemFolderPath) {
+              this.plugin.discernAndSetSystemFolderState(
+                value,
+                normalizePath(this.plugin.settings.systemFolderPath)
+              );
+            }
+            await this.plugin.saveSettings();
+          });
+      });
 
     //^CHECKED
     // --------   CREATE / EDIT FLOWS   ----------------
@@ -1230,7 +1234,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     saveButton
       .setButtonText(this.plugin.t("saveButton.setButtonText save flow def"))
       .onClick(async (buttonEl: MouseEvent) => {
-        // if the user is renaming the flow:
         this.plugin.flowService.renameFlow();
 
         // if checks and flow creation haven't been performed by the preview button
