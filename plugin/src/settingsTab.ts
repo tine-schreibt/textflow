@@ -32,7 +32,19 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    const setUpTextFlow = containerEl.createDiv({
+    const basicSettings = containerEl.createEl("details", {
+      cls: "advancedSettings-container",
+    });
+
+    basicSettings
+      .createEl("summary", {
+        cls: "advancedSettings-headline",
+      })
+      .createSpan({
+        text: this.plugin.t("basicSettings.headline"),
+      });
+
+    const setUpTextFlow = basicSettings.createDiv({
       cls: "headline-container",
     });
 
@@ -343,7 +355,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       });
 
     // ------------ The Quality of Life stuff
-    const qol = setUpTextFlow.createEl("details", {
+    const qol = containerEl.createEl("details", {
       cls: "advancedSettings-container",
     });
 
@@ -457,11 +469,19 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           });
           desc.createEl("br");
           desc.createSpan({
-            text: "xxhash: ",
+            text: "mtime + hash: ",
             cls: "text-emphasis",
           });
           desc.createSpan({
             text: this.plugin.t("qol.hash.setDesc.3 xxhash"),
+          });
+          desc.createEl("br");
+          desc.createSpan({
+            text: "hash: ",
+            cls: "text-emphasis",
+          });
+          desc.createSpan({
+            text: this.plugin.t("qol.hash.setDesc.4 always hash"),
           });
         })
       )
@@ -472,7 +492,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             this.plugin.t("qol.hash.addDropdown.addOption.1 don't check")
           )
           .addOption("mtime", "mtime")
-          .addOption("xxhash", "xxhash")
+          .addOption("hash", "mitme + hash")
+          .addOption("always hash", "hash")
           .setValue(this.plugin.settings.checkExternalEdits)
           .onChange(async (value) => {
             this.plugin.settings.checkExternalEdits =

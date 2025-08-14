@@ -1413,7 +1413,7 @@ export class FlowService {
           let fileContent: string = await this.app.vault.read(note);
 
           // make a hash if we don't have one yet
-          if (this.plugin.settings.checkExternalEdits === "xxhash") {
+          if (this.plugin.settings.checkExternalEdits === "mtime+hash") {
             if (!this.plugin.settings.hashes[ingredient]) {
               const hash = this.plugin.makeHash(fileContent);
               this.plugin.settings.hashes[ingredient] = hash;

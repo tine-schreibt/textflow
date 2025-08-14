@@ -52,8 +52,8 @@ export default class TextFlowPlugin extends Plugin {
   isRebuilding: boolean = false; // to prevent superfluous feedback
   isLoading: boolean = true; // suspend create listener while we're setting up
   textFlowOperation: boolean = false; // set mostly when syncing to prevent doom spiral of the modify listener
-  lastActivity: number = Date.now();
-  inactivityThreshold: number = 5 * 60 * 1000; // five minutes
+  lastActivity: { [key: string]: number } = {};
+  inactivityThreshold: number = 5 * 60 * 1000;
 
   // ---------------- Global objects and variables -------------------------
 
@@ -839,7 +839,6 @@ ${pseudoElement}
     // the context menu for rebuild flagging
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file) => {
-        this.lastActivity = Date.now();
         if (this.settings.checkExternalEdits != "no") return;
         const baseName = basename(file.path);
         menu.addItem((item) => {
@@ -900,17 +899,24 @@ ${pseudoElement}
       })
     );
 
-    // ---------------- File modification -------------------------------
-    // This event fires whenever any file in the vault is modified
-    // the textFlowOperation flag prevents a doom spiral
-    //CHECKED AND TESTED
-
+    // modify events
     this.registerEvent(
       this.app.vault.on("modify", (file: TAbstractFile) => {
         if (this.textFlowOperation) return;
 
         if (file instanceof TFile) {
-          Object.keys(this.settings.flows).forEach((flowName) => {
+          for (let flowName of Object.keys(this.settings.flows)) {
+            const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+            if (view) {
+              if (view.file) {
+                if (view.file.path) {
+                  if (view.file.path.endsWith(`${flowName}.md`)) {
+                    continue;
+                    // because the edit tracker or cursor tracker will handle it
+                  }
+                }
+              }
+            }
             if (
               !this.settings.flows[flowName].flaggedForRebuild &&
               this.settings.flows[flowName].flowMap[file.path]
@@ -918,11 +924,10 @@ ${pseudoElement}
               this.settings.flows[flowName].flaggedForRebuild = true;
               this.saveSettings();
             }
-          });
+          }
         }
       })
     );
-    //^CHECKED AND TESTED
 
     // Rename events
     //CHECKED AND TESTED
@@ -1123,13 +1128,9 @@ ${pseudoElement}
 
     this.registerDomEvent(window, "focus", async () => {
       const now = Date.now();
-      if (now - this.lastActivity > this.inactivityThreshold) {
-        Object.keys(this.settings.activeFlowObject).forEach(
-          async (flowName) => {
-            await this.checkStatsForFlow(flowName);
-          }
-        );
-      }
+      Object.keys(this.settings.activeFlowObject).forEach(async (flowName) => {
+        await this.checkStatsForFlow(flowName);
+      });
     });
     //^CHECKED AND TESTED
 
@@ -1166,7 +1167,6 @@ ${pseudoElement}
     //CHECKED AND TESTED
     this.registerEvent(
       this.app.workspace.on("layout-change", () => {
-        this.lastActivity = Date.now();
         if (this.app.workspace.getLeavesOfType("markdown").length === 0) {
           // We're definitely in the "empty leaf" state
           this.manageActiveFlowObject();
@@ -1234,12 +1234,36 @@ ${pseudoElement}
               clearTimeout(debounceTimeout);
             }
 
-            debounceTimeout = setTimeout(() => {
+            debounceTimeout = setTimeout(async () => {
               if (!plugin.settings.flows[flowName]) {
                 throw new Error(`Flow ${flowName} not found in settings`);
               }
+
+              if (plugin.settings.checkExternalEdits != "no") {
+                if (
+                  Date.now() - plugin.lastActivity[flowName] >
+                  plugin.inactivityThreshold
+                ) {
+                  const activeRegionPath =
+                    plugin.settings.flows[flowName].activeRegions[leafID].path;
+                  if (activeRegionPath) {
+                    const flowHasEdits = await plugin.checkStatsForFlow(
+                      flowName
+                    );
+                    if (flowHasEdits) {
+                      plugin.flowService.rebuildFlow(flowName, "menuBar");
+                      new Notice(
+                        plugin.t("cursorTracker.notice", {
+                          flowName: flowName,
+                        })
+                      );
+                      plugin.lastActivity[flowName] = Date.now();
+                    }
+                  }
+                }
+              }
               // this sets off a chain of functions which updates the active Region
-              plugin.checkActiveRegion(
+              await plugin.checkActiveRegion(
                 plugin.settings.flows[flowName],
                 leafID,
                 cursorOffset,
@@ -1346,7 +1370,7 @@ ${pseudoElement}
             clearTimeout(debounceTimeout);
           }
 
-          debounceTimeout = setTimeout(() => {
+          debounceTimeout = setTimeout(async () => {
             // Prevent rebuild frong registering as text change
             if (plugin.settings.flows[flowName].isFreshBuild) {
               plugin.settings.flows[flowName].isFreshBuild = false;
@@ -1371,6 +1395,27 @@ ${pseudoElement}
                 activeRegionPath
               )
             ) {
+              // if the user wants checks, do checks if there's been inactivity
+              if (plugin.settings.checkExternalEdits != "no") {
+                if (
+                  Date.now() - plugin.lastActivity[flowName] >
+                  plugin.inactivityThreshold
+                ) {
+                  const fileHasEdits = await plugin.checkStatsForNote(
+                    flowName,
+                    activeRegionPath
+                  );
+                  if (fileHasEdits) {
+                    new Notice(
+                      plugin.t("textChangeListener.notice", {
+                        path: activeRegionPath,
+                        flowName: flowName,
+                      })
+                    );
+                    return;
+                  }
+                }
+              }
               // Add to unsynced array
               plugin.settings.flows[flowName].unsyncedRegionsArray.push(
                 activeRegionPath
@@ -1418,7 +1463,7 @@ ${pseudoElement}
         delete this.listenerBasket[`${leafID}-changes`];
       }
       new Notice(
-        this.t("TextChangeListener.notice error setting up listener"),
+        this.t("textChangeListener.notice error setting up listener"),
         10000
       );
     }
@@ -1509,7 +1554,6 @@ ${pseudoElement}
         return;
       }
 
-      this.lastActivity = Date.now();
       // Prevent Obsidian's default click action immediately.
       event.preventDefault();
       event.stopPropagation();
@@ -1715,8 +1759,20 @@ ${pseudoElement}
     this.addWriteProtection(view, "sync");
 
     // check if the flow needs a rebuild due to changes from outside
-    await this.checkStatsForFlow(flowName);
-    this.lastActivity = Date.now();
+    if (this.settings.checkExternalEdits != "no") {
+      // if the flow has been newly opened
+      if (!this.lastActivity[flowName]) {
+        await this.checkStatsForFlow(flowName);
+      } else if (
+        // if it's been dormant for at least five minutes
+        this.lastActivity[flowName] - Date.now() >
+        this.inactivityThreshold
+      ) {
+        await this.checkStatsForFlow(flowName);
+      }
+      // update activity
+      this.lastActivity[flowName] = Date.now();
+    }
     if (this.settings.flows[flowName].flaggedForRebuild) {
       this.toggleEditable(view, false);
       await this.flowService.rebuildFlow(flowName, "setupFlowView");
@@ -2001,7 +2057,6 @@ ${pseudoElement}
   // CHECKED AND TESTED
   // if a flow is replaced by a non-flow
   closeFlow = async (view: MarkdownView) => {
-    this.lastActivity = Date.now();
     await this.syncAllLeaves();
     this.removeCursorListener(view);
     this.removeTextChangeListener(view);
@@ -2233,20 +2288,6 @@ ${pseudoElement}
             );
             return;
           } else if (sourceFile instanceof TFile && startOfRegion) {
-            const fileHasEdits = await this.checkStatsForNote(flowName, path);
-            if (fileHasEdits) {
-              const timestamp = this.flowService.getTimestamp(
-                sourceFile.stat.mtime
-              );
-              new Notice(
-                this.t("syncBackToSource.notice", {
-                  path: path,
-                  flowName: flowName,
-                  timestamp: timestamp,
-                })
-              );
-              return;
-            }
             const regionSlice = text.slice(startOfRegion + 1, endOfRegion);
             try {
               // Read existing content
@@ -2290,7 +2331,7 @@ ${pseudoElement}
       this.settings.flows[flowName].flowMap[path].mtime = file.stat.mtime;
       this.saveSettings();
     }
-    if (this.settings.checkExternalEdits === "xxhash") {
+    if (this.settings.checkExternalEdits === "mtime+hash") {
       let fileContent: string = await this.app.vault.read(file);
       const newHash = this.makeHash(fileContent);
       this.settings.hashes[path] = newHash;
@@ -2306,56 +2347,40 @@ ${pseudoElement}
     if (this.settings.checkExternalEdits === "no") return;
     if (this.settings.flows[flowName].flaggedForRebuild) return;
     let changed = false;
-    let didInitialHashing = false;
     const interruptablePathArray = Object.keys(
       this.settings.flows[flowName].flowMap
     );
     for (let path of interruptablePathArray) {
       const sourceFile = this.app.vault.getFileByPath(path);
-      if (!(sourceFile instanceof TFile)) continue;
-      // get the mtimes to compare
+      if (!(sourceFile instanceof TFile)) continue; // get the mtimes to compare
       const oldMtime = this.settings.flows[flowName].flowMap[path].mtime;
       const newMtime = sourceFile.stat.mtime;
 
-      // leave some leniency because some OS aren't that accurate
-      if (Math.abs(newMtime - oldMtime) > this.MTIME_EPSILON) {
+      // if user uses shitty sync service
+      if (this.settings.checkExternalEdits === "always hash") {
+        changed = await this.checkHash(sourceFile, path, flowName);
+      }
+      // else leave some leniency because some OS aren't that accurate
+      else if (Math.abs(newMtime - oldMtime) > this.MTIME_EPSILON) {
         if (this.settings.checkExternalEdits === "mtime") {
-          // if user is fine with false positives, flag here
-          this.settings.flows[flowName].flaggedForRebuild = true;
+          // if user is fine with false positives, rebuild or flag here
+          if (this.settings.activeFlowObject[flowName]) {
+            this.flowService.rebuildFlow(flowName, "switcher");
+          } else {
+            this.settings.flows[flowName].flaggedForRebuild = true;
+          }
           new Notice(
-            this.t("main.checkStats check stats feedback", {
+            this.t("main.checkStats check stats feedback mtime", {
               path: path,
             })
           );
           changed = true;
         } else {
-          let fileContent: string = await this.app.vault.read(sourceFile);
-          const newHash = this.makeHash(fileContent);
-          // if there's no hash yet, it's because user just activated hashing
-          // so do a quick once-over for the flow
-          if (!this.settings.hashes[path] && !didInitialHashing) {
-            await this.initialHashing(flowName);
-            didInitialHashing = true;
-          }
-          if (newHash === this.settings.hashes[path]) {
-            // if contents are the same, just update mtime
-            this.settings.flows[flowName].flowMap[path].mtime = newMtime;
-          } else {
-            // if there's been an actual edit to the content, flag the flow
-            this.settings.flows[flowName].flaggedForRebuild = true;
-            new Notice(
-              this.t("main.checkStats check stats feedback", {
-                path: path,
-              })
-            );
-            this.settings.hashes[path] = newHash;
-            changed = true;
-          }
+          changed = await this.checkHash(sourceFile, path, flowName);
         }
       }
     }
     this.saveSettings();
-    this.lastActivity = Date.now();
     return changed;
   };
 
@@ -2364,16 +2389,15 @@ ${pseudoElement}
 
     if (this.settings.flows[flowName].flaggedForRebuild) return;
     let changed = false;
-    let didInitialHashing = false;
     const sourceFile = this.app.vault.getFileByPath(path);
     if (!(sourceFile instanceof TFile)) return;
-    // get the mtimes to compare
+
     const oldMtime = this.settings.flows[flowName].flowMap[path].mtime;
     const newMtime = sourceFile.stat.mtime;
 
-    // leave some leniency because some OS aren't that accurate
-    if (Math.abs(newMtime - oldMtime) > this.MTIME_EPSILON) {
-      // if user chose to just check mtime, flag here
+    if (this.settings.checkExternalEdits === "always hash") {
+      changed = await this.checkHash(sourceFile, path, flowName);
+    } else if (Math.abs(newMtime - oldMtime) > this.MTIME_EPSILON) {
       if (this.settings.checkExternalEdits === "mtime") {
         Object.keys(this.settings.flows).forEach((flowName) => {
           if (!this.settings.flows[flowName].flaggedForRebuild) {
@@ -2391,47 +2415,12 @@ ${pseudoElement}
         changed = true;
       } else {
         // if they want the hash check, do that
-        let fileContent: string = await this.app.vault.read(sourceFile);
-        const newHash = this.makeHash(fileContent);
-
-        // if there's no hash yet, it's because user just activated hashing
-        // so do a quick once-over for the flow
-        if (!this.settings.hashes[path] && !didInitialHashing) {
-          await this.initialHashing(flowName);
-          didInitialHashing = true;
-        }
-
-        // if contents are the same, just update mtime
-        if (newHash === this.settings.hashes[path]) {
-          this.settings.flows[flowName].flowMap[path].mtime = newMtime;
-        } else {
-          // if there's been an actual edit to the content, flag the flow
-          Object.keys(this.settings.flows).forEach((flowName) => {
-            if (!this.settings.flows[flowName].flaggedForRebuild) {
-              if (this.settings.flows[flowName].flowMap[path]) {
-                this.settings.flows[flowName].flaggedForRebuild = true;
-              }
-            }
-          });
-          this.settings.flows[flowName].flaggedForRebuild = true;
-          new Notice(
-            this.t("main.checkStats check stats feedback", {
-              path: path,
-            })
-          );
-          this.settings.hashes[path] = newHash;
-          changed = true;
-        }
+        changed = await this.checkHash(sourceFile, path, flowName);
       }
     }
 
     this.saveSettings();
-    this.lastActivity = Date.now();
     return changed;
-  };
-
-  makeHash = (text: string) => {
-    return XXH.h64(text, 0x0).toString(16);
   };
 
   initialHashing = async (flowName: string) => {
@@ -2446,6 +2435,41 @@ ${pseudoElement}
       }
     }
     await this.saveSettings();
+  };
+
+  makeHash = (text: string) => {
+    return XXH.h64(text, 0x0).toString(16);
+  };
+
+  checkHash = async (sourceFile: TFile, path: string, flowName: string) => {
+    let changed = false;
+    let fileContent: string = await this.app.vault.read(sourceFile);
+    const newHash = this.makeHash(fileContent);
+    // if there's no hash yet, it's because user just activated hashing
+    // so do a quick once-over for the flow
+    if (!this.settings.hashes[path]) {
+      await this.initialHashing(flowName);
+    }
+    if (newHash === this.settings.hashes[path]) {
+      // if contents are the same, just update mtime
+      const newMtime = sourceFile.stat.mtime;
+      this.settings.flows[flowName].flowMap[path].mtime = newMtime;
+    } else {
+      // if there's been an actual edit to the content, flag the flow
+      if (this.settings.activeFlowObject[flowName]) {
+        this.flowService.rebuildFlow(flowName, "switcher");
+      } else {
+        this.settings.flows[flowName].flaggedForRebuild = true;
+      }
+      new Notice(
+        this.t("main.checkStats check stats feedback hash", {
+          path: path,
+        })
+      );
+      this.settings.hashes[path] = newHash;
+      changed = true;
+    }
+    return changed;
   };
 
   //CHECKED AND TESTED
@@ -2610,15 +2634,23 @@ ${pseudoElement}
 
       // double check because active region could come back undefined
       if (activeRegionObject) {
-        // if the user wants checks, do checks, if there's been inactivity
-        if (this.settings.checkExternalEdits != "no") {
-          const now = Date.now();
-          if (now - this.lastActivity > this.inactivityThreshold) {
-            this.checkStatsForFlow(flow.flowName);
+        const activeRegionPath =
+          this.settings.flows[flow.flowName].activeRegions[leafID].path;
+        if (activeRegionPath) {
+          const flowHasEdits = await this.checkStatsForNote(
+            flow.flowName,
+            activeRegionPath
+          );
+          if (flowHasEdits) {
+            this.flowService.rebuildFlow(flow.flowName, "menuBar");
+            new Notice(
+              this.t("cursorTracker.notice", {
+                flowName: flow.flowName,
+              })
+            );
+            this.lastActivity[flow.flowName] = Date.now();
           }
-          this.lastActivity = Date.now();
         }
-
         flow.activeRegions[leafID] = activeRegionObject;
         // then check if the active region overlaps and sent a notice
         if (activeRegionObject.path) {
@@ -2884,7 +2916,6 @@ ${pseudoElement}
           this.checkStatsForFlow(flowName);
         });
       }
-      this.lastActivity = Date.now();
 
       // ---- Set up UI
       // ----------------------------------------------

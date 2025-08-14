@@ -6,6 +6,8 @@
 
   "-------- SETTINGS TAB": "This is the class in which the user chooses their settings for the plugin.-------------",
 
+  "basicSettings.headline": "Basic settings",
+
   "------ SET SYSTEM FOLDER": "Here the user chooses which path the system folder should have ----------------",
   "setSystemFolder.setName choose existing folder": "Choose an existing folder in which to put textFlow's system folder - ${textFlowSystemFolderName}.",
   "setSystemFolder.setDesc.1 what is system folder used for": "TextFlow needs a (hidden) system folder to store its flows in.",
@@ -52,9 +54,10 @@
   "qol.scrollbar.addDropdown.addOption.3 don't hide": "Don't hide",
 
   "qol.hash.setName hash?": "Check for external edits",
-  "qol.hash.setDesc.1 when should you check?": "If you often edit this vault on machines that can't run textFlow (like your phone), you should activate this.",
-  "qol.hash.setDesc.2 mtime": "textFlow will compare your source notes' modification time.",
-  "qol.hash.setDesc.3 xxhash": "If mtime produces too many false positives (unnecessary rebuilds) for you, select 'xxhash', so textFlow will also compare the hashed contents of a note.",
+  "qol.hash.setDesc.1 when should you check?": "If you also edit this vault on devices that can't run textFlow (i.e. your phone).",
+  "qol.hash.setDesc.2 mtime": "Fast and safe enough for 99% of use cases - modification dates will be compared.",
+  "qol.hash.setDesc.3 xxhash": "Best if you get unnecessary rebuilds - compares hash if mtime differs.",
+  "qol.hash.setDesc.4 always hash": "Best if you don't trust your sync tool - always compares hashes.",
   "qol.hash.addDropdown.addOption.1 don't check": "No checks",
 
   "qol.hidesystemFolder.setName hide system folder": "Hide ${textFlowSystemFolderName}",
@@ -215,12 +218,15 @@
   "main.renameListener.notice old file name was restored": "textFlow: Old file name/path has been restored.",
   "main.renameListener.notice new element created in system folder; please remove": "textFlow: You just created a new element in the system folder. Please move it somewhere else.",
 
-  "main.cursorListener.notice tracking failed": "textFlow:\n Cursor tracking failed for ${flowName}!\nPlease close and reopen the flow.\nIf this error persists, reload your vault.",
+  "main.cursorListener.notice tracking failed": "textFlow: Cursor tracking failed for ${flowName}!\nPlease close and reopen the flow.\nIf this error persists, reload your vault.",
+  "cursorTracker.notice": "textFlow: External edit found. Flow ${flowName} was rebuilt.",
 
-  "main.checkStats check stats feedback": "textFlow: External edit detected for ${path}; flows have been flagged for rebuild.",
+  "main.checkStats check stats feedback mtime": "textFlow: mtime differs for ${path}; flows have been flagged for rebuild.",
+  "main.checkStats check stats feedback hash": "textFlow: hash differs for ${path}; flows have been flagged for rebuild.",
   "main.checkStats no changes": "textFlow: No external edits have been detected.",
 
-  "TextChangeListener.notice error setting up listener": "textFlow Plugin: Error setting up change tracking.\nPlease report this issue on github.",
+  "textChangeListener.notice error setting up listener": "textFlow Plugin: Error setting up change tracking.\nPlease report this issue on github.",
+  "textChangeListener.notice hash interrupt": "textFlow: The source note of the active region - ${path} - has been edited externally after you (re)built flow ${flowName}. \nPlease check if you really want to overwrite it. \nProcedure for overwriting: \n1. Copy the edits you just made. \n2. Rebuild the flow. \n3. Paste the edits back in. \n4. Sync the flow.",
 
   "activateFlow.notice flow name not found": "textFlow: No flow with name ${flowName} found.",
   "activateFlow.notice flow file not found": "textFlow: Flow file not found: ${flow.flowFilePath}\nTry clicking the 'Move' button for the system folder location (in settings).",

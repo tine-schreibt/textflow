@@ -31,7 +31,7 @@ export interface TextFlowSettings {
 
 // sub-types of TextFlowSettings
 
-export type ExternalEditsType = "no" | "mtime" | "xxhash";
+export type ExternalEditsType = "no" | "mtime" | "mtime+hash" | "always hash";
 
 export type DecorationEntry = [
   symbol1: string,
