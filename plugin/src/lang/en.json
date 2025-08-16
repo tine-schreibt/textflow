@@ -39,7 +39,7 @@
   "activeRegionDeco.addOption.4 outline muted": "Outline: Muted text colour.",
 
   "-------- QUALITY OF LIVE SETTINGS": "Some settings to clean up/debug the UI",
-  "qol.createSpan.text quality of life settings": "Some quality of life settings",
+  "qol.createSpan.text quality of life settings": "Adanced settings",
 
   "qol.hideExplorerDeco.setName hide explorer deco": "Hide explorer deco",
 
@@ -213,17 +213,20 @@
 
   "main.fileMenuListener.context flag flows for rebuild": "textFlow: Flag flows including \"${baseName}\" for rebuild",
 
-  "main.renameListener.notice don't rename system folder": "textFlow: Please don't rename textFlow's system folder. You can hide it in settings.",
-  "main.renameListener.notice use settings to rename / export to export": "textFlow: Please use textFlow settings to rename flows / the export function to get them out of the system folder.\nIf you moved textFlow's system folder manually, please reload your vault to restore proper syncing.",
+  "main.renameListener.notice don't rename system folder": "textFlow: Please don't rename ${textFlowSystemFolderName}. Revert the change so textFlow can work again.",
+  "main.renameListener.notice use settings to rename": "textFlow: Please use textFlow settings to rename flows.",
+  "main.renameListener.notice use export to export": "textFlow: Please use the export function to get a copy of your flow outside the textFlowSystemFolder (see menu bar or command palette).",
   "main.renameListener.notice old file name was restored": "textFlow: Old file name/path has been restored.",
   "main.renameListener.notice new element created in system folder; please remove": "textFlow: You just created a new element in the system folder. Please move it somewhere else.",
 
   "main.cursorListener.notice tracking failed": "textFlow: Cursor tracking failed for ${flowName}!\nPlease close and reopen the flow.\nIf this error persists, reload your vault.",
-  "cursorTracker.notice": "textFlow: External edit found. Flow ${flowName} was rebuilt.",
+  "main.cursorTracker.notice": "textFlow: External edit found. Flow ${flowName} was rebuilt.",
 
   "main.checkStats check stats feedback mtime": "textFlow: mtime differs for ${path}; flows have been flagged for rebuild.",
   "main.checkStats check stats feedback hash": "textFlow: hash differs for ${path}; flows have been flagged for rebuild.",
   "main.checkStats no changes": "textFlow: No external edits have been detected.",
+
+  "main.checkStatsForNote source note not found": "textFlow: The source note for the active region could not be found at ${path}. Please copy the active region to prevent data loss and make sure the source note wasn't accidentally deleted before you rebuild the flow.",
 
   "textChangeListener.notice error setting up listener": "textFlow Plugin: Error setting up change tracking.\nPlease report this issue on github.",
   "textChangeListener.notice hash interrupt": "textFlow: The source note of the active region - ${path} - has been edited externally after you (re)built flow ${flowName}. \nPlease check if you really want to overwrite it. \nProcedure for overwriting: \n1. Copy the edits you just made. \n2. Rebuild the flow. \n3. Paste the edits back in. \n4. Sync the flow.",
@@ -256,5 +259,8 @@
 
   "flowBuilder.notice system folder not found": "textFlow: ${textFlowSystemFolderName} not found.",
   "flowBuilder.notice ingredient not found": "textFlow: The note at ${ingredient} couldn't be found.",
-  "flowBUilder.notice UUID found in source note": "textFlow: The note\n ${ingredient}\n of flow\n ${flowName}\n contains at least one UUID.\n This can come about due to sync errors.\nHow to proceed safely: \n1. Export ${flowName} to prevent any loss of edits and backup your vault, just to be safe.\n2. Check the mentioned note for any additional regions that were accidentally copied into it (search for '<hr>'), and cut them out.\n3. Check the source notes of these regions to make sure they are up to date; if they aren't, copy/paste the latest version from your exported flow.\nTo make all of this easier, turn off navigation via file explorer (in the settings tab or command palette).\nAfterwards try another rebuild."
+  "flowBUilder.notice UUID found in source note": "textFlow: The note\n ${ingredient}\n of flow\n ${flowName}\n contains at least one UUID.\n This can come about due to sync errors.\nHow to proceed safely: \n1. Export ${flowName} to prevent any loss of edits and backup your vault, just to be safe.\n2. Check the mentioned note for any additional regions that were accidentally copied into it (search for '<hr>'), and cut them out.\n3. Check the source notes of these regions to make sure they are up to date; if they aren't, copy/paste the latest version from your exported flow.\nTo make all of this easier, turn off navigation via file explorer (in the settings tab or command palette).\nAfterwards try another rebuild.",
+
+  "----------- The Blurb": " This is added as README to the system folder ---------------------------",
+  "readme": "This folder is textFlow's system folder. \n \n **What it should contain:**\n - this README \n - your flows\n - a file called textFlowBackup.json (not visible in Obsidian's file explorer)\n \n **You may:** \n - delete flow files from this folder\n - move this entire folder to a different location\n \n **But please do not:** \n - add files to this folder\n - rename this folder\n - rename files in this folder (to rename flows, use the settings tab)\n \n **For further information, please refer to the readme:**"
 }

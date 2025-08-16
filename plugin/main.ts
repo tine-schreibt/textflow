@@ -57,7 +57,7 @@ export default class TextFlowPlugin extends Plugin {
 
   // ---------------- Global objects and variables -------------------------
 
-  textFlowSystemFolderName = "_textFlow_";
+  textFlowSystemFolderName = "textFlowSystemFolder";
 
   // localisation
   private i18n: Record<string, any> = {};
@@ -712,11 +712,7 @@ ${pseudoElement}
 
     for (let flowName of flowArray) {
       // get the file list
-      let key = this.settings.flows[flowName].flowRecipe.bookmarks
-        ? "bookmarks"
-        : "foldersTagsProps";
-
-      for (path of this.settings.flows[flowName].flowRecipe[key]) {
+      for (path of Object.keys(this.settings.flows[flowName].flowMap)) {
         // exclude folder titles
         if (path.startsWith("#")) continue;
 
@@ -803,12 +799,7 @@ ${pseudoElement}
     // -------- THE LOGIC -----------------
     const handledPaths: { [key: string]: boolean } = {};
     Object.keys(this.settings.flows).forEach((flowName) => {
-      // get the file list
-      let key = this.settings.flows[flowName].flowRecipe.bookmarks
-        ? "bookmarks"
-        : "foldersTagsProps";
-
-      for (path of this.settings.flows[flowName].flowRecipe[key]) {
+      for (path of Object.keys(this.settings.flows[flowName].flowMap)) {
         // exclude folder titles
         if (path.startsWith("#")) continue;
         handlePath(path);
@@ -906,13 +897,13 @@ ${pseudoElement}
 
         if (file instanceof TFile) {
           for (let flowName of Object.keys(this.settings.flows)) {
+            // check if it's the active leaf and a flow, so mtime-checking can handle it
             const view = this.app.workspace.getActiveViewOfType(MarkdownView);
             if (view) {
               if (view.file) {
                 if (view.file.path) {
                   if (view.file.path.endsWith(`${flowName}.md`)) {
                     continue;
-                    // because the edit tracker or cursor tracker will handle it
                   }
                 }
               }
@@ -935,9 +926,10 @@ ${pseudoElement}
       this.app.vault.on("rename", (file: TAbstractFile, oldPath: string) => {
         if (this.textFlowOperation) return;
 
-        let parentFolder = normalizePath(dirname(file.path));
+        let newParentFolder = normalizePath(dirname(file.path));
+        // if we'r edealing with a folder, don't get the parent
         if (file instanceof TFolder) {
-          parentFolder = file.path;
+          newParentFolder = file.path;
         }
 
         let oldParentFolder = normalizePath(dirname(oldPath));
@@ -945,14 +937,54 @@ ${pseudoElement}
           oldParentFolder = file.path;
         }
 
-        // Check if the user moved the system folder
-        if (this.settings.systemFolderPath === normalizePath(oldPath)) {
+        // Check if the user renamed the system folder
+        if (
+          basename(oldPath) === this.textFlowSystemFolderName &&
+          basename(file.path) != this.textFlowSystemFolderName
+        ) {
+          this.textFlowOperation = true;
+          this.app.vault.rename(file, oldPath);
+          this.textFlowOperation = false;
+          new Notice(
+            this.t("main.renameListener.notice don't rename system folder", {
+              textFlowSystemFolderName: this.textFlowSystemFolderName,
+            })
+          );
+          return;
+        } // or if they moved the system folder
+        else if (basename(oldPath) === this.textFlowSystemFolderName) {
           // update system folder data
           this.ensureSystemFolder();
+          return;
         }
 
         const continuableCheckPaths = Object.keys(this.settings.flows);
         for (let flowName of continuableCheckPaths) {
+          // check if the user renamed or moved a flow
+          if (basename(oldPath) === `${flowName}.md`) {
+            if (basename(file.path) != `${flowName}.md`) {
+              // revert renaming
+              this.textFlowOperation = true;
+              this.app.vault.rename(file, oldPath);
+              this.textFlowOperation = false;
+
+              new Notice(
+                this.t("main.renameListener.notice use settings to rename")
+              );
+              return;
+            }
+            if (!newParentFolder.endsWith(this.textFlowSystemFolderName)) {
+              // revert move
+              this.textFlowOperation = true;
+              this.app.vault.rename(file, oldPath);
+              this.textFlowOperation = false;
+
+              new Notice(
+                this.t("main.renameListener.notice use export to export")
+              );
+              return;
+            }
+          }
           if (this.settings.flows[flowName].flaggedForRebuild) continue;
 
           // if the flow contained the old path, flag and move on
@@ -963,7 +995,7 @@ ${pseudoElement}
           }
           // if the parent is included
           if (
-            parentFolder ===
+            newParentFolder ===
             this.settings.flows[flowName].flowCookbook.folderIncluded
           ) {
             this.settings.flows[flowName].flaggedForRebuild = true;
@@ -972,7 +1004,7 @@ ${pseudoElement}
           }
           if (
             // if the path starts with inclusion path and subfolders aren't excluded
-            parentFolder.startsWith(
+            newParentFolder.startsWith(
               this.settings.flows[flowName].flowCookbook.folderIncluded + "/"
             ) &&
             !this.settings.flows[flowName].flowCookbook.folderIncluded.endsWith(
@@ -986,7 +1018,7 @@ ${pseudoElement}
                   ","
                 );
               const isExcluded = exclusionArray.some((path) =>
-                parentFolder.includes(path.trim() + "/")
+                newParentFolder.includes(path.trim() + "/")
               );
               if (isExcluded) continue;
             }
@@ -1238,30 +1270,6 @@ ${pseudoElement}
               if (!plugin.settings.flows[flowName]) {
                 throw new Error(`Flow ${flowName} not found in settings`);
               }
-
-              if (plugin.settings.checkExternalEdits != "no") {
-                if (
-                  Date.now() - plugin.lastActivity[flowName] >
-                  plugin.inactivityThreshold
-                ) {
-                  const activeRegionPath =
-                    plugin.settings.flows[flowName].activeRegions[leafID].path;
-                  if (activeRegionPath) {
-                    const flowHasEdits = await plugin.checkStatsForFlow(
-                      flowName
-                    );
-                    if (flowHasEdits) {
-                      plugin.flowService.rebuildFlow(flowName, "menuBar");
-                      new Notice(
-                        plugin.t("cursorTracker.notice", {
-                          flowName: flowName,
-                        })
-                      );
-                      plugin.lastActivity[flowName] = Date.now();
-                    }
-                  }
-                }
-              }
               // this sets off a chain of functions which updates the active Region
               await plugin.checkActiveRegion(
                 plugin.settings.flows[flowName],
@@ -1371,7 +1379,7 @@ ${pseudoElement}
           }
 
           debounceTimeout = setTimeout(async () => {
-            // Prevent rebuild frong registering as text change
+            // Prevent rebuild from registering as text change
             if (plugin.settings.flows[flowName].isFreshBuild) {
               plugin.settings.flows[flowName].isFreshBuild = false;
               return;
@@ -1395,19 +1403,24 @@ ${pseudoElement}
                 activeRegionPath
               )
             ) {
-              // if the user wants checks, do checks if there's been inactivity
+              // if the user wants checks and has been inactive, do checks
+              console.log(
+                "before ",
+                plugin.lastActivity[flowName] - Date.now()
+              );
               if (plugin.settings.checkExternalEdits != "no") {
                 if (
-                  Date.now() - plugin.lastActivity[flowName] >
+                  Math.abs(Date.now() - plugin.lastActivity[flowName]) >
                   plugin.inactivityThreshold
                 ) {
+                  console.log("change listener checking ", activeRegionPath);
                   const fileHasEdits = await plugin.checkStatsForNote(
                     flowName,
                     activeRegionPath
                   );
                   if (fileHasEdits) {
                     new Notice(
-                      plugin.t("textChangeListener.notice", {
+                      plugin.t("textChangeListener.notice hash interrupt", {
                         path: activeRegionPath,
                         flowName: flowName,
                       })
@@ -1416,6 +1429,7 @@ ${pseudoElement}
                   }
                 }
               }
+              plugin.lastActivity[flowName] = Date.now();
               // Add to unsynced array
               plugin.settings.flows[flowName].unsyncedRegionsArray.push(
                 activeRegionPath
@@ -2346,35 +2360,55 @@ ${pseudoElement}
   checkStatsForFlow = async (flowName: string) => {
     if (this.settings.checkExternalEdits === "no") return;
     if (this.settings.flows[flowName].flaggedForRebuild) return;
+
     let changed = false;
     const interruptablePathArray = Object.keys(
       this.settings.flows[flowName].flowMap
     );
+
+    // iterating over the paths
     for (let path of interruptablePathArray) {
       const sourceFile = this.app.vault.getFileByPath(path);
-      if (!(sourceFile instanceof TFile)) continue; // get the mtimes to compare
+      if (!sourceFile) {
+        if (this.settings.hashes[path]) {
+          delete this.settings.hashes[path];
+        }
+        changed = true;
+        continue;
+      }
+
+      // if user wants to always hash
+      if (this.settings.checkExternalEdits === "always hash") {
+        changed = await this.checkHash(sourceFile, path, flowName);
+        this.saveSettings();
+        changed = true;
+        continue;
+      }
+
+      // otherwise get the mtimes to compare
       const oldMtime = this.settings.flows[flowName].flowMap[path].mtime;
       const newMtime = sourceFile.stat.mtime;
 
-      // if user uses shitty sync service
-      if (this.settings.checkExternalEdits === "always hash") {
-        changed = await this.checkHash(sourceFile, path, flowName);
-      }
-      // else leave some leniency because some OS aren't that accurate
-      else if (Math.abs(newMtime - oldMtime) > this.MTIME_EPSILON) {
+      if (Math.abs(newMtime - oldMtime) > this.MTIME_EPSILON) {
         if (this.settings.checkExternalEdits === "mtime") {
-          // if user is fine with false positives, rebuild or flag here
+          changed = true;
+          // check if the flow is active and in active leaf
           if (this.settings.activeFlowObject[flowName]) {
-            this.flowService.rebuildFlow(flowName, "switcher");
+            const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+            if (view) {
+              if (view.file) {
+                if (view.file.path) {
+                  if (view.file.path.endsWith(`${flowName}.md`)) {
+                    // rebuild right away
+                    this.flowService.rebuildFlow(flowName, "switcher");
+                  }
+                }
+              }
+            }
           } else {
+            // otherwise just flag it; rebuild will happen on click
             this.settings.flows[flowName].flaggedForRebuild = true;
           }
-          new Notice(
-            this.t("main.checkStats check stats feedback mtime", {
-              path: path,
-            })
-          );
-          changed = true;
         } else {
           changed = await this.checkHash(sourceFile, path, flowName);
         }
@@ -2386,35 +2420,43 @@ ${pseudoElement}
 
   checkStatsForNote = async (flowName: string, path: string) => {
     if (this.settings.checkExternalEdits === "no") return;
-
     if (this.settings.flows[flowName].flaggedForRebuild) return;
+
     let changed = false;
+
     const sourceFile = this.app.vault.getFileByPath(path);
-    if (!(sourceFile instanceof TFile)) return;
+    if (!sourceFile) {
+      if (this.settings.hashes[path]) {
+        delete this.settings.hashes[path];
+      }
+      new Notice(
+        this.t("main.checkStatsForNote source note not found", { path: path })
+      );
+      return false;
+    }
+
+    if (this.settings.checkExternalEdits === "always hash") {
+      if (this.settings.checkExternalEdits === "always hash") {
+        changed = await this.checkHash(sourceFile, path, flowName);
+      }
+    }
 
     const oldMtime = this.settings.flows[flowName].flowMap[path].mtime;
     const newMtime = sourceFile.stat.mtime;
-
-    if (this.settings.checkExternalEdits === "always hash") {
-      changed = await this.checkHash(sourceFile, path, flowName);
-    } else if (Math.abs(newMtime - oldMtime) > this.MTIME_EPSILON) {
+    if (Math.abs(newMtime - oldMtime) > this.MTIME_EPSILON) {
       if (this.settings.checkExternalEdits === "mtime") {
+        changed = true;
         Object.keys(this.settings.flows).forEach((flowName) => {
           if (!this.settings.flows[flowName].flaggedForRebuild) {
+            // rebuild is taken care of by the edit handler,
+            // since we know which flow is in active leaf
             if (this.settings.flows[flowName].flowMap[path]) {
               this.settings.flows[flowName].flaggedForRebuild = true;
             }
           }
         });
         this.settings.flows[flowName].flaggedForRebuild = true;
-        new Notice(
-          this.t("main.checkStats check stats feedback", {
-            path: path,
-          })
-        );
-        changed = true;
       } else {
-        // if they want the hash check, do that
         changed = await this.checkHash(sourceFile, path, flowName);
       }
     }
@@ -2467,8 +2509,10 @@ ${pseudoElement}
         })
       );
       this.settings.hashes[path] = newHash;
+
       changed = true;
     }
+    this.saveSettings();
     return changed;
   };
 
@@ -2622,7 +2666,7 @@ ${pseudoElement}
     // Get full document text from CodeMirror state
     const text = cmEditor.state.doc.toString();
 
-    // if this is the initial call for the leaf, give it a n active region
+    // if this is the initial call for the leaf, give it an active region
     if (!flow.activeRegions[leafID]) {
       let activeRegionObject = this.findActiveRegion(
         flow,
@@ -2634,23 +2678,6 @@ ${pseudoElement}
 
       // double check because active region could come back undefined
       if (activeRegionObject) {
-        const activeRegionPath =
-          this.settings.flows[flow.flowName].activeRegions[leafID].path;
-        if (activeRegionPath) {
-          const flowHasEdits = await this.checkStatsForNote(
-            flow.flowName,
-            activeRegionPath
-          );
-          if (flowHasEdits) {
-            this.flowService.rebuildFlow(flow.flowName, "menuBar");
-            new Notice(
-              this.t("cursorTracker.notice", {
-                flowName: flow.flowName,
-              })
-            );
-            this.lastActivity[flow.flowName] = Date.now();
-          }
-        }
         flow.activeRegions[leafID] = activeRegionObject;
         // then check if the active region overlaps and sent a notice
         if (activeRegionObject.path) {
@@ -2682,6 +2709,28 @@ ${pseudoElement}
       );
 
       if (activeRegion) {
+        const activeRegionPath = activeRegion.path;
+        // if the user wants checks, always check the new region
+        if (
+          !activeRegionPath?.startsWith("#") &&
+          this.settings.checkExternalEdits != "no"
+        ) {
+          if (activeRegionPath) {
+            const flowHasEdits = await this.checkStatsForNote(
+              flow.flowName,
+              activeRegionPath
+            );
+            if (flowHasEdits) {
+              this.flowService.rebuildFlow(flow.flowName, "menuBar");
+              new Notice(
+                this.t("main.cursorTracker.notice", {
+                  flowName: flow.flowName,
+                })
+              );
+              this.lastActivity[flow.flowName] = Date.now();
+            }
+          }
+        }
         flow.activeRegions[leafID] = activeRegion;
         this.saveSettings();
         this.decorateSourceNotes("update");
@@ -2909,13 +2958,6 @@ ${pseudoElement}
       // make sure we know where our stuff is
       this.ensureSystemFolder();
       this.discernAndSetSystemFolderState();
-
-      // check for external edits
-      if (this.settings.checkExternalEdits != "no") {
-        Object.keys(this.settings.activeFlowObject).forEach((flowName) => {
-          this.checkStatsForFlow(flowName);
-        });
-      }
 
       // ---- Set up UI
       // ----------------------------------------------

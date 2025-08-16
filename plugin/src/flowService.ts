@@ -153,6 +153,13 @@ export class FlowService {
         this.app.vault.getAbstractFileByPath(newSystemFolderPath);
       if (!newSystemFolder) {
         await this.app.vault.createFolder(newSystemFolderPath);
+
+        // add a little readme with info on how to not fuck up the folder
+        const readmePath = normalizePath(`${newSystemFolderPath}/README.md`);
+        const content = this.plugin.t("readme");
+        await this.safeCreateFile(this.app.vault, readmePath, content);
+
+        // inform the user of success
         new Notice(
           this.plugin.t("createSystemFolder.notice folder created", {
             newSystemFolderPath: newSystemFolderPath,
@@ -1413,7 +1420,10 @@ export class FlowService {
           let fileContent: string = await this.app.vault.read(note);
 
           // make a hash if we don't have one yet
-          if (this.plugin.settings.checkExternalEdits === "mtime+hash") {
+          if (
+            this.plugin.settings.checkExternalEdits === "mtime+hash" ||
+            this.plugin.settings.checkExternalEdits === "always hash"
+          ) {
             if (!this.plugin.settings.hashes[ingredient]) {
               const hash = this.plugin.makeHash(fileContent);
               this.plugin.settings.hashes[ingredient] = hash;
@@ -1622,7 +1632,6 @@ export class FlowService {
 
   safeCreateFile = async (vault: Vault, path: string, content: string) => {
     try {
-      console.log("trying to create ", path);
       const existingFile = vault.getAbstractFileByPath(path);
       this.plugin.isRebuilding = true;
       this.plugin.textFlowOperation = true;
@@ -1656,7 +1665,7 @@ export class FlowService {
 
     // check if we got a backup file
     const backupPath = normalizePath(
-      `${this.plugin.settings.systemFolderPath}/textFlowSettingsBackup.json`
+      `${this.plugin.settings.systemFolderPath}/${this.plugin.textFlowSystemFolderName}/textFlowSettingsBackup.json`
     );
     const backupFile = this.app.vault.getAbstractFileByPath(backupPath);
 

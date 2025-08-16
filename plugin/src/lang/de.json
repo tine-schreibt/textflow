@@ -39,7 +39,7 @@
   "activeRegionDeco.addOption.4 outline muted": "Umriss: Gedeckte Textfarbe.",
 
   "-------- QUALITY OF LIVE SETTINGS": "Ein paar Settings, die die UI verbessern",
-  "qol.createSpan.text quality of life settings": "Ein paar Einstellungen für die Lebensqualität.",
+  "qol.createSpan.text quality of life settings": "Erweitere Einstellungen.",
 
   "qol.hideExplorerDeco.setName hide explorer deco": "Verstecke DateiExplorer-Deco",
 
@@ -212,17 +212,19 @@
 
   "main.fileMenuListener.context flag flows for rebuild": "textFlow: Flagge alle Flows, die \"${baseName}\" enthalten, für Neubau",
 
-  "main.renameListener.notice don't rename system folder": "textFlow: Bitte nicht textFlows Systemordner umbenennen. Du kannst ihn in den Einstellungen verstecken.",
-  "main.renameListener.notice use settings to rename / export to export": "textFlow: Bitte verwende die TextFlow-Einstellungen, um Flows umzubenennen / die Export-Funktion, um sie aus textFlows Systemordner zu bekommen.\nWenn du textFlows Systemordner manuell verschoben hast, bitte deinen Vault neu laden, um die ordnungsgemäße Synchronisation zu gewährleisten.",
-  "main.renameListener.notice old file name was restored": "textFlow: Der alte Dateiname/Pfad wurde wiederhergestellt.",
+  "main.renameListener.notice don't rename system folder": "textFlow: Bitte benenne ${textFlowSystemFolderName} nicht um. Nimm die Änderung zurück, damit textFlow wieder richtig funktioniert.",
+  "main.renameListener.notice use settings to rename": "textFlow: Bitte benutze textFlow's Einstellungen, um Flows umzubenennen.",
+  "main.renameListener.notice use export to export": "textFlow: Bitte benutze die Export-Funktion, um eine Kopie deines Flows außerhalb von textFlowSystemFolder zu erhalten (siehe Menüleiste oder Befehlspalette).",
   "main.renameListener.notice new element created in system folder; please remove": "textFlow: Gerade wurde ein neues Element in textFlows Systemordner erstellt.",
 
   "main.checkStats check stats feedback mtime": "textFlow: mtime unterscheidet sich für ${path}; Flows wurden für Neubau geflaggt.",
   "main.checkStats check stats feedback hash": "textFlow: hash unterscheidet sich für ${path}; Flows wurden für Neubau geflaggt.",
   "main.checkStats no changes": "textFlow: Es wurden keine externen Bearbeitungen festgestellt.",
 
+  "main.checkStatsForNote source note not found": "textFlow: Die Quellnotiz der aktiven Region konnte unter ${path} nicht gefunden werden. Bitte kopiere die Region, um Datenverlust zu vermeiden und stelle sicher, dass die Quellnotiz nicht versehentlich gelöscht wurde, ehe du den Flow neu baust.",
+
   "main.cursorListener.notice tracking failed": "textFlow:\n Cursor-Tracking für ${flowName} fehlgeschlagen!\nBitte schließe und öffne den Flow erneut.\nWenn dieser Fehler weiterhin auftritt, lade deinen Vault neu.",
-  "cursorTracker.notice": "textFlow: Externe Bearbeitung festgestellt. Flow ${flowName} wurde neugebaut.",
+  "main.cursorTracker.notice": "textFlow: Externe Bearbeitung festgestellt. Flow ${flowName} wurde neugebaut.",
 
   "textChangeListener.notice error setting up listener": "textFlow Plugin: Fehler beim Einrichten des Änderungstrackings.\nBitte melde dieses Problem auf github.",
   "textChangeListener.notice hash interrupt": "textFlow: Die Quellnotiz der aktiven Region - ${path} - wurde extern bearbeitet, also nachdem du den Flow ${flowName} (neu)gebaut hast. \nBitte prüfe, ob du sie überschreiben willst. \nVorgehen zum Überschreiben: \n1. Kopiere die Änderungen, die du gerade gemacht hast. \n2. Baue den Flow neu. \n3. Füge die Änderungen an ihrem alten Platz ein. \n4. Synchronisiere den Flow.",
@@ -254,5 +256,8 @@
 
   "flowBuilder.notice system folder not found": "textFlow: ${textFlowSystemFolderName} konnte nicht gefunden werden.",
   "flowBuilder.notice ingredient not found": "textFlow: Die Notiz ${ingredient} konnte nicht gefunden werden.",
-  "flowBUilder.notice UUID found in source note": "textFlow: Die Notiz\n ${ingredient}\n für Flow\n ${flowName}\n enthält mindestens eine UUID.\nDas kann durch Synchronisationsfehler verursacht werden.\n Die nächsten Schritte: \n . Exportiere ${flowName}, um den Verlust von Änderungen zu verhindern - erstelle ein Backup deines Vaults, nur um sicher zu sein. \n2. Prüfe die erwähnte Quellnotiz, ob zusätzliche Regionen hineinkopiert wurden (suche nach '<hr>'), und schneide sie aus.\n3. Prüfe die Quellnotizen dieser Regionen, um sicher zu sein, dass sie aktuell sind; falls nicht, copy/past die letzte Version aus deinem exportierten Flow.\nMach es dir einfacher, indem du Navigation per Dateiexplorer abschaltest (Settings-Tab oder Befehlspalette).\nVersuche danach noch mal einen Neubau."
+  "flowBUilder.notice UUID found in source note": "textFlow: Die Notiz\n ${ingredient}\n für Flow\n ${flowName}\n enthält mindestens eine UUID.\nDas kann durch Synchronisationsfehler verursacht werden.\n Die nächsten Schritte: \n . Exportiere ${flowName}, um den Verlust von Änderungen zu verhindern - erstelle ein Backup deines Vaults, nur um sicher zu sein. \n2. Prüfe die erwähnte Quellnotiz, ob zusätzliche Regionen hineinkopiert wurden (suche nach '<hr>'), und schneide sie aus.\n3. Prüfe die Quellnotizen dieser Regionen, um sicher zu sein, dass sie aktuell sind; falls nicht, copy/past die letzte Version aus deinem exportierten Flow.\nMach es dir einfacher, indem du Navigation per Dateiexplorer abschaltest (Settings-Tab oder Befehlspalette).\nVersuche danach noch mal einen Neubau.",
+
+  "----------- The Blurb": " Wird als README dem Systemordner hinzugefügt ---------------------------",
+  "readme": "Das hier ist textFlows Systemordner. \n \n **Was er enthalten sollte:** \n - dieses README \n - deine Flows\n - eine Datei namens 'textFlowBackup.json' (nicht sichtbar in Obsidians Datei-Explorer)\n \n **Du darfst:** \n - Flows aus diesem Ordner löschen\n - den gesamten Ordner an einen anderen Ort verschieben\n \n **Aber bitte unterlasse es:** \n - Dateien zu diesem Ordner hinzuzufügen\n - diesen Ordner umzubenennen\n - Dateien in diesem Ordner umzubenennen (um Flows umzubenennen, benutze die Einstellungen)\n \n **Weiterführende Informationen findest du im Gesamt-README:**"
 }

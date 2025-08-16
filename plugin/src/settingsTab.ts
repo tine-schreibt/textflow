@@ -498,6 +498,12 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.settings.checkExternalEdits =
               value as Types.ExternalEditsType;
+            if (value === "no" || value === "mtime") {
+              // if the user may have stopped hashing, delete hashes to prevent stale data
+              if (Object.keys(this.plugin.settings.hashes).length > 0) {
+                this.plugin.settings.hashes = {};
+              }
+            }
             await this.plugin.saveSettings();
           });
       });
