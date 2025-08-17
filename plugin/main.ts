@@ -890,6 +890,54 @@ ${pseudoElement}
       })
     );
 
+    this.registerEvent(
+      this.app.workspace.on("file-menu", (menu, file) => {
+        menu.addItem((item) => {
+          item
+            .setTitle(this.t("main.fileMenuListener.context create new file"))
+            .setIcon("rotate-cw")
+            .onClick(async () => {
+              console.log("path of the note: ", file.path);
+              const normalisedPath = normalizePath(file.path);
+
+              let parentFolder = "";
+              if (file instanceof TFile) {
+                parentFolder = dirname(normalisedPath);
+              } else {
+                parentFolder = normalisedPath;
+              }
+
+              // this little thing was written by Claude 3.5 Sonnet
+              const getUniqueFileName = (
+                basePath: string,
+                baseName: string = "_untitled"
+              ) => {
+                let fileName = baseName;
+                let number = 0;
+                let fullPath = normalizePath(`${basePath}/${fileName}.md`);
+
+                // Check if file exists
+                while (this.app.vault.getAbstractFileByPath(fullPath)) {
+                  number++;
+                  fileName = `${baseName} ${number}`;
+                  fullPath = normalizePath(`${basePath}/${fileName}.md`);
+                }
+
+                return fileName;
+              };
+
+              const newFileName = getUniqueFileName(parentFolder);
+              const newFilePath = normalizePath(
+                `/${parentFolder}/${newFileName}.md`
+              );
+
+              console.log("path of the new note: ", newFilePath);
+              await this.app.vault.create(newFilePath, "");
+            });
+        });
+      })
+    );
+
     // modify events
     this.registerEvent(
       this.app.vault.on("modify", (file: TAbstractFile) => {
@@ -923,118 +971,121 @@ ${pseudoElement}
     // Rename events
     //CHECKED AND TESTED
     this.registerEvent(
-      this.app.vault.on("rename", (file: TAbstractFile, oldPath: string) => {
-        if (this.textFlowOperation) return;
+      this.app.vault.on(
+        "rename",
+        async (file: TAbstractFile, oldPath: string) => {
+          if (this.textFlowOperation) return;
 
-        let newParentFolder = normalizePath(dirname(file.path));
-        // if we'r edealing with a folder, don't get the parent
-        if (file instanceof TFolder) {
-          newParentFolder = file.path;
-        }
-
-        let oldParentFolder = normalizePath(dirname(oldPath));
-        if (file instanceof TFolder) {
-          oldParentFolder = file.path;
-        }
-
-        // Check if the user renamed the system folder
-        if (
-          basename(oldPath) === this.textFlowSystemFolderName &&
-          basename(file.path) != this.textFlowSystemFolderName
-        ) {
-          this.textFlowOperation = true;
-          this.app.vault.rename(file, oldPath);
-          this.textFlowOperation = false;
-          new Notice(
-            this.t("main.renameListener.notice don't rename system folder", {
-              textFlowSystemFolderName: this.textFlowSystemFolderName,
-            })
-          );
-          return;
-        } // or if they moved the system folder
-        else if (basename(oldPath) === this.textFlowSystemFolderName) {
-          // update system folder data
-          this.ensureSystemFolder();
-          return;
-        }
-
-        const continuableCheckPaths = Object.keys(this.settings.flows);
-        for (let flowName of continuableCheckPaths) {
-          // check if the user renamed or moved a flow
-          if (basename(oldPath) === `${flowName}.md`) {
-            if (basename(file.path) != `${flowName}.md`) {
-              // revert renaming
-              this.textFlowOperation = true;
-              this.app.vault.rename(file, oldPath);
-              this.textFlowOperation = false;
-
-              new Notice(
-                this.t("main.renameListener.notice use settings to rename")
-              );
-              return;
-            }
-            if (!newParentFolder.endsWith(this.textFlowSystemFolderName)) {
-              // revert move
-              this.textFlowOperation = true;
-              this.app.vault.rename(file, oldPath);
-              this.textFlowOperation = false;
-
-              new Notice(
-                this.t("main.renameListener.notice use export to export")
-              );
-              return;
-            }
+          let newParentFolder = normalizePath(dirname(file.path));
+          // if we'r edealing with a folder, don't get the parent
+          if (file instanceof TFolder) {
+            newParentFolder = file.path;
           }
-          if (this.settings.flows[flowName].flaggedForRebuild) continue;
 
-          // if the flow contained the old path, flag and move on
-          if (this.settings.flows[flowName].flowMap[oldPath]) {
-            this.settings.flows[flowName].flaggedForRebuild = true;
-            this.saveSettings();
-            continue;
+          let oldParentFolder = normalizePath(dirname(oldPath));
+          if (file instanceof TFolder) {
+            oldParentFolder = file.path;
           }
-          // if the parent is included
+
+          // Check if the user renamed the system folder
           if (
-            newParentFolder ===
-            this.settings.flows[flowName].flowCookbook.folderIncluded
+            basename(oldPath) === this.textFlowSystemFolderName &&
+            basename(file.path) != this.textFlowSystemFolderName
           ) {
-            this.settings.flows[flowName].flaggedForRebuild = true;
-            this.saveSettings();
-            continue;
+            this.textFlowOperation = true;
+            await this.app.vault.rename(file, oldPath);
+            this.textFlowOperation = false;
+            new Notice(
+              this.t("main.renameListener.notice don't rename system folder", {
+                textFlowSystemFolderName: this.textFlowSystemFolderName,
+              })
+            );
+            return;
+          } // or if they moved the system folder
+          else if (basename(oldPath) === this.textFlowSystemFolderName) {
+            // update system folder data
+            this.ensureSystemFolder();
+            return;
           }
-          if (
-            // if the path starts with inclusion path and subfolders aren't excluded
-            newParentFolder.startsWith(
-              this.settings.flows[flowName].flowCookbook.folderIncluded + "/"
-            ) &&
-            !this.settings.flows[flowName].flowCookbook.folderIncluded.endsWith(
-              "/"
-            )
-          ) {
-            // if the exclusion criterion isn't empty
-            if (this.settings.flows[flowName].flowCookbook.folderExcluded) {
-              const exclusionArray =
-                this.settings.flows[flowName].flowCookbook.folderExcluded.split(
-                  ","
+
+          const continuableCheckPaths = Object.keys(this.settings.flows);
+          for (let flowName of continuableCheckPaths) {
+            // check if the user renamed or moved a flow
+            if (basename(oldPath) === `${flowName}.md`) {
+              if (basename(file.path) != `${flowName}.md`) {
+                // revert renaming
+                this.textFlowOperation = true;
+                await this.app.vault.rename(file, oldPath);
+                this.textFlowOperation = false;
+
+                new Notice(
+                  this.t("main.renameListener.notice use settings to rename")
                 );
-              const isExcluded = exclusionArray.some((path) =>
-                newParentFolder.includes(path.trim() + "/")
-              );
-              if (isExcluded) continue;
+                return;
+              }
+              if (!newParentFolder.endsWith(this.textFlowSystemFolderName)) {
+                // revert move
+                this.textFlowOperation = true;
+                await this.app.vault.rename(file, oldPath);
+                this.textFlowOperation = false;
+
+                new Notice(
+                  this.t("main.renameListener.notice use export to export")
+                );
+                return;
+              }
             }
-            this.settings.flows[flowName].flaggedForRebuild = true;
-            this.saveSettings();
-            continue;
+            if (this.settings.flows[flowName].flaggedForRebuild) continue;
+
+            // if the flow contained the old path, flag and move on
+            if (this.settings.flows[flowName].flowMap[oldPath]) {
+              this.settings.flows[flowName].flaggedForRebuild = true;
+              this.saveSettings();
+              continue;
+            }
+            // if the parent is included
+            if (
+              newParentFolder ===
+              this.settings.flows[flowName].flowCookbook.folderIncluded
+            ) {
+              this.settings.flows[flowName].flaggedForRebuild = true;
+              this.saveSettings();
+              continue;
+            }
+            if (
+              // if the path starts with inclusion path and subfolders aren't excluded
+              newParentFolder.startsWith(
+                this.settings.flows[flowName].flowCookbook.folderIncluded + "/"
+              ) &&
+              !this.settings.flows[
+                flowName
+              ].flowCookbook.folderIncluded.endsWith("/")
+            ) {
+              // if the exclusion criterion isn't empty
+              if (this.settings.flows[flowName].flowCookbook.folderExcluded) {
+                const exclusionArray =
+                  this.settings.flows[
+                    flowName
+                  ].flowCookbook.folderExcluded.split(",");
+                const isExcluded = exclusionArray.some((path) =>
+                  newParentFolder.includes(path.trim() + "/")
+                );
+                if (isExcluded) continue;
+              }
+              this.settings.flows[flowName].flaggedForRebuild = true;
+              this.saveSettings();
+              continue;
+            }
           }
         }
-      })
+      )
     );
     //^CHECKED AND TESTED
 
     // Create events
     //CHECKED AND TESTED
     this.registerEvent(
-      this.app.vault.on("create", (file: TAbstractFile) => {
+      this.app.vault.on("create", async (file: TAbstractFile) => {
         if (this.isLoading) return;
         if (this.textFlowOperation) return;
         if (this.isRebuilding) return;
@@ -1047,9 +1098,14 @@ ${pseudoElement}
         if (
           // if the user put a new file in the system folder
           // the check for .md is so that stuff by - for example - Edit History doesn't get flagged
-          parentFolder.contains(this.textFlowSystemFolderName) &&
+          parentFolder.endsWith(this.textFlowSystemFolderName) &&
           file.path.endsWith(".md")
         ) {
+          const vaultPath = basename(file.path);
+          this.textFlowOperation = true;
+          await this.app.vault.rename(file, vaultPath);
+          this.textFlowOperation = false;
+
           new Notice(
             this.t(
               "main.renameListener.notice new element created in system folder; please remove"
@@ -1059,11 +1115,13 @@ ${pseudoElement}
           return;
         }
 
+        // actual checks for flagging
         const continuableCheckPaths = Object.keys(this.settings.flows);
         for (let flowName of continuableCheckPaths) {
           if (this.settings.flows[flowName].flaggedForRebuild) continue;
           // if the flow is made from bookmarks, move on
-          if (this.settings.flows[flowName].flowRecipe.bookmarks) continue;
+          if (this.settings.flows[flowName].definitionMode === "bookmarks")
+            continue;
 
           // if the parent folder is included
           if (
@@ -1112,8 +1170,7 @@ ${pseudoElement}
           parentFolder = normalizePath(file.path);
         }
 
-        if (parentFolder.contains(this.textFlowSystemFolderName)) {
-          // switcher modal makes sure flows with missing file are flagged for rebuild
+        if (parentFolder.endsWith(this.textFlowSystemFolderName)) {
           this.ensureSystemFolder();
           return;
         }
@@ -1121,8 +1178,16 @@ ${pseudoElement}
         if (file instanceof TFile) {
           const continuableCheckPaths = Object.keys(this.settings.flows);
           for (let flowName of continuableCheckPaths) {
-            // make sure the user doesn't end up stuck with an error
-            if (this.settings.flows[flowName].flowMap[normalisedPath]) {
+            // check if the user delete a flow file
+            if (basename(parentFolder) === flowName) {
+              if (!this.settings.flows[flowName].flaggedForRebuild) {
+                this.settings.flows[flowName].flaggedForRebuild = true;
+                this.saveSettings();
+                continue;
+              }
+            }
+            // make sure the user doesn't end up stuck with an unsyncable region
+            else if (this.settings.flows[flowName].flowMap[normalisedPath]) {
               if (
                 this.settings.flows[flowName].unsyncedRegionsArray.includes(
                   normalizePath(file.path)
@@ -1404,16 +1469,11 @@ ${pseudoElement}
               )
             ) {
               // if the user wants checks and has been inactive, do checks
-              console.log(
-                "before ",
-                plugin.lastActivity[flowName] - Date.now()
-              );
               if (plugin.settings.checkExternalEdits != "no") {
                 if (
                   Math.abs(Date.now() - plugin.lastActivity[flowName]) >
                   plugin.inactivityThreshold
                 ) {
-                  console.log("change listener checking ", activeRegionPath);
                   const fileHasEdits = await plugin.checkStatsForNote(
                     flowName,
                     activeRegionPath

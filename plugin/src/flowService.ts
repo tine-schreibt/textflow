@@ -14,6 +14,8 @@ import {
 import { EditorView } from "@codemirror/view";
 import TextFlow from "../main";
 import * as Types from "./types";
+import fs from "fs/promises";
+import path from "path";
 
 interface ObsidianEditor extends Editor {
   cm?: EditorView;
@@ -1046,7 +1048,7 @@ export class FlowService {
       ),
       definitionMode: flowBuildBasket.definitionMode,
       flowCookbook: flowBuildBasket.flowCookbook,
-      flowRecipe: flowBuildBasket.finalRecipe, // { defMode: pathArray }
+      flowRecipe: flowBuildBasket.finalRecipe,
       folderTitles: flowBuildBasket.folderTitles,
       isFreshBuild: true,
       flowBuilt: false,
@@ -1066,22 +1068,17 @@ export class FlowService {
   //CHECKED AND TESTED
   conflictCollector = (flowBuildBasket: Types.flowBuildBasket) => {
     const conflictObject: Types.ConflictObject = {};
-    const key1 = Object.keys(flowBuildBasket.finalRecipe)[0];
+    const key = Object.keys(flowBuildBasket.finalRecipe)[0];
     if (Object.keys(this.plugin.settings.flows).length >= 1) {
       flowLoop: for (let referenceFlow in this.plugin.settings.flows) {
         if (
           referenceFlow != flowBuildBasket.oldFlowName &&
           referenceFlow != flowBuildBasket.flowName
         ) {
-          const key2 = Object.keys(
-            this.plugin.settings.flows[referenceFlow].flowRecipe
-          )[0];
-          for (let path of flowBuildBasket.finalRecipe[key1]) {
+          for (let path of flowBuildBasket.finalRecipe[key]) {
             if (
               !path.startsWith("#") &&
-              this.plugin.settings.flows[referenceFlow].flowRecipe[
-                key2
-              ].includes(path)
+              this.plugin.settings.flows[referenceFlow].flowMap[path]
             ) {
               if (!conflictObject[referenceFlow]) {
                 conflictObject[referenceFlow] = {};
@@ -1651,6 +1648,7 @@ export class FlowService {
   };
 
   backupFlowDef = async (flowName: string) => {
+    console.log("backup function called");
     // make a clone of the flow, clean it and package it
     const currentDate = this.getTimestamp();
     const backupName = `${flowName} ${currentDate}`;
@@ -1663,51 +1661,73 @@ export class FlowService {
     exportObj[backupName].flowMap = {};
     const output = JSON.stringify(exportObj, null, 2);
 
-    // check if we got a backup file
-    const backupPath = normalizePath(
-      `${this.plugin.settings.systemFolderPath}/${this.plugin.textFlowSystemFolderName}/textFlowSettingsBackup.json`
-    );
-    const backupFile = this.app.vault.getAbstractFileByPath(backupPath);
+    // get the absolute path for the vault (we have to use the adapter here, sorry)
+    const basePath = (this.app.vault.adapter as any).basePath;
 
-    if (!(backupFile instanceof TFile)) {
-      // if we don't, just dump the backup in
-      await this.app.vault.create(backupPath, output);
-    } else {
-      // if we do, process it so we can add stuff
-      const rawContents = await this.app.vault.read(backupFile);
-      let parsedJson;
+    // Make the path
+    const backupPath = path.join(
+      basePath,
+      this.app.vault.configDir,
+      "plugins",
+      this.plugin.manifest.id,
+      "textFlowSettingsBackup.json"
+    );
+
+    // check if the file exists
+    const doesFileExist = async (filePath: string): Promise<boolean> => {
       try {
+        await fs.access(filePath);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    const fileExists = await doesFileExist(backupPath);
+
+    // variable to hold the contents if the file exists
+    let parsedJson;
+
+    if (!fileExists) {
+      console.log("file not found");
+      // if the file doesn't exist yet, create it
+      await fs.writeFile(backupPath, output, "utf-8");
+      return;
+    } else {
+      try {
+        console.log("file found; parsing json");
+        const rawContents = await fs.readFile(backupPath, "utf-8");
         parsedJson = JSON.parse(rawContents);
       } catch (e) {
         console.error("Invalid JSON in backup file:", e);
         return;
       }
+    }
 
-      // add our backup data to the object
-      parsedJson[backupName] = exportObj[backupName];
+    // add our backup data to the object
+    parsedJson[backupName] = exportObj[backupName];
 
-      //delete old entries
-      const flowArray = Object.keys(this.plugin.settings.flows);
-      for (let flowName of flowArray) {
-        let counter = 0;
-        const backupArray = Object.keys(parsedJson);
-        const sortedBackups = backupArray.sort();
-        for (let backup of sortedBackups) {
-          if (backup.startsWith(flowName)) {
-            counter++;
-          }
-          if (counter >= 4) {
-            delete parsedJson.backup;
-          }
+    //count entries and delete stale ones
+    const flowArray = Object.keys(this.plugin.settings.flows);
+    for (let flowName of flowArray) {
+      let counter = 0;
+      const backupArray = Object.keys(parsedJson);
+      const sortedBackups = backupArray.sort();
+      for (let backup of sortedBackups) {
+        if (backup.startsWith(flowName)) {
+          counter++;
+        }
+        if (counter >= 4) {
+          delete parsedJson[backup];
         }
       }
-
-      // write the object back to our file
-      await this.app.vault.modify(
-        backupFile,
-        JSON.stringify(parsedJson, null, 2)
-      );
     }
+
+    // write the object back to our file
+    await fs.writeFile(
+      backupPath,
+      JSON.stringify(parsedJson, null, 2),
+      "utf-8"
+    );
   };
 
   // export active flow
@@ -1715,6 +1735,7 @@ export class FlowService {
   exportFlow = async (flowName: string) => {
     const path = this.plugin.settings.flows[flowName].flowFilePath;
     const file = this.app.vault.getAbstractFileByPath(path);
+
     if (file instanceof TFile) {
       const fileContent: string = await this.app.vault.read(file);
       const stripUUIDs = (text: string): string => {
@@ -1723,7 +1744,9 @@ export class FlowService {
         const result = text.replace(uuidPattern, "\n");
         return result;
       };
+
       const cleanContent = stripUUIDs(fileContent);
+
       const exportedFlowPath = normalizePath(
         `${flowName}_export_${this.plugin.flowService.getTimestamp()}.md`
       );

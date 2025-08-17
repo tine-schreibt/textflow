@@ -212,6 +212,7 @@
   "main.registerCommand toggle scroll bar": "Toggle scroll bar",
 
   "main.fileMenuListener.context flag flows for rebuild": "textFlow: Flag flows including \"${baseName}\" for rebuild",
+  "main.fileMenuListener.context create new file": "textFlow: Create a new note in this folder.",
 
   "main.renameListener.notice don't rename system folder": "textFlow: Please don't rename ${textFlowSystemFolderName}. Revert the change so textFlow can work again.",
   "main.renameListener.notice use settings to rename": "textFlow: Please use textFlow settings to rename flows.",
@@ -241,7 +242,7 @@
   "syncBackToSource.notice other random error": "textFlow: An error occurred while trying to sync from ${flowName} to ${path}. \nPlease try again in a second. \nIf the error persists, consult the 'Fixing problems' section of the readme.",
   "syncBackToSource.notice hash interrupt": "textFlow: The note at ${path} has been externally edited at ${timestamp}, which is after you last (re)built flow ${flowName}. \nPlease check if you really want to overwrite it. \nProcedure to overwrite: \n1. Copy the edit you just made.\n2. Rebuild the flow. \n3. Paste the edit back into its spot. \n 4. Sync the flow.",
 
-  "checkActiveRegion.notice region tracking error": "textFlow: Region tracking error.\nYour are most likely seeing this because you undid (ctrl+z) your way into the state before a rebuild.\nPlease redo (ctrl+shift+z) your way back into the current version of things.\nIf that doesn't seem to work, please rebuild ${flow.flowName}.\nThis may lead to further error messages. Please follow their instructions.",
+  "checkActiveRegion.notice region tracking error": "textFlow: Region tracking error for ${flowName}.\nYour are most likely seeing this because you a) renamed the flow's source folder or b) undid (cmd+z) your way into the state before a rebuild.\n Case a: Please update the flow's definition and rebuild it. \nCase b: \nPlease redo (cmd+shift+z) your way back into the current version of things.\nIf that doesn't seem to work, please rebuild ${flow.flowName}.\nThis may lead to further error messages. Please follow their instructions.",
   "checkActiveRegion.notice overlap detected": "The current region ${regionName} is overlapping with the following flow(s): ${overlapString}",
 
   "---------- FLOW SERVICE": "A class that holds most of the functionality for the settings tab and related stuff",
@@ -252,7 +253,7 @@
 
   "createFlowDefinition.notice enter bookmark group": "textFlow: Please enter a bookmark group.",
   "createFlowDefinition.notice definition leads to empty flow": "textFlow: Your definition leads to an empty flow. Please check for typos or make your criteria less restrictive.",
-  "createFlowDefinition.notice random error, please check console": "textFlow: An error occurred while creating the finalRecipe for your flow. Please check the console (ctrl+alt+i) for details.",
+  "createFlowDefinition.notice random error, please check console": "textFlow: An error occurred while creating the finalRecipe for your flow. Please check the console (cmd+alt+i) for details.",
   "createFlowDefinition.notice bookmark group not found": "textFlow: Please check the name of the bookmark group you submitted.",
   "getPathsByFoldersTagsProps.notice dataview not installed": "textFlow: Dataview API not available. Please make sure you have installed the dataview plugin (Settings > Community plugins > Browse).",
   "getPathsByFoldersTagsProps.notice only one inclusion folder please": "textFlow: Folder inclusion can only contain a single folder.",

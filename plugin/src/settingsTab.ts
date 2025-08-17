@@ -1293,7 +1293,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
         // save so we can pull our backup
         this.plugin.saveSettings();
-        this.plugin.flowService.backupFlowDef(
+        await this.plugin.flowService.backupFlowDef(
           this.plugin.settings.flowBuildBasket.flowName
         );
 

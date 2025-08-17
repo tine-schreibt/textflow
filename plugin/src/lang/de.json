@@ -39,7 +39,7 @@
   "activeRegionDeco.addOption.4 outline muted": "Umriss: Gedeckte Textfarbe.",
 
   "-------- QUALITY OF LIVE SETTINGS": "Ein paar Settings, die die UI verbessern",
-  "qol.createSpan.text quality of life settings": "Erweitere Einstellungen.",
+  "qol.createSpan.text quality of life settings": "Erweitere Einstellungen",
 
   "qol.hideExplorerDeco.setName hide explorer deco": "Verstecke DateiExplorer-Deco",
 
@@ -211,6 +211,7 @@
   "main.registerCommand toggle scroll bar": "Scrollbar umschalten",
 
   "main.fileMenuListener.context flag flows for rebuild": "textFlow: Flagge alle Flows, die \"${baseName}\" enthalten, für Neubau",
+  "main.fileMenuListener.context create new file": "textFlow: Erstelle eine neue Notiz in diesem Ordner.",
 
   "main.renameListener.notice don't rename system folder": "textFlow: Bitte benenne ${textFlowSystemFolderName} nicht um. Nimm die Änderung zurück, damit textFlow wieder richtig funktioniert.",
   "main.renameListener.notice use settings to rename": "textFlow: Bitte benutze textFlow's Einstellungen, um Flows umzubenennen.",
@@ -238,7 +239,7 @@
   "syncBackToSource.notice sync failed flow note": "textFlow: Sync fehlgeschlagen. Der Flow ${path} konnte nicht gefunden werden.",
   "syncBackToSource.notice other random error": "textFlow: Ein Fehler ist aufgetreten, während versucht wurde, ${flowName} zu ${path} zu synchronisieren. \nBitte versuche es in einer Sekunde erneut. \nWenn der Fehler weiterhin auftritt, lies die 'Fehlerbehebung' Sektion des Readmes.",
 
-  "checkActiveRegion.notice region tracking error": "textFlow: Fehler beim Tracken der aktiven Region. \nDu siehst diesen Fehler wahrscheinlich, weil du durch (ctrl+z) in den Zustand vor einem Neubau zurückgesprungen bist. \nBitte drücke ctrl+shift+z, bis du wieder im Zustand nach dem Neubau angekommen bist. \nWenn das nicht funktioniert, nimm einen Neubau an ${flow.flowName} vor. \nDies kann zu weiteren Fehlermeldungen führen. Bitte folge ihren Anweisungen.",
+  "checkActiveRegion.notice region tracking error": "textFlow: Fehler beim Tracken der aktiven Region von ${flowName}. \nDu siehst diesen Fehler wahrscheinlich, weil du a) den Quellordner umbenannt hast, oder b) durch (cmd+z) in den Zustand vor einem Neubau zurückgesprungen bist. \nFalls a:\n Bitte ändere die Flow-Definition entsprechend. \n Falls b: \nBitte drücke cmd+Umschalt+z, bis du wieder im Zustand nach dem Neubau angekommen bist. \nWenn das nicht funktioniert, nimm einen Neubau an ${flow.flowName} vor. \nDies kann zu weiteren Fehlermeldungen führen. Bitte folge ihren Anweisungen.",
   "checkActiveRegion.notice overlap detected": "Die aktuelle Region \"&{basename(path)}\" überschneidet sich mit den folgenden Flows: \n${overlapString}",
 
   "---------- FLOW SERVICE": "Eine Klasse die die meiste Funktionalität rund um den Settingstab usw. enthält",
@@ -249,7 +250,7 @@
 
   "createFlowDefinition.notice enter bookmark group": "textFlow: Bitte gib eine Lesezeichengruppe ein.",
   "createFlowDefinition.notice definition leads to empty flow": "textFlow: Deine Kriterien erzeugt einen leeren Flow. Bitte prüfe sie auf Vertipper und/oder gestalte sie weniger restriktiv.",
-  "createFlowDefinition.notice random error, please check console": "textFlow: Ein Fehler ist aufgetreten, während das finalReceipe für deinen Flow erzeugt wurde. Bitte sieh in die Konsole (ctrl+alt+i), um Details zu erfahren.",
+  "createFlowDefinition.notice random error, please check console": "textFlow: Ein Fehler ist aufgetreten, während das finalReceipe für deinen Flow erzeugt wurde. Bitte sieh in die Konsole (cmd+alt+i), um Details zu erfahren.",
   "createFlowDefinition.notice bookmark group not found": "textFlow: Bitte prüfe den Namen der eingegebenen Lesezeichengruppe.",
   "getPathsByFoldersTagsProps.notice dataview not installed": "textFlow: Dataview API nicht verfügbar. Bitte stelle sicher, dass du das Dataview-Plugin installiert hast (Einstellungen > Externe Plugins > Durchsuchen)",
   "getPathsByFoldersTagsProps.notice only one inclusion folder please": "textFlow: Bei der Ordner-Inklusion darf nur ein einzelner Ordner angegeben werden.",
