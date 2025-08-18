@@ -126,7 +126,7 @@ export interface SourceFileObject {
 export const DEFAULT_SETTINGS: TextFlowSettings = {
   firstLaunch: true,
   systemFolderHidden: true,
-  checkExternalEdits: "no",
+  checkExternalEdits: "mtime",
   hashes: {},
   explorerDecoStyle: [
     "○",

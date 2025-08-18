@@ -492,7 +492,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             this.plugin.t("qol.hash.addDropdown.addOption.1 don't check")
           )
           .addOption("mtime", "mtime")
-          .addOption("hash", "mitme + hash")
+          .addOption("mtime+hash", "mitme + hash")
           .addOption("always hash", "hash")
           .setValue(this.plugin.settings.checkExternalEdits)
           .onChange(async (value) => {
@@ -1414,7 +1414,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       // --- THE DISPLAY ITSELF -------------------------------
       const flowShow = new Setting(flowDisplay);
       flowShow
-        .setName(`${shownFlow.flowName}`)
+        .setName(`${flowName}`)
         .setDesc(
           createFragment((desc) => {
             desc.createSpan({
@@ -1444,7 +1444,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         )
         //^CHECKED
         //CHECKED  AND TESTED
-        .addButton((rebuildButton) =>
+        .addButton((rebuildButton) => {
           rebuildButton
             .setButtonText(
               this.plugin.t("flowDisplay.rebuildButton.setButtonText (re)build")
@@ -1470,8 +1470,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               this.plugin.refreshMenuBars();
               await this.plugin.saveSettings();
               this.display();
-            })
-        )
+            });
+        })
         //^CHECKED AND TESTED
         //CHECKED AND TESTED
         .addButton((editFlow) => {
@@ -1525,7 +1525,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             });
         });
     }
-    /*
+
     const restoreSettings = new Setting(flowDisplay)
       .setName(this.plugin.t("restoreSettings.setName restore definitions"))
       .addButton((rebuildButton) =>
@@ -1534,9 +1534,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             this.plugin.t("restoreSettings.setButtonText restore definitions")
           )
           .onClick(async () => {
-            await this.plugin.saveSettings();
-            this.display();
+            new Modals.RestoreFlowDefModal(this.app, this.plugin, this).open();
           })
-      );*/
+      );
   }
 }

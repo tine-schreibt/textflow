@@ -21,6 +21,8 @@ import { TextFlowSettingsTab } from "./settingsTab";
 import { basename } from "path";
 import { FlowService } from "./flowService";
 import { EditorView } from "@codemirror/view";
+import fs from "fs/promises";
+import path from "path";
 
 export class ExportModal extends Modal {
   constructor(app: App, private plugin: TextFlowPlugin) {
@@ -415,38 +417,86 @@ export class DeleteFlowDefModal extends Modal {
   }
 }
 // ^CHECKED AND TESTED
-/*
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
 //----------- RESTORE FLOW DEFS
 export class RestoreFlowDefModal extends Modal {
   constructor(
     app: App,
     private plugin: TextFlowPlugin,
-    private settingsTab: TextFlowSettingsTab,
-    private flowName: string
+    private settingsTab: TextFlowSettingsTab
   ) {
     super(app);
     this.settingsTab = settingsTab;
-    this.flowName = flowName;
   }
-  onOpen() {
+
+  // check if the file exists
+  private doesFileExist = async (filePath: string): Promise<boolean> => {
+    try {
+      await fs.access(filePath);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  private getBackup = async () => {
+    // make the path of the backup.json
+    const basePath = (this.app.vault.adapter as any).basePath;
+    const backupPath = path.join(
+      basePath,
+      this.app.vault.configDir,
+      "plugins",
+      this.plugin.manifest.id,
+      "textFlowSettingsBackup.json"
+    );
+
+    const fileExists = await this.doesFileExist(backupPath);
+
+    // variable to hold the contents if the file exists
+    let parsedJson;
+    console.log("file found; parsing json");
+    const rawContents = await fs.readFile(backupPath, "utf-8");
+    parsedJson = JSON.parse(rawContents);
+
+    return { parsedJson, backupPath };
+  };
+
+  onOpen = async () => {
     const { contentEl } = this;
+
+    const { parsedJson, backupPath } = await this.getBackup();
+
     const flowDisplay = contentEl.createDiv({
       cls: "headline-container",
     });
     flowDisplay.createEl("h3", {
-      text: this.plugin.t("flowDisplay.createEl.text your flow definitions"),
+      text: this.plugin.t("backup.description restore"),
       cls: "headline-text",
     });
 
     const flowSorted: string[] = [];
-    Object.keys(this.plugin.settings.flows).forEach((flowName) => {
-      flowSorted.push(flowName);
+    Object.keys(parsedJson).forEach((flow) => {
+      flowSorted.push(flow);
     });
 
     flowSorted.sort();
 
     for (let flowName of flowSorted) {
-      const shownFlow = this.plugin.settings.flows[flowName];
+      const shownFlow = parsedJson[flowName];
 
       // --- DISPLAY PREPARATIONS ----------------------------------
       // Set up strings to display flow criteria
@@ -520,7 +570,7 @@ export class RestoreFlowDefModal extends Modal {
       // --- THE DISPLAY ITSELF -------------------------------
       const flowShow = new Setting(flowDisplay);
       flowShow
-        .setName(`${shownFlow.flowName}`)
+        .setName(`${flowName}`)
         .setDesc(
           createFragment((desc) => {
             desc.createSpan({
@@ -548,40 +598,42 @@ export class RestoreFlowDefModal extends Modal {
             }
           })
         )
-        //^CHECKED
-        //CHECKED  AND TESTED
-        .addButton((rebuildButton) =>
-          rebuildButton
+
+        .addButton((restore) => {
+          restore
             .setButtonText(
-              this.plugin.t("flowDisplay.rebuildButton.setButtonText (re)build")
+              this.plugin.t("backup.restoreButton.setButtonText restore")
             )
             .onClick(async () => {
-              // delete unneeded flowDef information
-              if (
-                shownFlow.definitionMode === "bookmarks" &&
-                shownFlow.flowCookbook.foldersTagsProps
-              ) {
-                delete shownFlow.flowCookbook.foldersTagsProps;
-                delete shownFlow.flowCookbook.foldersTagsPropsSortOrder;
-              } else if (
-                shownFlow.definitionMode === "foldersTagsProps" &&
-                shownFlow.flowCookbook.bookmarks
-              ) {
-                delete shownFlow.flowCookbook.bookmarks;
-                delete shownFlow.flowCookbook.bookmarksSortOrder;
-              }
-
-              // gather all info for the flowDefinition
-              this.plugin.flowService.rebuildFlow(flowName, "settingsTab");
-              this.plugin.refreshMenuBars();
+              this.plugin.settings.flows[flowName] = shownFlow;
               await this.plugin.saveSettings();
-            })
-        );
-      this.settingsTab.display();
-      this.close();
+              this.settingsTab.display();
+            });
+        })
+        .addButton((deleteBackup) => {
+          deleteBackup
+            .setButtonText(
+              this.plugin.t("backup.deleteButton.setButtonText delete")
+            )
+            .onClick(async () => {
+              delete parsedJson[flowName];
+            });
+        });
     }
-  }
-}*/
+    const closeButton = new ButtonComponent(contentEl);
+    closeButton
+      .setButtonText(this.plugin.t("backup.closeButton.setButtonText close"))
+      .onClick(async (buttonEl: MouseEvent) => {
+        await fs.writeFile(
+          backupPath,
+          JSON.stringify(parsedJson, null, 2),
+          "utf-8"
+        );
+        this.settingsTab.display();
+        this.close();
+      });
+  };
+}
 
 //-------- FLOW SWITCHING
 export class FlowSwitcherModal extends Modal {

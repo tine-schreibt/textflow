@@ -24,6 +24,12 @@
   "switcherModalPosition.addDropdown.addOption.alt ribbon": "Ribbon",
   "switcherModalPosition.addDropdown.addOption.alt command palette only": "Command palette only",
 
+  "---------- BACKUP MODAL": "Modal, which allows the user to restore flows from backups ----------",
+  "backup.description restore": "Your backups",
+  "backup.restoreButton.setButtonText restore": "Restore",
+  "backup.deleteButton.setButtonText delete": "Delete",
+  "backup.closeButton.setButtonText close": "Close",
+
   "------ EXPLORER DECORATION": "Choose unicode characters to decorate source notes in file explorer ----------------",
   "explorerDeco.setName.1 choose deco": "Choose a file explorer decoration",
   "explorerDeco.setDesc.2 what does deco do": "Marks the source notes of all currently active (opened) flows.",
@@ -199,16 +205,16 @@
 
   "--------- MAIN": "The main file that holds functions to deal with flow handling",
 
-  "main.registerCommand sync all leaves": "Sync all leaves",
-  "main.registerCommand flag for rebuild": "Flag all flows for rebuild.",
   "main.registerCommand check stats": "Check vault for external edits.",
-  "main.registerCommand open switcher": "Open flow switcher modal",
+  "main.registerCommand export active flow": "Export active flow",
+  "main.registerCommand flag for rebuild": "Flag all flows for rebuild.",
   "main.registerCommand open fuzzy navigation": "Open fuzzy navigation modal",
+  "main.registerCommand open switcher": "Open flow switcher modal",
+  "main.registerCommand restore most recent cursor": "Restore most recent cursor position",
+  "main.registerCommand select active region": "Select active region",
+  "main.registerCommand sync all leaves": "Sync all leaves",
   "main.registerCommand toggle explorer navigation": "Toggle explorer navigation",
   "main.registerCommand toggle menu bar": "Toggle menu bar",
-  "main.registerCommand export active flow": "Export active flow",
-  "main.registerCommand select active region": "Select active region",
-  "main.registerCommand restore most recent cursor": "Restore most recent cursor position",
   "main.registerCommand toggle scroll bar": "Toggle scroll bar",
 
   "main.fileMenuListener.context flag flows for rebuild": "textFlow: Flag flows including \"${baseName}\" for rebuild",

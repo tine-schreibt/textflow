@@ -213,7 +213,11 @@ export default class TextFlowPlugin extends Plugin {
           }
         },
       });
-    } else {
+    } else if (
+      this.settings.checkExternalEdits === "mtime" ||
+      this.settings.checkExternalEdits === "mtime+hash" ||
+      this.settings.checkExternalEdits === "always hash"
+    ) {
       this.addCommand({
         id: `text-flow-check-stats`,
         name: this.t("main.registerCommand check stats"),
@@ -332,9 +336,12 @@ export default class TextFlowPlugin extends Plugin {
       callback: () => {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (!view) return;
+        if (!view) return;
+        if (!view.file) return;
 
+        const activeLeafPath = view.file.path;
         const leafID = (view.leaf as any).id;
-        const flowName = this.isFlowFile(leafID.view.path);
+        const flowName = this.isFlowFile(activeLeafPath);
         if (!flowName) return;
         if (!this.settings.flows[flowName].activeRegions) return;
         if (!this.settings.flows[flowName].activeRegions[leafID]) return;
