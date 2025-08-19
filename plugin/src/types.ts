@@ -77,7 +77,6 @@ export interface CursorData {
 // ------------------------------
 
 export interface FlowDef {
-  flowName: string;
   flowFilePath: string;
   definitionMode: string;
   flowCookbook: { [key: string]: string }; // user input

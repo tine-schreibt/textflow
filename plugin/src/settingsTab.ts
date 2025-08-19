@@ -12,6 +12,8 @@ import {
 import TextFlow from "../main";
 import * as Types from "./types";
 import { dirname } from "path";
+import fs from "fs/promises";
+import path from "path";
 
 // --- The class that defines the settings tab
 export class TextFlowSettingsTab extends PluginSettingTab {
@@ -28,7 +30,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
   //###########################   Settings Tab   ##########################
   //#######################################################################
 
-  display(): void {
+  display = async () => {
     const { containerEl } = this;
     containerEl.empty();
 
@@ -1485,8 +1487,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
                 createOrEdit: "edit",
                 dataviewSearchPath: "",
                 success: true,
-                flowName: shownFlow.flowName,
-                oldFlowName: shownFlow.flowName,
+                flowName: flowName,
+                oldFlowName: flowName,
                 definitionMode: shownFlow.definitionMode,
                 folderTitles: shownFlow.folderTitles,
                 flowCookbook: shownFlow.flowCookbook,
@@ -1519,23 +1521,97 @@ export class TextFlowSettingsTab extends PluginSettingTab {
                 this.app,
                 this.plugin,
                 this,
-                shownFlow.flowName
+                flowName
               );
               DeleteFlowDefModal.open();
             });
         });
     }
 
+    // Check if we got a backup of the backup in our vault
+    if (this.plugin.settings.firstLaunch) {
+      // path for the file in the vault
+      const basePath = (this.app.vault.adapter as any).basePath;
+      const searchPath = path.join(basePath, "textFlowDefBackup.json");
+
+      // path for the file in .obsidian/plugins/textFlow
+      const createPath = path.join(
+        basePath,
+        this.app.vault.configDir,
+        "plugins",
+        this.plugin.manifest.id,
+        "textFlowDefBackup.json"
+      );
+
+      const fileExists = await this.plugin.flowService.doesFileExistFs(
+        searchPath
+      );
+      if (fileExists) {
+        const rawContents = await fs.readFile(searchPath, "utf-8");
+        await fs.writeFile(createPath, rawContents, "utf-8");
+        // once we copied the contents, we can delete the source file
+        await fs.unlink(searchPath);
+        new Notice(
+          this.plugin.t("restoreSettings.notice .json has been restored to .obsidian")
+        );
+      }
+      this.plugin.settings.firstLaunch = false;
+    }
+
     const restoreSettings = new Setting(flowDisplay)
       .setName(this.plugin.t("restoreSettings.setName restore definitions"))
-      .addButton((rebuildButton) =>
+      .setDesc(
+        createFragment((desc) => {
+          desc.createSpan({
+            text: this.plugin.t("restoreSettings.setDesc1 explanation"),
+          });
+          desc.createEl("br");
+          desc.createSpan({
+            text: this.plugin.t("restoreSettings.setDesc2 explanation"),
+          });
+        })
+      )
+
+      .addButton((rebuildButton) => {
         rebuildButton
           .setButtonText(
             this.plugin.t("restoreSettings.setButtonText restore definitions")
           )
           .onClick(async () => {
             new Modals.RestoreFlowDefModal(this.app, this.plugin, this).open();
-          })
-      );
-  }
+          });
+      })
+      .addButton((backupBackupButton) => {
+        backupBackupButton
+          .setButtonText(
+            this.plugin.t("restoreSettings.setButtonText copy to vault")
+          )
+          .onClick(async () => {
+            // create the path for the file in .obsidian/plugins/textFlow
+            const basePath = (this.app.vault.adapter as any).basePath;
+            const searchPath = path.join(
+              basePath,
+              this.app.vault.configDir,
+              "plugins",
+              this.plugin.manifest.id,
+              "textFlowDefBackup.json"
+            );
+
+            // and the path for where we'll put the plugin
+            const createPath = path.join(basePath, "textFlowDefBackup.json");
+
+            const fileExists = await this.plugin.flowService.doesFileExistFs(
+              searchPath
+            );
+            if (fileExists) {
+              // get the contents and write them into the new file
+              const rawContents = await fs.readFile(searchPath, "utf-8");
+              await fs.writeFile(createPath, rawContents, "utf-8");
+              new Notice(
+                this.plugin.t("restoreSettings.notice .json has been copied")
+              );
+            }
+          });
+      });
+  };
 }

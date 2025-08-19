@@ -163,8 +163,13 @@
   "flowDisplay.editButton.setButtonText edit": "Bearbeiten",
   "flowDisplay.deleteButton.setButtonText delete definition": "Definition löschen",
 
-  "restoreSettings.setName restore definitions": "Stelle alte Settings wieder her",
+  "restoreSettings.notice .json has been restored to .obsidian": "textFlowDefBackup.json wurde nach .obsidian/plugins/textFlow kopiert und aus deinem Vault gelöscht.",
+  "restoreSettings.setName restore definitions": "Stelle alte Flow-Definitionen wieder her",
+  "restoreSettings.setDesc1 explanation": "Kopiere die Backups in deinen Vault, bevor du das Plugin de/reinstallierst.",
+  "restoreSettings.setDesc2 explanation": "Sie werden nach dem nächsten Start wieder hier verfügbar sein.",
   "restoreSettings.setButtonText restore definitions": "Zeige Backups",
+  "restoreSettings.setButtonText copy to vault": "Kopiere in Vault",
+  "restoreSettings.notice .json has been copied": "textFlowDefBackup.json wurde im Wurzelordner erstellt.",
 
   "-------- MENU BAR": "The menu bar.-------------",
   "menuBar.selectButton.setTooltip select active region": "Aktive Region auswählen",
@@ -192,10 +197,13 @@
   "switcherModal.info no inactive flows found": "Keine inaktiven Flows gefunden",
 
   "---------- BACKUP MODAL": "Modal, das erlaubt, Flow-Definitionen aus Backups wiederherzustellen ----------",
-  "backup.description restore": "Deine Backups",
+  "backup.headline": "Deine Backups",
+  "backup.explanation empty": "Du hast keine Backups. Erstelle oder editiere einen Flow, um ein Backup zu erzeugen.",
+  "backup.explanation": "Klicke einmal, um auszuwählen, ein zweites mal um wieder abzuwählen.",
   "backup.restoreButton.setButtonText restore": "Wiederherstellen",
   "backup.deleteButton.setButtonText delete": "Löschen",
-  "backup.closeButton.setButtonText close": "Schließen",
+  "backup.okayButton.setButtonText okay": "Okay",
+  "backup.dismissButton.setButtonText dismiss": "Abbrechen",
 
   "-------------- FUZZY NAVIGATION MODAL": "Tastaturfreundliches Modal für das Öffnen und Schließen von Flows --------",
   "fuzzyNavigabiotnModal.info flow in active leaf": "Flow im aktiven leaf",

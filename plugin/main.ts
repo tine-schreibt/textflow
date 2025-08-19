@@ -1345,6 +1345,7 @@ ${pseudoElement}
               // this sets off a chain of functions which updates the active Region
               await plugin.checkActiveRegion(
                 plugin.settings.flows[flowName],
+                flowName,
                 leafID,
                 cursorOffset,
                 view
@@ -2715,6 +2716,7 @@ ${pseudoElement}
   // --------------- Functions: Flow management: Regions -----------------------------------------
   private checkActiveRegion = async (
     flow: Types.FlowDef,
+    flowName: string,
     leafID: number,
     cursorOffset: number,
     view: MarkdownView
@@ -2749,7 +2751,7 @@ ${pseudoElement}
         // then check if the active region overlaps and sent a notice
         if (activeRegionObject.path) {
           this.decorateSourceNotes("update");
-          this.notifyOfOverlap(activeRegionObject.path, flow.flowName);
+          this.notifyOfOverlap(activeRegionObject.path, flowName);
         }
 
         await this.saveSettings();
@@ -2784,17 +2786,17 @@ ${pseudoElement}
         ) {
           if (activeRegionPath) {
             const flowHasEdits = await this.checkStatsForNote(
-              flow.flowName,
+              flowName,
               activeRegionPath
             );
             if (flowHasEdits) {
-              this.flowService.rebuildFlow(flow.flowName, "menuBar");
+              this.flowService.rebuildFlow(flowName, "menuBar");
               new Notice(
                 this.t("main.cursorTracker.notice", {
-                  flowName: flow.flowName,
+                  flowName: flowName,
                 })
               );
-              this.lastActivity[flow.flowName] = Date.now();
+              this.lastActivity[flowName] = Date.now();
             }
           }
         }
@@ -2805,13 +2807,13 @@ ${pseudoElement}
           view.menuBar.refresh(view.contentEl);
         }
         if (activeRegion.path) {
-          this.notifyOfOverlap(activeRegion.path, flow.flowName);
+          this.notifyOfOverlap(activeRegion.path, flowName);
         }
       } else {
         // if the compass just cirles, notify the user
         new Notice(
           this.t("checkActiveRegion.notice region tracking error", {
-            flow_flowName: flow.flowName,
+            flow_flowName: flowName,
           }),
           0
         );

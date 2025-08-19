@@ -1042,7 +1042,6 @@ export class FlowService {
 
     // -------- CREATE THE FLOW OBJECT -------------------------------
     settings.flows[flowBuildBasket.flowName] = {
-      flowName: flowBuildBasket.flowName,
       flowFilePath: normalizePath(
         `${this.plugin.settings.systemFolderPath}/${flowBuildBasket.flowName}.md`
       ),
@@ -1152,8 +1151,8 @@ export class FlowService {
       dataviewSearchPath: "",
       success: false,
       // properties that will be transferred to the actual flow object
-      flowName: this.plugin.settings.flows[flowName].flowName,
-      oldFlowName: this.plugin.settings.flows[flowName].flowName,
+      flowName: flowName,
+      oldFlowName: flowName,
       definitionMode: this.plugin.settings.flows[flowName].definitionMode,
       folderTitles: this.plugin.settings.flows[flowName].folderTitles,
       flowCookbook: this.plugin.settings.flows[flowName].flowCookbook,
@@ -1647,6 +1646,16 @@ export class FlowService {
     }
   };
 
+  // check if the file exists
+  doesFileExistFs = async (filePath: string): Promise<boolean> => {
+    try {
+      await fs.access(filePath);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   backupFlowDef = async (flowName: string) => {
     console.log("backup function called");
     // make a clone of the flow, clean it and package it
@@ -1670,19 +1679,10 @@ export class FlowService {
       this.app.vault.configDir,
       "plugins",
       this.plugin.manifest.id,
-      "textFlowSettingsBackup.json"
+      "textFlowDefBackup.json"
     );
 
-    // check if the file exists
-    const doesFileExist = async (filePath: string): Promise<boolean> => {
-      try {
-        await fs.access(filePath);
-        return true;
-      } catch {
-        return false;
-      }
-    };
-    const fileExists = await doesFileExist(backupPath);
+    const fileExists = await this.doesFileExistFs(backupPath);
 
     // variable to hold the contents if the file exists
     let parsedJson;

@@ -26,8 +26,11 @@
 
   "---------- BACKUP MODAL": "Modal, which allows the user to restore flows from backups ----------",
   "backup.description restore": "Your backups",
+  "backup.explanation empty": "You don't have any backups. Create or edit a flow to create one.",
+  "backup.explanation": "Click once to select, a second time to deselect.",
   "backup.restoreButton.setButtonText restore": "Restore",
   "backup.deleteButton.setButtonText delete": "Delete",
+  "backup.okayButton.setButtonText okay": "Okay",
   "backup.closeButton.setButtonText close": "Close",
 
   "------ EXPLORER DECORATION": "Choose unicode characters to decorate source notes in file explorer ----------------",
@@ -169,8 +172,13 @@
   "flowDisplay.editButton.setButtonText edit": "Edit",
   "flowDisplay.deleteButton.setButtonText delete definition": "Delete definition",
 
-  "restoreSettings.setName restore definitions": "Restore old settings",
+  "restoreSettings.notice .json has been restored to .obsidian": "textFlowDefBackup.json has been copied to .obsidian/plugins/textFlow and delete from your vault.",
+  "restoreSettings.setName restore definitions": "Restore old flow definitions",
+  "restoreSettings.setDesc1 explanation": "Copy backups to your vault before de/reinstalling the plugin.",
+  "restoreSettings.setDesc2 explanation": "They'll be available again right here after the next start.",
   "restoreSettings.setButtonText restore definitions": "Show backups",
+  "restoreSettings.setButtonText copy to vault": "Copy to vault",
+  "restoreSettings.notice .json has been copied": "textFlowDefBackup.json has been created in your root folder.",
 
   "-------- MENU BAR": "The menu bar.-------------",
   "menuBar.selectButton.setTooltip select active region": "Select active region",

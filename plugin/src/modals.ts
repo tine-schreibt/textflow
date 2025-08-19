@@ -443,6 +443,11 @@ export class RestoreFlowDefModal extends Modal {
     this.settingsTab = settingsTab;
   }
 
+  private decisionBasket: { [key: string]: { [key: string]: boolean } } = {
+    restore: {},
+    delete: {},
+  };
+
   // check if the file exists
   private doesFileExist = async (filePath: string): Promise<boolean> => {
     try {
@@ -461,10 +466,12 @@ export class RestoreFlowDefModal extends Modal {
       this.app.vault.configDir,
       "plugins",
       this.plugin.manifest.id,
-      "textFlowSettingsBackup.json"
+      "textFlowDefBackup.json"
     );
 
     const fileExists = await this.doesFileExist(backupPath);
+
+    if (!fileExists) return null;
 
     // variable to hold the contents if the file exists
     let parsedJson;
@@ -476,162 +483,236 @@ export class RestoreFlowDefModal extends Modal {
   };
 
   onOpen = async () => {
+    this.display();
+  };
+
+  display = async () => {
     const { contentEl } = this;
+    contentEl.empty();
 
-    const { parsedJson, backupPath } = await this.getBackup();
+    // check if we have something to display
+    const exists = await this.getBackup();
+    if (!exists) {
+      // if we don't, tell the user how to get something to display
+      const flowDisplay = contentEl.createDiv({
+        cls: "headline-container",
+      });
 
-    const flowDisplay = contentEl.createDiv({
-      cls: "headline-container",
-    });
-    flowDisplay.createEl("h3", {
-      text: this.plugin.t("backup.description restore"),
-      cls: "headline-text",
-    });
+      flowDisplay.createEl("h3", {
+        text: this.plugin.t("backup.headline"),
+        cls: "headline-text",
+      });
+      const flowExplanation = flowDisplay
+        .createDiv()
+        .setText(this.plugin.t("backup.explanation empty"));
 
-    const flowSorted: string[] = [];
-    Object.keys(parsedJson).forEach((flow) => {
-      flowSorted.push(flow);
-    });
-
-    flowSorted.sort();
-
-    for (let flowName of flowSorted) {
-      const shownFlow = parsedJson[flowName];
-
-      // --- DISPLAY PREPARATIONS ----------------------------------
-      // Set up strings to display flow criteria
-
-      // SOURCE
-      let source = "";
-      if (shownFlow.flowCookbook.bookmarks) {
-        source += this.plugin.t("flowDisplay.source.alt bookmark group", {
-          shownFlow_flowCookbook_bookmarks: shownFlow.flowCookbook.bookmarks,
-        });
-      } else if (
-        shownFlow.flowCookbook.folderIncluded === "" ||
-        shownFlow.flowCookbook.folderIncluded === "/"
-      ) {
-        source += "/";
-      } else {
-        source += `/${shownFlow.flowCookbook.folderIncluded}`;
-      }
-
-      // INCLUSION
-      const included: string[] = [];
-      if (shownFlow.flowCookbook.tagsIncluded?.trim()) {
-        included.push(
-          this.plugin.t("flowDisplay.included tags", {
-            shownFlow_flowCookbook_tagsIncluded:
-              shownFlow.flowCookbook.tagsIncluded,
-          })
-        );
-      }
-      if (shownFlow.flowCookbook.propsIncluded?.trim()) {
-        included.push(
-          this.plugin.t("flowDisplay.included props", {
-            shownFlow_flowCookbook_propsIncluded:
-              shownFlow.flowCookbook.propsIncluded,
-          })
-        );
-      }
-      const inclusionString = included.length > 0 ? included.join(" / ") : "";
-
-      // EXCLUSION
-      const excluded: string[] = [];
-      if (
-        !shownFlow.flowCookbook.bookmarks &&
-        shownFlow.flowCookbook.folderExcluded?.trim()
-      ) {
-        excluded.push(
-          this.plugin.t("flowDisplay.excluded folders", {
-            shownFlow_flowCookbook_folderExcluded:
-              shownFlow.flowCookbook.folderExcluded,
-          })
-        );
-      }
-      if (shownFlow.flowCookbook.tagsExcluded?.trim()) {
-        excluded.push(
-          this.plugin.t("flowDisplay.excluded tags", {
-            shownFlow_flowCookbook_tagsExcluded:
-              shownFlow.flowCookbook.tagsExcluded,
-          })
-        );
-      }
-      if (shownFlow.flowCookbook.propsExcluded?.trim()) {
-        excluded.push(
-          this.plugin.t("flowDisplay.excluded props", {
-            shownFlow_flowCookbook_propsExcluded:
-              shownFlow.flowCookbook.propsExcluded,
-          })
-        );
-      }
-      const exclusionString = excluded.length > 0 ? excluded.join(" / ") : "";
-
-      // --- THE DISPLAY ITSELF -------------------------------
-      const flowShow = new Setting(flowDisplay);
-      flowShow
-        .setName(`${flowName}`)
-        .setDesc(
-          createFragment((desc) => {
-            desc.createSpan({
-              text: this.plugin.t("flowDisplay.flowShow.setDesc.1 source", {
-                source: source,
-              }),
-            });
-            if (inclusionString != "" && inclusionString != undefined) {
-              desc.createEl("br");
-              desc.createSpan({
-                text: this.plugin.t(
-                  "flowDisplay.flowShow.setDesc.2 inclusion criteria",
-                  { inclusionString: inclusionString }
-                ),
-              });
-            }
-            if (exclusionString != "" && exclusionString != undefined) {
-              desc.createEl("br");
-              desc.createSpan({
-                text: this.plugin.t(
-                  "flowDisplay.flowShow.setDesc.3 exclusion criteria",
-                  { exclusionString: exclusionString }
-                ),
-              });
-            }
-          })
+      const dismissButton = new ButtonComponent(contentEl);
+      dismissButton
+        .setButtonText(
+          this.plugin.t("backup.dismissButton.setButtonText dismiss")
         )
+        .onClick(async (buttonEl: MouseEvent) => {
+          this.close();
+        });
+    } else {
+      // if we do, display that
+      const { parsedJson, backupPath } = exists;
 
-        .addButton((restore) => {
-          restore
-            .setButtonText(
-              this.plugin.t("backup.restoreButton.setButtonText restore")
-            )
-            .onClick(async () => {
-              this.plugin.settings.flows[flowName] = shownFlow;
-              await this.plugin.saveSettings();
-              this.settingsTab.display();
+      const flowDisplay = contentEl.createDiv({
+        cls: "headline-container",
+      });
+
+      flowDisplay.createEl("h3", {
+        text: this.plugin.t("backup.headline"),
+        cls: "headline-text",
+      });
+
+      const flowExplanation = flowDisplay
+        .createDiv()
+        .setText(this.plugin.t("backup.explanation"));
+
+      const flowSorted: string[] = [];
+      Object.keys(parsedJson).forEach((flow) => {
+        flowSorted.push(flow);
+      });
+
+      flowSorted.sort();
+
+      for (let flowName of flowSorted) {
+        const shownFlow = parsedJson[flowName];
+
+        // --- DISPLAY PREPARATIONS ----------------------------------
+        // Set up strings to display flow criteria
+
+        // SOURCE
+        let source = "";
+        if (shownFlow.flowCookbook.bookmarks) {
+          source += this.plugin.t("flowDisplay.source.alt bookmark group", {
+            shownFlow_flowCookbook_bookmarks: shownFlow.flowCookbook.bookmarks,
+          });
+        } else if (
+          shownFlow.flowCookbook.folderIncluded === "" ||
+          shownFlow.flowCookbook.folderIncluded === "/"
+        ) {
+          source += "/";
+        } else {
+          source += `/${shownFlow.flowCookbook.folderIncluded}`;
+        }
+
+        // INCLUSION
+        const included: string[] = [];
+        if (shownFlow.flowCookbook.tagsIncluded?.trim()) {
+          included.push(
+            this.plugin.t("flowDisplay.included tags", {
+              shownFlow_flowCookbook_tagsIncluded:
+                shownFlow.flowCookbook.tagsIncluded,
+            })
+          );
+        }
+        if (shownFlow.flowCookbook.propsIncluded?.trim()) {
+          included.push(
+            this.plugin.t("flowDisplay.included props", {
+              shownFlow_flowCookbook_propsIncluded:
+                shownFlow.flowCookbook.propsIncluded,
+            })
+          );
+        }
+        const inclusionString = included.length > 0 ? included.join(" / ") : "";
+
+        // EXCLUSION
+        const excluded: string[] = [];
+        if (
+          !shownFlow.flowCookbook.bookmarks &&
+          shownFlow.flowCookbook.folderExcluded?.trim()
+        ) {
+          excluded.push(
+            this.plugin.t("flowDisplay.excluded folders", {
+              shownFlow_flowCookbook_folderExcluded:
+                shownFlow.flowCookbook.folderExcluded,
+            })
+          );
+        }
+        if (shownFlow.flowCookbook.tagsExcluded?.trim()) {
+          excluded.push(
+            this.plugin.t("flowDisplay.excluded tags", {
+              shownFlow_flowCookbook_tagsExcluded:
+                shownFlow.flowCookbook.tagsExcluded,
+            })
+          );
+        }
+        if (shownFlow.flowCookbook.propsExcluded?.trim()) {
+          excluded.push(
+            this.plugin.t("flowDisplay.excluded props", {
+              shownFlow_flowCookbook_propsExcluded:
+                shownFlow.flowCookbook.propsExcluded,
+            })
+          );
+        }
+        const exclusionString = excluded.length > 0 ? excluded.join(" / ") : "";
+
+        // --- THE DISPLAY ITSELF -------------------------------
+        const flowShow = new Setting(flowDisplay);
+        flowShow
+          .setName(`${flowName}`)
+          .setDesc(
+            createFragment((desc) => {
+              desc.createSpan({
+                text: this.plugin.t("flowDisplay.flowShow.setDesc.1 source", {
+                  source: source,
+                }),
+              });
+              if (inclusionString != "" && inclusionString != undefined) {
+                desc.createEl("br");
+                desc.createSpan({
+                  text: this.plugin.t(
+                    "flowDisplay.flowShow.setDesc.2 inclusion criteria",
+                    { inclusionString: inclusionString }
+                  ),
+                });
+              }
+              if (exclusionString != "" && exclusionString != undefined) {
+                desc.createEl("br");
+                desc.createSpan({
+                  text: this.plugin.t(
+                    "flowDisplay.flowShow.setDesc.3 exclusion criteria",
+                    { exclusionString: exclusionString }
+                  ),
+                });
+              }
+            })
+          )
+
+          .addButton((restoreButton) => {
+            restoreButton
+              .setIcon("download")
+              .setTooltip(
+                this.plugin.t("backup.restoreButton.setButtonText restore")
+              )
+              .onClick(async () => {
+                // if the button has not been clicked yet
+                if (!this.decisionBasket.restore[flowName]) {
+                  restoreButton.buttonEl.classList.add("mod-cta");
+                  this.decisionBasket.restore[flowName] = true;
+                } else {
+                  restoreButton.buttonEl.classList.remove("mod-cta");
+                  delete this.decisionBasket.restore[flowName];
+                }
+              });
+          })
+          .addButton((deleteButton) => {
+            deleteButton
+              .setIcon("trash")
+              .setTooltip(
+                this.plugin.t("backup.deleteButton.setButtonText delete")
+              )
+              .onClick(async () => {
+                // if the button has not been clicked yet
+                if (!this.decisionBasket.delete[flowName]) {
+                  deleteButton.buttonEl.classList.add("mod-warning");
+                  this.decisionBasket.delete[flowName] = true;
+                } else {
+                  deleteButton.buttonEl.classList.remove("mod-warning");
+                  delete this.decisionBasket.delete[flowName];
+                }
+              });
+          });
+      }
+      const okayButton = new ButtonComponent(contentEl);
+      okayButton
+        .setButtonText(this.plugin.t("backup.okayButton.setButtonText okay"))
+        .onClick(async (buttonEl: MouseEvent) => {
+          const restoreDef = async () => {
+            Object.keys(this.decisionBasket.restore).forEach((flowName) => {
+              this.plugin.settings.flows[flowName] = parsedJson[flowName];
             });
-        })
-        .addButton((deleteBackup) => {
-          deleteBackup
-            .setButtonText(
-              this.plugin.t("backup.deleteButton.setButtonText delete")
-            )
-            .onClick(async () => {
+          };
+          const deleteDef = () => {
+            Object.keys(this.decisionBasket.delete).forEach((flowName) => {
               delete parsedJson[flowName];
             });
+          };
+
+          await restoreDef();
+          await deleteDef();
+
+          await fs.writeFile(
+            backupPath,
+            JSON.stringify(parsedJson, null, 2),
+            "utf-8"
+          );
+          this.settingsTab.display();
+          this.close();
+        });
+
+      const dismissButton = new ButtonComponent(contentEl);
+      dismissButton
+        .setButtonText(
+          this.plugin.t("backup.dismissButton.setButtonText dismiss")
+        )
+        .onClick(async (buttonEl: MouseEvent) => {
+          this.close();
         });
     }
-    const closeButton = new ButtonComponent(contentEl);
-    closeButton
-      .setButtonText(this.plugin.t("backup.closeButton.setButtonText close"))
-      .onClick(async (buttonEl: MouseEvent) => {
-        await fs.writeFile(
-          backupPath,
-          JSON.stringify(parsedJson, null, 2),
-          "utf-8"
-        );
-        this.settingsTab.display();
-        this.close();
-      });
   };
 }
 
@@ -734,14 +815,10 @@ export class FlowSwitcherModal extends Modal {
 
     // ---------- PREPARE INACTIVE REGIONS --------------------
     const inactiveFlowArray: string[] = [];
-    Object.keys(this.plugin.settings.flows).forEach((flow) => {
+    Object.keys(this.plugin.settings.flows).forEach((flowName) => {
       // if there's entries for a flow
-      if (
-        !sortActiveRegionsArray.includes(
-          this.plugin.settings.flows[flow].flowName
-        )
-      ) {
-        inactiveFlowArray.push(this.plugin.settings.flows[flow].flowName);
+      if (!sortActiveRegionsArray.includes(flowName)) {
+        inactiveFlowArray.push(flowName);
       }
     });
     const sortedInactiveFlowArray = inactiveFlowArray.sort();
@@ -781,7 +858,7 @@ export class FlowSwitcherModal extends Modal {
       setIcon(flowIconSpan, "file-text");
 
       const flowName = flowHeader.createSpan({
-        text: `${this.plugin.settings.flows[activeFlow].flowName}`,
+        text: `${activeFlow}`,
         cls: "flow-switch-modal-active-header-flow-name",
       });
 
@@ -1065,7 +1142,7 @@ export class FlowSwitcherModal extends Modal {
       setIcon(inactiveFlowIconSpan, "file-text");
 
       const inactiveFlowName = inactiveFlowHeader.createSpan({
-        text: `${this.plugin.settings.flows[inactiveFlow].flowName}`,
+        text: `${inactiveFlow}`,
         cls: "flow-switch-modal-INactive-header-flow-name",
       });
 

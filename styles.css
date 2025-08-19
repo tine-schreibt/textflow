@@ -484,6 +484,11 @@
   text-align: left;
 }
 
+/* ------------- BACKUP MODAL ------------- */
+.restore {
+  color: var(--color-accent);
+}
+
 /* ---------- MENUBAR STUFF ------------- */
 /* height and alignment unification*/
 .textflow-menu-bar .clickable-icon,
