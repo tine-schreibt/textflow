@@ -141,6 +141,7 @@
   "previewButton.setButtonText preview your flow structure": "Vorschau deines Flows",
 
   "saveButton.setButtonText save flow def": "Speichere Flow-Definition",
+  "saveButton.notice create sys folder first": "textFlow: Bitte wähle zuerst einen Ort für textFlows Systemordner.",
 
   "clearValues.setButtonText clear values": "Verwerfe Eingaben",
 

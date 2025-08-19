@@ -150,6 +150,7 @@
   "previewButton.setButtonText preview your flow structure": "Preview your flow structure",
 
   "saveButton.setButtonText save flow def": "Save flow definition",
+  "saveButton.notice create sys folder first": "textFlow: Please choose a path for textFlow's system folder first",
 
   "clearValues.setButtonText clear values": "Clear values",
 

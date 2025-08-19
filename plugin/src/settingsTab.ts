@@ -1264,6 +1264,13 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     saveButton
       .setButtonText(this.plugin.t("saveButton.setButtonText save flow def"))
       .onClick(async (buttonEl: MouseEvent) => {
+        if (!this.plugin.settings.systemFolderPath) {
+          new Notice(
+            this.plugin.t("saveButton.notice create sys folder first")
+          );
+          return;
+        }
+
         this.plugin.flowService.renameFlow();
 
         // if checks and flow creation haven't been performed by the preview button
@@ -1552,7 +1559,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         // once we copied the contents, we can delete the source file
         await fs.unlink(searchPath);
         new Notice(
-          this.plugin.t("restoreSettings.notice .json has been restored to .obsidian")
+          this.plugin.t(
+            "restoreSettings.notice .json has been restored to .obsidian"
+          )
         );
       }
       this.plugin.settings.firstLaunch = false;

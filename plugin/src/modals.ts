@@ -475,7 +475,6 @@ export class RestoreFlowDefModal extends Modal {
 
     // variable to hold the contents if the file exists
     let parsedJson;
-    console.log("file found; parsing json");
     const rawContents = await fs.readFile(backupPath, "utf-8");
     parsedJson = JSON.parse(rawContents);
 

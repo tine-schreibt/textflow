@@ -1657,7 +1657,6 @@ export class FlowService {
   };
 
   backupFlowDef = async (flowName: string) => {
-    console.log("backup function called");
     // make a clone of the flow, clean it and package it
     const currentDate = this.getTimestamp();
     const backupName = `${flowName} ${currentDate}`;
@@ -1688,13 +1687,11 @@ export class FlowService {
     let parsedJson;
 
     if (!fileExists) {
-      console.log("file not found");
       // if the file doesn't exist yet, create it
       await fs.writeFile(backupPath, output, "utf-8");
       return;
     } else {
       try {
-        console.log("file found; parsing json");
         const rawContents = await fs.readFile(backupPath, "utf-8");
         parsedJson = JSON.parse(rawContents);
       } catch (e) {
