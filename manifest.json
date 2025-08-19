@@ -3,7 +3,7 @@
   "name": "_a_textFlow",
   "version": "0.1.0",
   "minAppVersion": "1.4.0",
-  "description": "Displays all text as a continuous flow, like Scrivenings",
+  "description": "Display, browse and edit multiple notes as one continuous document (flow). Flows can be defined using bookmarks, paths, tags and properties, and automatically sync with their source notes.",
   "author": "tine-schreibt",
   "authorUrl": "https://github.com/tine-schreibt",
   "isDesktopOnly": true
