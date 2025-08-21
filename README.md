@@ -512,7 +512,7 @@ Und wann solltest du beide zusammen benutzen?
 
 <hr>
 
-### 12 Melde einen Bug / Zeige deine Liebe
+### 12 Melde einen Bug / Zeig deine Liebe
 
 Falls dir irgendwelche Bugs oder komisches Verhalten begegnen, die im Kapitel über das [Beheben von Problemen](#9-probleme-beheben) nicht erwähnt werden, melde dich auf github: https://github.com/tine-schreibt/aDHL/issues 
 Am besten kann ich dir helfen, wenn du dir die Fehlermeldungen in der Konsole ansiehst: 
