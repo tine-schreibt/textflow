@@ -1441,29 +1441,6 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
         path: filePath,
         searchableText: `: ${flowName}`,
       });
-
-      if (this.settings.flows[flowName].activeRegions) {
-        Object.keys(this.settings.flows[flowName].activeRegions).forEach(
-          (iteratorLeafID) => {
-            flowNames.push({
-              type: "active-region",
-              flowName: flowName,
-              leafID: iteratorLeafID,
-              region:
-                this.settings.flows[flowName].activeRegions[iteratorLeafID]
-                  .path,
-              path: this.settings.flows[flowName].activeRegions[iteratorLeafID]
-                .path,
-              searchableText: `: ${flowName} - ${iteratorLeafID.slice(
-                0,
-                5
-              )} - ${
-                this.settings.flows[flowName].activeRegions[iteratorLeafID].path
-              }`,
-            });
-          }
-        );
-      }
     });
 
     return [...activeFlowItems, ...otherFlowItems, ...flowNames];
@@ -1478,7 +1455,11 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
     el: HTMLElement
   ) {
     const suggestionItem = fuzzyMatch.item;
-    const searchText = suggestionItem.searchableText;
+    let displayFlowName = `${suggestionItem.flowName} `;
+    if (suggestionItem.type === "flow-name") {
+      displayFlowName = "";
+    }
+    const searchText = displayFlowName + suggestionItem.searchableText;
 
     // make the container
     const contentEl = el.createDiv({ cls: "suggestion-content" });

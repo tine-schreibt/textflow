@@ -2128,6 +2128,7 @@ ${pseudoElement}
         leafMenuBarSettings: {
           menuBarDisplayState: "show",
           navDropdownState: "hide",
+          navDropdownSearchTerm: undefined,
           cursorDropdownState: "hide",
         },
       };
@@ -2939,6 +2940,10 @@ ${pseudoElement}
                 .menuBarDisplayState,
             navDropdownState:
               flow.activeRegions[leafID].leafMenuBarSettings.navDropdownState,
+            navDropdownSearchTerm:
+              flow.activeRegions[leafID].leafMenuBarSettings
+                .navDropdownSearchTerm,
+
             cursorDropdownState:
               flow.activeRegions[leafID].leafMenuBarSettings
                 .cursorDropdownState,

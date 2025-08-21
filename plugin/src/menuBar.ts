@@ -419,9 +419,7 @@ export class MenuBar {
       }
 
       // If we don't have an active region - we always do, but still - be ready to use the first region
-      const key = this.plugin.settings.flows[this.flowName].flowRecipe.bookmarks
-        ? "bookmarks"
-        : "foldersTagsProps";
+      const key = this.plugin.settings.flows[this.flowName].definitionMode;
       const firstThing =
         this.plugin.settings.flows[this.flowName].flowRecipe[key][0];
       const firstThingNoteName = this.makeNavPath(firstThing);
@@ -451,6 +449,19 @@ export class MenuBar {
         setIcon(iconSpan, "chevrons-down-up");
 
         this.addManagedListener(navHeadline, "click", (event) => {
+          // see if we got a search term stored; this is so the user doesn't have to
+          // retype it if they use it to create a navigation environment
+          if (
+            this.plugin.settings.flows[this.flowName].activeRegions[this.leafID]
+              .leafMenuBarSettings.navDropdownSearchTerm
+          ) {
+            const query =
+              this.plugin.settings.flows[this.flowName].activeRegions[
+                this.leafID
+              ].leafMenuBarSettings.navDropdownSearchTerm;
+            performSearch(event, query);
+          }
+
           if (this.getDropdownState("nav") === "hide") {
             this.setDropdownState("nav", "show");
             this.refresh(this.associatedView.contentEl);
@@ -482,7 +493,26 @@ export class MenuBar {
           cls: "menu-bar-navigation-dropdown-search-input",
           type: "text",
           placeholder: "Filter...",
+          value:
+            this.plugin.settings.flows[this.flowName].activeRegions[this.leafID]
+              .leafMenuBarSettings.navDropdownSearchTerm,
         });
+
+        // if we have a stored search term, select it, so it's easy to replace/remove
+        if (
+          this.plugin.settings.flows[this.flowName].activeRegions[this.leafID]
+            ?.leafMenuBarSettings.navDropdownSearchTerm
+        ) {
+          searchInput.select();
+        }
+
+        this.addManagedListener(searchInput, "input", (event) => {
+          performSearch(event);
+        });
+      }
+
+      // this function is in here so I don't have to hand over a million args
+      const performSearch = (event: Event, query?: string) => {
         const searchItems = this.plugin.settings.flows[
           this.flowName
         ].flowRecipe[key].map((path) => ({
@@ -501,36 +531,41 @@ export class MenuBar {
           includeMatches: true,
         });
 
-        this.addManagedListener(searchInput, "input", (event) => {
-          const query = (event.target as HTMLInputElement).value;
+        // if the event is an input - which it is if we don't have a query
+        if (!query) {
+          query = (event.target as HTMLInputElement).value;
+        }
 
-          // If no query (yet), return all paths
-          if (!query) {
-            this.filterList =
-              this.plugin.settings.flows[this.flowName].flowRecipe[key];
-          }
+        this.plugin.settings.flows[this.flowName].activeRegions[
+          this.leafID
+        ].leafMenuBarSettings.navDropdownSearchTerm = query;
+        // save the query debouncedly
+        this.plugin.flowService.debouncedSaveSettings();
 
-          // Otherwise return filtered paths
-          this.filterList = fuse
-            .search(query)
-            .map(
-              (result) => (result as FuseResult<{ path: string }>).item.path
-            );
+        // If no query (yet), return all paths
+        if (!query) {
+          this.filterList =
+            this.plugin.settings.flows[this.flowName].flowRecipe[key];
+        }
 
-          if (this.filterList.length === 0 && query != "") {
-            // no entries because of failed filter
-            this.refreshNavDropdownEntries(dropdownEntries, true);
-          } else if (this.filterList.length > 0) {
-            // entries because of successful filter
-            this.refreshNavDropdownEntries(dropdownEntries, false);
-          } else {
-            // no entries because query has been deleted
-            this.filterList =
-              this.plugin.settings.flows[this.flowName].flowRecipe[key];
-            this.refreshNavDropdownEntries(dropdownEntries, false);
-          }
-        });
-      }
+        // Otherwise return filtered paths
+        this.filterList = fuse
+          .search(query)
+          .map((result) => (result as FuseResult<{ path: string }>).item.path);
+
+        if (this.filterList.length === 0 && query != "") {
+          // no entries because of failed filter
+          this.refreshNavDropdownEntries(dropdownEntries, true);
+        } else if (this.filterList.length > 0) {
+          // entries because of successful filter
+          this.refreshNavDropdownEntries(dropdownEntries, false);
+        } else {
+          // no entries because query has been deleted -> give whole list again
+          this.filterList =
+            this.plugin.settings.flows[this.flowName].flowRecipe[key];
+          this.refreshNavDropdownEntries(dropdownEntries, false);
+        }
+      };
 
       // a matrioshka of layout despair
       const dropdownGeneral = navigationDropdown.createDiv({
@@ -593,6 +628,8 @@ export class MenuBar {
         if (this.getDropdownState("cursor") === "hide") {
           this.setDropdownState("cursor", "show");
           this.refresh(this.associatedView.contentEl);
+          // this is just in here because I can't figure out how to
+          // get the styling right otherwise -.-
           const filterCriterion = this.element?.querySelector(
             ".menu-bar-navigation-dropdown-search-input"
           );
@@ -819,7 +856,7 @@ export class MenuBar {
           this.plugin.t("menuBar.selectButton.setTooltip export flow")
         )
         .onClick(async () => {
-          this.plugin.flowService.exportFlow(this.flowName)
+          this.plugin.flowService.exportFlow(this.flowName);
         });
 
       // a chevron to minimise

@@ -105,6 +105,7 @@ export interface ActiveRegion {
   leafMenuBarSettings: {
     menuBarDisplayState: MenuBarDisplayState;
     navDropdownState: DropdownState;
+    navDropdownSearchTerm: string | undefined;
     cursorDropdownState: DropdownState;
   };
 }
