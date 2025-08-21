@@ -712,52 +712,50 @@ export class FlowService {
     // ---- Pre-flight checks and cleanup --------------
 
     //--- INCLUDED FOLDER - only one path; notify if multiple
-    let cleanInclusionPath: string = "";
-    const folderInclusionArray = shCookbook.folderIncluded.split(",");
-    let excludeSubfolders = false;
-    if (folderInclusionArray.length > 1) {
-      new Notice(
-        this.plugin.t(
-          "getPathsByFoldersTagsProps.notice only one inclusion folder please"
-        )
-      );
-    } else {
-      // Clean up the whole "" and \ stuff we have to add for Dataview so rebuilds don't accumulate it
-      cleanInclusionPath = shCookbook.folderIncluded
-        .replace(/["\\\s]/g, "")
-        .replace(/\/+/g, "/") // Replace multiple forward slashes with single ones
-        .trim();
-      // check for trailing slash, because normalizePath will eat it
-      if (
-        cleanInclusionPath != "/" &&
-        cleanInclusionPath != "//" &&
-        cleanInclusionPath != "."
-      ) {
-        excludeSubfolders = cleanInclusionPath.endsWith("/");
-      }
-      // Normalise
-      cleanInclusionPath = normalizePath(cleanInclusionPath);
-      // and because all that cleaning STILL doesn't get rid of "//":
-      if (shCookbook.folderIncluded === "//") {
-        shCookbook.folderIncluded = "/";
-      }
-      // save path with trailing slash
-      if (excludeSubfolders) {
-        flowBuildBasket.flowCookbook.folderIncluded = `${cleanInclusionPath}/`;
-        this.plugin.saveSettings();
-      } else {
-        flowBuildBasket.flowCookbook.folderIncluded = `${cleanInclusionPath}`;
-        this.plugin.saveSettings();
-      }
+    let cleanFolderInclusionArray: string[] = [];
 
-      // dataview likes paths only with extra garnish
-      flowBuildBasket.dataviewSearchPath =
-        cleanInclusionPath === "" ||
+    const folderInclusionArray = shCookbook.folderIncluded.split(",");
+    if (folderInclusionArray.length >= 1) {
+      const nonEmptyFolderInclusionArray = folderInclusionArray
+        .map((x) => x.trim())
+        .filter((x) => x.length > 0);
+
+      // check for trailing slash, because normalizePath will eat it
+      for (let path of nonEmptyFolderInclusionArray) {
+        let excludeSubfolders = false;
+
+        if (path != "/" && path != "//" && path != ".") {
+          excludeSubfolders = path.endsWith("/");
+        }
+        // Normalise
+        let cleanIncludedPath = normalizePath(path.trim());
+        // and because all that cleaning STILL doesn't get rid of "//":
+        if (cleanIncludedPath === "//") {
+          cleanIncludedPath = "/";
+        }
+        // save path with trailing slash
+        if (excludeSubfolders) {
+          cleanFolderInclusionArray.push(`${cleanIncludedPath}/`);
+          this.plugin.saveSettings();
+        } else {
+          cleanFolderInclusionArray.push(`${cleanIncludedPath}`);
+          this.plugin.saveSettings();
+        }
+      }
+      flowBuildBasket.flowCookbook.folderIncluded =
+        cleanFolderInclusionArray.join(", ");
+    } else {
+      cleanFolderInclusionArray.push("");
+      flowBuildBasket.flowCookbook.folderIncluded = "";
+    }
+
+    // dataview likes paths only with extra garnish
+    flowBuildBasket.dataviewSearchPath = "";
+    /* cleanInclusionPath === "" ||
         cleanInclusionPath === "/" ||
         cleanInclusionPath === "root"
           ? "" // Empty string in Dataview queries means "search everywhere"
-          : `\"${cleanInclusionPath}\"`; // For specific paths, we need to wrap in quotes
-    }
+          : `\"${cleanInclusionPath}\"`; // For specific paths, we need to wrap in quotes*/
 
     // Leave the cleanup. I know it's redundant, but if you touch it, it releases a curse.
     //--- EXCLUDED FOLDERS - clean up paths
@@ -768,6 +766,7 @@ export class FlowService {
       const nonEmptyFolderExclusionArray = folderExclusionArray
         .map((x) => x.trim())
         .filter((x) => x.length > 0);
+
       for (let excludedFolder of nonEmptyFolderExclusionArray) {
         let cleanExcludedPath = normalizePath(excludedFolder.trim());
         cleanFolderExclusionArray.push(cleanExcludedPath);
@@ -896,7 +895,9 @@ export class FlowService {
       : buildFilesFirstFileTree(vault.getRoot());
 
     // ---- CALL DATAVIEW API to fetch all included, then filter
-    let allNotes = dv.pages(flowBuildBasket.dataviewSearchPath);
+    let allNotes = dv.pages("");
+
+    const inclusionFilteredNotes = [];
 
     // Function to exclude subfolders
     const isDirectChild = (filePath: string, basePath: string): boolean => {
@@ -905,20 +906,37 @@ export class FlowService {
       // Count remaining forward slashes
       return relativePath.split("/").length <= 1;
     };
-    // If inclusion path ends with slash, do the thing
-    if (
-      flowBuildBasket.flowCookbook.folderIncluded != "/" &&
-      flowBuildBasket.flowCookbook.folderIncluded.endsWith("/")
-    ) {
-      allNotes = allNotes.filter((page: Types.DVNote) =>
-        isDirectChild(
-          page.file.path,
-          flowBuildBasket.flowCookbook.folderIncluded.slice(0, -1)
-        )
-      );
+
+    let subfolders: Types.DVNote[] = [];
+    // remove subfolders that were excluded via slash
+    for (let path of cleanFolderInclusionArray) {
+      let partialSubfolders: Types.DVNote[] = [];
+      if (
+        flowBuildBasket.flowCookbook.folderIncluded != "/" &&
+        flowBuildBasket.flowCookbook.folderIncluded.endsWith("/")
+      ) {
+        partialSubfolders = allNotes.filter((page: Types.DVNote) =>
+          isDirectChild(
+            page.file.path,
+            flowBuildBasket.flowCookbook.folderIncluded.slice(0, -1)
+          )
+        );
+      }
+      for (let page of partialSubfolders) {
+        subfolders.push(page);
+      }
+    }
+    // this has to be any in order for the next filter to work
+    let includedNotes: any = [];
+    for (let page of subfolders) {
+      for (let includedPath of cleanFolderInclusionArray) {
+        if (page.file.path.startsWith(includedPath)) {
+          includedNotes.push(page);
+        }
+      }
     }
 
-    const filteredNotes = allNotes.where((note: Types.DVNote) => {
+    const filteredNotes = includedNotes.where((note: Types.DVNote) => {
       return (
         // exlude folders
         !cleanFolderExclusionArray.some((path) =>
