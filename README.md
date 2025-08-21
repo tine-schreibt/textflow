@@ -1,7 +1,3 @@
-# en_Readme
-
-<hr>
-
 ### TL;DR 
 
 **textFlow** lets you define flows - dynamic documents built from the contents
@@ -20,7 +16,7 @@ readme. Or do they explain this readme? I guess both...
 
 Also, this thing is new, so not all quirks are known/fixed yet. If you find
 anything not mentioned in this Readme
-[let me know](#12-report-a-bug-report-your-love).
+[let me know](#12-report-a-bug--report-your-love).
 
 _Please consider running Obsidian's own data recovery plugin or 'Edit history'
 by Antonio Tejada until you've gotten into a groove with textFlow._
@@ -46,7 +42,7 @@ safely?**
 9. [Fixing problems](#9-fixing-problems)
 10. [Cheat sheet](#10-cheat-sheet)
 11. [Comparing textFlow and Outline](#11-comparing-textflow-and-outline)
-12. [Report a bug / report your love](#12-report-a-bug-report-your-love) ​​​
+12. [Report a bug / report your love](#12-report-a-bug--report-your-love) ​​​
 
 <hr>
 
@@ -78,8 +74,8 @@ safely?**
 5. **A flow is really just an ordinary note with some listeners and extensions
    attached:** So _everything will still work within your flows_: Your themes
    still work. Inline-styles still work. Dataview tables will be displayed as
-   usual. Outline still works ([for the most part](#3-limitations-and-known-inconveniences))
-. In-note
+   usual. Outline still works
+   ([for the most part](#3-limitations-and-known-inconveniences)). In-note
    search still works. Callouts, lists, code blocks, tables, tabs, it all still
    works. Because, again, a flow is just a normal note with some API bling stuck
    on.
@@ -88,7 +84,7 @@ safely?**
    you can sync any time you like.
 7. **Navigate within flows via the file explorer:** Yup. I know! It even
    highlights the active region's source note in one of four styles!
-   [It's not perfect, though...](#4-limitations-and-known-inconveniences)
+   [It's not perfect, though...](#3-limitations-and-known-inconveniences)
 8. **Navigate via fuzzy navigation modal:** If you're used to working with
    Obsidian's Quick switcher modal, you'll be right at home here - with some
    handy tricks included:
@@ -388,7 +384,7 @@ Sorted in no particular order:
 1. **Some things need time to settle:** Leaf focus isn't the only thing about
    Obsidian (and CodeMirror) that sometimes needs a second to settle. So if
    something seems buggy, try doing it again, but slower. If it still seems
-   buggy, hit me up on [github](#12-report-a-bug-report-your-love).
+   buggy, hit me up on [github](#12-report-a-bug--report-your-love).
 2. **Twitchy scroll bar:** If you are in the middle of a wall of text with no
    headlines or other separators in sight, the scroll bar handle will start to
    twitch - because... ask the CodeMirror community. If that bothers you and
@@ -433,7 +429,7 @@ Sorted in no particular order:
   your main work flows into the more disjointed ones you use to focus in on a
   particular aspect of your text.
 - You maybe use textFlow in combination with
-  [Outline](#comparing-textflow-and-outline), and the various safety features
+  [Outline](#11-comparing-textflow-and-outline), and the various safety features
   and indicators help you trust that your work is safe with textFlow.
 
 #### 2. Minimal use
@@ -583,7 +579,7 @@ All commands can be tied to hotkeys in Obsidian's settings.
 #### Best practice
 
 If you want to know why: [Safety features](#2-safety-features) /
-[Limitations](#4-limitations-and-known-inconveniences)
+[Limitations](#3-limitations-and-known-inconveniences)
 
 - Go slooow when opening multiple new flow leaves, but also in general.
 - Only ever open and edit flows in Obsidian and while textFlow is active.
@@ -661,7 +657,7 @@ the flow switcher modal.
 ### 9. Fixing problems
 
 If you didn't do any of the stuff that I [recommended](#2-safety-features) you
-[don't](#4-limitations-and-known-inconveniences]), your problem can likely be
+[don't](#3-limitations-and-known-inconveniences]), your problem can likely be
 solved by turning it off and on again:
 
 - **rebuild the problem flow and/or**
@@ -671,14 +667,14 @@ In case you had to see for yourself (or textFlow is colliding with some of your
 settings/other plugins or something really did go wrong), here's a list of
 problems I myself managed to cause, plus explanations and solutions. If you
 don't find your problem on this list, let me know (see
-[Report a bug / report your love](#12-report-a-bug-report-your-love))
+[Report a bug / report your love](#12-report-a-bug--report-your-love))
 
 **Table of Contents**
 
 1. [Flow creation problems](#flow-creation-problems)
 2. [Flow switcher problems](#flow-switcher-problems)
 3. [Menu bar problems](#menu-bar-problems)
-4. [Flow / leaf problems](#flow-leaf-problems)
+4. [Flow / leaf problems](#flow--leaf-problems)
 5. [Weird problems](#weird-problems)
 6. [More problems](#more-problems)
 

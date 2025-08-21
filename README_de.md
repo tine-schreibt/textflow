@@ -1,7 +1,3 @@
-# de_Readme
-
-<hr>
-
 ### TL;DR
 
 Mit **textFlow** kannst du Flows definieren - dynamische Dokumente, die aus dem
@@ -21,7 +17,7 @@ Readme erklärt. Oder erklären sie dieses Readme? Wahrscheinlich beides...
 
 Außerdem ist das Ding neu, weshalb noch nicht alle Eigenheiten bekannt/gefixt
 sind. Falls du etwas aufstöberst, das dieses Readme nicht erwähnt,
-[lass es mich wissen](#12-melde-einen-bug-zeig-deine-liebe).
+[lass es mich wissen](#12-melde-einen-bug--zeig-deine-liebe).
 
 _Bitte ziehe in Erwägung, Obsidians eigenes Datenwiederherstellung-Plugin oder
 'Edit history' von Antonio Tejada mitlaufen zu lassen, bis du dich an textFlow
@@ -31,28 +27,30 @@ gewöhnt hast._
 
 - [Voraussetzungen und Einrichtung](#5-voraussetzungen-und-einrichtung)
 - [Los gehts](#8-los-gehts)
-- [Probleme beheben](#9-probleme-beheben)
+- [Probleme beheben](#9-probleme-beheben) <small>(ich hab keine Ahnung, warum
+  ausgerechnet dieser Link nicht funktioniert)</small>
 
 **Du willst erstmal wissen, was du eigentlich bekommst und wie du textFlow
 sicher benutzen kannst?**
 
 1. [Featurefeatures](#1-featurefeatures) (inclusive
    [Tips und Tricks](#tips-und-tricks)))
-2. [Sicherheitsfeatures](#2-safetyfeatures)
+2. [Sicherheitsfeatures](#2-sicherheitsfeatures)
 3. [Einschränkungen und bekannte Unannehmlichkeiten](#3-einschränkungen-und-bekannte-unannehmlichkeiten)
 4. [Use cases](#4-use-cases)
 5. [Voraussetzungen und Einrichtung](#5-voraussetzungen-und-einrichtung)
 6. [Einstellungen](#6-Einstellungen)
 7. [Befehle](#7-befehle)
 8. [Los gehts](#8-los-gehts)
-9. [Probleme beheben](#9-probleme-beheben)
-10. [Spickzettel](#10-Spickzettel)
+9. [Probleme beheben](#9-probleme-beheben) <small>(ich hab keine Ahnung, warum
+   ausgerechnet dieser Link nicht funktioniert)</small>
+10. [Spickzettel](#10-spickzettel)
 11. [textFlow und Gliederung im Vergleich](#11-textflow-und-gliederung-im-vergleich)
-12. [Melde einen Bug / Zeig deine Liebe](#12-melde-einen-bug-zeig-deine-liebe)
+12. [Melde einen Bug / Zeig deine Liebe](#12-melde-einen-bug--zeig-deine-liebe)
 
 <hr>
 
-### Featurefeatures
+### 1. Featurefeatures
 
 ##### Bereits implementiert:
 
@@ -98,7 +96,7 @@ sicher benutzen kannst?**
    aber ich kenn das Gefühl, daher kannst du jederzeit von Hand synchronisieren.
 7. **Navigiere innerhalb deiner Flows mit dem Datei-Explorer:** Yup. Ich weiß!
    textFlow hebt sogar die Quellnotiz der aktiven Region hervor.
-   [Es funzt allerdings nicht perfekt](#4-einschränkungen-und-bekannte-unannehmlichkeiten)
+   [Es funzt allerdings nicht perfekt](#3-einschränkungen-und-bekannte-unannehmlichkeiten)
 8. **Ein Fuzzy-Navigation Modal:** Wenn du es gewohnt bist, Obsidians
    Schnellauswahl zu benutzen, wirst du dich hier wie zuhause fühlen - mit ein
    paar netten Tricks obendrauf:
@@ -112,7 +110,7 @@ sicher benutzen kannst?**
      zum aktiven Leaf an (vorausgesetzt es enthält einen Flow) - Flow-Name,
      aktive Region, LeafID und aktuelle Cursor-Position. Details zur Nutzung des
      Modals findest du hier:
-     [Wie funktioniert das Fuzzy-Navigation Modal](#wie-funktioniert-das-fuzzy-navigation-modal)
+     [Wie funktioniert das Fuzzy-Navigation Modal](#-wie-geht-fuzzy-navigation)
 9. **Eine praktische Menüleiste:** Falls du Buttons vorziehst, hat textFlow eine
    nette (versteckbare) Menüleiste für dich. Darin findest du einen Button zum
    Synchronisieren und einen zum Neubauen. Und außerdem:
@@ -438,7 +436,7 @@ In keiner besonderen Reihenfolge:
    das einzige an Obsidian (und CodeMirror), dass manchmal nen Moment braucht.
    Also falls dir etwas verbuggt vorkommt, versuch es noch mal, aber langsamer.
    Wenns dann immer noch verbuggt wirkt, schreib mir auf
-   [github](#12-melde-einen-bug-zeig-deine-liebe).
+   [github](#12-melde-einen-bug--zeig-deine-liebe).
 2. **Zuckende Scrolleiste:** Wenn du dich in der Mitte einer Wand aus Text mit
    keinem Trenner / keiner Überschrift in Sicht, fängt der Griff der Scrolleiste
    an zu zucken, weil... frag die CodeMirror Community. Falls dich das stört und
@@ -485,7 +483,7 @@ In keiner besonderen Reihenfolge:
   deinen Haupt-Arbeitsflows in die Neben-Flows zu kopieren, die du benutzt, wenn
   du auf einen bestimmten Aspekt deiner Geschichte fokussieren willst.
 - Vielleicht benutzt du textFlow in Kombination mit der
-  [Gliederung](#textflow-und-gliederung-im-vergleich), und die diversen
+  [Gliederung](#11-textflow-und-gliederung-im-vergleich), und die diversen
   Sicherheitsfunktionen helfen dir, darauf zu vertrauen, dass dein Arbeit mit
   textFlow sicher ist.
 
@@ -641,7 +639,7 @@ werden.
 #### Gute Angewohnheiten
 
 Wenn du wissen willst, warum: [Sicherheitsfeatures](#2-safetyfeatures) /
-[Einschränkungen](#4-einschränkungen-und-bekannte-unannehmlichkeiten)
+[Einschränkungen](#3-einschränkungen-und-bekannte-unannehmlichkeiten)
 
 - Lass dir Zeit, wenn du mehrere Flows öffnest, aber auch im Allgemeinen.
 - Öffne und bearbeite Flows immer nur in Obsidian und währen textFlow aktiv ist.
@@ -735,14 +733,14 @@ Falls dus einfach selber rausfinden musstest (oder textFlow mit anderen
 Einstellungen/Plugins kollidiert oder tatsächlich etwas schiefgegangen ist), ist
 hier eine Liste von Problemen, die ich selber verursachen konnte, plus Erklärung
 und Lösungen. Falls du dein Problem hier nicht findest, sag bescheid (siehe auch
-[Melde einen Bug / Zeig deine Liebe](#12-melde-einen-bug-zeig-deine-liebe))
+[Melde einen Bug / Zeig deine Liebe](#12-melde-einen-bug--zeig-deine-liebe))
 
 **Inhaltsverzeichnis**
 
 1. [Flow Erzeugung](#flow-erzeugung)
 2. [Flow-Switcher](#flow-switcher)
 3. [Menüleiste](#menüleiste)
-4. [Flow / Leaf](#flow-leaf)
+4. [Flow / Leaf](#flow--leaf)
 5. [Komische Sachen](#komische-sachen)
 6. [Mehr Probleme](#mehr-probleme)
 
@@ -919,7 +917,7 @@ und Lösungen. Falls du dein Problem hier nicht findest, sag bescheid (siehe auc
     - Falls der Fehler weiterhin auftritt, schalte all deine Plugins aus und
       dann nach einander wieder ein, während du Neubauten machst, um
       rauszufinden, wer das Problem verursacht
-      ([und lass es mich wissen](#12-melde-einen-bug-zeig-deine-liebe))
+      ([und lass es mich wissen](#12-melde-einen-bug--zeig-deine-liebe))
 
 - **Problem:** Navigation per Datei-Explorer funktioniert nicht, obwohl es
   definitiv angeschaltet ist.
@@ -930,11 +928,12 @@ und Lösungen. Falls du dein Problem hier nicht findest, sag bescheid (siehe auc
     - Geh in die Einstellungen und stell deine Flow-Definitionen aus den Backups
       wieder her.
 
-#### More problems
+#### Mehr Probleme
 
 - **Problem:** Irgend etwas anderes funktioniert nicht und Neubau/neu laden
   hilft nicht.
-  - **Lösung:** [Schick mir einen Bug-Report](#melde-einen-bug-zeig-deine-liebe)
+  - **Lösung:**
+    [Schick mir einen Bug-Report](#12-melde-einen-bug--zeig-deine-liebe)
 
 <hr>
 
@@ -997,7 +996,7 @@ und Lösungen. Falls du dein Problem hier nicht findest, sag bescheid (siehe auc
 
 <hr>
 
-### 11 textFlow und Gliederung im Vergleich
+### 11. textFlow und Gliederung im Vergleich
 
 Obsidian hat schon einen Weg, um einzelne, große Dokumente zu browsen, in Form
 des Kern-Plugins 'Gliederung' - also wann ist textFlow einen Blick wert? Und
@@ -1049,7 +1048,7 @@ wann solltest du beide zusammen benutzen?
 
 <hr>
 
-### 12 Melde einen Bug / Zeige deine Liebe
+### 12. Melde einen Bug / Zeig deine Liebe
 
 Falls dir irgendwelche Bugs oder komisches Verhalten begegnen, die im Kapitel
 über das [Beheben von Problemen](#9-probleme-beheben) nicht erwähnt werden,
