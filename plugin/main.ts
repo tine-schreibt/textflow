@@ -53,6 +53,7 @@ export default class TextFlowPlugin extends Plugin {
   isLoading: boolean = true; // suspend create listener while we're setting up
   textFlowOperation: boolean = false; // set mostly when syncing to prevent doom spiral of the modify listener
   lastActivity: { [key: string]: number } = {};
+  lastActiveRegion: string;
   inactivityThreshold: number = 5 * 60 * 1000;
 
   // ---------------- Global objects and variables -------------------------
@@ -335,7 +336,6 @@ export default class TextFlowPlugin extends Plugin {
       name: this.t("main.registerCommand select active region"),
       callback: () => {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (!view) return;
         if (!view) return;
         if (!view.file) return;
 
@@ -832,6 +832,30 @@ ${pseudoElement}
 
   // ---------------- Functions: Listeners -------------------------
 
+  // this little thing was written by Claude 3.5 Sonnet and is needed
+  // by some of the listeners
+  getUniqueFileName = async (
+    basePath: string,
+    baseName: string = "_untitled.md"
+  ) => {
+    console.log("getUniqueName called");
+    // remove the .md so we can put numbers before it
+    let fileName = baseName.slice(0, baseName.length - 3);
+    console.log("fileName: ", fileName);
+    let number = 0;
+    let fullPath = normalizePath(`${basePath}/${fileName}.md`);
+    console.log("fullpath in checker: ", fullPath);
+    // Check if file exists
+    while (this.app.vault.getAbstractFileByPath(fullPath)) {
+      number++;
+      fileName = `${baseName} ${number}.md`;
+      fullPath = normalizePath(`${basePath}/${fileName}.md`);
+    }
+
+    console.log("New found file name: ", fileName);
+    return `${fileName}.md`;
+  };
+
   // ---------------- Functions: Listeners: Global -----------------
   addListeners() {
     // the context menu for rebuild flagging
@@ -914,26 +938,7 @@ ${pseudoElement}
                 parentFolder = normalisedPath;
               }
 
-              // this little thing was written by Claude 3.5 Sonnet
-              const getUniqueFileName = (
-                basePath: string,
-                baseName: string = "_untitled"
-              ) => {
-                let fileName = baseName;
-                let number = 0;
-                let fullPath = normalizePath(`${basePath}/${fileName}.md`);
-
-                // Check if file exists
-                while (this.app.vault.getAbstractFileByPath(fullPath)) {
-                  number++;
-                  fileName = `${baseName} ${number}`;
-                  fullPath = normalizePath(`${basePath}/${fileName}.md`);
-                }
-
-                return fileName;
-              };
-
-              const newFileName = getUniqueFileName(parentFolder);
+              const newFileName = await this.getUniqueFileName(parentFolder);
               const newFilePath = normalizePath(
                 `/${parentFolder}/${newFileName}.md`
               );
@@ -1097,6 +1102,7 @@ ${pseudoElement}
         if (this.textFlowOperation) return;
         if (this.isRebuilding) return;
 
+        console.log("newly created file: ", file.path);
         let parentFolder = normalizePath(dirname(file.path));
         if (file instanceof TFolder) {
           parentFolder = normalizePath(file.path);
@@ -1105,18 +1111,31 @@ ${pseudoElement}
         if (
           // if the user put a new file in the system folder
           // the check for .md is so that stuff by - for example - Edit History doesn't get flagged
-          parentFolder.endsWith(this.textFlowSystemFolderName) &&
+          parentFolder === this.settings.systemFolderPath &&
           file.path.endsWith(".md")
         ) {
-          const vaultPath = basename(file.path);
+          console.log("parentFolder", parentFolder);
+          // the user has set 'create new file in same folder as active file'
+          // so we simulate that behaviour by getting the path for last active region
+          // and moving the file in the respective folder
+          const baseName = basename(file.path);
+          console.log("basename of new file", baseName);
+          const basePath = dirname(this.lastActiveRegion);
+          console.log("last active region base path: ", basePath);
+          const newFileName = await this.getUniqueFileName(basePath, baseName);
+          console.log("new file name in listener: ", newFileName);
+          const newFilePath = normalizePath(`${basePath}/${newFileName}`);
+          console.log(newFilePath);
           this.textFlowOperation = true;
-          await this.app.vault.rename(file, vaultPath);
+          await this.app.vault.rename(file, newFilePath);
           this.textFlowOperation = false;
 
           new Notice(
             this.t(
-              "main.renameListener.notice new element created in system folder; please remove"
-            )
+              "main.renameListener.notice new element created in system folder; was moved",
+              { basePath: basePath }
+            ),
+            0
           );
           this.ensureSystemFolder();
           return;
@@ -2751,6 +2770,7 @@ ${pseudoElement}
         flow.activeRegions[leafID] = activeRegionObject;
         // then check if the active region overlaps and sent a notice
         if (activeRegionObject.path) {
+          this.lastActiveRegion = activeRegionObject.path;
           this.decorateSourceNotes("update");
           this.notifyOfOverlap(activeRegionObject.path, flowName);
         }
@@ -2764,6 +2784,9 @@ ${pseudoElement}
       cursorOffset < flow.activeRegions[leafID].endInFlow
     ) {
       flow.activeRegions[leafID].currentCursorPos = cursorOffset;
+      if (flow.activeRegions[leafID].path) {
+        this.lastActiveRegion = flow.activeRegions[leafID].path;
+      }
       await this.saveSettings();
       return;
     } else {
@@ -2779,6 +2802,9 @@ ${pseudoElement}
       );
 
       if (activeRegion) {
+        if (activeRegion.path) {
+          this.lastActiveRegion = activeRegion.path;
+        }
         const activeRegionPath = activeRegion.path;
         // if the user wants checks, always check the new region
         if (
