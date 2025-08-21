@@ -10,6 +10,9 @@
 # and also: 
 !manifest.json
 !styles.css
+!main.js
+!README.md 
+!README_de.md 
 
 # but especially ignore node_modules! 
 node_modules/
