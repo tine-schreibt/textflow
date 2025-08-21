@@ -78,8 +78,7 @@ safely?**
 5. **A flow is really just an ordinary note with some listeners and extensions
    attached:** So _everything will still work within your flows_: Your themes
    still work. Inline-styles still work. Dataview tables will be displayed as
-   usual. Outline still works
-   - [for the most part](#3-limitations-and-known-inconveniences)
+   usual. Outline still works ([for the most part](#3-limitations-and-known-inconveniences))
 . In-note
    search still works. Callouts, lists, code blocks, tables, tabs, it all still
    works. Because, again, a flow is just a normal note with some API bling stuck
