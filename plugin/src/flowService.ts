@@ -1605,24 +1605,38 @@ export class FlowService {
 
   //
 
+  // this was written by Claude 3.5 Sonnet
   scrollToPos(editor: Types.ObsidianEditor, cursorPos: number) {
     const cmEditor = editor.cm;
-    let text = "";
-    if (cmEditor) {
-      text = cmEditor.state.doc.toString();
-    }
-    if (cursorPos !== undefined && cursorPos >= 0 && cmEditor) {
-      const line = cmEditor.state.doc.lineAt(Math.max(0, cursorPos)); // Ensure position is not negative
-      const targetPos = line.from; // Scroll to the beginning of the line
+    if (!cmEditor) return;
+
+    if (cursorPos !== undefined && cursorPos >= 0) {
+      const line = cmEditor.state.doc.lineAt(Math.max(0, cursorPos));
+      const targetPos = line.from;
+
+      // Get current viewport info
+      const viewport = cmEditor.viewport;
+
+      // Calculate the target scroll position
+      const targetLine = line.number;
+      const lineHeight = cmEditor.defaultLineHeight;
+
+      // Set selection and try to scroll using CodeMirror's way, so CodeMirror knows where we're at
       cmEditor.dispatch({
         selection: { anchor: targetPos, head: targetPos },
         effects: EditorView.scrollIntoView(targetPos, {
-          y: "center", // Center in viewport
-          yMargin: 10, // Small margin
+          y: "start",
+          yMargin: lineHeight * 2,
         }),
-        userEvent: "select.pointer",
       });
-      cmEditor.focus(); // Explicitly focus the editor
+
+      // Then immediately use DOM scrolling as a forced backup
+      // b/c sometimes the first scroll ends up with negative coordinates for some reason
+      const scrollDOM = cmEditor.scrollDOM;
+      const targetScrollTop = (targetLine - 1) * lineHeight;
+      scrollDOM.scrollTop = targetScrollTop;
+
+      cmEditor.focus();
     }
   }
 

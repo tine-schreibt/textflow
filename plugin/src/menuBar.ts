@@ -274,7 +274,6 @@ export class MenuBar {
             flowOrder,
             text
           );
-
           if (startPosInFlow) {
             this.plugin.flowService.scrollToPos(editor, startPosInFlow);
           }
