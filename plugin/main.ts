@@ -11,7 +11,7 @@ import {
   WorkspaceLeaf,
   TFile,
 } from "obsidian";
-import { FlowCreationModal, TextFlowSettingsTab } from "./src/settingsTab";
+import { TextFlowSettingsTab } from "./src/settingsTab";
 import { TextFlowSettings, DEFAULT_SETTINGS } from "./src/types";
 import { EditorView, ViewUpdate, ViewPlugin } from "@codemirror/view";
 import {
@@ -949,36 +949,6 @@ ${pseudoElement}
               await this.app.vault.create(newFilePath, "");
             });
         });
-      })
-    );
-
-    // thing to make flow from selected folder
-    this.registerEvent(
-      this.app.workspace.on("file-menu", (menu, file) => {
-        // if the user clicks a folder
-        if (file instanceof TFolder) {
-          const baseName = basename(file.path);
-          menu.addItem((item) => {
-            item
-              .setTitle(
-                this.t("main.fileMenuListener.context make flow from folder")
-              )
-              .onClick(() => {
-                const normalisedPath = normalizePath(file.path);
-                this.settings.flowBuildBasket.flowCookbook.folderIncluded =
-                  normalisedPath;
-                this.settings.flowBuildBasket.definitionMode =
-                  "foldersTagsProps";
-                this.saveSettings();
-
-                const flowCreationModal = new FlowCreationModal(
-                  this.app,
-                  this,
-                );
-                flowCreationModal.open();
-              });
-          });
-        }
       })
     );
 
