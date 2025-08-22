@@ -235,7 +235,7 @@
   "main.renameListener.notice old file name was restored": "textFlow: Old file name/path has been restored.",
   "main.renameListener.notice new element created in system folder; please remove": "textFlow: You just created a new element in the system folder. Please move it somewhere else.",
 
-  "main.renameListener.notice new element created in system folder; was moved": "textFlow: You just created a new file in textFlows's system folder.\nThe file was moved to ${basePath}.",
+  "main.renameListener.notice new element created in system folder; was moved": "textFlow: You just created a new file in textFlows's system folder.\nThe file was moved to ${newFilePath}.",
 
   "main.cursorListener.notice tracking failed": "textFlow: Cursor tracking failed for ${flowName}!\nPlease close and reopen the flow.\nIf this error persists, reload your vault.",
   "main.cursorTracker.notice": "textFlow: External edit found. Flow ${flowName} was rebuilt.",

@@ -232,7 +232,7 @@
   "main.renameListener.notice don't rename system folder": "textFlow: Bitte benenne ${textFlowSystemFolderName} nicht um. Nimm die Änderung zurück, damit textFlow wieder richtig funktioniert.",
   "main.renameListener.notice use settings to rename": "textFlow: Bitte benutze textFlow's Einstellungen, um Flows umzubenennen.",
   "main.renameListener.notice use export to export": "textFlow: Bitte benutze die Export-Funktion, um eine Kopie deines Flows außerhalb von textFlowSystemFolder zu erhalten (siehe Menüleiste oder Befehlspalette).",
-  "main.renameListener.notice new element created in system folder; was moved": "textFlow: Du hast soeben eine neue Datei in textFlows Systemordner erstellt.\nDie Datei wurde nach ${basePath} bewegt.",
+  "main.renameListener.notice new element created in system folder; was moved": "textFlow: Du hast soeben eine neue Datei in textFlows Systemordner erstellt.\nDie Datei wurde nach ${newFilePath} bewegt.",
 
   "main.checkStats check stats feedback mtime": "textFlow: mtime unterscheidet sich für ${path}; Flows wurden für Neubau geflaggt.",
   "main.checkStats check stats feedback hash": "textFlow: hash unterscheidet sich für ${path}; Flows wurden für Neubau geflaggt.",

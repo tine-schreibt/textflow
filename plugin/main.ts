@@ -848,7 +848,7 @@ ${pseudoElement}
     // Check if file exists
     while (this.app.vault.getAbstractFileByPath(fullPath)) {
       number++;
-      fileName = `${baseName} ${number}.md`;
+      fileName = `${baseName} ${number}`;
       fullPath = normalizePath(`${basePath}/${fileName}.md`);
     }
 
@@ -1130,12 +1130,19 @@ ${pseudoElement}
           await this.app.vault.rename(file, newFilePath);
           this.textFlowOperation = false;
 
+          // open the new file so the user gets the expected behaviour
+          const movedFile = this.app.vault.getAbstractFileByPath(newFilePath);
+          if (movedFile instanceof TFile) {
+            const leaf = this.app.workspace.getLeaf("tab");
+            await leaf.openFile(movedFile);
+            this.app.workspace.setActiveLeaf(leaf, { focus: true });
+          }
+
           new Notice(
             this.t(
               "main.renameListener.notice new element created in system folder; was moved",
-              { basePath: basePath }
-            ),
-            0
+              { newFilePath: newFilePath }
+            )
           );
           this.ensureSystemFolder();
           return;

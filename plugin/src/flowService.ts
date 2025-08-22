@@ -837,6 +837,8 @@ export class FlowService {
     let cleanPropertiesExclusionArray = propertyCleanup(
       shCookbook.propsExcluded
     );
+    // add this to keep exports excluded
+    cleanPropertiesExclusionArray.push(["textFlowExport"]);
 
     // -------- cleanup done ----------------
 
@@ -1757,6 +1759,9 @@ export class FlowService {
       };
 
       const cleanContent = stripUUIDs(fileContent);
+      const yaml = `---\ntextFlowExport: true\n---`;
+
+      const contentWithYaml = `${yaml}\n${cleanContent}`;
 
       const exportedFlowPath = normalizePath(
         `${flowName}_export_${this.plugin.flowService.getTimestamp()}.md`
@@ -1764,7 +1769,7 @@ export class FlowService {
       await this.plugin.flowService.safeCreateFile(
         this.app.vault,
         exportedFlowPath,
-        cleanContent
+        contentWithYaml
       );
       new Notice(
         this.plugin.t("menubar.selectButton.notice successful export", {
