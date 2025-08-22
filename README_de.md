@@ -157,7 +157,7 @@ sicher benutzen kannst?**
 - Um mal schnell einen Flow für zwischendurch zu bauen:
   - wähle die Notizen aus, die du im Flow haben willst
   - tagge sie mit dem Namen, den der Flow haben soll
-  - (benutze 'Multi Properties' von fez-github wenn es sich um mehrere, gleich
+  - (benutze 'Multi Properties' von technohiker wenn es sich um mehrere, gleich
     aufeinander folgende Notizen handelt)
   - baue einen Flow aus dem Tag
 - Um dahin zurück zu kehren, wo du eben noch warst, nachdem du woanders im Flow
@@ -681,7 +681,7 @@ Wenn du wissen willst, warum: [Sicherheitsfeatures](#2-safetyfeatures) /
 - Klick dann auf das Icon mit den drei Strichen. Jetzt kannst du einen Typ für
   deine Eigenschaften aussuchen. Was genau die bedeuten, kannst du selber
   recherchieren, aber die Namen sind recht selbsterklärend.
-- Ich empfehle außerdem wärmstens das Plugin 'Multi Properties' von fez-github.
+- Ich empfehle außerdem wärmstens das Plugin 'Multi Properties' von technohiker.
   Damit kannst du die Eigenschaften von mehreren Notizen gleichzeitig
   bearbeiten.
 

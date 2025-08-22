@@ -136,7 +136,7 @@ safely?**
 - To make a quick flow 'on the go':
   - select the notes you want to include in your flow
   - tag them with the flow name you'll want to give them
-  - (use 'Multi Properties' by fez-github if they are multiple consecutive
+  - (use 'Multi Properties' by technohiker if they are multiple consecutive
     notes)
   - build a flow from that tag
 - To return to where you were after looking up something elsewhere in the flow:
@@ -620,7 +620,7 @@ If you want to know why: [Safety features](#2-safety-features) /
 - Afterwards, click the hamburger menu to the left to choose a type for your
   property. You can research what they mean, but the names are pretty self
   explanatory
-- I warmly recommend the plugin 'Multi Properties' by fez-github. It allows you
+- I warmly recommend the plugin 'Multi Properties' by technohiker. It allows you
   to set, remove and edit properties for multiple notes at once.
 
 #### How to Fuzzy navigation modal
