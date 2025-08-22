@@ -11,7 +11,7 @@ import {
   WorkspaceLeaf,
   TFile,
 } from "obsidian";
-import { TextFlowSettingsTab } from "./src/settingsTab";
+import { FlowCreationModal, TextFlowSettingsTab } from "./src/settingsTab";
 import { TextFlowSettings, DEFAULT_SETTINGS } from "./src/types";
 import { EditorView, ViewUpdate, ViewPlugin } from "@codemirror/view";
 import {
@@ -858,6 +858,7 @@ ${pseudoElement}
 
   // ---------------- Functions: Listeners: Global -----------------
   addListeners() {
+    // ------------ CLICK EVENTS ------------------
     // the context menu for rebuild flagging
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file) => {
@@ -921,6 +922,7 @@ ${pseudoElement}
       })
     );
 
+    // the thing to create a new file in the current folder
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file) => {
         menu.addItem((item) => {
@@ -950,6 +952,37 @@ ${pseudoElement}
       })
     );
 
+    // thing to make flow from selected folder
+    this.registerEvent(
+      this.app.workspace.on("file-menu", (menu, file) => {
+        // if the user clicks a folder
+        if (file instanceof TFolder) {
+          const baseName = basename(file.path);
+          menu.addItem((item) => {
+            item
+              .setTitle(
+                this.t("main.fileMenuListener.context make flow from folder")
+              )
+              .onClick(() => {
+                const normalisedPath = normalizePath(file.path);
+                this.settings.flowBuildBasket.flowCookbook.folderIncluded =
+                  normalisedPath;
+                this.settings.flowBuildBasket.definitionMode =
+                  "foldersTagsProps";
+                this.saveSettings();
+
+                const flowCreationModal = new FlowCreationModal(
+                  this.app,
+                  this,
+                );
+                flowCreationModal.open();
+              });
+          });
+        }
+      })
+    );
+
+    // ------------- FILE EVENTS ---------------------
     // modify events
     this.registerEvent(
       this.app.vault.on("modify", (file: TAbstractFile) => {

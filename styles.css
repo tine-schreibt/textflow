@@ -724,3 +724,36 @@
 .sync-rebuild-protection {
   color: var(--text-muted);
 }
+
+
+/*----- THE FLOW CREATION MODAL -------- */
+/* Flow Creation Modal */
+.flow-creation-modal {
+  background-color: var(--background-primary);
+  border-radius: var(--radius-m);
+  padding: 20px;
+  width: 100%;
+  max-width: 600px; /* adjust as needed */
+}
+
+.flow-creation-modal .modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.flow-creation-modal .headline-container {
+  margin-bottom: 16px;
+}
+
+.flow-creation-modal .setting-item {
+  border-top: none;
+  padding-top: 12px;
+}
+
+.flow-creation-modal .button-container {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
