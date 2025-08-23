@@ -25,6 +25,203 @@ import fs from "fs/promises";
 import path from "path";
 import { dirname } from "path";
 
+export class CreateFlowFromFolder extends Modal {
+  constructor(app: App, private plugin: TextFlowPlugin) {
+    super(app);
+    this.plugin = plugin;
+  }
+  onOpen() {
+    const { contentEl } = this;
+
+    const modalTitle = contentEl.createEl("h2", {
+      text: this.plugin.t("CreateFlowFromFolderModal.headline"),
+    });
+    const description = contentEl.createSpan({
+      text: this.plugin.t(
+        "CreateFlowFromFolderModal.description refine def in settings"
+      ),
+    });
+    const chooseFlowName = new Setting(contentEl)
+      .setName(
+        this.plugin.t("createFlows.chooseFlowName.setName name your flow")
+      )
+      .setDesc(
+        createFragment((desc) => {
+          desc.createSpan({
+            text: this.plugin.t(
+              "createFlows.chooseFlowName.setDesc some characters can't be part of a flow name"
+            ),
+          });
+          desc.createEl("br");
+          desc.createSpan({
+            text: '? : # * < > [ ] / | \\ "  ^ `',
+          });
+        })
+      );
+    chooseFlowName.addText((setFlowName) => {
+      setFlowName.setValue(this.plugin.settings.flowBuildBasket.flowName);
+
+      setFlowName.onChange(async (value) => {
+        this.plugin.settings.flowBuildBasket.flowName = value.trim();
+        this.plugin.flowService.debouncedSaveSettings();
+      });
+    });
+
+    // FOLDER TITLES TOGGLE
+    const toggleFolderTitles = new Setting(contentEl)
+      .setName(
+        this.plugin.t(
+          "toggleFolderTitles.setName include folder / bookmark group titles"
+        )
+      )
+      .setDesc(
+        this.plugin.t(
+          "toggleFolderTitles.setDesc will also turn off titles in nav dropdown"
+        )
+      )
+      .addToggle((sortToggle) => {
+        sortToggle
+          .setValue(this.plugin.settings.flowBuildBasket.folderTitles)
+          .onChange(async (value) => {
+            this.plugin.settings.flowBuildBasket.folderTitles = value;
+            this.plugin.saveSettings();
+          });
+      });
+
+    // SORT ORDER TOGGLE
+    const sortFlowPathsTagsProperties = new Setting(contentEl).setName(
+      this.plugin.t("sortFlowPathsTagsProperties.setName sort order")
+    );
+    sortFlowPathsTagsProperties.setDesc(
+      createFragment((desc) => {
+        desc.createSpan({
+          text: this.plugin.t(
+            "sortFlowPathsTagsProperties.setDesc.1 depth first"
+          ),
+          cls: "text-emphasis",
+        });
+        desc.createSpan({
+          text: this.plugin.t(
+            "sortFlowPathsTagsProperties.setDesc.2 description of depth first"
+          ),
+        });
+        desc.createEl("br");
+        desc.createSpan({
+          text: this.plugin.t(
+            "sortFlowPathsTagsProperties.setDesc.3 notes first"
+          ),
+          cls: "text-emphasis",
+        });
+        desc.createSpan({
+          text: this.plugin.t(
+            "sortFlowPathsTagsProperties.setDesc.4 description of notes first"
+          ),
+        });
+        desc.createEl("br");
+        desc.createSpan({
+          text: this.plugin.t(
+            "sortFlowPathsTagsProperties.setDesc.5 test them all out"
+          ),
+        });
+      })
+    );
+
+    sortFlowPathsTagsProperties.addDropdown((dropdown) => {
+      dropdown
+        .addOption(
+          "depthFirst",
+          this.plugin.t(
+            "sortFlowPathsTagsProperties.addDropdown.addOption.1 depth first"
+          )
+        )
+        .addOption(
+          "filesFirst",
+          this.plugin.t(
+            "sortFlowPathsTagsProperties.addDropdown.addOption.2 files first"
+          )
+        );
+      dropdown.setValue(
+        // remove "custom" as option
+        this.plugin.settings.flowBuildBasket.flowCookbook
+          .pathsTagsPropertiesSortOrder
+          ? this.plugin.settings.flowBuildBasket.flowCookbook
+              .pathsTagsPropertiesSortOrder
+          : "depthFirst"
+      );
+      dropdown.onChange((value) => {
+        this.plugin.settings.flowBuildBasket.flowCookbook.pathsTagsPropertiesSortOrder =
+          value as Types.SortOrder;
+        this.plugin.saveSettings();
+      });
+    });
+
+    const saveButton = new ButtonComponent(contentEl);
+    saveButton
+      .setButtonText(this.plugin.t("saveButton.setButtonText save flow def"))
+      .onClick(async (buttonEl: MouseEvent) => {
+        if (!this.plugin.settings.systemFolderPath) {
+          new Notice(
+            this.plugin.t("saveButton.notice create sys folder first")
+          );
+          return;
+        }
+
+        this.plugin.flowService.renameFlow();
+
+        // if checks and flow creation haven't been performed by the preview button
+        const validation = await this.plugin.flowService.isValidFlowName(
+          this.plugin.settings.flowBuildBasket.flowName
+        );
+        if (!validation.valid && validation.reason) {
+          new Notice(validation.reason);
+          return;
+        }
+
+        await this.plugin.flowService.createFlowDefinition(
+          this.plugin.settings.flowBuildBasket
+        );
+        if (!this.plugin.settings.flowBuildBasket.success) {
+          return;
+        }
+
+        // write the whole stuff (also flags for rebuild)
+        await this.plugin.flowService.writeFlowDef(
+          this.plugin.settings,
+          this.plugin.settings.flowBuildBasket
+        );
+
+        // update conflicts,
+        await this.plugin.flowService.syncConflictObjects(
+          this.plugin.settings.flowBuildBasket
+        );
+
+        // save so we can pull our backup
+        this.plugin.saveSettings();
+        await this.plugin.flowService.backupFlowDef(
+          this.plugin.settings.flowBuildBasket.flowName
+        );
+
+        // and clean up the basket.
+        await this.plugin.flowService.resetFlowBuildBasket(
+          this.plugin.settings.flowBuildBasket
+        );
+
+        this.plugin.saveSettings();
+
+        this.close();
+      });
+
+    const closeButton = new ButtonComponent(contentEl)
+      .setButtonText(this.plugin.t("PreviewModal.button close preview"))
+      .onClick(async () => {
+        await this.plugin.flowService.resetFlowBuildBasket(
+          this.plugin.settings.flowBuildBasket
+        );
+        this.close();
+      });
+  }
+}
+
 //CHECKED AND TESTED
 export class PreviewModal extends Modal {
   constructor(
@@ -143,8 +340,8 @@ export class PreviewModal extends Modal {
         });
       })
     );
-    const editButton = new ButtonComponent(closeModal.controlEl)
-      .setButtonText(this.plugin.t("PreviewModal.button close preview"))
+    const closeButton = new ButtonComponent(closeModal.controlEl)
+      .setButtonText(this.plugin.t("CreateFlowFromFolderModal.headline"))
       .onClick(() => {
         this.close();
       });

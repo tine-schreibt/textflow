@@ -177,6 +177,11 @@
   "menuBar.selectButton.setTooltip export flow": "Flow exportieren",
   "menubar.selectButton.notice successful export": "textFlow: Dein Flow wurde nach ${exportedFlowPath} exportiert.",
 
+  "------- CREATE FLOW FROM FOLDER MODAL": "LIKE IT SAYS ----------------",
+  "CreateFlowFromFolderModal.headline": "Erzeuge neuen Flow aus dem gewählten Ordner.",
+  "CreateFlowFromFolderModal.description refine def in settings": "Du kannst die Definition nachher in den Settings verfeinern.",
+  "CreateFlowFromFolderModal.close": "Verwerfen",
+
   "----------- PREVIEW MODAL": "Modal that shows the users the structure of their flow---------",
   "PreviewModal.modalTitle preview for flow": "Vorschau für Flow ${this_flowBuildBasket_flowName}.",
   "PreviewModal.modalTitle overlap for flow": "Die folgenden Flows überschneiden sich mit ${this_flowBuildBasket_flowName}:",
@@ -214,9 +219,10 @@
 
   "--------- MAIN": "Die Hauptdatei, die Funktionen für das Flow-Handling enthält",
 
-  "main.registerCommand check stats": "Prüfe Vault auf externe Edits.",
-  "main.registerCommand export active flow": "Exportiere den aktiven Flow.",
-  "main.registerCommand flag for rebuild": "Alle Flows für Neubau markieren.",
+  "main.registerCommand check stats": "Prüfe Vault auf externe Edits",
+  "main.registerCommand export active flow": "Exportiere den Flow im aktiven leaf",
+  "main.registerCommand flag for rebuild": "Alle Flows für Neubau markieren",
+  "main.registerCommand rebuild active leaf": "Baue den Flow im aktiven Leaf neu",
   "main.registerCommand restore most recent cursor": "Letzte Cursor-Position wiederherstellen",
   "main.registerCommand open fuzzy navigation": "Fuzzy-Navigation öffnen",
   "main.registerCommand open switcher": "Flow-Switcher öffnen",
@@ -227,8 +233,8 @@
   "main.registerCommand toggle scroll bar": "Scrollbar umschalten",
 
   "main.fileMenuListener.context flag flows for rebuild": "textFlow: Flagge alle Flows, die \"${baseName}\" enthalten, für Neubau.",
-  "main.fileMenuListener.context create new file": "textFlow: Erstelle eine neue Notiz in diesem Ordner.",
-  "main.fileMenuListener.context make flow from folder": "textFlow: Definiere Flow aus diesem Ordner.",
+  "main.fileMenuListener.context create new file": "textFlow: Erstelle eine neue Notiz in diesem Ordner",
+  "main.fileMenuListener.context make flow from folder": "textFlow: Definiere Flow aus diesem Ordner",
 
   "main.renameListener.notice don't rename system folder": "textFlow: Bitte benenne ${textFlowSystemFolderName} nicht um. Nimm die Änderung zurück, damit textFlow wieder richtig funktioniert.",
   "main.renameListener.notice use settings to rename": "textFlow: Bitte benutze textFlow's Einstellungen, um Flows umzubenennen.",

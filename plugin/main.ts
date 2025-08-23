@@ -245,6 +245,24 @@ export default class TextFlowPlugin extends Plugin {
       });
     }
 
+    // rebuild active leaf flow
+    this.addCommand({
+      id: `text-flow-rebuild-active`,
+      name: this.t("main.registerCommand rebuild active leaf"),
+      callback: async () => {
+        // get the active leaf
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!view) return;
+        if (!view.file) return;
+
+        const activeLeafPath = view.file.path;
+        const flowName = this.isFlowFile(activeLeafPath);
+        if (!flowName) return;
+        // rebuild
+        this.flowService.rebuildFlow(flowName, "switcher");
+      },
+    });
+
     // Open the switcher modal
     this.addCommand({
       id: "text-flow-open-switcher",
@@ -830,7 +848,7 @@ ${pseudoElement}
   };
   //^CHECKED AND TESTED
 
-  // ---------------- Functions: Listeners -------------------------
+  // ---------------- Functions: Listener helper functions -------------------------
 
   // this little thing was written by Claude 3.5 Sonnet and is needed
   // by some of the listeners
@@ -951,6 +969,49 @@ ${pseudoElement}
         });
       })
     );
+
+    // ---------------   // thing to make flow from selected folder
+    this.registerEvent(
+      this.app.workspace.on("file-menu", (menu, file) => {
+        // if the user clicks a folder
+        if (file instanceof TFolder) {
+          const baseName = basename(file.path);
+          menu.addItem((item) => {
+            item
+              .setTitle(
+                this.t("main.fileMenuListener.context make flow from folder")
+              )
+              .onClick(async () => {
+                // empty the basket, just in case
+                await this.flowService.resetFlowBuildBasket(
+                  this.settings.flowBuildBasket
+                );
+                const normalisedPath = normalizePath(file.path);
+                // put defaults in
+                this.settings.flowBuildBasket.flowName = `${basename(
+                  normalisedPath
+                )} - ${this.flowService.getTimestamp()}`;
+                this.settings.flowBuildBasket.flowCookbook.folderIncluded =
+                  normalisedPath;
+                this.settings.flowBuildBasket.definitionMode =
+                  "foldersTagsProps";
+                this.settings.flowBuildBasket.flowCookbook.pathsTagsPropertiesSortOrder =
+                  "depthFirst";
+                this.settings.flowBuildBasket.folderTitles = true;
+                this.saveSettings();
+
+                const flowCreationModal = new Modals.CreateFlowFromFolder(
+                  this.app,
+                  this
+                );
+                flowCreationModal.open();
+              });
+          });
+        }
+      })
+    );
+
+    // ------------- FILE EVENTS ---------------------
 
     // ------------- FILE EVENTS ---------------------
     // modify events

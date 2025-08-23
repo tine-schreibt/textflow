@@ -14,12 +14,11 @@ lots of small notes. And while textFlow arguably does its thing with a certain
 grace, it has its limitations and inconveniences which are explained by this
 readme. Or do they explain this readme? I guess both...
 
-Also, this thing is new, so not all quirks are known/fixed yet. If you find
-anything not mentioned in this Readme
-[let me know](#12-report-a-bug--report-your-love).
-
-_Please consider running Obsidian's own data recovery plugin or 'Edit history'
-by Antonio Tejada until you've gotten into a groove with textFlow._
+Also, this thing is new, so not all quirks are known/fixed/worked around yet. If
+you find anything not mentioned in this Readme
+[let me know](#12-report-a-bug--report-your-love). _Please consider running
+Obsidian's own data recovery plugin or 'Edit history' by Antonio Tejada until
+textFlow has earned your trust._
 
 **Still want to jump right in?**
 
@@ -28,10 +27,9 @@ by Antonio Tejada until you've gotten into a groove with textFlow._
 - [Fixing problems](#9-fixing-problems)
 
 **Want to know what you're getting first and understand how to use textFlow
-safely?**
+smoothly?**
 
-1. [Feature features](#1-feature-features) (including
-   [Tips and tricks](#tips-and-tricks))
+1. [Feature features](#1-feature-features)
 2. [Safety features](#2-safety-features)
 3. [Limitations and known inconveniences](#3-limitations-and-known-inconveniences)
 4. [Use cases](#4-use-cases)
@@ -56,7 +54,10 @@ safely?**
    delete a note (or folder) in your bookmarks or vault, textFlow will register
    these actions and automatically rebuild the relevant flow to reflect the
    changes. If you change a note's front matter so it gets included in a new
-   flow, you will have to rebuild manually.
+   flow, you will have to rebuild manually. - **Convenient:** Right-click on a
+   folder gives the option: `textFlow: Create new flow from this folder`. The
+   definition can then be refined in the settings tab. <small>This functionality
+   is not available for bookmarks groups right now</small>
 2. **Structure your flows:**
    - Flows built from folders, tags or properties have two sorting options:
      1. Mirror the order of your _notes_ as they appear in the file explorer.
@@ -98,7 +99,7 @@ safely?**
      region, leafID and current cursor position Details on how to navigate using
      the modal: [How to Fuzzy navigation modal](#How-to-Fuzzy-navigation-modal)
 9. **Convenience in a menu bar:** If you prefer buttons, textFlow has with a
-   neat little (hidable) menu bar for you. In it you'll find a sync and a
+   neat little (hideable) menu bar for you. In it you'll find a sync and a
    rebuild button and also:
    1. **A navigation menu**: This dropdown makes it easy to navigate disjointed
       flows, or if the fickle focus thing is too frustrating for you. The menu
@@ -128,23 +129,6 @@ safely?**
 - **Favourites for the switcher modal:** In case you have a gazillion flows,
   need help staying on top of them, and frontmatter/dataview seem scary to you.
 - **Open wiki-links inside flow:** This would be a right-click thing, I guess.
-- **Custom name for system folder:** It's not hard to do in principle, I just
-  don't feel like doing it right now.
-
-### Tips and tricks
-
-- To make a quick flow 'on the go':
-  - select the notes you want to include in your flow
-  - tag them with the flow name you'll want to give them
-  - (use 'Multi Properties' by technohiker if they are multiple consecutive
-    notes)
-  - build a flow from that tag
-- To return to where you were after looking up something elsewhere in the flow:
-  - before you move, click into the text and do a manual sync to save that
-    cursor position
-  - go to the other place
-  - click the target button in the menu bar or use the hotkey to return to the
-    last know cursor position, which is where you synced just then
 
 <hr>
 
@@ -554,19 +538,26 @@ All commands can be tied to hotkeys in Obsidian's settings.
 
 - **Sync all leaves:** This also saves the current cursor position for all
   active leaves.
-- Depending on your settings (check for external edits enabled or not):
-  - **Flag all flows for rebuild:** If you're not sure which notes you edited
-    outside of Obsidian, or you are worried about forgetting one.
-  - **Check vault for external edits:** If you also want to have your inactive
-    flows checked (automatic checks only run for your active flows)
+- **Rebuild flow in active leaf:**
+- **Restore last known cursor position:** Like it says on the tin.
+- **Select active region:** Select the text of the active region in the active
+  leaf.
+- **Export flow in active leaf:** In case you don't like the menu bar button.
+
 - **Open fuzzy navigation modal:** For your keyboard navigation.
 - **Open flow switcher modal:** If you don't want to summon the modal with
   buttons, you can use this command instead.
 - **Toggle menu bar:** This command allows you to completely hide / summon the
   menu bar. It also helps, should the bar ever fail to refresh.
-- **Restore last known cursor position:** Like it says on the tin.
-- **Select active region:** Select the text of the active region in the active
-  leaf.
+
+- Depending on your settings (check for external edits enabled or not - you need
+  to reload your vault for changes in your settings to be reflected here):
+
+  - **Flag all flows for rebuild:** If you're not sure which notes you edited
+    outside of Obsidian, or you are worried about forgetting one.
+  - **Check vault for external edits:** If you also want to have your inactive
+    flows checked (automatic checks only run for your active flows)
+
 - **Toggle scroll bar visibility:** So you can quickly switch it off when it's
   twitchy and back on when you need it.
 - **Toggle explorer navigation:** If you need multi-select to work right, this
@@ -915,7 +906,7 @@ should you use both together?
     parts, forgetting to update or getting confused as to which excerpt has
     which edit, because textFlow handles it all for you.
 - **File explorer:**
-  - The plugin 'Quiet outline' by the_tree allows you to decorate headlines in
+  - The plugin 'Quiet outline' by guopenghui allows you to decorate headlines in
     Outline and to auto-expand the headline(s) under which you are working. But
     to change the deco, you have to browse your document instead of just
     clicking on note titles in a sidebar. And if you prefer a specific set of

@@ -186,6 +186,11 @@
   "menuBar.selectButton.setTooltip export flow": "Export flow",
   "menubar.selectButton.notice successful export": "textFlow: Your flow has been exported to ${exportedFlowPath}.",
 
+  "------- CREATE FLOW FROM FOLDER MODAL": "LIKE IT SAYS ----------------",
+  "CreateFlowFromFolderModal.headline": "Create a new flow from the selected folder.",
+  "CreateFlowFromFolderModal.description refine def in settings": "You can refine the definition in the settings tab.",
+  "CreateFlowFromFolderModal.close": "Dismiss",
+
   "----------- PREVIEW MODAL": "Modal that shows the users the structure of their flow---------",
   "PreviewModal.modalTitle preview for flow": "Preview for flow ${this_flowBuildBasket_flowName}.",
   "PreviewModal.modalTitle overlap for flow": "The following flows overlap with ${this_flowBuildBasket_flowName}:",
@@ -214,20 +219,22 @@
 
   "--------- MAIN": "The main file that holds functions to deal with flow handling",
 
-  "main.registerCommand check stats": "Check vault for external edits.",
-  "main.registerCommand export active flow": "Export active flow",
-  "main.registerCommand flag for rebuild": "Flag all flows for rebuild.",
+  "main.registerCommand sync all leaves": "Sync all leaves",
+  "main.registerCommand check stats": "Check vault for external edits",
+  "main.registerCommand export active flow": "Export flow in active leaf",
+  "main.registerCommand flag for rebuild": "Flag all flows for rebuild",
+  "main.registerCommand rebuild active leaf": "Rebuild flow in active leaf",
   "main.registerCommand open fuzzy navigation": "Open fuzzy navigation modal",
   "main.registerCommand open switcher": "Open flow switcher modal",
   "main.registerCommand restore most recent cursor": "Restore most recent cursor position",
   "main.registerCommand select active region": "Select active region",
-  "main.registerCommand sync all leaves": "Sync all leaves",
   "main.registerCommand toggle explorer navigation": "Toggle explorer navigation",
   "main.registerCommand toggle menu bar": "Toggle menu bar",
   "main.registerCommand toggle scroll bar": "Toggle scroll bar",
 
   "main.fileMenuListener.context flag flows for rebuild": "textFlow: Flag flows including \"${baseName}\" for rebuild",
-  "main.fileMenuListener.context create new file": "textFlow: Create a new note in this folder.",
+  "main.fileMenuListener.context create new file": "textFlow: Create a new note in this folder",
+  "main.fileMenuListener.context make flow from folder": "textFlow: Define new Flow from this folder",
 
   "main.renameListener.notice don't rename system folder": "textFlow: Please don't rename ${textFlowSystemFolderName}. Revert the change so textFlow can work again.",
   "main.renameListener.notice use settings to rename": "textFlow: Please use textFlow settings to rename flows.",

@@ -15,13 +15,13 @@ kleinen Notizen gedacht ist. Und auch wenn textFlow sein Ding mit einer gewissen
 Eleganz macht, hat es seine Einschränkungen und Unannehmlichkeiten, die dieses
 Readme erklärt. Oder erklären sie dieses Readme? Wahrscheinlich beides...
 
-Außerdem ist das Ding neu, weshalb noch nicht alle Eigenheiten bekannt/gefixt
-sind. Falls du etwas aufstöberst, das dieses Readme nicht erwähnt,
-[lass es mich wissen](#12-melde-einen-bug--zeig-deine-liebe).
-
-_Bitte ziehe in Erwägung, Obsidians eigenes Datenwiederherstellung-Plugin oder
-'Edit history' von Antonio Tejada mitlaufen zu lassen, bis du dich an textFlow
-gewöhnt hast._
+Außerdem ist das Ding neu, weshalb noch nicht alle Eigenheiten
+bekannt/gefixt/mit Workaround versehen sind. Falls du etwas aufstöberst, das
+dieses Readme nicht erwähnt,
+[lass es mich wissen](#12-melde-einen-bug--zeig-deine-liebe). _Bitte ziehe in
+Erwägung, Obsidians eigenes Datenwiederherstellung-Plugin oder 'Edit history'
+von Antonio Tejada mitlaufen zu lassen, bis textFlow dein Vertrauen verdient
+hat._
 
 **Du willst immer noch gleich loslegen?**
 
@@ -30,10 +30,9 @@ gewöhnt hast._
 - [Probleme beheben](#9-probleme-beheben)
 
 **Du willst erstmal wissen, was du eigentlich bekommst und wie du textFlow
-sicher benutzen kannst?**
+stressfrei benutzen kannst?**
 
-1. [Featurefeatures](#1-featurefeatures) (inclusive
-   [Tips und Tricks](#tips-und-tricks)))
+1. [Featurefeatures](#1-featurefeatures)
 2. [Sicherheitsfeatures](#2-sicherheitsfeatures)
 3. [Einschränkungen und bekannte Unannehmlichkeiten](#3-einschränkungen-und-bekannte-unannehmlichkeiten)
 4. [Use cases](#4-use-cases)
@@ -61,6 +60,10 @@ sicher benutzen kannst?**
    textFlow das und baut automatisch alle relevanten Flows neu, um die Änderung
    widerzuspiegeln. Wenn du die Eigenschaften einer Notiz änderst, so dass sie
    in einen neuen Flow eingeschlossen wird, musst du von Hand neu bauen.
+   - **Praktisch:** Rechts-Klick auf Ordner gibt die Option:
+     `textFlow: Erzeuge neuen Flow aus diesem Ordner`. Die Definition kann dann
+     in den Settings verfeinert werden. <small>Für Lesezeichengruppen ist diese
+     Funktionalität derzeit leider nicht verfügbar.</small>
 2. **Strukturiere deine Flows:**
    - Flows, die über Ordner, Tags oder Eigenschaften definiert sind, habe zwei
      Sortieroptionen:
@@ -151,23 +154,6 @@ sicher benutzen kannst?**
   schätze ich.
 - **Frei wählbarer Name für den Systemordner:** Wäre nicht schwer zu
   implementieren, ich hab nur grad keinen Bock drauf.
-
-### Tips und Tricks
-
-- Um mal schnell einen Flow für zwischendurch zu bauen:
-  - wähle die Notizen aus, die du im Flow haben willst
-  - tagge sie mit dem Namen, den der Flow haben soll
-  - (benutze 'Multi Properties' von technohiker wenn es sich um mehrere, gleich
-    aufeinander folgende Notizen handelt)
-  - baue einen Flow aus dem Tag
-- Um dahin zurück zu kehren, wo du eben noch warst, nachdem du woanders im Flow
-  was nachgelesen hast:
-  - bevor du nachliest, klick in den Text und synce manuell, um die
-    Cursor-Position zu speichern
-  - lies nach
-  - click den Zielscheiben-Button oder benutze das Tastenkürzel, um zur letzten
-    bekannten Crusor-Position zurückzukehren, die halt die Position ist, die du
-    eben gespeichert hast.
 
 <hr>
 
@@ -613,20 +599,30 @@ Alle Befehle können in Obsidians Einstellungen mit Tastenkürzeln verknüpft
 werden.
 
 - **Alle Leaves synchronisieren:** Speichert auch die aktuelle Cursor-Position
-- Je nach Einstellung (Check externe Edits aus oder an)
+- **Flow im aktive Leaf neubauen:** Manchmal ist ein Neubau außer der Reihe
+  nötig.
+- **Letzte Cursor-Position wiederherstellen:** Wie die Beschreibung schon sagt.
+- **Aktive Region auswählen:** Wählt den Text der aktiven Region des aktiven
+  Flows aus.
+- **Flow im aktiven Leaf exportieren:** Falls du die Menüleiste nicht aktiviert
+  hast.
+
+- **Fuzzy-Navigation öffnen:** Für die Navigation per Tastatur.
+- **Flow-Switcher öffnen:** Falls du das Modal nicht mit Buttons öffnen willst,
+  kannst du stattdessen diesen Befehl nutzen.
+- **Menüleiste umschalten:** Wie die Beschreibung schon sagt.
+
+- Je nach Einstellung (Check für externe Edits aus oder an - Änderungen an
+  diesem Setting brauchen einen Reload deines Vaults, um sich hier
+  widerzuspiegeln):
+
   - **Flagge alle Flows für den Neubau:** Falls du keine automatischen Checks
     für externe Edits hast und unsicher bist, welche Notizen du extern
     bearbeitet hast.
   - **Prüfe Vault auf externe Edits:** Falls du auch für deine gerade inaktiven
     Flows einen Check möchtest (die automatischen Checks prüfen nur aktive
     Flows)
-- **Fuzzy-Navigation öffnen:** Für die Navigation per Tastatur.
-- **Flow-Switcher öffnen:** Falls du das Modal nicht mit Buttons öffnen willst,
-  kannst du stattdessen diesen Befehl nutzen.
-- **Menüleiste umschalten:** Wie die Beschreibung schon sagt.
-- **Letzte Cursor-Position wiederherstellen:** Ebenso.
-- **Aktive Region auswählen:** Wählt den Text der aktiven Region des aktiven
-  Flows aus.
+
 - **Scrollbar umschalten:** Für den schnellen Wechsel.
 - **Navigation per Explorer umschalten:** Falls du die Mehrfachauswahl brauchst.
 
@@ -1009,7 +1005,7 @@ wann solltest du beide zusammen benutzen?
     darüber zu sein, welche Zusammenstellung welche Version enthält, weil
     textFlow das alles für dich regelt.
 - **Datei-Explorer:**
-  - Das Plugin 'Quiet outline' von the_tree erlaubt es dir, Überschriften in
+  - Das Plugin 'Quiet outline' von guopenghui erlaubt es dir, Überschriften in
     Outline zu dekorieren und auto-expand klappt die Überschriften aus, unter
     denen du gerade arbeitest. Aber um die Deko zu ändern, musst du dein
     Dokument durchsuchen, anstatt nur im Datei-Explorer zu klicken. Und wenn du
