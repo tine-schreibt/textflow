@@ -205,8 +205,11 @@
   "---------- BACKUP MODAL": "Modal, das erlaubt, Flow-Definitionen aus Backups wiederherzustellen ----------",
   "backup.headline": "Deine Backups",
   "backup.explanation empty": "Du hast keine Backups. Erstelle oder editiere einen Flow, um ein Backup zu erzeugen.",
+  "backup.explanation replace": "Wenn du 'ersetzen' auswählst, wird die Definition ohne Zeitstempel im Namen heruntergeladen und ersetzt etwaige Definitionen mit diesem Namen.",
+  "backup.explanation restore": "Wählst du 'herunterladen', bleibt der Zeitstempel erhalten und nichts wird ersetzt.",
   "backup.explanation": "Klicke einmal, um auszuwählen, ein zweites mal um wieder abzuwählen.",
-  "backup.restoreButton.setButtonText restore": "Wiederherstellen",
+  "backup.restoreButton.setButtonText replace": "Ersetzen",
+  "backup.restoreButton.setButtonText restore": "Herunterladen",
   "backup.deleteButton.setButtonText delete": "Löschen",
   "backup.okayButton.setButtonText okay": "Okay",
   "backup.dismissButton.setButtonText dismiss": "Abbrechen",
@@ -262,7 +265,7 @@
   "syncBackToSource.notice sync failed flow note": "textFlow: Sync fehlgeschlagen. Der Flow ${path} konnte nicht gefunden werden.",
   "syncBackToSource.notice other random error": "textFlow: Ein Fehler ist aufgetreten, während versucht wurde, ${flowName} zu ${path} zu synchronisieren. \nBitte versuche es in einer Sekunde erneut. \nWenn der Fehler weiterhin auftritt, lies die 'Fehlerbehebung' Sektion des Readmes.",
 
-  "checkActiveRegion.notice region tracking error": "textFlow: Fehler beim Tracken der aktiven Region von ${flowName}. \nDu siehst diesen Fehler wahrscheinlich, weil du a) den Quellordner umbenannt hast, oder b) durch (cmd+z) in den Zustand vor einem Neubau zurückgesprungen bist. \nFalls a:\n Bitte ändere die Flow-Definition entsprechend. \n Falls b: \nBitte drücke cmd+Umschalt+z, bis du wieder im Zustand nach dem Neubau angekommen bist. \nWenn das nicht funktioniert, nimm einen Neubau an ${flow.flowName} vor. \nDies kann zu weiteren Fehlermeldungen führen. Bitte folge ihren Anweisungen.",
+  "checkActiveRegion.notice region tracking error": "textFlow: Fehler beim Tracking. Falls sich das wiederholt, versuche einen manuellen Neubau deines Flows.",
   "checkActiveRegion.notice overlap detected": "Die aktuelle Region \"&{basename(path)}\" überschneidet sich mit den folgenden Flows: \n${overlapString}",
 
   "---------- FLOW SERVICE": "Eine Klasse die die meiste Funktionalität rund um den Settingstab usw. enthält",

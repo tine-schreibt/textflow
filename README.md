@@ -1,3 +1,5 @@
+(Deutsche Version: [Klick](https://github.com/tine-schreibt/textFlow/blob/main/README_de.md))
+
 ### TL;DR 
 
 **textFlow** lets you define flows - dynamic documents built from the contents
@@ -41,7 +43,6 @@ smoothly?**
 10. [Cheat sheet](#10-cheat-sheet)
 11. [Comparing textFlow and Outline](#11-comparing-textflow-and-outline)
 12. [Report a bug / report your love](#12-report-a-bug--report-your-love) ​​​
-
 <hr>
 
 ### 1. Feature features
@@ -129,7 +130,6 @@ smoothly?**
 - **Favourites for the switcher modal:** In case you have a gazillion flows,
   need help staying on top of them, and frontmatter/dataview seem scary to you.
 - **Open wiki-links inside flow:** This would be a right-click thing, I guess.
-
 <hr>
 
 ### 2. Safety features
@@ -243,14 +243,12 @@ smoothly?**
     it marked for rebuild. There will also be a command to blanket-mark all your
     flows for rebuild.
 11. **Definition backup:** Whenever you create or edit a flow definition, a copy
-    of that definition will be saved together with a timestamp (up to three
-    versions per flow), so you can restore old definitions. If you ever have to
-    un/reinstall the plugin, you can store that file in your vault's root folder
-    temporarily (you won't be able to see it in Obsidian, though, since it's a
-    `.json` file). Upon restarting the plugin the file will be automatically
-    read and then deleted from your vault. So you can quickly restore all your
-    flow definitions via the modal.
-
+of that definition will be saved together with a timestamp (up to three versions
+per flow), so you can restore old definitions. If you ever have to un/reinstall
+the plugin, you can store that file in your vault's root folder temporarily (you
+won't be able to see it in Obsidian, though, since it's a `.json` file). Upon
+restarting the plugin the file will be automatically read and then deleted from
+your vault. So you can quickly restore all your flow definitions via the modal.
 <hr>
 
 ### 3. Limitations and known inconveniences
@@ -396,11 +394,10 @@ Sorted in no particular order:
    1' in the alphabet. So in your flow, all the numbered basename files will
    come before the naked basename file. Solution: 'basename 0'
 7. **'Editing toolbar' overlaps textFlow menu bar:** If you're using the plugin
-   'Editing toolbar' by Cuman set in the 'top' position, you will notice that it
-   covers up most of textFlow's menu bar. I've spent several hours vainly trying
-   to work around this without introducing bugs to my menu bar.
-   [The result](#9-fixing-problems)
-
+'Editing toolbar' by Cuman set in the 'top' position, you will notice that it
+covers up most of textFlow's menu bar. I've spent several hours vainly trying to
+work around this without introducing bugs to my menu bar.
+[The result](#9-fixing-problems)
 <hr>
 
 ### 4. Use cases
@@ -429,7 +426,6 @@ Sorted in no particular order:
   it suits you, your work phase and your project.
 - You do you.
 - Go live your best life.
-
 <hr>
 
 ### 5. Requirements and setup
@@ -443,8 +439,6 @@ Sorted in no particular order:
   - There may be bug in at least one version older than 1.8.10 that prepends the
     note title to note content. If you see this issue in your flows, please let
     me know which version you are using so I can include this info here.
-- **Install via BRAT:** While the plugin isn't released to the market place, you
-  can only install it manually or using BRAT.
   - **BRAT guide**: https://tfthacker.com/brat-quick-guide
   - **Manual install:** Download the the `main.js`, `manifest.json` and
     `styles.css` from the release. Create a folder `textFlow` in your vault's
@@ -452,10 +446,9 @@ Sorted in no particular order:
     to Obsidian's `Settings > Community plugins`. Search for textFlow. Toggle to
     activate, then click the cog to get to the settings.
 - **Install via marketplace:** Once textFlow is released to the market place: Go
-  to Obsidian `Settings > Community plugins > Browse`, search for textFlow,
-  click`Install`, click `Activate`, then click `Options` (all the same button,
-  just give it a second).
-
+to Obsidian `Settings > Community plugins > Browse`, search for textFlow,
+click`Install`, click `Activate`, then click `Options` (all the same button,
+just give it a second).
 <hr>
 
 ### 6. Settings
@@ -527,9 +520,8 @@ Sorted in no particular order:
   also recreates most of the flow's data structure in the background.
 - **Edit:** If you need to change something about the flow definition.
 - **Delete:** This will delete the flow definition, flow note (if it exists) and
-  any trace of them in the data structure (except for backups, which will
-  deleted based on time stamp age).
-
+any trace of them in the data structure (except for backups, which will deleted
+based on time stamp age).
 <hr>
 
 ### 7. Commands
@@ -561,8 +553,7 @@ All commands can be tied to hotkeys in Obsidian's settings.
 - **Toggle scroll bar visibility:** So you can quickly switch it off when it's
   twitchy and back on when you need it.
 - **Toggle explorer navigation:** If you need multi-select to work right, this
-  command is your friend and ally.
-
+command is your friend and ally.
 <hr>
 
 ### 8. Getting started
@@ -572,11 +563,11 @@ All commands can be tied to hotkeys in Obsidian's settings.
 If you want to know why: [Safety features](#2-safety-features) /
 [Limitations](#3-limitations-and-known-inconveniences)
 
-- Go slooow when opening multiple new flow leaves, but also in general.
-- Only ever open and edit flows in Obsidian and while textFlow is active.
-- Only edit regions that do not overlap with other active flows.
-- If you edit your source notes on devices that can't run textFlow, activate
-  checks for external edits in the settings.
+1. Go slow.
+2. Open as few flows in as few tabs as possible.
+3. Be careful with `ctrl/cmd + z` after a rebuild. It can take you back into the
+   pre-rebuild state.
+4. Only ever open and edit flows in Obsidian and while textFlow is active.
 
 #### Quick tutorial
 
@@ -828,13 +819,11 @@ don't find your problem on this list, let me know (see
 #### More problems
 
 - **Problem:** Something else is going on and rebuilding/reloading/reinstalling
-  doesn't help.
-  - **Solution:** Send me a bug report:
-    - In Obsidian, use the keycombo `cmd/ctrl+alt+i` to open the console.
-    - Reproduce the problem and copy the contents of the Console.
-    - Then on github, post a bug report, describing exactly what you were trying
-      to do, what happened instead, including the console output
-
+doesn't help. - **Solution:** Send me a bug report: - In Obsidian, use the
+keycombo `cmd/ctrl+alt+i` to open the console. - Reproduce the problem and copy
+the contents of the Console. - Then on github, post a bug report, describing
+exactly what you were trying to do, what happened instead, including the console
+output
 <hr>
 
 ### 10. Cheat sheet
@@ -936,8 +925,7 @@ should you use both together?
 **Together they shine:**
 
 - But why choose when you can just use both - textFlow to create flexible
-  documents and make snapshots and Outline to granularly navigate your flows.
-
+documents and make snapshots and Outline to granularly navigate your flows.
 <hr>
 
 ### 12. Report a bug / Report your love

@@ -25,6 +25,10 @@ import fs from "fs/promises";
 import path from "path";
 import { dirname } from "path";
 
+// --------------------------------------------------------------------------------
+// ----------- CREATE FLOW FROM FOLDER
+// --------------------------------------------------------------------------------
+
 export class CreateFlowFromFolder extends Modal {
   constructor(app: App, private plugin: TextFlowPlugin) {
     super(app);
@@ -223,6 +227,10 @@ export class CreateFlowFromFolder extends Modal {
 }
 
 //CHECKED AND TESTED
+// --------------------------------------------------------------------------------
+// ---------- PREVIEW MODAL
+// --------------------------------------------------------------------------------
+
 export class PreviewModal extends Modal {
   constructor(
     app: App,
@@ -341,7 +349,7 @@ export class PreviewModal extends Modal {
       })
     );
     const closeButton = new ButtonComponent(closeModal.controlEl)
-      .setButtonText(this.plugin.t("CreateFlowFromFolderModal.headline"))
+      .setButtonText(this.plugin.t("PreviewModal.button close preview"))
       .onClick(() => {
         this.close();
       });
@@ -353,7 +361,10 @@ export class PreviewModal extends Modal {
 //^CHECKED AND TESTED
 
 // ^CHECKED AND TESTED
+// --------------------------------------------------------------------------------
 //----------- FLOW DEF DELETION
+// --------------------------------------------------------------------------------
+
 export class DeleteFlowDefModal extends Modal {
   constructor(
     app: App,
@@ -450,22 +461,11 @@ export class DeleteFlowDefModal extends Modal {
   }
 }
 // ^CHECKED AND TESTED
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
 
-//----------- RESTORE FLOW DEFS
+// --------------------------------------------------------------------------------
+//----------- RESTORE FLOW DEFS (backup)
+// --------------------------------------------------------------------------------
+
 export class RestoreFlowDefModal extends Modal {
   constructor(
     app: App,
@@ -477,6 +477,7 @@ export class RestoreFlowDefModal extends Modal {
   }
 
   private decisionBasket: { [key: string]: { [key: string]: boolean } } = {
+    replace: {},
     restore: {},
     delete: {},
   };
@@ -522,18 +523,19 @@ export class RestoreFlowDefModal extends Modal {
     const { contentEl } = this;
     contentEl.empty();
 
+    const flowDisplay = contentEl.createDiv({
+      cls: "headline-container",
+    });
+
+    flowDisplay.createEl("h3", {
+      text: this.plugin.t("backup.headline"),
+      cls: "headline-text",
+    });
+
     // check if we have something to display
     const exists = await this.getBackup();
     if (!exists) {
       // if we don't, tell the user how to get something to display
-      const flowDisplay = contentEl.createDiv({
-        cls: "headline-container",
-      });
-
-      flowDisplay.createEl("h3", {
-        text: this.plugin.t("backup.headline"),
-        cls: "headline-text",
-      });
       const flowExplanation = flowDisplay
         .createDiv()
         .setText(this.plugin.t("backup.explanation empty"));
@@ -550,18 +552,21 @@ export class RestoreFlowDefModal extends Modal {
       // if we do, display that
       const { parsedJson, backupPath } = exists;
 
-      const flowDisplay = contentEl.createDiv({
-        cls: "headline-container",
-      });
-
-      flowDisplay.createEl("h3", {
-        text: this.plugin.t("backup.headline"),
-        cls: "headline-text",
-      });
-
-      const flowExplanation = flowDisplay
-        .createDiv()
-        .setText(this.plugin.t("backup.explanation"));
+      const flowExplanation = new Setting(flowDisplay).setDesc(
+        createFragment((desc) => {
+          desc.createSpan({
+            text: this.plugin.t("backup.explanation replace"),
+          });
+          desc.createEl("br");
+          desc.createSpan({
+            text: this.plugin.t("backup.explanation restore"),
+          });
+          desc.createEl("br");
+          desc.createSpan({
+            text: this.plugin.t("backup.explanation select"),
+          });
+        })
+      );
 
       const flowSorted: string[] = [];
       Object.keys(parsedJson).forEach((flow) => {
@@ -674,6 +679,24 @@ export class RestoreFlowDefModal extends Modal {
             })
           )
 
+          .addButton((replaceButton) => {
+            replaceButton
+              .setIcon("replace")
+              .setTooltip(
+                this.plugin.t("backup.restoreButton.setButtonText replace")
+              )
+              .onClick(async () => {
+                // if the button has not been clicked yet
+                if (!this.decisionBasket.replace[flowName]) {
+                  replaceButton.buttonEl.classList.add("mod-cta");
+                  this.decisionBasket.replace[flowName] = true;
+                } else {
+                  replaceButton.buttonEl.classList.remove("mod-cta");
+                  delete this.decisionBasket.replace[flowName];
+                }
+              });
+          })
+
           .addButton((restoreButton) => {
             restoreButton
               .setIcon("download")
@@ -713,9 +736,33 @@ export class RestoreFlowDefModal extends Modal {
       okayButton
         .setButtonText(this.plugin.t("backup.okayButton.setButtonText okay"))
         .onClick(async (buttonEl: MouseEvent) => {
+          const replaceDef = async () => {
+            Object.keys(this.decisionBasket.replace).forEach((flowName) => {
+              console.log("replace: ", flowName);
+              const starIndex = flowName.indexOf("*");
+              const cleanedFlowName = flowName.slice(0, starIndex);
+              console.log("cleanedFlowName", cleanedFlowName);
+              // check if we have a flow by this name and replace the definition
+              if (this.plugin.settings.flows[cleanedFlowName]) {
+                console.log("found exsisting: ", flowName);
+                this.plugin.settings.flows[cleanedFlowName].definitionMode =
+                  parsedJson[flowName].definitionMode;
+                this.plugin.settings.flows[cleanedFlowName].flowCookbook =
+                  parsedJson[flowName].flowCookbook;
+                this.plugin.settings.flows[cleanedFlowName].folderTitles =
+                  parsedJson[flowName].folderTitles;
+                this.plugin.settings.flows[cleanedFlowName].flaggedForRebuild =
+                  true;
+              } else {
+                // otherwise create it fresh
+                this.plugin.settings.flows[flowName] = parsedJson[flowName];
+              }
+            });
+          };
           const restoreDef = async () => {
             Object.keys(this.decisionBasket.restore).forEach((flowName) => {
-              this.plugin.settings.flows[flowName] = parsedJson[flowName];
+              const cleanedName = flowName.replace("*", " ");
+              this.plugin.settings.flows[cleanedName] = parsedJson[flowName];
             });
           };
           const deleteDef = () => {
@@ -723,9 +770,11 @@ export class RestoreFlowDefModal extends Modal {
               delete parsedJson[flowName];
             });
           };
-
+          await replaceDef();
           await restoreDef();
           await deleteDef();
+
+          this.plugin.saveSettings();
 
           await fs.writeFile(
             backupPath,
@@ -748,7 +797,10 @@ export class RestoreFlowDefModal extends Modal {
   };
 }
 
-//-------- FLOW SWITCHING
+// --------------------------------------------------------------------------------
+//-------- FLOW SWITCHING ---------------------------------------------------------
+// --------------------------------------------------------------------------------
+
 export class FlowSwitcherModal extends Modal {
   private plugin: TextFlowPlugin;
   private currentActiveLeafID: string | undefined;
@@ -1306,8 +1358,9 @@ export class FlowSwitcherModal extends Modal {
     contentEl.empty();
   }
 }
-
+// --------------------------------------------------------------------------------
 // ------------------------ FUZZY NAVIGATON MODAL ------------------------
+// --------------------------------------------------------------------------------
 // This modal was largely written by Claude 3.5 Sonnet,
 // but I put it all together and debugged it
 export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {

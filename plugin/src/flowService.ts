@@ -1367,6 +1367,7 @@ export class FlowService {
         await this.createInvisibleUID(mapValueBasket);
         // make the proper divider
         const divider = `\r${mapValueBasket.invisibleUUID}<hr>\r\r`;
+        console.log(divider);
 
         // unencoded divider for debugging purposes (there's also debugUID())
         // const divider = `\r${mapValueBasket.identifier}<hr>\r\r`;
@@ -1532,6 +1533,7 @@ export class FlowService {
 
     // get the initial UUID
     let UUID = crypto.randomUUID();
+    console.log("UUID for ", mapValueBasket.flowOrder, UUID);
 
     // turn it into base9 piecemeal (to avoid bigint), then join and pad
     const base9Transform = (identifier: string) => {
@@ -1673,12 +1675,18 @@ export class FlowService {
   };
 
   backupFlowDef = async (flowName: string) => {
+    console.log("start of backup function: ", flowName);
     // make a clone of the flow, clean it and package it
     const currentDate = this.getTimestamp();
-    const backupName = `${flowName} ${currentDate}`;
+    const backupName = `${flowName}*${currentDate}`;
     const exportObj: { [key: string]: Types.FlowDef } = {};
     exportObj[backupName] = structuredClone(
       this.plugin.settings.flows[flowName]
+    );
+    console.log("backupName: ", backupName);
+    // null or update properties that need to be nulled or updated
+    exportObj[backupName].flowFilePath = normalizePath(
+      `${this.plugin.settings.systemFolderPath}/${backupName}`
     );
     exportObj[backupName].flowRecipe = {};
     exportObj[backupName].flaggedForRebuild = true;

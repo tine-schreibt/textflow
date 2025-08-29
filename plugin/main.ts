@@ -2912,8 +2912,7 @@ ${pseudoElement}
         new Notice(
           this.t("checkActiveRegion.notice region tracking error", {
             flow_flowName: flowName,
-          }),
-          0
+          })
         );
       }
       await this.saveSettings();

@@ -1,3 +1,5 @@
+(English version: [Click](https://github.com/tine-schreibt/textFlow/blob/main/README.md))
+
 ### TL;DR
 
 Mit **textFlow** kannst du Flows definieren - dynamische Dokumente, die aus dem
@@ -635,11 +637,12 @@ werden.
 Wenn du wissen willst, warum: [Sicherheitsfeatures](#2-safetyfeatures) /
 [Einschränkungen](#3-einschränkungen-und-bekannte-unannehmlichkeiten)
 
-- Lass dir Zeit, wenn du mehrere Flows öffnest, aber auch im Allgemeinen.
-- Öffne und bearbeite Flows immer nur in Obsidian und währen textFlow aktiv ist.
-- Bearbeite nur Regionen, die sich nicht mit anderen Flows überlappen.
-- Wenn du auf einem Gerät ohne textFlow Quellnotizen bearbeitest, schalte in den
-  Einstellungen die Prüfung für externe Bearbeitung ein.
+1. Lass dir Zeit.
+2. Öffne so wenige Flows in so wenigen Tabs wie möglich.
+3. Sei vorsichtig mit `strg/cmd + z` nach einem Neubau. Es kann dich in den
+   Zustand vor dem Neubau zurückbringen.
+4. Öffne und bearbeite Flows immer nur in Obsidian und während textFlow aktiv
+   ist.
 
 #### Schnelles Tutorial
 
