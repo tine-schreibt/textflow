@@ -53,7 +53,8 @@ export default class TextFlowPlugin extends Plugin {
   isLoading: boolean = true; // suspend create listener while we're setting up
   textFlowOperation: boolean = false; // set mostly when syncing to prevent doom spiral of the modify listener
   lastActivity: { [key: string]: number } = {};
-  lastActiveRegion: string;
+  alreadyActivated: { [key: string]: { [key: string]: boolean } } = {}; // flowName: {leafID: true}
+  lastActiveRegion: string = "";
   inactivityThreshold: number = 5 * 60 * 1000;
 
   // ---------------- Global objects and variables -------------------------
@@ -398,7 +399,7 @@ export default class TextFlowPlugin extends Plugin {
 
         const leafID = (activeView.leaf as any).id;
         // check if we got data for that leafID
-        this.restoreCursorPos(flowName, activeView, leafID);
+        this.flowService.restoreCursorPos(flowName, activeView, leafID);
       },
     });
 
@@ -856,21 +857,16 @@ ${pseudoElement}
     basePath: string,
     baseName: string = "_untitled.md"
   ) => {
-    console.log("getUniqueName called");
     // remove the .md so we can put numbers before it
     let fileName = baseName.slice(0, baseName.length - 3);
-    console.log("fileName: ", fileName);
     let number = 0;
     let fullPath = normalizePath(`${basePath}/${fileName}.md`);
-    console.log("fullpath in checker: ", fullPath);
     // Check if file exists
     while (this.app.vault.getAbstractFileByPath(fullPath)) {
       number++;
       fileName = `${baseName} ${number}`;
       fullPath = normalizePath(`${basePath}/${fileName}.md`);
     }
-
-    console.log("New found file name: ", fileName);
     return `${fileName}.md`;
   };
 
@@ -948,14 +944,11 @@ ${pseudoElement}
             .setTitle(this.t("main.fileMenuListener.context create new file"))
             .setIcon("rotate-cw")
             .onClick(async () => {
-              console.log("path of the note: ", file.path);
               const normalisedPath = normalizePath(file.path);
 
-              let parentFolder = "";
+              let parentFolder = normalisedPath;
               if (file instanceof TFile) {
                 parentFolder = dirname(normalisedPath);
-              } else {
-                parentFolder = normalisedPath;
               }
 
               const newFileName = await this.getUniqueFileName(parentFolder);
@@ -963,7 +956,6 @@ ${pseudoElement}
                 `/${parentFolder}/${newFileName}.md`
               );
 
-              console.log("path of the new note: ", newFilePath);
               await this.app.vault.create(newFilePath, "");
             });
         });
@@ -973,41 +965,40 @@ ${pseudoElement}
     // ---------------   // thing to make flow from selected folder
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file) => {
-        // if the user clicks a folder
-        if (file instanceof TFolder) {
-          const baseName = basename(file.path);
-          menu.addItem((item) => {
-            item
-              .setTitle(
-                this.t("main.fileMenuListener.context make flow from folder")
-              )
-              .onClick(async () => {
-                // empty the basket, just in case
-                await this.flowService.resetFlowBuildBasket(
-                  this.settings.flowBuildBasket
-                );
-                const normalisedPath = normalizePath(file.path);
-                // put defaults in
-                this.settings.flowBuildBasket.flowName = `${basename(
-                  normalisedPath
-                )} - ${this.flowService.getTimestamp()}`;
-                this.settings.flowBuildBasket.flowCookbook.folderIncluded =
-                  normalisedPath;
-                this.settings.flowBuildBasket.definitionMode =
-                  "foldersTagsProps";
-                this.settings.flowBuildBasket.flowCookbook.pathsTagsPropertiesSortOrder =
-                  "depthFirst";
-                this.settings.flowBuildBasket.folderTitles = true;
-                this.saveSettings();
+        menu.addItem((item) => {
+          item
+            .setTitle(
+              this.t("main.fileMenuListener.context make flow from folder")
+            )
+            .onClick(async () => {
+              const normalisedPath = normalizePath(file.path);
+              let parentFolder = normalisedPath;
+              if (file instanceof TFile) {
+                parentFolder = dirname(normalisedPath);
+              }
+              // empty the basket, just in case
+              await this.flowService.resetFlowBuildBasket(
+                this.settings.flowBuildBasket
+              );
+              // put defaults in
+              this.settings.flowBuildBasket.flowName = `${basename(
+                parentFolder
+              )}`;
+              this.settings.flowBuildBasket.flowCookbook.folderIncluded =
+                parentFolder;
+              this.settings.flowBuildBasket.definitionMode = "foldersTagsProps";
+              this.settings.flowBuildBasket.flowCookbook.pathsTagsPropertiesSortOrder =
+                "depthFirst";
+              this.settings.flowBuildBasket.folderTitles = true;
+              this.saveSettings();
 
-                const flowCreationModal = new Modals.CreateFlowFromFolder(
-                  this.app,
-                  this
-                );
-                flowCreationModal.open();
-              });
-          });
-        }
+              const flowCreationModal = new Modals.CreateFlowFromFolder(
+                this.app,
+                this
+              );
+              flowCreationModal.open();
+            });
+        });
       })
     );
 
@@ -1166,7 +1157,6 @@ ${pseudoElement}
         if (this.textFlowOperation) return;
         if (this.isRebuilding) return;
 
-        console.log("newly created file: ", file.path);
         let parentFolder = normalizePath(dirname(file.path));
         if (file instanceof TFolder) {
           parentFolder = normalizePath(file.path);
@@ -1178,18 +1168,13 @@ ${pseudoElement}
           parentFolder === this.settings.systemFolderPath &&
           file.path.endsWith(".md")
         ) {
-          console.log("parentFolder", parentFolder);
           // the user has set 'create new file in same folder as active file'
           // so we simulate that behaviour by getting the path for last active region
           // and moving the file in the respective folder
           const baseName = basename(file.path);
-          console.log("basename of new file", baseName);
           const basePath = dirname(this.lastActiveRegion);
-          console.log("last active region base path: ", basePath);
           const newFileName = await this.getUniqueFileName(basePath, baseName);
-          console.log("new file name in listener: ", newFileName);
           const newFilePath = normalizePath(`${basePath}/${newFileName}`);
-          console.log(newFilePath);
           this.textFlowOperation = true;
           await this.app.vault.rename(file, newFilePath);
           this.textFlowOperation = false;
@@ -1349,7 +1334,7 @@ ${pseudoElement}
               this.mostRecentActiveFlowLeaf = leaf;
               return;
             }
-            // otherwise strip the flow stuff; hash check happens in closeFlow
+            // otherwise strip the flow stuff; hash check happens with syncAllLeaves in closeFlow
             this.closeFlow(view);
           }
         }
@@ -1918,7 +1903,7 @@ ${pseudoElement}
   //^CHECKED AND TESTED
 
   // The big bundle that centralises flow management
-  async setupFlowView(flowName: string, view: MarkdownView) {
+  setupFlowView = async (flowName: string, view: MarkdownView) => {
     const leafID = (view.leaf as any).id;
 
     // Keep track of the last active leaf for the fuzzNav
@@ -1958,9 +1943,19 @@ ${pseudoElement}
     this.addCursorListener(view);
     this.addTextChangeListener(view);
 
-    // Update the switcher modal
+    // Update the switcher modal in case it's open
     if (this.modalUpdateCallback) {
       this.modalUpdateCallback();
+    }
+
+    // See if this is the inital activation of the flow/leaf and restore cursor
+    if (!this.alreadyActivated[flowName]) {
+      this.alreadyActivated[flowName] = {};
+      this.alreadyActivated[flowName].leafID = true;
+      this.flowService.restoreCursorPos(flowName, view, leafID);
+    } else if (!this.alreadyActivated[flowName].leafID) {
+      this.alreadyActivated[flowName].leafID = true;
+      this.flowService.restoreCursorPos(flowName, view, leafID);
     }
 
     // check scroll bar visibility
@@ -1979,7 +1974,7 @@ ${pseudoElement}
 
       view.menuBar?.refresh(view.contentEl);
     }
-  }
+  };
   //^CHECKED AND TESTED
 
   //CHECKED AND TESTED
@@ -2238,12 +2233,25 @@ ${pseudoElement}
     if (view.menuBar) {
       view.menuBar.detach();
     }
+
     // reveal scrollbar
     this.flowService.updateScrollbarVisibility();
 
-    const leafId = (view.leaf as any).id;
-    if (this.editableCompartments?.[leafId]) {
-      delete this.editableCompartments[leafId];
+    const leafID = (view.leaf as any).id;
+    if (this.editableCompartments?.[leafID]) {
+      delete this.editableCompartments[leafID];
+    }
+
+    // update the activation tracker
+    const activeLeafPath = view.file?.path;
+    if (activeLeafPath) {
+      const flowName = this.isFlowFile(activeLeafPath);
+      if (flowName) {
+        this.alreadyActivated[flowName];
+        if (this.alreadyActivated[flowName].leafID) {
+          delete this.alreadyActivated[flowName].leafID;
+        }
+      }
     }
 
     this.saveSettings();
@@ -2260,7 +2268,7 @@ ${pseudoElement}
     protectionType: Types.ProtectionType
   ) => {
     const editor = view.editor as any;
-    const leafId = (view.leaf as any).id;
+    const leafID = (view.leaf as any).id;
 
     if (!editor.cm) {
       return;
@@ -2270,13 +2278,13 @@ ${pseudoElement}
       // create new compartment
       const protectSyncCompartment = new Compartment();
       // store compartment so we can reuse it to toggle on/off
-      this.editableCompartments[leafId] = [protectSyncCompartment, true];
+      this.editableCompartments[leafID] = [protectSyncCompartment, true];
 
       // Initialise
       editor.cm.dispatch({
         effects: StateEffect.appendConfig.of([
           protectSyncCompartment.of(
-            this.preventEdit(this.editableCompartments, leafId)
+            this.preventEdit(this.editableCompartments, leafID)
           ),
         ]),
       });
@@ -2362,15 +2370,15 @@ ${pseudoElement}
   toggleEditable = (view: MarkdownView, editable: boolean) => {
     const editor = view.editor as any;
 
-    const leafId = (view.leaf as any).id;
-    if (!this.editableCompartments[leafId]) return;
-    this.editableCompartments[leafId][1] = editable;
-    const compartment = this.editableCompartments[leafId][0];
+    const leafID = (view.leaf as any).id;
+    if (!this.editableCompartments[leafID]) return;
+    this.editableCompartments[leafID][1] = editable;
+    const compartment = this.editableCompartments[leafID][0];
 
     if (compartment) {
       editor.cm.dispatch({
         effects: compartment.reconfigure([
-          this.preventEdit(this.editableCompartments, leafId),
+          this.preventEdit(this.editableCompartments, leafID),
         ]),
       });
     }
@@ -2744,66 +2752,6 @@ ${pseudoElement}
   //^CHECKED AND TESTED
 
   //CHECKED AND TESTED
-  // -------- Restore cursorPos for known and unknown leafIDs
-  restoreCursorPos = (flowName: string, view: MarkdownView, leafID: string) => {
-    if (
-      this.settings.flows[flowName].persistentCursors &&
-      this.settings.flows[flowName].persistentCursors[leafID]
-    ) {
-      const editor = view.editor as ObsidianEditor;
-      const cmEditor = editor.cm;
-      if (cmEditor) {
-        const cursorPos =
-          this.settings.flows[flowName].persistentCursors[leafID].cursors[0][1];
-
-        if (cursorPos !== undefined && cursorPos >= 0) {
-          this.flowService.scrollToPos(editor, cursorPos);
-        }
-      }
-    } else {
-      // get the most recent time stamp for the active flow
-      const timestampArray: number[] = [];
-      if (
-        Object.keys(this.settings.flows[flowName].persistentCursors).length > 0
-      ) {
-        Object.keys(this.settings.flows[flowName].persistentCursors).forEach(
-          (leafID) => {
-            timestampArray.push(
-              this.settings.flows[flowName].persistentCursors[leafID].update
-            );
-          }
-        );
-
-        // sort the timestamps in reverse order so newest timestamp comes first
-        timestampArray.sort((a, b) => b - a);
-
-        const mostRecentTimestamp: number = timestampArray[0];
-        let mostRecentCursor: number = 0;
-        if (this.settings.flows[flowName].persistentCursors) {
-          Object.keys(this.settings.flows[flowName].persistentCursors).forEach(
-            (leafID) => {
-              if (
-                this.settings.flows[flowName].persistentCursors[leafID]
-                  .update === mostRecentTimestamp
-              ) {
-                mostRecentCursor =
-                  this.settings.flows[flowName].persistentCursors[leafID]
-                    .cursors[0][1];
-              }
-            }
-          );
-        }
-
-        const editor = view.editor as ObsidianEditor;
-        mostRecentCursor
-          ? this.flowService.scrollToPos(editor, mostRecentCursor)
-          : "";
-      }
-    }
-  };
-  //^CHECKED AND TESTED
-
-  //CHECKED AND TESTED
   // --------------- Functions: Flow management: Regions -----------------------------------------
   private checkActiveRegion = async (
     flow: Types.FlowDef,
@@ -2812,16 +2760,15 @@ ${pseudoElement}
     cursorOffset: number,
     view: MarkdownView
   ) => {
+    // this is to prevent error messages when activating a leaf triggers a rebuild
+    if (this.settings.flows[flowName].flaggedForRebuild) return;
+
     const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-    if (!activeView) {
-      return;
-    }
+    if (!activeView) return;
 
     const editor = activeView.editor as ObsidianEditor;
     const cmEditor = editor.cm;
-    if (!cmEditor) {
-      return;
-    }
+    if (!cmEditor) return;
 
     // Get full document text from CodeMirror state
     const text = cmEditor.state.doc.toString();
@@ -2911,8 +2858,9 @@ ${pseudoElement}
         // if the compass just cirles, notify the user
         new Notice(
           this.t("checkActiveRegion.notice region tracking error", {
-            flow_flowName: flowName,
-          })
+            flowName: flowName,
+          }),
+          0
         );
       }
       await this.saveSettings();

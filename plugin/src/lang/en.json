@@ -192,6 +192,7 @@
   "------- CREATE FLOW FROM FOLDER MODAL": "LIKE IT SAYS ----------------",
   "CreateFlowFromFolderModal.headline": "Create a new flow from the selected folder.",
   "CreateFlowFromFolderModal.description refine def in settings": "You can refine the definition in the settings tab.",
+  "createFromFolder.notice": "textFlow: Your new flow ${flowName} has been defined.",
   "CreateFlowFromFolderModal.close": "Dismiss",
 
   "----------- PREVIEW MODAL": "Modal that shows the users the structure of their flow---------",
@@ -269,7 +270,7 @@
   "syncBackToSource.notice other random error": "textFlow: An error occurred while trying to sync from ${flowName} to ${path}. \nPlease try again in a second. \nIf the error persists, consult the 'Fixing problems' section of the readme.",
   "syncBackToSource.notice hash interrupt": "textFlow: The note at ${path} has been externally edited at ${timestamp}, which is after you last (re)built flow ${flowName}. \nPlease check if you really want to overwrite it. \nProcedure to overwrite: \n1. Copy the edit you just made.\n2. Rebuild the flow. \n3. Paste the edit back into its spot. \n 4. Sync the flow.",
 
-  "checkActiveRegion.notice region tracking error": "textFlow: Tracking error. If this persists, try to manually rebuild your flow.",
+  "checkActiveRegion.notice region tracking error": "textFlow: Region tracking error for ${flowName}.\nYour are most likely seeing this because you a) renamed the flow's source folder or b) undid (cmd+z) your way into the state before a rebuild.\n Case a: Please update the flow's definition and rebuild it. \nCase b: \nPlease redo (cmd+shift+z) your way back into the current version of things.\nIf that doesn't seem to work, please rebuild ${flowName}.\nThis may lead to further error messages. Please follow their instructions.",
   "checkActiveRegion.notice overlap detected": "The current region ${regionName} is overlapping with the following flow(s): ${overlapString}",
 
   "---------- FLOW SERVICE": "A class that holds most of the functionality for the settings tab and related stuff",

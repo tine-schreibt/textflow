@@ -86,7 +86,7 @@ export interface FlowDef {
   flowBuilt: boolean;
   flaggedForRebuild: boolean;
   conflictObject: ConflictObject;
-  activeRegions: { [key: number | string]: ActiveRegion };
+  activeRegions: { [key: string | string]: ActiveRegion };
   persistentCursors: CursorData;
   lastActiveLeaf: string;
   unsyncedRegionsArray: string[];

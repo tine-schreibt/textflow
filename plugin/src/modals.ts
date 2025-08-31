@@ -63,6 +63,7 @@ export class CreateFlowFromFolder extends Modal {
         })
       );
     chooseFlowName.addText((setFlowName) => {
+      // this value has already been set by the click that also calls this modal
       setFlowName.setValue(this.plugin.settings.flowBuildBasket.flowName);
 
       setFlowName.onChange(async (value) => {
@@ -181,6 +182,10 @@ export class CreateFlowFromFolder extends Modal {
           return;
         }
 
+        // set this so it won't trigger the rename thing
+        this.plugin.settings.flowBuildBasket.oldFlowName =
+          this.plugin.settings.flowBuildBasket.flowName;
+
         await this.plugin.flowService.createFlowDefinition(
           this.plugin.settings.flowBuildBasket
         );
@@ -205,6 +210,12 @@ export class CreateFlowFromFolder extends Modal {
           this.plugin.settings.flowBuildBasket.flowName
         );
 
+        new Notice(
+          this.plugin.t("createFromFolder.notice", {
+            flowName: this.plugin.settings.flowBuildBasket.flowName,
+          })
+        );
+
         // and clean up the basket.
         await this.plugin.flowService.resetFlowBuildBasket(
           this.plugin.settings.flowBuildBasket
@@ -223,6 +234,14 @@ export class CreateFlowFromFolder extends Modal {
         );
         this.close();
       });
+  }
+
+  async onClose() {
+    // and clean up the basket.
+    await this.plugin.flowService.resetFlowBuildBasket(
+      this.plugin.settings.flowBuildBasket
+    );
+    this.plugin.saveSettings();
   }
 }
 
@@ -738,13 +757,10 @@ export class RestoreFlowDefModal extends Modal {
         .onClick(async (buttonEl: MouseEvent) => {
           const replaceDef = async () => {
             Object.keys(this.decisionBasket.replace).forEach((flowName) => {
-              console.log("replace: ", flowName);
               const starIndex = flowName.indexOf("*");
               const cleanedFlowName = flowName.slice(0, starIndex);
-              console.log("cleanedFlowName", cleanedFlowName);
               // check if we have a flow by this name and replace the definition
               if (this.plugin.settings.flows[cleanedFlowName]) {
-                console.log("found exsisting: ", flowName);
                 this.plugin.settings.flows[cleanedFlowName].definitionMode =
                   parsedJson[flowName].definitionMode;
                 this.plugin.settings.flows[cleanedFlowName].flowCookbook =
@@ -1624,7 +1640,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
         if (item.cursorPos) {
           this.plugin.flowService.scrollToPos(editor, item.cursorPos);
         } else {
-          // IF WE DON'T HAVE ONE find a cursor pos to scroll to
+          // IF WE DON'T HAVE ONE find the region's cursor pos
           let text = "";
           if (cmEditor) {
             text = cmEditor.state.doc.toString();

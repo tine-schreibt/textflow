@@ -1,5 +1,3 @@
-(Deutsche Version: [Klick](https://github.com/tine-schreibt/textFlow/blob/main/README_de.md))
-
 ### TL;DR 
 
 **textFlow** lets you define flows - dynamic documents built from the contents
@@ -122,8 +120,14 @@ smoothly?**
     - switch between a flow's tabs
     - quickly close multiple flow tabs
     - rebuild inactive flows
-11. **A language file:** There's an Englisch and German version already. If you
-    want to contribute another language, let me know.
+11. **Little things:**
+    - You can hide scroll bars
+    - Right-clicking into file explorer gives the option
+      - to create a new file in the current folder
+      - to create a new flow from the current folder (with options for titles
+        and sort order)
+    - Cursor positions for existing flow leaves are automatically restored after
+      a vault reload
 
 ##### Maybe coming in the future if enough people ask for it:
 

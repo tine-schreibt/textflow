@@ -1,5 +1,3 @@
-(English version: [Click](https://github.com/tine-schreibt/textFlow/blob/main/README.md))
-
 ### TL;DR
 
 Mit **textFlow** kannst du Flows definieren - dynamische Dokumente, die aus dem
@@ -139,13 +137,14 @@ stressfrei benutzen kannst?**
     - zwischen offenen Tabs mit Flows zu springen
     - schnell mehrere Tabs mit Flows zu schließen
     - inaktive Flows neu zu bauen
-11. **Ein Language File:** Es gibt bereits eine deutsche und eine englische
-    Version. Falls du eine weitere Sprache hinzufügen möchtest, sag mir
-    bescheid.
-12. **Kleinigkeiten:**
+11. **Kleinigkeiten:**
     - Du kannst die Scrolleisten ausschalten.
-    - Rechtsklick in den Datei-Explorer hat die Option, eine Datei im aktuellen
-      Ordner zu erzeugen.
+    - Rechtsklick in den Datei-Explorer gibt die Option
+      - eine neue Datei im aktuellen Ordner zu erzeugen
+      - einen neuen Flow aus dem aktuellen Ordner zu erzeugen (Titel/Sortierung
+        als Einstellungsmöglichkeiten).
+    - Nach einem Reload des Vaults werden Cursor-Positionen für existierende
+      Flow-Leaves automatisch wiederhergestellt.
 
 ##### Kommt vielleicht in der Zukunft, wenn genug Leute danach fragen:
 
@@ -156,6 +155,8 @@ stressfrei benutzen kannst?**
   schätze ich.
 - **Frei wählbarer Name für den Systemordner:** Wäre nicht schwer zu
   implementieren, ich hab nur grad keinen Bock drauf.
+- **Mehr Sprachen:** Bisher gibt es das Plugin auf Deutsch und auf Englisch, und
+  ich nehme gern Übersetzungen in anderen Sprachen entgegen.
 
 <hr>
 
@@ -470,7 +471,7 @@ In keiner besonderen Reihenfolge:
   du auf einen bestimmten Aspekt deiner Geschichte fokussieren willst.
 - Vielleicht benutzt du textFlow in Kombination mit der
   [Gliederung](#11-textflow-und-gliederung-im-vergleich), und die diversen
-  Sicherheitsfunktionen helfen dir, darauf zu vertrauen, dass dein Arbeit mit
+  Sicherheitsfunktionen helfen dir, darauf zu vertrauen, dass deine Arbeit mit
   textFlow sicher ist.
 
 #### 2. Minimale Nutzung
@@ -485,7 +486,7 @@ In keiner besonderen Reihenfolge:
 #### 3. Mittlere Nutzung
 
 - Du machst irgendwas dazwischen und wechselst Methoden, je nach dem, wie es
-  dir, deinem Projekt oder deine Arbeitsphase passt.
+  dir, deinem Projekt oder deiner Arbeitsphase passt.
 - Du machst dein Ding.
 - Leb dein bestes Leben.
 

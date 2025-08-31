@@ -282,7 +282,10 @@ export class FlowService {
     this.plugin.textFlowOperation = true;
     if (
       this.plugin.settings.flowBuildBasket.flowName !=
-      this.plugin.settings.flowBuildBasket.oldFlowName
+        this.plugin.settings.flowBuildBasket.oldFlowName &&
+      this.plugin.settings.flows[
+        this.plugin.settings.flowBuildBasket.oldFlowName
+      ]
     ) {
       const newFlowName = this.plugin.settings.flowBuildBasket.flowName;
       const oldFlowName = this.plugin.settings.flowBuildBasket.oldFlowName;
@@ -310,16 +313,18 @@ export class FlowService {
       const leaves = this.app.workspace.getLeavesOfType("markdown");
       Object.keys(this.plugin.settings.activeFlowObject).forEach(
         (activeFlow) => {
-          Object.keys(
-            this.plugin.settings.activeFlowObject[activeFlow]
-          ).forEach(async (leafID) => {
-            const targetLeaf = leaves.find(
-              (leaf) => (leaf as any).id === leafID
-            );
-            if (targetLeaf) {
-              await targetLeaf.detach();
-            }
-          });
+          if (activeFlow === oldFlowName) {
+            Object.keys(
+              this.plugin.settings.activeFlowObject[activeFlow]
+            ).forEach(async (leafID) => {
+              const targetLeaf = leaves.find(
+                (leaf) => (leaf as any).id === leafID
+              );
+              if (targetLeaf) {
+                await targetLeaf.detach();
+              }
+            });
+          }
         }
       );
       // nix the flow's activeRegions
@@ -723,10 +728,7 @@ export class FlowService {
       );
     } else {
       // Clean up the whole "" and \ stuff we have to add for Dataview so rebuilds don't accumulate it
-      cleanInclusionPath = shCookbook.folderIncluded
-        .replace(/["\\\s]/g, "")
-        .replace(/\/+/g, "/") // Replace multiple forward slashes with single ones
-        .trim();
+      cleanInclusionPath = normalizePath(shCookbook.folderIncluded);
       // check for trailing slash, because normalizePath will eat it
       if (
         cleanInclusionPath != "/" &&
@@ -735,13 +737,11 @@ export class FlowService {
       ) {
         excludeSubfolders = cleanInclusionPath.endsWith("/");
       }
-      // Normalise
-      cleanInclusionPath = normalizePath(cleanInclusionPath);
-      // and because all that cleaning STILL doesn't get rid of "//":
+      // because all that cleaning STILL doesn't get rid of "//":
       if (shCookbook.folderIncluded === "//") {
         shCookbook.folderIncluded = "/";
       }
-      // save path with trailing slash
+      // save cleaned path with trailing slash
       if (excludeSubfolders) {
         flowBuildBasket.flowCookbook.folderIncluded = `${cleanInclusionPath}/`;
         this.plugin.saveSettings();
@@ -772,6 +772,7 @@ export class FlowService {
         let cleanExcludedPath = normalizePath(excludedFolder.trim());
         cleanFolderExclusionArray.push(cleanExcludedPath);
       }
+      // save cleaned values
       flowBuildBasket.flowCookbook.folderExcluded =
         cleanFolderExclusionArray.join(", ");
     } else {
@@ -796,7 +797,7 @@ export class FlowService {
       return nonEmptyTagArray;
     };
 
-    // use cleanup on tags
+    // use cleanup on tags and save cleaned strings back
     const cleanTagInclusionArray = tagCleanup(shCookbook.tagsIncluded);
     flowBuildBasket.flowCookbook.tagsIncluded =
       cleanTagInclusionArray.join(", ");
@@ -839,6 +840,9 @@ export class FlowService {
     );
     // add this to keep exports excluded
     cleanPropertiesExclusionArray.push(["textFlowExport"]);
+
+    // Do NOT save cleaned up proprties back to the cookbook!
+    // the formatting is not what's expected by the cleanup
 
     // -------- cleanup done ----------------
 
@@ -1269,6 +1273,7 @@ export class FlowService {
 
     // Get an object started for the rest of cases
     let progressOverlays: { [key: string]: LoadingOverlay } = {};
+    const IDAndEditorObject: { [key: string]: WorkspaceLeaf } = {};
     if (caller != "settingsTab") {
       if (this.plugin.settings.activeFlowObject[flowName]) {
         Object.keys(this.plugin.settings.flows[flowName].activeRegions).forEach(
@@ -1287,6 +1292,7 @@ export class FlowService {
                   await leaf.openFile(flowFile);
                 }
               }
+              IDAndEditorObject[leafID] = leaf;
               progressOverlays[leafID] = new LoadingOverlay(
                 leaf,
                 flowName,
@@ -1367,7 +1373,6 @@ export class FlowService {
         await this.createInvisibleUID(mapValueBasket);
         // make the proper divider
         const divider = `\r${mapValueBasket.invisibleUUID}<hr>\r\r`;
-        console.log(divider);
 
         // unencoded divider for debugging purposes (there's also debugUID())
         // const divider = `\r${mapValueBasket.identifier}<hr>\r\r`;
@@ -1450,7 +1455,39 @@ export class FlowService {
               }
             } else {
               Object.keys(progressOverlays).forEach((leafID) => {
-                progressOverlays[leafID].remove();
+                Object.keys(this.plugin.settings.activeFlowObject).forEach(
+                  (flowName) => {
+                    if (
+                      this.plugin.settings.activeFlowObject[flowName].leafID
+                    ) {
+                      if (
+                        this.plugin.settings.flows[flowName].activeRegions[
+                          leafID
+                        ]
+                      ) {
+                        // check if we got a cursor position
+                        if (
+                          !this.plugin.settings.flows[flowName]
+                            .persistentCursors ||
+                          !this.plugin.settings.flows[flowName]
+                            .persistentCursors[leafID] ||
+                          !this.plugin.settings.flows[flowName]
+                            .persistentCursors[leafID].cursors
+                        ) {
+                          // if we don't that's it
+                          progressOverlays[leafID].remove();
+                        } else {
+                          // if we do, we first scroll there
+                          const view = IDAndEditorObject[leafID];
+                          if (view instanceof MarkdownView) {
+                            this.restoreCursorPos(flowName, view, leafID);
+                          }
+                          progressOverlays[leafID].remove();
+                        }
+                      }
+                    }
+                  }
+                );
               });
             }
             return;
@@ -1533,7 +1570,6 @@ export class FlowService {
 
     // get the initial UUID
     let UUID = crypto.randomUUID();
-    console.log("UUID for ", mapValueBasket.flowOrder, UUID);
 
     // turn it into base9 piecemeal (to avoid bigint), then join and pad
     const base9Transform = (identifier: string) => {
@@ -1607,10 +1643,69 @@ export class FlowService {
   };
   // ^CHECKED AND TESTED
 
-  //
+  //CHECKED AND TESTED
+  // -------- Restore cursorPos for known and unknown leafIDs
+  restoreCursorPos = (flowName: string, view: MarkdownView, leafID: string) => {
+    if (
+      this.plugin.settings.flows[flowName].persistentCursors &&
+      this.plugin.settings.flows[flowName].persistentCursors[leafID]
+    ) {
+      const editor = view.editor as ObsidianEditor;
+      const cmEditor = editor.cm;
+      if (cmEditor) {
+        const cursorPos =
+          this.plugin.settings.flows[flowName].persistentCursors[leafID]
+            .cursors[0][1];
+
+        if (cursorPos !== undefined && cursorPos >= 0) {
+          this.scrollToPos(editor, cursorPos);
+        }
+      }
+    } else {
+      // get the most recent time stamp for the active flow
+      const timestampArray: number[] = [];
+      if (
+        Object.keys(this.plugin.settings.flows[flowName].persistentCursors)
+          .length > 0
+      ) {
+        Object.keys(
+          this.plugin.settings.flows[flowName].persistentCursors
+        ).forEach((leafID) => {
+          timestampArray.push(
+            this.plugin.settings.flows[flowName].persistentCursors[leafID]
+              .update
+          );
+        });
+
+        // sort the timestamps in reverse order so newest timestamp comes first
+        timestampArray.sort((a, b) => b - a);
+
+        const mostRecentTimestamp: number = timestampArray[0];
+        let mostRecentCursor: number = 0;
+        if (this.plugin.settings.flows[flowName].persistentCursors) {
+          Object.keys(
+            this.plugin.settings.flows[flowName].persistentCursors
+          ).forEach((leafID) => {
+            if (
+              this.plugin.settings.flows[flowName].persistentCursors[leafID]
+                .update === mostRecentTimestamp
+            ) {
+              mostRecentCursor =
+                this.plugin.settings.flows[flowName].persistentCursors[leafID]
+                  .cursors[0][1];
+            }
+          });
+        }
+
+        const editor = view.editor as ObsidianEditor;
+        mostRecentCursor ? this.scrollToPos(editor, mostRecentCursor) : "";
+      }
+    }
+  };
+  //^CHECKED AND TESTED
 
   // this was written by Claude 3.5 Sonnet
-  scrollToPos(editor: Types.ObsidianEditor, cursorPos: number) {
+  scrollToPos = (editor: Types.ObsidianEditor, cursorPos: number) => {
     const cmEditor = editor.cm;
     if (!cmEditor) return;
 
@@ -1642,7 +1737,7 @@ export class FlowService {
 
       cmEditor.focus();
     }
-  }
+  };
 
   safeCreateFile = async (vault: Vault, path: string, content: string) => {
     try {
@@ -1675,7 +1770,6 @@ export class FlowService {
   };
 
   backupFlowDef = async (flowName: string) => {
-    console.log("start of backup function: ", flowName);
     // make a clone of the flow, clean it and package it
     const currentDate = this.getTimestamp();
     const backupName = `${flowName}*${currentDate}`;
@@ -1683,7 +1777,6 @@ export class FlowService {
     exportObj[backupName] = structuredClone(
       this.plugin.settings.flows[flowName]
     );
-    console.log("backupName: ", backupName);
     // null or update properties that need to be nulled or updated
     exportObj[backupName].flowFilePath = normalizePath(
       `${this.plugin.settings.systemFolderPath}/${backupName}`

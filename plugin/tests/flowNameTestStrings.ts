@@ -3,29 +3,20 @@
 const invalidChars = /[<>:"/\\|?*#^[\]`\x00-\x1F]/;
 // Let's test each character separately
 const individualCharTests = [
-    { name: ":", expected: false },
-    { name: "#", expected: false },
-    { name: "`", expected: false }
+  { name: ":", expected: false },
+  { name: "#", expected: false },
+  { name: "`", expected: false },
 ];
 
-console.log("Testing individual characters:");
-individualCharTests.forEach(({name, expected}) => {
-    const hasInvalidChar = invalidChars.test(name);
-    console.log(
-        `Character "${name}": ${hasInvalidChar ? "caught" : "NOT caught"} by regex`
-    );
-    // Let's also see the actual regex match result
-    console.log(`  Match result:`, name.match(invalidChars));
+individualCharTests.forEach(({ name, expected }) => {
+  const hasInvalidChar = invalidChars.test(name);
+  // Let's also see the actual regex match result
 });
 
 // Let's also try a different regex pattern
 const altRegex = /[:#{}`]/g;
-console.log("\nTrying alternative regex:");
-individualCharTests.forEach(({name}) => {
-    console.log(
-        `Character "${name}": ${altRegex.test(name) ? "caught" : "NOT caught"} by alternative regex`
-    );
-});const reservedNames = [
+individualCharTests.forEach(({ name }) => {});
+const reservedNames = [
   ".",
   "..",
   "CON",
