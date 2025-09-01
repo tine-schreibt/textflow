@@ -2,13 +2,43 @@ import type { FuseResult } from "fuse.js";
 import { App, Editor } from "obsidian";
 import { EditorView } from "@codemirror/view";
 
-//#######################################################################
-//###########################                ############################
-//###########################     types      ############################
-//###########################                ############################
-//#######################################################################
+// --------------------------------------------------------------------------------
+// TOC
+// --------------------------------------------------------------------------------
+// - TextFlowSettings
+//    - ExternalEditsType
+//    - DecorationEntry
+//    - ActiveRegionHighlight
+//    - flowBuildBasket
+//       - ConflictObject
+//       - CursorData
+//    - FlowDef
+//       - ActiveRegion
+//       - SourceFileObject
+// - DEFAULT_SETTINGS
+// - mapValueBasket
+//    - SortOrder
+//    - ObsidianApp
+//    - InternalPlugins
+//    - BookmarkItem
+//    - BookmarksData
+// - DataviewFolder
+//    - FolderGroup
+//    - DVNote
+// - MISC
+//    - ProtectionType
+//    - ObsidianEditor
+//    - CalculationMode
+//    - DecoStyle
+//    - DropdownState
+//    - MenuBarDisplayState
+//    - SearchItem
+//    - SearchResult
+//    - SuggestionItem
+//    - SuggestionType
+// --------------------------------------------------------------------------------
 
-// -------- OUR SETTINGS
+// -------- OUR GENERAL SETTINGS
 export interface TextFlowSettings {
   firstLaunch: boolean;
   systemFolderPath?: string;
@@ -29,8 +59,7 @@ export interface TextFlowSettings {
   flows: { [key: string]: FlowDef };
 }
 
-// sub-types of TextFlowSettings
-
+// ---- sub-types of TextFlowSettings
 export type ExternalEditsType = "no" | "mtime" | "mtime+hash" | "always hash";
 
 export type DecorationEntry = [

@@ -27,6 +27,91 @@ import { FlowService } from "./src/flowService";
 import XXH from "xxhashjs";
 import { dirname, basename } from "path";
 
+//-----------------------------------------------------------------------------------------
+// This file is too big, but I feel like splitting it up
+// would just move the complexity over to the file explorer
+//-----------------------------------------------------------------------------------------
+// TOC
+//-----------------------------------------------------------------------------------------
+// - Utility functions
+//-----------------------------------------------------------------------------------------
+//    - load and save
+//    - ensureSystemFolder
+//-----------------------------------------------------------------------------------------
+// - Utility UI/UX
+//-----------------------------------------------------------------------------------------
+//    - loadLanguage (localisation)
+//    - cleanupMenuBar
+//    - COMMANDS
+//    - systemFolderState (hidden/shown)
+//    - decorateSourceNotes
+//    - undecorateSourceNotes
+//-----------------------------------------------------------------------------------------
+// - LISTENERS
+//-----------------------------------------------------------------------------------------
+//    - Listener helpers
+//      - getUniqueFileName
+//    - Click Events (in file explorer)
+//      - flag all flows containing file
+//      - create new file
+//      - create flow from folder
+//    - File Events
+//      - modify (flag for rebuild)
+//      - rename (flag or restore name)
+//      - create (flag or move and open)
+//      - delete (flag)
+//    - Window/editor/workspace events
+//      - blur (sync and statcheck active flows)
+//      - focus (statcheck active flows)
+//      - active-leaf-change (setup/close flow leaves)
+//      - layout-change (catch edge case when no flows open)
+//    - TRACKING in editor
+//      - addCursorListener
+//      - removeCursorListener
+//      - addTextChangeListener
+//      - removeTextChangeListener
+//      - isFileExplorerClick
+//      - fileExplorerOpenClickListener
+//    - TRACKING helpers
+//      - checkActiveRegion
+//      - addRegionTracking
+//      - findActiveRegion
+//      - findStartOfRegion
+//-----------------------------------------------------------------------------------------
+// - Flow Management and UI
+//-----------------------------------------------------------------------------------------
+//      - isFlowFile
+//      - setupFlowView
+//      - setupMenuBar
+//      - refreshMenuBars
+//      - activateFlow
+//      - manageActiveFlowObject
+//      - closeFlow
+//-----------------------------------------------------------------------------------------
+// - Data safety
+//-----------------------------------------------------------------------------------------
+//      - addWriteProtection
+//      - preventEdit
+//      - toggleEditable
+//      - syncAllLeaves
+//      - syncBackToSource
+//      - updateStats
+//      - checkStatsForFlow
+//      - checkStatsForNote
+//      - initialHashing
+//      - makeHash
+//      - checkHash
+//-----------------------------------------------------------------------------------------
+// - Misc
+//-----------------------------------------------------------------------------------------
+//      - manageCursorPos
+//      - notifyOfOverlap
+//-----------------------------------------------------------------------------------------
+// - ONLOAD
+//-----------------------------------------------------------------------------------------
+// - ONUNLOAD
+//-----------------------------------------------------------------------------------------
+
 // so the menu bar can be kept within the view
 declare module "obsidian" {
   interface MarkdownView {
@@ -97,6 +182,7 @@ export default class TextFlowPlugin extends Plugin {
 
   // ---------------------------------------------------------------
   //CHECKED
+  // see also: discernAndSetSystemFolderState for UI
   async ensureSystemFolder() {
     const systemFolder = this.app.vault
       .getAllLoadedFiles()
@@ -1297,7 +1383,8 @@ ${pseudoElement}
     //^CHECKED AND TESTED
 
     //CHECKED AND TESTED
-    // ----------------- Auto-sync on blur  -------------------------------
+    // ---------- Window/Editor events
+    // ----------------- Auto-sync and checks on blur or focus  -------------------------------
     this.registerDomEvent(window, "blur", async () => {
       await this.syncAllLeaves();
       Object.keys(this.settings.activeFlowObject).forEach(async (flowName) => {
@@ -1306,7 +1393,6 @@ ${pseudoElement}
     });
 
     this.registerDomEvent(window, "focus", async () => {
-      const now = Date.now();
       Object.keys(this.settings.activeFlowObject).forEach(async (flowName) => {
         await this.checkStatsForFlow(flowName);
       });
@@ -1357,7 +1443,7 @@ ${pseudoElement}
 
   //CHECKED AND TESTED
 
-  // ---------------- Functions: Listeners: Individual ----------
+  // ---------------- Functions: Listeners: Tracking in editor ----------
   // a little object to keep track of stuff
   listenerBasket: { [key: string]: ListenerBasketItem } = {};
 
@@ -1889,6 +1975,315 @@ ${pseudoElement}
   }
   //^CHECKED AND TESTED
 
+  //CHECKED AND TESTED
+  // --------------- Listeners: Tracking helpers -----------------------------------------
+  private checkActiveRegion = async (
+    flow: Types.FlowDef,
+    flowName: string,
+    leafID: number,
+    cursorOffset: number,
+    view: MarkdownView
+  ) => {
+    // this is to prevent error messages when activating a leaf triggers a rebuild
+    if (this.settings.flows[flowName].flaggedForRebuild) return;
+
+    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!activeView) return;
+
+    const editor = activeView.editor as ObsidianEditor;
+    const cmEditor = editor.cm;
+    if (!cmEditor) return;
+
+    // Get full document text from CodeMirror state
+    const text = cmEditor.state.doc.toString();
+
+    // if this is the initial call for the leaf, give it an active region
+    if (!flow.activeRegions[leafID]) {
+      let activeRegionObject = this.findActiveRegion(
+        flow,
+        editor,
+        leafID,
+        cursorOffset,
+        text
+      );
+
+      // double check because active region could come back undefined
+      if (activeRegionObject) {
+        flow.activeRegions[leafID] = activeRegionObject;
+        // then check if the active region overlaps and sent a notice
+        if (activeRegionObject.path) {
+          this.lastActiveRegion = activeRegionObject.path;
+          this.decorateSourceNotes("update");
+          this.notifyOfOverlap(activeRegionObject.path, flowName);
+        }
+
+        await this.saveSettings();
+        return;
+      }
+    } else if (
+      // if there are values, use those to check if we're still in our known region
+      cursorOffset > flow.activeRegions[leafID].startInFlow &&
+      cursorOffset < flow.activeRegions[leafID].endInFlow
+    ) {
+      flow.activeRegions[leafID].currentCursorPos = cursorOffset;
+      if (flow.activeRegions[leafID].path) {
+        this.lastActiveRegion = flow.activeRegions[leafID].path;
+      }
+      await this.saveSettings();
+      return;
+    } else {
+      // new terrain!
+      flow.activeRegions[leafID].currentCursorPos = cursorOffset;
+      // Use a map and compass
+      let activeRegion = this.findActiveRegion(
+        flow,
+        editor,
+        leafID,
+        cursorOffset,
+        text
+      );
+
+      if (activeRegion) {
+        if (activeRegion.path) {
+          this.lastActiveRegion = activeRegion.path;
+        }
+        const activeRegionPath = activeRegion.path;
+        // if the user wants checks, always check the new region
+        if (
+          !activeRegionPath?.startsWith("#") &&
+          this.settings.checkExternalEdits != "no"
+        ) {
+          if (activeRegionPath) {
+            const flowHasEdits = await this.checkStatsForNote(
+              flowName,
+              activeRegionPath
+            );
+            if (flowHasEdits) {
+              this.flowService.rebuildFlow(flowName, "menuBar");
+              new Notice(
+                this.t("main.cursorTracker.notice", {
+                  flowName: flowName,
+                })
+              );
+              this.lastActivity[flowName] = Date.now();
+            }
+          }
+        }
+        flow.activeRegions[leafID] = activeRegion;
+        this.saveSettings();
+        this.decorateSourceNotes("update");
+        if (view.menuBar) {
+          view.menuBar.refresh(view.contentEl);
+        }
+        if (activeRegion.path) {
+          this.notifyOfOverlap(activeRegion.path, flowName);
+        }
+      } else {
+        // if the compass just cirles, notify the user
+        new Notice(
+          this.t("checkActiveRegion.notice region tracking error", {
+            flowName: flowName,
+          }),
+          0
+        );
+      }
+      await this.saveSettings();
+      return;
+    }
+  };
+  //^CHECKED AND TESTED
+
+  //CHECKED AND TESTED
+  // ----- add region tracking for new leafs, because we get errors if we don't
+  addRegionTracking = async (flowName: string, leafID: string) => {
+    const [path, targetObject] =
+      Object.entries(this.settings.flows[flowName].flowMap).find(
+        ([_, obj]) => obj.flowOrder === 1
+      ) || [];
+    if (targetObject) {
+      const { type, invisibleUUID, flowOrder, lengthPlusDividers } =
+        targetObject;
+      this.settings.flows[flowName].activeRegions[leafID] = {
+        currentCursorPos: 0,
+        type: targetObject.type,
+        path: path,
+        invisibleUUID: targetObject.invisibleUUID,
+        flowOrder: 1,
+        startInFlow: 0,
+        endInFlow: targetObject.lengthPlusDividers,
+        leafMenuBarSettings: {
+          menuBarDisplayState: "show",
+          navDropdownState: "hide",
+          navDropdownSearchTerm: undefined,
+          cursorDropdownState: "hide",
+        },
+      };
+      await this.saveSettings();
+    }
+  };
+  //^CHECKED AND TESTED
+
+  //CHECKED AND TESTED
+  // ------------- region tracking utilities ----------------------
+  private findActiveRegion = (
+    flow: Types.FlowDef,
+    editor: ObsidianEditor,
+    leafID: number,
+    cursorOffset: number,
+    text: string
+  ) => {
+    const markerRegex =
+      /[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46}<hr>/;
+
+    // Handle extreme conditions
+    if (cursorOffset === 0) {
+      // Get first region from flow map
+      const firstRegion = Object.entries(flow.flowMap).find(
+        ([_, regionMap]) => regionMap.flowOrder === 1
+      );
+
+      if (firstRegion) {
+        const [path, regionMap] = firstRegion;
+        // Move cursor to safe position in first region
+        const safePos = 1;
+        this.flowService.scrollToPos(editor, safePos);
+
+        // then return region data
+        return {
+          currentCursorPos: safePos,
+          type: regionMap.type,
+          path: path,
+          invisibleUUID: regionMap.invisibleUUID,
+          flowOrder: 1,
+          startInFlow: 0,
+          endInFlow:
+            text.indexOf(regionMap.invisibleUUID) +
+            regionMap.invisibleUUID.length +
+            4,
+          leafMenuBarSettings: flow.activeRegions[leafID].leafMenuBarSettings,
+        };
+      }
+    }
+
+    if (cursorOffset >= text.length - 46) {
+      // Get last region from flow map
+      const lastRegion = Object.entries(flow.flowMap).find(
+        ([_, regionMap]) =>
+          regionMap.flowOrder === Object.keys(flow.flowMap).length
+      );
+
+      if (lastRegion) {
+        const [path, regionMap] = lastRegion;
+        // Move cursor to safe position in last region
+        const safePos = text.lastIndexOf(regionMap.invisibleUUID) - 1;
+        this.flowService.scrollToPos(editor, safePos);
+
+        // and return region data
+        return {
+          currentCursorPos: safePos,
+          type: regionMap.type,
+          path: path,
+          invisibleUUID: regionMap.invisibleUUID,
+          flowOrder: regionMap.flowOrder,
+          startInFlow:
+            this.findStartOfRegion(flow, regionMap.flowOrder, text) || 0,
+          endInFlow:
+            text.lastIndexOf(regionMap.invisibleUUID) +
+            regionMap.invisibleUUID.length +
+            4,
+          leafMenuBarSettings: flow.activeRegions[leafID].leafMenuBarSettings,
+        };
+      }
+    }
+
+    // if we're already in a safe position
+    const searchStart = text.slice(cursorOffset);
+    const matches = searchStart.match(markerRegex);
+
+    if (matches) {
+      const UIDLength = matches[0].length - 4;
+      const UID = matches[0].slice(0, UIDLength);
+
+      const foundRegion = Object.entries(flow.flowMap).find(
+        ([_, foundRegionMap]) => foundRegionMap.invisibleUUID === UID
+      );
+
+      if (foundRegion) {
+        const [foundRegionPath, foundRegionMap] = foundRegion;
+
+        // calculate where the region starts
+        let newStartInFlow;
+        if (foundRegionMap.flowOrder > 1) {
+          newStartInFlow =
+            this.findStartOfRegion(flow, foundRegionMap.flowOrder, text) || 0;
+        } else {
+          newStartInFlow = 0;
+        }
+
+        // calculate where it ends
+        const endInFlow =
+          text.indexOf(foundRegionMap.invisibleUUID) + matches[0].length;
+
+        // put together the object
+        const activeRegionObject: Types.ActiveRegion = {
+          currentCursorPos: cursorOffset,
+          type: foundRegionMap.type,
+          path: foundRegionPath,
+          invisibleUUID: UID,
+          flowOrder: foundRegionMap.flowOrder,
+          startInFlow: newStartInFlow,
+          endInFlow: endInFlow,
+          leafMenuBarSettings: {
+            menuBarDisplayState:
+              flow.activeRegions[leafID].leafMenuBarSettings
+                .menuBarDisplayState,
+            navDropdownState:
+              flow.activeRegions[leafID].leafMenuBarSettings.navDropdownState,
+            navDropdownSearchTerm:
+              flow.activeRegions[leafID].leafMenuBarSettings
+                .navDropdownSearchTerm,
+
+            cursorDropdownState:
+              flow.activeRegions[leafID].leafMenuBarSettings
+                .cursorDropdownState,
+          },
+        };
+        return activeRegionObject;
+      } else {
+        console.error("No matching region found for UID");
+      }
+    } else {
+      console.error("No marker found in text after cursor");
+    }
+    return undefined;
+  };
+  //^CHECKED AND TESTED
+
+  //CHECKED AND TESTED
+  // ------------------
+  findStartOfRegion = (
+    flow: Types.FlowDef,
+    flowOrder: number,
+    text: string
+  ) => {
+    // this is just math
+    const previousRegion = Object.entries(flow.flowMap).find(
+      ([previousRegion, previousRegionFlowMapEntry]) =>
+        previousRegionFlowMapEntry.flowOrder === flowOrder - 1
+    );
+
+    if (previousRegion) {
+      const [previousRegionPath, previousRegionMap] = previousRegion;
+      const invisibleUID = previousRegionMap.invisibleUUID;
+      const index = text.indexOf(invisibleUID);
+      const startPos = index + (invisibleUID + "<hr>").length + 1;
+      return startPos;
+    } else {
+      return 1;
+    }
+  };
+  //^CHECKED AND TESTED
+
   // ---------------- Functions: Flow management and UI -------------------------
   // ---- Identity check
   //CHECKED AND TESTED
@@ -2031,7 +2426,7 @@ ${pseudoElement}
 
   //CHECKED AND TESTED
   // ---- Make sure flows are set up when they are activated
-  async activateFlow(flowName: string) {
+  activateFlow = async (flowName: string) => {
     if (!this.settings.flows[flowName]) {
       new Notice(
         this.t("activateFlow.notice flow name not found", {
@@ -2067,7 +2462,7 @@ ${pseudoElement}
         10000
       );
     }
-  }
+  };
   //^CHECKED AND TESTED
 
   //CHECKED AND TESTED
@@ -2188,36 +2583,6 @@ ${pseudoElement}
       if (!flowName) continue;
 
       view.menuBar?.refresh(view.contentEl);
-    }
-  };
-  //^CHECKED AND TESTED
-
-  //CHECKED AND TESTED
-  // ----- add region tracking for new leafs, because we get errors if we don't
-  addRegionTracking = async (flowName: string, leafID: string) => {
-    const [path, targetObject] =
-      Object.entries(this.settings.flows[flowName].flowMap).find(
-        ([_, obj]) => obj.flowOrder === 1
-      ) || [];
-    if (targetObject) {
-      const { type, invisibleUUID, flowOrder, lengthPlusDividers } =
-        targetObject;
-      this.settings.flows[flowName].activeRegions[leafID] = {
-        currentCursorPos: 0,
-        type: targetObject.type,
-        path: path,
-        invisibleUUID: targetObject.invisibleUUID,
-        flowOrder: 1,
-        startInFlow: 0,
-        endInFlow: targetObject.lengthPlusDividers,
-        leafMenuBarSettings: {
-          menuBarDisplayState: "show",
-          navDropdownState: "hide",
-          navDropdownSearchTerm: undefined,
-          cursorDropdownState: "hide",
-        },
-      };
-      await this.saveSettings();
     }
   };
   //^CHECKED AND TESTED
@@ -2684,7 +3049,7 @@ ${pseudoElement}
   };
 
   //CHECKED AND TESTED
-  // ------ Functions: Manage persistent cursor position
+  // ------ Functions: Misc
   manageCursorPos = (flowName: string, leafID: string) => {
     if (this.settings.flows[flowName].activeRegions) {
       if (!this.settings.flows[flowName].activeRegions[leafID]) {
@@ -2749,284 +3114,6 @@ ${pseudoElement}
     }
   };
 
-  //^CHECKED AND TESTED
-
-  //CHECKED AND TESTED
-  // --------------- Functions: Flow management: Regions -----------------------------------------
-  private checkActiveRegion = async (
-    flow: Types.FlowDef,
-    flowName: string,
-    leafID: number,
-    cursorOffset: number,
-    view: MarkdownView
-  ) => {
-    // this is to prevent error messages when activating a leaf triggers a rebuild
-    if (this.settings.flows[flowName].flaggedForRebuild) return;
-
-    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-    if (!activeView) return;
-
-    const editor = activeView.editor as ObsidianEditor;
-    const cmEditor = editor.cm;
-    if (!cmEditor) return;
-
-    // Get full document text from CodeMirror state
-    const text = cmEditor.state.doc.toString();
-
-    // if this is the initial call for the leaf, give it an active region
-    if (!flow.activeRegions[leafID]) {
-      let activeRegionObject = this.findActiveRegion(
-        flow,
-        editor,
-        leafID,
-        cursorOffset,
-        text
-      );
-
-      // double check because active region could come back undefined
-      if (activeRegionObject) {
-        flow.activeRegions[leafID] = activeRegionObject;
-        // then check if the active region overlaps and sent a notice
-        if (activeRegionObject.path) {
-          this.lastActiveRegion = activeRegionObject.path;
-          this.decorateSourceNotes("update");
-          this.notifyOfOverlap(activeRegionObject.path, flowName);
-        }
-
-        await this.saveSettings();
-        return;
-      }
-    } else if (
-      // if there are values, use those to check if we're still in our known region
-      cursorOffset > flow.activeRegions[leafID].startInFlow &&
-      cursorOffset < flow.activeRegions[leafID].endInFlow
-    ) {
-      flow.activeRegions[leafID].currentCursorPos = cursorOffset;
-      if (flow.activeRegions[leafID].path) {
-        this.lastActiveRegion = flow.activeRegions[leafID].path;
-      }
-      await this.saveSettings();
-      return;
-    } else {
-      // new terrain!
-      flow.activeRegions[leafID].currentCursorPos = cursorOffset;
-      // Use a map and compass
-      let activeRegion = this.findActiveRegion(
-        flow,
-        editor,
-        leafID,
-        cursorOffset,
-        text
-      );
-
-      if (activeRegion) {
-        if (activeRegion.path) {
-          this.lastActiveRegion = activeRegion.path;
-        }
-        const activeRegionPath = activeRegion.path;
-        // if the user wants checks, always check the new region
-        if (
-          !activeRegionPath?.startsWith("#") &&
-          this.settings.checkExternalEdits != "no"
-        ) {
-          if (activeRegionPath) {
-            const flowHasEdits = await this.checkStatsForNote(
-              flowName,
-              activeRegionPath
-            );
-            if (flowHasEdits) {
-              this.flowService.rebuildFlow(flowName, "menuBar");
-              new Notice(
-                this.t("main.cursorTracker.notice", {
-                  flowName: flowName,
-                })
-              );
-              this.lastActivity[flowName] = Date.now();
-            }
-          }
-        }
-        flow.activeRegions[leafID] = activeRegion;
-        this.saveSettings();
-        this.decorateSourceNotes("update");
-        if (view.menuBar) {
-          view.menuBar.refresh(view.contentEl);
-        }
-        if (activeRegion.path) {
-          this.notifyOfOverlap(activeRegion.path, flowName);
-        }
-      } else {
-        // if the compass just cirles, notify the user
-        new Notice(
-          this.t("checkActiveRegion.notice region tracking error", {
-            flowName: flowName,
-          }),
-          0
-        );
-      }
-      await this.saveSettings();
-      return;
-    }
-  };
-  //^CHECKED AND TESTED
-  //CHECKED AND TESTED
-  // ------------- region tracking utilities ----------------------
-  private findActiveRegion = (
-    flow: Types.FlowDef,
-    editor: ObsidianEditor,
-    leafID: number,
-    cursorOffset: number,
-    text: string
-  ) => {
-    const markerRegex =
-      /[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46}<hr>/;
-
-    // Handle extreme conditions
-    if (cursorOffset === 0) {
-      // Get first region from flow map
-      const firstRegion = Object.entries(flow.flowMap).find(
-        ([_, regionMap]) => regionMap.flowOrder === 1
-      );
-
-      if (firstRegion) {
-        const [path, regionMap] = firstRegion;
-        // Move cursor to safe position in first region
-        const safePos = 1;
-        this.flowService.scrollToPos(editor, safePos);
-
-        // then return region data
-        return {
-          currentCursorPos: safePos,
-          type: regionMap.type,
-          path: path,
-          invisibleUUID: regionMap.invisibleUUID,
-          flowOrder: 1,
-          startInFlow: 0,
-          endInFlow:
-            text.indexOf(regionMap.invisibleUUID) +
-            regionMap.invisibleUUID.length +
-            4,
-          leafMenuBarSettings: flow.activeRegions[leafID].leafMenuBarSettings,
-        };
-      }
-    }
-
-    if (cursorOffset >= text.length - 46) {
-      // Get last region from flow map
-      const lastRegion = Object.entries(flow.flowMap).find(
-        ([_, regionMap]) =>
-          regionMap.flowOrder === Object.keys(flow.flowMap).length
-      );
-
-      if (lastRegion) {
-        const [path, regionMap] = lastRegion;
-        // Move cursor to safe position in last region
-        const safePos = text.lastIndexOf(regionMap.invisibleUUID) - 1;
-        this.flowService.scrollToPos(editor, safePos);
-
-        // and return region data
-        return {
-          currentCursorPos: safePos,
-          type: regionMap.type,
-          path: path,
-          invisibleUUID: regionMap.invisibleUUID,
-          flowOrder: regionMap.flowOrder,
-          startInFlow:
-            this.findStartOfRegion(flow, regionMap.flowOrder, text) || 0,
-          endInFlow:
-            text.lastIndexOf(regionMap.invisibleUUID) +
-            regionMap.invisibleUUID.length +
-            4,
-          leafMenuBarSettings: flow.activeRegions[leafID].leafMenuBarSettings,
-        };
-      }
-    }
-
-    // if we're already in a safe position
-    const searchStart = text.slice(cursorOffset);
-    const matches = searchStart.match(markerRegex);
-
-    if (matches) {
-      const UIDLength = matches[0].length - 4;
-      const UID = matches[0].slice(0, UIDLength);
-
-      const foundRegion = Object.entries(flow.flowMap).find(
-        ([_, foundRegionMap]) => foundRegionMap.invisibleUUID === UID
-      );
-
-      if (foundRegion) {
-        const [foundRegionPath, foundRegionMap] = foundRegion;
-
-        // calculate where the region starts
-        let newStartInFlow;
-        if (foundRegionMap.flowOrder > 1) {
-          newStartInFlow =
-            this.findStartOfRegion(flow, foundRegionMap.flowOrder, text) || 0;
-        } else {
-          newStartInFlow = 0;
-        }
-
-        // calculate where it ends
-        const endInFlow =
-          text.indexOf(foundRegionMap.invisibleUUID) + matches[0].length;
-
-        // put together the object
-        const activeRegionObject: Types.ActiveRegion = {
-          currentCursorPos: cursorOffset,
-          type: foundRegionMap.type,
-          path: foundRegionPath,
-          invisibleUUID: UID,
-          flowOrder: foundRegionMap.flowOrder,
-          startInFlow: newStartInFlow,
-          endInFlow: endInFlow,
-          leafMenuBarSettings: {
-            menuBarDisplayState:
-              flow.activeRegions[leafID].leafMenuBarSettings
-                .menuBarDisplayState,
-            navDropdownState:
-              flow.activeRegions[leafID].leafMenuBarSettings.navDropdownState,
-            navDropdownSearchTerm:
-              flow.activeRegions[leafID].leafMenuBarSettings
-                .navDropdownSearchTerm,
-
-            cursorDropdownState:
-              flow.activeRegions[leafID].leafMenuBarSettings
-                .cursorDropdownState,
-          },
-        };
-        return activeRegionObject;
-      } else {
-        console.error("No matching region found for UID");
-      }
-    } else {
-      console.error("No marker found in text after cursor");
-    }
-    return undefined;
-  };
-  //^CHECKED AND TESTED
-
-  //CHECKED AND TESTED
-  // ------------------
-  findStartOfRegion = (
-    flow: Types.FlowDef,
-    flowOrder: number,
-    text: string
-  ) => {
-    // this is just math
-    const previousRegion = Object.entries(flow.flowMap).find(
-      ([previousRegion, previousRegionFlowMapEntry]) =>
-        previousRegionFlowMapEntry.flowOrder === flowOrder - 1
-    );
-
-    if (previousRegion) {
-      const [previousRegionPath, previousRegionMap] = previousRegion;
-      const invisibleUID = previousRegionMap.invisibleUUID;
-      const index = text.indexOf(invisibleUID);
-      const startPos = index + (invisibleUID + "<hr>").length + 1;
-      return startPos;
-    } else {
-      return 1;
-    }
-  };
   //^CHECKED AND TESTED
 
   notifyOfOverlap = (path: string, activeFlow: string) => {

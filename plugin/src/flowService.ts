@@ -17,6 +17,52 @@ import * as Types from "./types";
 import fs from "fs/promises";
 import path from "path";
 
+//-----------------------------------------------------------------------------------------
+// TOC
+//-----------------------------------------------------------------------------------------
+// - Progress stuff
+//-----------------------------------------------------------------------------------------
+//    - class ProgressNotice
+//    - class LoadingOverlay
+//-----------------------------------------------------------------------------------------
+// - Required by settingsTab in order of appearance
+//-----------------------------------------------------------------------------------------
+//    - checkSystemFolder
+//    - createSystemFolder
+//    - debouncedSaveSettings
+//    - radioButtonManager
+//    - isValidFlowName
+//    - renameFlow
+//    - radioButtonManager
+//    - CREATE FLOW DEFINITON
+//      - getBookmarkPathsByGroupName
+//      - ensureNoUndefined
+//      - getPathsByFoldersTagsProps
+//    - writeFlowDef
+//    - conflictCollector
+//    - syncConflictObjects
+//    - resetFlowBuildBasket
+//    - REBUILD FLOW
+//      - flowBuilder
+//       - createInvisibleUUID
+//       - debugUID
+//    - restoreCursorPos (for saved pos)
+//    - scrollToPos (for computed pos)
+//    - safeCreateFile
+//    - doesFileExistFs
+//    - backupFlowDef
+//-----------------------------------------------------------------------------------------
+// - Required by menuBar.ts and main.ts
+//-----------------------------------------------------------------------------------------
+//    - exportFlow
+//    - selectActiveRegion
+//-----------------------------------------------------------------------------------------
+// - Misc utilities
+//-----------------------------------------------------------------------------------------
+//    - updateScrollbarVisibility
+//    - getTimestamp
+//    - explorerDecoArray
+
 interface ObsidianEditor extends Editor {
   cm?: EditorView;
 }
@@ -92,7 +138,7 @@ class LoadingOverlay {
       cls: "textflow-loading-container",
     });
 
-    const symbol = this.plugin.flowService.explorereDecoArray[0][0];
+    const symbol = this.plugin.flowService.explorerDecoArray[0][0];
     this.progressText = this.container.createDiv({
       cls: "textflow-loading-text",
       text: this.t("flowService.progressNotice.notice initial notice", {
@@ -132,9 +178,7 @@ export class FlowService {
   //#######################################################################
 
   // stuff is sorted in the order in which it is being called from settingsTab
-
   // -------- see if a system folder already exists -------
-  //CHECKED AND TESTED
   //CHECKED AND TESTED
   checkSystemFolder = () => {
     const systemFolder = this.app.vault
@@ -189,16 +233,6 @@ export class FlowService {
       this.debouncedSaveTimer = undefined;
     }, 200); // .2 second delay
   };
-
-  // --- RADIO BUTTON MANAGER -----------------
-  radioButtonManager(
-    selectedButton: ButtonComponent,
-    unselectedButton1: ButtonComponent
-  ) {
-    // Update all buttons
-    selectedButton.buttonEl.addClass("settings-radio-button-active");
-    unselectedButton1.buttonEl.removeClass("settings-radio-button-active");
-  }
 
   // --------- Make sure only valid file names can be entered as flow names
   // CHECKED AND TESTED
@@ -366,6 +400,16 @@ export class FlowService {
   };
 
   // ^ CHECKED AND TESTED
+
+  // --- RADIO BUTTON MANAGER -----------------
+  radioButtonManager(
+    selectedButton: ButtonComponent,
+    unselectedButton1: ButtonComponent
+  ) {
+    // Update all buttons
+    selectedButton.buttonEl.addClass("settings-radio-button-active");
+    unselectedButton1.buttonEl.removeClass("settings-radio-button-active");
+  }
 
   //CHECKED
   createFlowDefinition = async (
@@ -1342,7 +1386,7 @@ export class FlowService {
           );
         }
       } else {
-        const symbolEmpty = this.explorereDecoArray[0][0];
+        const symbolEmpty = this.explorerDecoArray[0][0];
         const symbolFilled = this.plugin.settings.explorerDecoStyle[1];
         Object.keys(progressOverlays).forEach((leafID) => {
           progressOverlays[leafID].updateProgress(
@@ -1964,7 +2008,7 @@ export class FlowService {
   };
 
   // The arrays with the deco stuff, which I made, by hand. I like pain sometimes.
-  explorereDecoArray: Types.DecorationEntry[] = [
+  explorerDecoArray: Types.DecorationEntry[] = [
     ["○", "●", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
     ["○", "●", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
     ["○", "●", "small-high-contrast-neutral", "small-high-contrast-unsynced"],

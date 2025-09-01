@@ -2,19 +2,21 @@ import * as Modals from "./modals";
 import {
   App,
   ButtonComponent,
-  Modal,
   normalizePath,
   Notice,
   PluginSettingTab,
   setIcon,
   Setting,
-  TFile,
 } from "obsidian";
 import TextFlow from "../main";
 import * as Types from "./types";
 import { dirname } from "path";
 import fs from "fs/promises";
 import path from "path";
+
+// ----------------------------------
+// Find TOC by looking at settingsTab
+// ----------------------------------
 
 // --- The class that defines the settings tab
 export class TextFlowSettingsTab extends PluginSettingTab {
@@ -24,12 +26,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     super(app, plugin);
     this.plugin = plugin;
   }
-
-  // ----- Helper functions
-
-  //#######################################################################
-  //###########################   Settings Tab   ##########################
-  //#######################################################################
 
   display = async () => {
     const { containerEl } = this;
@@ -271,7 +267,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     flowModeExplorerDecoHeadline.addEventListener("click", toggleDropdown);
 
     // Create entries
-    const decoArray = this.plugin.flowService.explorereDecoArray;
+    const decoArray = this.plugin.flowService.explorerDecoArray;
     decoArray.forEach((entry) => {
       const explorerDecoEntry = flowModeExplorerDecoContainer.createDiv({
         cls: "explorer-deco-dropdown-entry",

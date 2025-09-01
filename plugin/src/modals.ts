@@ -11,7 +11,6 @@ import {
   Modal,
   normalizePath,
   Setting,
-  TextAreaComponent,
   TFile,
   WorkspaceLeaf,
 } from "obsidian";
@@ -19,11 +18,20 @@ import * as Types from "./types";
 import TextFlow from "../main";
 import { TextFlowSettingsTab } from "./settingsTab";
 import { basename } from "path";
-import { FlowService } from "./flowService";
 import { EditorView } from "@codemirror/view";
 import fs from "fs/promises";
 import path from "path";
-import { dirname } from "path";
+
+// --------------------------------------------------------------------------------
+// TOC
+// --------------------------------------------------------------------------------
+// - CreateFlowFromFolder
+// - PreviewModal
+// - DeleteFlowDefModal
+// - RestoreFlowDefModal
+// - FlowSwitcherModal
+// - FuzzyNavModal
+// --------------------------------------------------------------------------------
 
 // --------------------------------------------------------------------------------
 // ----------- CREATE FLOW FROM FOLDER

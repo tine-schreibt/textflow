@@ -1,13 +1,4 @@
-import {
-  App,
-  ButtonComponent,
-  Editor,
-  MarkdownView,
-  normalizePath,
-  Notice,
-  setIcon,
-  TFile,
-} from "obsidian";
+import { App, ButtonComponent, Editor, MarkdownView, setIcon } from "obsidian";
 import { EditorView } from "@codemirror/view";
 import Fuse, { FuseResult } from "fuse.js";
 import type TextFlowPlugin from "../main";
