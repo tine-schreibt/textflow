@@ -48,7 +48,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     });
 
     // ###############   SET UP A SYSTEM FOLDER   ###########################
-    //CHECKED AND TESTED
+
     const systemFolder = this.plugin.flowService.checkSystemFolder();
     let newSystemFolderParent = "";
 
@@ -162,11 +162,10 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             }
           });
       });
-    // ^CHECKED AND TESTED
 
     // --------------------- UI settings
     // -----------   flowSwitcherModal  ---------------
-    //CHECKED AND TESTED
+
     const switcherModalPosition = new Setting(setUpTextFlow)
       .setName(
         this.plugin.t("switcherModalPosition.setName access flow switcher via")
@@ -203,9 +202,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         });
       });
 
-    //^CHECKED AND TESTED
-
-    //CHECKED
     // ------------ explorer Deco
     // Claude 3.5 Sonnet wrote this to preserve my sanity, which is also why it looks much more refined than my usual stuff
     const explorerDeco = new Setting(setUpTextFlow)
@@ -550,7 +546,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           });
       });
 
-    //^CHECKED
     // --------   CREATE / EDIT FLOWS   ----------------
     const createFlows = containerEl.createDiv({
       cls: "headline-container",
@@ -561,7 +556,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     });
 
     //--------- FLOW NAME -----------------
-    // CHECKED AND TESTED
+
     const chooseFlowName = new Setting(createFlows)
       .setName(
         this.plugin.t("createFlows.chooseFlowName.setName name your flow")
@@ -593,10 +588,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       });
     });
 
-    //^CHECKED AND TESTED
-
     // --------- FOLDER TITLES ------------------
-    // CHECKED
     const toggleFolderTitles = new Setting(createFlows)
       .setName(
         this.plugin.t(
@@ -617,10 +609,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           });
       });
 
-    // ^CHECKED
 
     //------- DEFINE FLOW --------------------
-    //CHECKED
     const defineFlow = new Setting(createFlows)
       .setName(this.plugin.t("defineFlow.setName define your flow"))
       .setDesc(
@@ -632,7 +622,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           });
         })
       );
-    //^CHECKED
 
     //------- RADIO BUTTONS
     const radioButtonContainer = defineFlow.controlEl.createDiv({
@@ -668,7 +657,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     }
 
     // ------ BOOKMARKS INPUT ELEMENT AND STUFF --------------------------------------
-    //CHECKED
 
     const bookmarksSortOrder = new Setting(createFlows);
     bookmarksSortOrder.settingEl.hide(); // HIDE INITIALLY
@@ -777,14 +765,12 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         this.plugin.flowService.debouncedSaveSettings();
       });
     });
-    //^CHECKED
 
     // ---------- FOLDERS, TAGS AND PROPERTIES INPUT ELEMENT -----------------------------------------
     // This function used to be called IHateCSSAndHTML.
     // I just can't get the layout to work with containers and
     // I am NOT going to try again.
 
-    //CHECKED
     const showOrHideAlLFoldersTagsProps = (state: string) => {
       if (state === "show") {
         sortFlowPathsTagsProperties.settingEl.show();
@@ -807,13 +793,10 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         propertiesExcludeInput.settingEl.hide();
       }
     };
-    //^CHECKED
 
-    //CHECKED
     // --- headline object ------
 
     // ---- SORT FLOW ---------
-    // CHECKED
     const sortFlowPathsTagsProperties = new Setting(createFlows).setName(
       this.plugin.t("sortFlowPathsTagsProperties.setName sort order")
     );
@@ -880,7 +863,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         this.plugin.saveSettings();
       });
     });
-    // ^ CHECKED
 
     const headlineChoosePathsTagsProperties = new Setting(createFlows);
     headlineChoosePathsTagsProperties.settingEl.hide();
@@ -899,9 +881,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         });
       })
     );
-    //^CHECKED
 
-    //CHECKED
     // ----- Folder include
     const folderIncludeInput = new Setting(createFlows);
     folderIncludeInput.settingEl.hide();
@@ -966,9 +946,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         this.plugin.flowService.debouncedSaveSettings();
       });
     });
-    //^CHECKED
 
-    //CHECKED
     // ----- Folder exclude
     const folderExcludeInput = new Setting(createFlows);
     folderExcludeInput.settingEl.hide();
@@ -1006,8 +984,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         });
       });
 
-    //^CHECKED
-    //CHECKED
     // ----- Tags
     const tagsIncludeInput = new Setting(createFlows);
     tagsIncludeInput.settingEl.hide();
@@ -1044,8 +1020,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           this.plugin.flowService.debouncedSaveSettings();
         });
       });
-    //^CHECKED
-    //CHECKED
     const tagsExcludeInput = new Setting(createFlows);
     tagsExcludeInput.settingEl.hide();
     tagsExcludeInput.settingEl.addClass("border-top-none");
@@ -1080,8 +1054,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           this.plugin.flowService.debouncedSaveSettings();
         });
       });
-    //^CHECKED
-    //CHECKED
     // ----- Properties
     const propertiesIncludeInput = new Setting(createFlows);
     propertiesIncludeInput.settingEl.hide();
@@ -1123,8 +1095,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           this.plugin.flowService.debouncedSaveSettings();
         });
       });
-    //^CHECKED
-    //CHECKED
     const propertiesExcludeInput = new Setting(createFlows);
     propertiesExcludeInput.settingEl.hide();
     propertiesExcludeInput.settingEl.addClass("border-top-none");
@@ -1165,9 +1135,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           this.plugin.flowService.debouncedSaveSettings();
         });
       });
-    //^CHECKED
 
-    //CHECKED
     // ---- RADIO BUTTON SETTINGS AND LOGIC
     // --- Presets for the BOOKMARKS button
     if (this.plugin.settings.flowBuildBasket.definitionMode === "bookmarks") {
@@ -1217,10 +1185,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       this.plugin.saveSettings();
       this.display();
     });
-    //^CHECKED
 
     // ----------- Preview and save BUTTONS --------------------
-    //CHECKED
     const previewButton = new ButtonComponent(containerEl);
     previewButton
       .setButtonText(
@@ -1254,9 +1220,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           PreviewModal.open();
         }
       });
-    //^CHECKED
 
-    //CHECKED
     const saveButton = new ButtonComponent(containerEl);
     saveButton
       .setButtonText(this.plugin.t("saveButton.setButtonText save flow def"))
@@ -1312,9 +1276,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
         this.display();
       });
-    //^CHECKED
 
-    //CHECKED
     // ----- Clear the input mask
     const clearValues = new ButtonComponent(containerEl);
     clearValues
@@ -1327,8 +1289,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         this.plugin.saveSettings();
         this.display();
       });
-    //^CHECKED
-    //CHECKED
     // ------- FLOW DISPLAY -----------------------------
     const flowDisplay = containerEl.createDiv({
       cls: "headline-container",
@@ -1448,8 +1408,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             }
           })
         )
-        //^CHECKED
-        //CHECKED  AND TESTED
         .addButton((rebuildButton) => {
           rebuildButton
             .setButtonText(
@@ -1478,8 +1436,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               this.display();
             });
         })
-        //^CHECKED AND TESTED
-        //CHECKED AND TESTED
+
         .addButton((editFlow) => {
           editFlow
             .setButtonText(
@@ -1510,9 +1467,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               this.display();
             });
         })
-        //^CHECKED AND TESTED
 
-        //CHECKED AND TESTED
         .addButton((deleteDef) => {
           deleteDef
             .setButtonText(

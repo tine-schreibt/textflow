@@ -253,7 +253,6 @@ export class CreateFlowFromFolder extends Modal {
   }
 }
 
-//CHECKED AND TESTED
 // --------------------------------------------------------------------------------
 // ---------- PREVIEW MODAL
 // --------------------------------------------------------------------------------
@@ -385,9 +384,7 @@ export class PreviewModal extends Modal {
     this.contentEl.empty();
   }
 }
-//^CHECKED AND TESTED
 
-// ^CHECKED AND TESTED
 // --------------------------------------------------------------------------------
 //----------- FLOW DEF DELETION
 // --------------------------------------------------------------------------------
@@ -487,7 +484,6 @@ export class DeleteFlowDefModal extends Modal {
     });
   }
 }
-// ^CHECKED AND TESTED
 
 // --------------------------------------------------------------------------------
 //----------- RESTORE FLOW DEFS (backup)

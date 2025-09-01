@@ -179,7 +179,7 @@ export class FlowService {
 
   // stuff is sorted in the order in which it is being called from settingsTab
   // -------- see if a system folder already exists -------
-  //CHECKED AND TESTED
+
   checkSystemFolder = () => {
     const systemFolder = this.app.vault
       .getAllLoadedFiles()
@@ -190,7 +190,6 @@ export class FlowService {
       );
     return systemFolder instanceof TFolder ? systemFolder : null;
   };
-  //^CHECKED AND TESTED
 
   createSystemFolder = async (newSystemFolderPath: string) => {
     try {
@@ -235,7 +234,7 @@ export class FlowService {
   };
 
   // --------- Make sure only valid file names can be entered as flow names
-  // CHECKED AND TESTED
+
   isValidFlowName = (name: string): { valid: boolean; reason?: string } => {
     // Check for null/undefined names
     if (!name) {
@@ -309,7 +308,6 @@ export class FlowService {
 
     return { valid: true };
   };
-  // ^ CHECKED AND TESTED
 
   renameFlow = async () => {
     // if the user is renaming the flow, handle that first
@@ -399,8 +397,6 @@ export class FlowService {
     }
   };
 
-  // ^ CHECKED AND TESTED
-
   // --- RADIO BUTTON MANAGER -----------------
   radioButtonManager(
     selectedButton: ButtonComponent,
@@ -411,7 +407,6 @@ export class FlowService {
     unselectedButton1.buttonEl.removeClass("settings-radio-button-active");
   }
 
-  //CHECKED
   createFlowDefinition = async (
     flowBuildBasket: Types.flowBuildBasket
   ): Promise<void> => {
@@ -471,12 +466,10 @@ export class FlowService {
       flowBuildBasket.success = false;
     }
   };
-  //^CHECKED
 
   // --- HELPER FUNCTIONS FOR FETCHING PATHS (AND CLEANING UP STUFF)
   // Also we're using the opportunity to get a clean cookbook (user input) for storage
 
-  //CHECKED AND TESTED
   // ---- GET PATHS IN BOOKMARK GROUP ----------------
   getBookmarkPathsByGroupName = async (
     flowBuildBasket: Types.flowBuildBasket
@@ -713,11 +706,9 @@ export class FlowService {
       return Promise.reject(Error);
     }
   };
-  //^CHECKED AND TESTED
 
   // --- GET ALL PATHS FROM FOLDER TAG PROPERTY ---------------------------
   // But first we snappily ensure we don't have undefineds and make the ! type assertion later on safe to use
-  //^CHECKED AND TESTED
   ensureNoUndefined = (flowBuildBasket: Types.flowBuildBasket) => {
     if (flowBuildBasket.flowCookbook.folderIncluded === undefined) {
       flowBuildBasket.flowCookbook.folderIncluded = "";
@@ -740,10 +731,9 @@ export class FlowService {
     this.plugin.saveSettings();
     return Promise.resolve();
   };
-  //^CHECKED AND TESTED
 
   // --- Function to get the paths -------
-  //CHECKED AND TESTED
+
   getPathsByFoldersTagsProps = async (
     flowBuildBasket: Types.flowBuildBasket
   ) => {
@@ -1077,10 +1067,9 @@ export class FlowService {
     // presto
     return Promise.resolve(pathArrayWithFolderTitles);
   };
-  //^CHECKED AND TESTED
 
   // ----- Save the stuff we just put together --------------
-  //CHECKED AND TESTED
+
   writeFlowDef = async (
     settings: Types.TextFlowSettings,
     flowBuildBasket: Types.flowBuildBasket
@@ -1111,10 +1100,9 @@ export class FlowService {
     };
     await this.plugin.saveSettings();
   };
-  //^CHECKED AND TESTED
 
   // ------ function that checks if flows overlap
-  //CHECKED AND TESTED
+
   conflictCollector = (flowBuildBasket: Types.flowBuildBasket) => {
     const conflictObject: Types.ConflictObject = {};
     const key = Object.keys(flowBuildBasket.finalRecipe)[0];
@@ -1140,11 +1128,9 @@ export class FlowService {
     }
     return conflictObject;
   };
-  //^CHECKED AND TESTED
 
   // ----------------- sync conflicts
 
-  //CHECKED AND TESTED
   syncConflictObjects = (referenceFlow: Types.flowBuildBasket) => {
     let refFlowName = referenceFlow.flowName;
 
@@ -1172,7 +1158,6 @@ export class FlowService {
       }
     });
   };
-  //^CHECKED AND TESTED
 
   // --- Reset flowBuildBasket -------------
   resetFlowBuildBasket = async (
@@ -1192,7 +1177,6 @@ export class FlowService {
     resetFlowBuildBasket.persistentCursors = {};
   };
 
-  // CHECKED AND TESTED
   // ------ The function that handles everything necessary to (re)build a flow
   rebuildFlow = async (flowName: string, caller: string) => {
     const flowReBuildBasket: Types.flowBuildBasket = {
@@ -1281,9 +1265,7 @@ export class FlowService {
 
     this.plugin.saveSettings();
   };
-  // ^CHECKED AND TESTED
 
-  // CHECKED AND TESTED
   // ------ The flowBuilder --------------------------
   flowBuilder = async (
     recipeArray: string[],
@@ -1594,9 +1576,6 @@ export class FlowService {
     }
   };
 
-  // ^CHECKED AND TESTED
-
-  // CHECKED AND TESTED
   // ---- Like it says....
   createInvisibleUID = async (mapValueBasket: Types.mapValueBasket) => {
     const invisibleChars = [
@@ -1645,10 +1624,6 @@ export class FlowService {
     mapValueBasket.invisibleUUID = paddedBase9Identifier;
   };
 
-  // ^CHECKED AND TESTED
-
-  // CHECKED AND TESTED
-
   // for debugging
   debugUID = (uid: string) => {
     console.log({
@@ -1685,9 +1660,7 @@ export class FlowService {
       ),
     });
   };
-  // ^CHECKED AND TESTED
 
-  //CHECKED AND TESTED
   // -------- Restore cursorPos for known and unknown leafIDs
   restoreCursorPos = (flowName: string, view: MarkdownView, leafID: string) => {
     if (
@@ -1746,7 +1719,6 @@ export class FlowService {
       }
     }
   };
-  //^CHECKED AND TESTED
 
   // this was written by Claude 3.5 Sonnet
   scrollToPos = (editor: Types.ObsidianEditor, cursorPos: number) => {

@@ -181,7 +181,6 @@ export default class TextFlowPlugin extends Plugin {
   }
 
   // ---------------------------------------------------------------
-  //CHECKED
   // see also: discernAndSetSystemFolderState for UI
   async ensureSystemFolder() {
     const systemFolder = this.app.vault
@@ -261,14 +260,13 @@ export default class TextFlowPlugin extends Plugin {
 
   // cleanup for the menu bar
   // creation happens in setupFlowView, using menuBar.ts
-  //CHECKED AND TESTED
+
   cleanupMenuBar(leaf: WorkspaceLeaf) {
     if (leaf.view instanceof MarkdownView && leaf.view.menuBar) {
       leaf.view.menuBar.detach();
       delete leaf.view.menuBar;
     }
   }
-  //^CHECKED AND TESTED
 
   // ---------------- all our nice commands
   registerCommands() {
@@ -508,7 +506,7 @@ export default class TextFlowPlugin extends Plugin {
   }
 
   // ----- is called onload and sets the visibility of textFlowSystemFolderName
-  //CHECKED AND TESTED
+
   discernAndSetSystemFolderState = (
     systemFolderHidden?: boolean,
     systemFolderPath?: string
@@ -548,10 +546,9 @@ export default class TextFlowPlugin extends Plugin {
     addStyle();
     setTimeout(addStyle, 500); // Add style again after 500ms
   };
-  // ^CHECKED AND TESTED
 
   // ----- DECORATE SOURCE NOTES IN FILE EXPLORER -----------
-  // CHECKED AND TESTED
+
   decorateSourceNotes = async (mode: Types.CalculationMode) => {
     let path = "";
     let handledPathsArray: string[] = [];
@@ -863,10 +860,8 @@ ${pseudoElement}
     }
   };
 
-  //^CHECKED AND TESTED
-
   // removing all styles on deactivation
-  //CHECKED AND TESTED
+
   unDecorateSourceNotes = async () => {
     if (this.settings.showExplorerDeco) return;
     let path = "";
@@ -920,10 +915,8 @@ ${pseudoElement}
     });
   };
 
-  //^CHECKED AND TESTED
-
   //------ function to clean up paths for CSS handling; used by deco function
-  //CHECKED AND TESTED
+
   escapeSelector = (str: string): string => {
     // Escape special characters that have meaning in CSS selectors
     return (
@@ -933,7 +926,6 @@ ${pseudoElement}
         .replace(/\s/g, "\\ ")
     );
   };
-  //^CHECKED AND TESTED
 
   // ---------------- Functions: Listener helper functions -------------------------
 
@@ -1122,7 +1114,7 @@ ${pseudoElement}
     );
 
     // Rename events
-    //CHECKED AND TESTED
+
     this.registerEvent(
       this.app.vault.on(
         "rename",
@@ -1233,10 +1225,9 @@ ${pseudoElement}
         }
       )
     );
-    //^CHECKED AND TESTED
 
     // Create events
-    //CHECKED AND TESTED
+
     this.registerEvent(
       this.app.vault.on("create", async (file: TAbstractFile) => {
         if (this.isLoading) return;
@@ -1326,10 +1317,9 @@ ${pseudoElement}
         }
       })
     );
-    //^CHECKED AND TESTED
 
     // Delete events
-    //CHECKED AND TESTED
+
     this.registerEvent(
       this.app.vault.on("delete", (file: TAbstractFile) => {
         const normalisedPath = normalizePath(file.path);
@@ -1380,9 +1370,7 @@ ${pseudoElement}
         }
       })
     );
-    //^CHECKED AND TESTED
 
-    //CHECKED AND TESTED
     // ---------- Window/Editor events
     // ----------------- Auto-sync and checks on blur or focus  -------------------------------
     this.registerDomEvent(window, "blur", async () => {
@@ -1397,11 +1385,10 @@ ${pseudoElement}
         await this.checkStatsForFlow(flowName);
       });
     });
-    //^CHECKED AND TESTED
 
     // -- LEAF CHANGE - Call management for flow, source and vanilla notes ------
     // setup functions take care of the details
-    //CHECKED AND TESTED
+
     this.registerEvent(
       this.app.workspace.on("active-leaf-change", async (leaf) => {
         // so we skip if the explorerClickListener is already taking care of stuff
@@ -1426,10 +1413,9 @@ ${pseudoElement}
         }
       })
     );
-    //^CHECKED AND TESTED
 
     // catch if only an empty leaf remains
-    //CHECKED AND TESTED
+
     this.registerEvent(
       this.app.workspace.on("layout-change", () => {
         if (this.app.workspace.getLeavesOfType("markdown").length === 0) {
@@ -1439,9 +1425,6 @@ ${pseudoElement}
       })
     );
   }
-  //^CHECKED AND TESTED
-
-  //CHECKED AND TESTED
 
   // ---------------- Functions: Listeners: Tracking in editor ----------
   // a little object to keep track of stuff
@@ -1542,9 +1525,7 @@ ${pseudoElement}
       );
     }
   };
-  //^CHECKED AND TESTED
 
-  //CHECKED AND TESTED
   // ---------------------------------------------------------
   removeCursorListener = (view: MarkdownView) => {
     const leafID = (view.leaf as any).id;
@@ -1562,9 +1543,7 @@ ${pseudoElement}
     });
     delete this.listenerBasket[leafID];
   };
-  //^CHECKED AND TESTED
 
-  //CHECKED AND TESTED
   // -----------------
   private addTextChangeListener = (view: MarkdownView | null) => {
     if (!view) return;
@@ -1711,9 +1690,7 @@ ${pseudoElement}
       );
     }
   };
-  //^CHECKED AND TESTED
 
-  //CHECKED AND TESTED
   //---------------
   removeTextChangeListener = (view: MarkdownView) => {
     const leafID = (view.leaf as any).id;
@@ -1733,9 +1710,7 @@ ${pseudoElement}
 
     delete this.listenerBasket[`${leafID}-changes`];
   };
-  //^CHECKED AND TESTED
 
-  //CHECKED AND TESTED
   // -------- helper for the fileExplorerClickListener
   // Are we even clicking into the file explorer?
   private isFileExplorerClick = (event: MouseEvent) => {
@@ -1754,9 +1729,7 @@ ${pseudoElement}
 
     return true;
   };
-  //^CHECKED AND TESTED
 
-  //CHECKED AND TESTED
   // ---- This listener is for navigating flows via the file explorer
   // it is removed onunload. It's also a nervous steed, so just admire it from afar.
   private boundFileExplorerClick: (event: MouseEvent) => void;
@@ -1973,9 +1946,7 @@ ${pseudoElement}
       }
     };
   }
-  //^CHECKED AND TESTED
 
-  //CHECKED AND TESTED
   // --------------- Listeners: Tracking helpers -----------------------------------------
   private checkActiveRegion = async (
     flow: Types.FlowDef,
@@ -2091,9 +2062,7 @@ ${pseudoElement}
       return;
     }
   };
-  //^CHECKED AND TESTED
 
-  //CHECKED AND TESTED
   // ----- add region tracking for new leafs, because we get errors if we don't
   addRegionTracking = async (flowName: string, leafID: string) => {
     const [path, targetObject] =
@@ -2121,9 +2090,7 @@ ${pseudoElement}
       await this.saveSettings();
     }
   };
-  //^CHECKED AND TESTED
 
-  //CHECKED AND TESTED
   // ------------- region tracking utilities ----------------------
   private findActiveRegion = (
     flow: Types.FlowDef,
@@ -2257,9 +2224,7 @@ ${pseudoElement}
     }
     return undefined;
   };
-  //^CHECKED AND TESTED
 
-  //CHECKED AND TESTED
   // ------------------
   findStartOfRegion = (
     flow: Types.FlowDef,
@@ -2282,11 +2247,10 @@ ${pseudoElement}
       return 1;
     }
   };
-  //^CHECKED AND TESTED
 
   // ---------------- Functions: Flow management and UI -------------------------
   // ---- Identity check
-  //CHECKED AND TESTED
+
   isFlowFile = (activeLeafPath: string) => {
     const flowName = activeLeafPath.match(/([^/]+)(?=\.md$)/)?.[0]; // gets the flow name out of the path
     if (flowName && this.settings.flows[flowName]) {
@@ -2295,7 +2259,6 @@ ${pseudoElement}
       return null;
     }
   };
-  //^CHECKED AND TESTED
 
   // The big bundle that centralises flow management
   setupFlowView = async (flowName: string, view: MarkdownView) => {
@@ -2370,9 +2333,7 @@ ${pseudoElement}
       view.menuBar?.refresh(view.contentEl);
     }
   };
-  //^CHECKED AND TESTED
 
-  //CHECKED AND TESTED
   // ---- handle menuBar setup
   setupMenuBar = (view: MarkdownView, flowName: string) => {
     let menuBar: MenuBar;
@@ -2392,9 +2353,7 @@ ${pseudoElement}
     }
     view.menuBar.refresh(view.contentEl);
   };
-  //^CHECKED AND TESTED
 
-  //CHECKED AND TESTED
   // mostly here to handle uninitialised leaves
   refreshMenuBars = async () => {
     const leaves = this.app.workspace.getLeavesOfType("markdown");
@@ -2422,9 +2381,7 @@ ${pseudoElement}
       }
     }
   };
-  //^CHECKED AND TESTED
 
-  //CHECKED AND TESTED
   // ---- Make sure flows are set up when they are activated
   activateFlow = async (flowName: string) => {
     if (!this.settings.flows[flowName]) {
@@ -2463,9 +2420,7 @@ ${pseudoElement}
       );
     }
   };
-  //^CHECKED AND TESTED
 
-  //CHECKED AND TESTED
   // ------------- Used by flowSwitcherModal -----------
   manageActiveFlowObject = async () => {
     // track all leaves
@@ -2585,9 +2540,7 @@ ${pseudoElement}
       view.menuBar?.refresh(view.contentEl);
     }
   };
-  //^CHECKED AND TESTED
 
-  // CHECKED AND TESTED
   // if a flow is replaced by a non-flow
   closeFlow = async (view: MarkdownView) => {
     await this.syncAllLeaves();
@@ -2621,13 +2574,12 @@ ${pseudoElement}
 
     this.saveSettings();
   };
-  // ^CHECKED AND TESTED
 
   // ---- Functions: Data safety ----------------------------
 
   // ---- Functions: Data safety: Read-only for dividers and during sync
   private editableCompartments: { [key: string]: [Compartment, boolean] } = {};
-  // CHECKED AND TESTED
+
   addWriteProtection = (
     view: MarkdownView,
     protectionType: Types.ProtectionType
@@ -2710,11 +2662,10 @@ ${pseudoElement}
       });
     }
   };
-  // ^CHECKED AND TESTED
 
   // the function that builds the preventDefault configuration for the
   // sync (and mostly rebuild) writelock
-  // CHECKED AND TESTED
+
   preventEdit = (
     editableCompartments: { [key: string]: [Compartment, boolean] },
     leafID: string
@@ -2728,10 +2679,9 @@ ${pseudoElement}
       },
     });
   };
-  // ^CHECKED AND TESTED
 
   // toggle the sync protection by reconfiguring the compartment
-  // CHECKED AND TESTED
+
   toggleEditable = (view: MarkdownView, editable: boolean) => {
     const editor = view.editor as any;
 
@@ -2748,9 +2698,7 @@ ${pseudoElement}
       });
     }
   };
-  // ^CHECKED AND TESTED
 
-  // CHECKED AND TESTED
   // Sync all leaves
   syncAllLeaves = async () => {
     const allLeaves = this.app.workspace.getLeavesOfType("markdown");
@@ -2795,9 +2743,7 @@ ${pseudoElement}
     this.refreshMenuBars();
     this.textFlowOperation = false; // unsuspends modify listener
   };
-  // ^CHECKED AND TESTED
 
-  // CHECKED AND TESTED
   //---- The actual sync function -------------
   syncBackToSource = async (flowName: string, text: string, leafID: string) => {
     if (this.settings.flows[flowName].unsyncedRegionsArray) {
@@ -2869,8 +2815,6 @@ ${pseudoElement}
       }
     }
   };
-
-  // ^CHECKED AND TESTED
 
   updateStats = async (flowName: string, path: string, file: TFile) => {
     if (this.settings.flows[flowName].flowMap[path]) {
@@ -3048,7 +2992,6 @@ ${pseudoElement}
     return changed;
   };
 
-  //CHECKED AND TESTED
   // ------ Functions: Misc
   manageCursorPos = (flowName: string, leafID: string) => {
     if (this.settings.flows[flowName].activeRegions) {
@@ -3113,8 +3056,6 @@ ${pseudoElement}
       }
     }
   };
-
-  //^CHECKED AND TESTED
 
   notifyOfOverlap = (path: string, activeFlow: string) => {
     if (!this.settings.showMenuBar || !this.settings.maxMenuBar) {
