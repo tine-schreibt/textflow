@@ -87,7 +87,7 @@ export interface flowBuildBasket {
   finalRecipe: { [key: string]: string[] };
   conflictObject: ConflictObject;
   activeRegions: { [key: number | string]: ActiveRegion };
-  lastActiveLeaf: string;
+  lastActiveLeaves: string[];
   persistentCursors: CursorData;
 }
 
@@ -115,9 +115,9 @@ export interface FlowDef {
   flowBuilt: boolean;
   flaggedForRebuild: boolean;
   conflictObject: ConflictObject;
-  activeRegions: { [key: string | string]: ActiveRegion };
+  activeRegions: { [key: string]: ActiveRegion }; // leafID: {region}
   persistentCursors: CursorData;
-  lastActiveLeaf: string;
+  lastActiveLeaves: string[]; // FLOWBUILDBASKET, RENAME
   unsyncedRegionsArray: string[];
   flowMap: { [key: string]: SourceFileObject };
 }
@@ -183,7 +183,7 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
     finalRecipe: {},
     conflictObject: {},
     activeRegions: {},
-    lastActiveLeaf: "",
+    lastActiveLeaves: [],
     persistentCursors: {},
   },
   activeFlowObject: {},

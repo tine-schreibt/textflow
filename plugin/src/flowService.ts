@@ -310,7 +310,6 @@ export class FlowService {
   };
 
   renameFlow = async () => {
-    // if the user is renaming the flow, handle that first
     this.plugin.textFlowOperation = true;
     if (
       this.plugin.settings.flowBuildBasket.flowName !=
@@ -1093,7 +1092,7 @@ export class FlowService {
       flaggedForRebuild: true,
       conflictObject: flowBuildBasket.conflictObject,
       activeRegions: flowBuildBasket.activeRegions,
-      lastActiveLeaf: flowBuildBasket.lastActiveLeaf,
+      lastActiveLeaves: flowBuildBasket.lastActiveLeaves,
       persistentCursors: flowBuildBasket.persistentCursors,
       unsyncedRegionsArray: [],
       flowMap: {},
@@ -1174,6 +1173,7 @@ export class FlowService {
     resetFlowBuildBasket.finalRecipe = {};
     resetFlowBuildBasket.conflictObject = {};
     resetFlowBuildBasket.activeRegions = {};
+    resetFlowBuildBasket.lastActiveLeaves = [];
     resetFlowBuildBasket.persistentCursors = {};
   };
 
@@ -1193,7 +1193,7 @@ export class FlowService {
       finalRecipe: {},
       conflictObject: this.plugin.settings.flows[flowName].conflictObject,
       activeRegions: this.plugin.settings.flows[flowName].activeRegions,
-      lastActiveLeaf: this.plugin.settings.flows[flowName].lastActiveLeaf,
+      lastActiveLeaves: this.plugin.settings.flows[flowName].lastActiveLeaves,
       persistentCursors: this.plugin.settings.flows[flowName].persistentCursors,
     };
 
@@ -1788,6 +1788,7 @@ export class FlowService {
   backupFlowDef = async (flowName: string) => {
     // make a clone of the flow, clean it and package it
     const currentDate = this.getTimestamp();
+    // the * is the separator so we can remove the timestamp without regEx
     const backupName = `${flowName}*${currentDate}`;
     const exportObj: { [key: string]: Types.FlowDef } = {};
     exportObj[backupName] = structuredClone(

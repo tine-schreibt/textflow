@@ -141,13 +141,16 @@ export class TextFlowSettingsTab extends PluginSettingTab {
                   );
                   await this.plugin.saveSettings();
                 }
+                const _newSystemFolderParent = newSystemFolderParent
+                  ? newSystemFolderParent
+                  : "root";
                 new Notice(
                   this.plugin.t(
                     "setSystemFolder.addButton.notice folder successfully moved",
                     {
                       textFlowSystemFolderName:
                         this.plugin.textFlowSystemFolderName,
-                      newSystemFolderParent: newSystemFolderParent,
+                      _newSystemFolderParent: _newSystemFolderParent,
                     }
                   )
                 );
@@ -608,7 +611,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             this.plugin.saveSettings();
           });
       });
-
 
     //------- DEFINE FLOW --------------------
     const defineFlow = new Setting(createFlows)
@@ -1456,7 +1458,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
                 finalRecipe: shownFlow.flowRecipe,
                 conflictObject: shownFlow.conflictObject,
                 activeRegions: shownFlow.activeRegions,
-                lastActiveLeaf: shownFlow.lastActiveLeaf,
+                lastActiveLeaves: shownFlow.lastActiveLeaves,
                 persistentCursors: shownFlow.persistentCursors,
               };
 

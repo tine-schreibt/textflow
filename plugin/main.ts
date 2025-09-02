@@ -2261,11 +2261,20 @@ ${pseudoElement}
   };
 
   // The big bundle that centralises flow management
-  setupFlowView = async (flowName: string, view: MarkdownView) => {
+  setupFlowView = async (
+    flowName: string,
+    view: MarkdownView,
+    cursorPos?: number
+  ) => {
     const leafID = (view.leaf as any).id;
 
     // Keep track of the last active leaf for the fuzzNav
-    this.settings.flows[flowName].lastActiveLeaf = leafID;
+    if (this.settings.flows[flowName].lastActiveLeaves.contains(leafID)) {
+      this.settings.flows[flowName].lastActiveLeaves = this.settings.flows[
+        flowName
+      ].lastActiveLeaves.filter((id) => id !== leafID);
+    }
+    this.settings.flows[flowName].lastActiveLeaves.unshift(leafID);
 
     // this has to happen first so the menuBar can just be set up
     await this.manageActiveFlowObject();
@@ -2307,13 +2316,30 @@ ${pseudoElement}
     }
 
     // See if this is the inital activation of the flow/leaf and restore cursor
-    if (!this.alreadyActivated[flowName]) {
-      this.alreadyActivated[flowName] = {};
-      this.alreadyActivated[flowName].leafID = true;
-      this.flowService.restoreCursorPos(flowName, view, leafID);
-    } else if (!this.alreadyActivated[flowName].leafID) {
-      this.alreadyActivated[flowName].leafID = true;
-      this.flowService.restoreCursorPos(flowName, view, leafID);
+    console.log("setupfFlowView got cursorPos ", cursorPos);
+    if (!cursorPos) {
+      // if we don't get a target and this is the first activation, we restore
+      if (!this.alreadyActivated[flowName]) {
+        this.alreadyActivated[flowName] = {};
+        this.alreadyActivated[flowName][leafID] = true;
+        this.flowService.restoreCursorPos(flowName, view, leafID);
+      } else if (!this.alreadyActivated[flowName].leafID) {
+        this.alreadyActivated[flowName][leafID] = true;
+        this.flowService.restoreCursorPos(flowName, view, leafID);
+      }
+    } else {
+      // if we do get a target, we set up or just scroll
+      const editor = view?.editor as ObsidianEditor;
+      if (!this.alreadyActivated[flowName]) {
+        this.alreadyActivated[flowName] = {};
+        this.alreadyActivated[flowName][leafID] = true;
+        this.flowService.scrollToPos(editor, cursorPos);
+      } else if (!this.alreadyActivated[flowName].leafID) {
+        this.alreadyActivated[flowName][leafID] = true;
+        this.flowService.scrollToPos(editor, cursorPos);
+      } else {
+        this.flowService.scrollToPos(editor, cursorPos);
+      }
     }
 
     // check scroll bar visibility
@@ -2469,9 +2495,12 @@ ${pseudoElement}
             async (leafID) => {
               if (!foundFlowLeaves[flowName]?.has(leafID)) {
                 delete this.settings.flows[flowName].activeRegions[leafID];
+                // filter the id from the array
+                this.settings.flows[flowName].lastActiveLeaves =
+                  this.settings.flows[flowName].lastActiveLeaves.filter(
+                    (id) => id !== leafID
+                  );
               }
-              // reset this for the fuzzNav modal
-              this.settings.flows[flowName].lastActiveLeaf = "";
 
               // then, if a flow is all closed, we sync it, because all other syncs
               // only care for active leaves
@@ -2702,7 +2731,7 @@ ${pseudoElement}
   // Sync all leaves
   syncAllLeaves = async () => {
     const allLeaves = this.app.workspace.getLeavesOfType("markdown");
-    const flowLeaves: Record<string, MarkdownView> = {};
+    const flowLeaves: Record<string, MarkdownView[]> = {};
 
     // Populate flowLeaves
     for (const leaf of allLeaves) {
@@ -2710,37 +2739,40 @@ ${pseudoElement}
       const filePath = view.file?.path;
       if (filePath) {
         const flowName = this.isFlowFile(filePath);
-        if (flowName && !flowLeaves[flowName]) {
-          flowLeaves[flowName] = view;
+        if (flowName) {
+          if (!flowLeaves[flowName]) {
+            flowLeaves[flowName] = [view];
+          } else {
+            flowLeaves[flowName].push(view);
+          }
         }
       }
     }
     // Perform syncs
     this.textFlowOperation = true; // suspends modify listener
 
-    await Promise.all(
-      Object.entries(flowLeaves).map(async ([flowName, view]) => {
-        // before we get to actually modifying, let's flag
-        Object.keys(this.settings.flows).forEach((otherFlowName) => {
-          if (flowName != otherFlowName) {
-            if (!this.settings.flows[otherFlowName].flaggedForRebuild) {
-              for (let path of this.settings.flows[flowName]
-                .unsyncedRegionsArray) {
-                if (this.settings.flows[otherFlowName].flowMap[path])
-                  this.settings.flows[otherFlowName].flaggedForRebuild = true;
-                this.saveSettings();
-              }
-            }
-          }
-        });
+    Object.keys(flowLeaves).forEach(async (flowName) => {
+      for (let view of flowLeaves[flowName]) {
         const text = view.editor.getValue();
         const leafID = (view.leaf as any).id;
         await this.toggleEditable(view, false); // block all user edits
         await this.syncBackToSource(flowName, text, leafID);
         await this.toggleEditable(view, true);
-      })
-    );
-    this.refreshMenuBars();
+      }
+      // before we get to actually modifying, let's flag other flows
+      Object.keys(this.settings.flows).forEach((otherFlowName) => {
+        if (flowName != otherFlowName) {
+          if (!this.settings.flows[otherFlowName].flaggedForRebuild) {
+            for (let path of this.settings.flows[flowName]
+              .unsyncedRegionsArray) {
+              if (this.settings.flows[otherFlowName].flowMap[path])
+                this.settings.flows[otherFlowName].flaggedForRebuild = true;
+              this.saveSettings();
+            }
+          }
+        }
+      });
+    });
     this.textFlowOperation = false; // unsuspends modify listener
   };
 
@@ -2809,6 +2841,7 @@ ${pseudoElement}
       this.settings.flows[flowName].unsyncedRegionsArray = remainingPaths;
 
       this.manageCursorPos(flowName, leafID);
+      this.refreshMenuBars();
       this.saveSettings();
       if (this.settings.showExplorerDeco) {
         this.decorateSourceNotes("update");
@@ -2816,6 +2849,7 @@ ${pseudoElement}
     }
   };
 
+  // Functionality to keep mtimes and hashes up to date
   updateStats = async (flowName: string, path: string, file: TFile) => {
     if (this.settings.flows[flowName].flowMap[path]) {
       this.settings.flows[flowName].flowMap[path].mtime = file.stat.mtime;
@@ -2894,6 +2928,7 @@ ${pseudoElement}
     return changed;
   };
 
+  // same checks but for a single note (called when new region is entered)
   checkStatsForNote = async (flowName: string, path: string) => {
     if (this.settings.checkExternalEdits === "no") return;
     if (this.settings.flows[flowName].flaggedForRebuild) return;
@@ -2941,6 +2976,7 @@ ${pseudoElement}
     return changed;
   };
 
+  // so we got hashes to compare against
   initialHashing = async (flowName: string) => {
     const awaitableArray = Object.keys(this.settings.flows[flowName].flowMap);
     for (const path of awaitableArray) {
@@ -2955,10 +2991,12 @@ ${pseudoElement}
     await this.saveSettings();
   };
 
+  // like it says
   makeHash = (text: string) => {
     return XXH.h64(text, 0x0).toString(16);
   };
 
+  // yeah...
   checkHash = async (sourceFile: TFile, path: string, flowName: string) => {
     let changed = false;
     let fileContent: string = await this.app.vault.read(sourceFile);

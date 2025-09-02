@@ -14,7 +14,7 @@
   "setSystemFolder.setDesc.2 how to enter root": "Gib / oder . ein, um den Root-Ordner auszuwählen.",
   "setSystemFolder.addButton.setButtonText.alt create": "Erzeugen",
   "setSystemFolder.addButton.setButtonText.alt move": "Verschieben",
-  "setSystemFolder.addButton.notice folder successfully moved": "text Flow: ${textFlowSystemFolderName} wurde nach ${newSystemFolderParent} verschoben.",
+  "setSystemFolder.addButton.notice folder successfully moved": "text Flow: ${textFlowSystemFolderName} wurde nach ${_newSystemFolderParent} verschoben.",
   "setSystemFolder.addButton.notice failed to move folder": "textFlow: Verschieben des Ordners fehlgeschagen: ${error_message}",
 
   "------ SWITCHER MODAL POSITION": "How do they want to access the flow switcher modal? ----------------",
