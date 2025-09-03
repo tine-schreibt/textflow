@@ -1194,9 +1194,9 @@ export class FlowSwitcherModal extends Modal {
             );
             if (targetLeaf) {
               this.app.workspace.setActiveLeaf(targetLeaf, { focus: true });
-              if (targetLeaf instanceof MarkdownView) {
+              /*if (targetLeaf instanceof MarkdownView) {
                 await this.plugin.setupFlowView(activeFlow, targetLeaf);
-              }
+              }*/
             }
             this.currentActiveLeafID = (targetLeaf as any).id;
             this.display();
@@ -1399,8 +1399,6 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
   onOpen() {
     super.onOpen();
 
-    // Set placeholder text in the search input
-
     let placeholderText = "Search for flows and paths...";
     if (this.activeFlowName) {
       const view = this.app.workspace.getActiveViewOfType(MarkdownView);
@@ -1438,17 +1436,15 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
     this.setInstructions([
       {
         command: "?",
-        purpose: this.plugin.t(
-          "fuzzyNavigabiotnModal.info flow in active leaf"
-        ),
+        purpose: this.plugin.t("fuzzyNavigationModal.info flow in active leaf"),
       },
       {
         command: "*",
-        purpose: this.plugin.t("fuzzyNavigabiotnModal.info other flows"),
+        purpose: this.plugin.t("fuzzyNavigationModal.info other flows"),
       },
       {
         command: ":",
-        purpose: this.plugin.t("fuzzyNavigabiotnModal.info flow names"),
+        purpose: this.plugin.t("fuzzyNavigationModal.info flow names"),
       },
       // Add any other custom shortcuts you plan to implement
     ]);
@@ -1462,7 +1458,6 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
     // the rest is my code
 
     // Contents of the flow in the ACTIVE LEAF if it exists
-    // item for each region
     Object.keys(this.settings.flows).forEach((flowName) => {
       if (flowName === this.activeFlowName) {
         Object.keys(this.settings.flows[flowName].flowMap).forEach((region) => {
@@ -1476,7 +1471,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
             searchableText: `? ${region}`,
           });
         });
-        // Item for each stored cursor position
+
         Object.keys(this.settings.flows[flowName].persistentCursors).forEach(
           (iteratorLeafID) => {
             let leafNickname =
@@ -1515,7 +1510,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
             searchableText: `* ${region}`,
           });
         });
-        // item for each stored cursor
+
         Object.keys(this.settings.flows[flowName].persistentCursors).forEach(
           (iteratorLeafID) => {
             const leafNickname =
@@ -1600,159 +1595,83 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
     // this is all my own code again
 
     // ------------- HELPER FUNCTIONS --------------
-
-    const setCursorPos = async (
-      item: Types.SuggestionItem,
-      cursorPos: number,
-      leafID: string
-    ) => {
-      if (!this.settings.flows[item.flowName].persistentCursors) {
-        this.settings.flows[item.flowName].persistentCursors = {};
-      }
-      if (!this.settings.flows[item.flowName].persistentCursors[leafID]) {
-        const regionPath = item.path ? item.path : "unknown";
-
-        this.settings.flows[item.flowName].persistentCursors[item.flowName] = {
-          leafNickname: `${item.flowName.slice(0, 5)}`,
-          update: Date.now(),
-          cursors: [[regionPath, cursorPos]],
-        };
-        const cursors = Object.entries(
-          this.settings.flows[item.flowName].persistentCursors
-        );
-        if (cursors.length > 5) {
-          // cap at five entries
-          // by finding the leaf with the oldest timestamp using forbidden magic
-          const [oldestLeafId] = cursors.reduce((oldest, current) => {
-            return current[1].update < oldest[1].update ? current : oldest;
-          });
-          delete this.settings.flows[item.flowName].persistentCursors[
-            oldestLeafId
-          ];
-        }
-      }
-    };
-
     const prepareFlowLeafAndCallScroll = async (item: Types.SuggestionItem) => {
-      // if we have open leaves for the flow (meaning we also have a last active one)
+      let leafID = "";
+
+      // if we have open leaves for the flow
       if (this.plugin.settings.flows[item.flowName].activeRegions) {
-        const leaves: WorkspaceLeaf[] = [];
-        // get the leaves into an array so we can exit at the first hit
-        this.app.workspace.iterateAllLeaves((leaf) => {
-          const leafViewState = leaf.getViewState();
-          if (leafViewState.type === "markdown") {
-            leaves.push(leaf);
-            console.log("added a leaf");
+        // targeting the last active leaf
+        leafID = this.plugin.settings.flows[item.flowName].lastActiveLeaves[0];
+
+        // Now get that leaf and do the thing
+        const leaves = this.app.workspace.getLeavesOfType("markdown");
+        const targetLeaf = leaves.find((leaf) => (leaf as any).id === leafID);
+        if (targetLeaf) {
+          this.app.workspace.setActiveLeaf(targetLeaf, { focus: true });
+          scrollToTarget(item);
+          return;
+        }
+      }
+
+      // if there are no active leaves we could target, open a new one
+      const file = this.app.vault.getAbstractFileByPath(
+        this.plugin.settings.flows[item.flowName].flowFilePath
+      );
+      if (file instanceof TFile) {
+        const leaf = this.app.workspace.getLeaf("tab");
+        await leaf.openFile(file);
+        leaf.setPinned(true);
+        this.app.workspace.setActiveLeaf(leaf, { focus: true });
+        scrollToTarget(item);
+      }
+    };
+
+    // this only ever cares about the active view, which is why above we make sure to open, activate and focus
+    const scrollToTarget = async (item: Types.SuggestionItem) => {
+      const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+      const editor = view?.editor as ObsidianEditor | null;
+      if (editor) {
+        const cmEditor = editor.cm;
+
+        // if we have a cursor pos, just scroll there
+        if (item.cursorPos) {
+          this.plugin.flowService.scrollToPos(editor, item.cursorPos);
+        } else {
+          // IF WE DON'T HAVE ONE find the region's cursor pos
+          let text = "";
+          if (cmEditor) {
+            text = cmEditor.state.doc.toString();
           }
-        });
-        // let's first look if there's a leaf that has recently been active
-        for (let leaf of leaves) {
-          console.log(
-            "prepareFlowLeafAndCallScroll looking for active leaf, checking ",
-            (leaf as any).id,
-            "against ",
-            this.settings.flows[item.flowName].lastActiveLeaves[0]
+          let flowOrder = 0;
+          if (item.region) {
+            flowOrder =
+              this.plugin.settings.flows[item.flowName].flowMap[item.region]
+                .flowOrder;
+          }
+
+          const startPosInFlow = this.plugin.findStartOfRegion(
+            this.settings.flows[item.flowName],
+            flowOrder,
+            text
           );
-          if (
-            (leaf as any).id ===
-            this.settings.flows[item.flowName].lastActiveLeaves[0]
-          ) {
-            console.log("match found");
-            if (!(leaf.view instanceof MarkdownView)) {
-              const flowFile = this.app.vault.getAbstractFileByPath(
-                this.plugin.settings.flows[item.flowName].flowFilePath
-              );
-              if (flowFile instanceof TFile) {
-                console.log("reopening file leaf");
-                await leaf.openFile(flowFile);
-              }
-            }
-            scrollToTarget(item, leaf);
-            return;
-          }
-        }
 
-        // if there are no active leaves we could target, open a new one and scroll
-        const file = this.app.vault.getAbstractFileByPath(
-          this.plugin.settings.flows[item.flowName].flowFilePath
-        );
-        if (file instanceof TFile) {
-          const leaf = this.app.workspace.getLeaf("tab");
-          await leaf.openFile(file);
-          leaf.setPinned(true);
-          scrollToTarget(item, leaf);
-        }
-      }
-    };
-
-    const scrollToTarget = async (
-      item: Types.SuggestionItem,
-      leaf: WorkspaceLeaf
-    ) => {
-      if (leaf.view instanceof MarkdownView) {
-        const editor = leaf.view.editor as ObsidianEditor | null;
-        if (editor) {
-          const cmEditor = editor.cm;
-
-          // if we have a cursor pos, just go there
-          if (item.cursorPos) {
-            const leafID = (leaf as any).id;
-            console.log("item.cursorPos ", item.cursorPos);
-            await setCursorPos(item, item.cursorPos, leafID);
-            console.log("Focussing ", leaf);
-            this.app.workspace.setActiveLeaf(leaf, { focus: true });
-            this.plugin.flowService.scrollToPos(editor, item.cursorPos);
-          } else {
-            // IF WE DON'T HAVE A CURSOR POS find the region's cursor pos ------
-            let text = "";
-            if (cmEditor) {
-              text = cmEditor.state.doc.toString();
-            }
-            let flowOrder = 0;
-            if (item.region) {
-              flowOrder =
-                this.plugin.settings.flows[item.flowName].flowMap[item.region]
-                  .flowOrder;
-            }
-
-            const startPosInFlow = this.plugin.findStartOfRegion(
-              this.settings.flows[item.flowName],
-              flowOrder,
-              text
-            );
-
-            if (startPosInFlow) {
-              // then we go there
-              const leafID = (leaf as any).id;
-              console.log("startPosInflow ", startPosInFlow);
-              await setCursorPos(item, startPosInFlow, leafID);
-              console.log("Focussing ", leaf);
-              this.app.workspace.setActiveLeaf(leaf, { focus: true });
-              this.plugin.flowService.scrollToPos(editor, startPosInFlow);
-            }
+          if (startPosInFlow) {
+            // then we call scrollToPos
+            this.plugin.flowService.scrollToPos(editor, startPosInFlow);
+            // it also automatically focuses the editor
           }
         }
       }
     };
 
-    // -------- The calling of the helper functions --------------
+    // -------- DOING STUFF WITH THE HELPER FUNCTIONS --------------
 
     if (
       this.activeFlowName &&
       (item.type === "active-flow-path" || item.type === "active-flow-cursor")
     ) {
       // If we're looking at the active leaf, just target that
-      const activeLeaf = this.app.workspace.getActiveViewOfType(MarkdownView);
-      if (activeLeaf) {
-        const activeLeafID = (activeLeaf as any).id;
-        this.app.workspace.iterateAllLeaves((iteratorLeaf) => {
-          const iteratorLeafID = (iteratorLeaf as any).id;
-
-          if (iteratorLeafID === activeLeafID) {
-            scrollToTarget(item, iteratorLeaf);
-          }
-        });
-      }
+      scrollToTarget(item);
     } else {
       // if not, go on a little journey...
       prepareFlowLeafAndCallScroll(item);

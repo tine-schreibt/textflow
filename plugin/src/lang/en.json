@@ -216,10 +216,10 @@
   "switcherModal.info no inactive flows found": "No inactive flows found",
 
   "-------------- FUZZY NAVIGATION MODAL": "Keyboard accessible modal for opening and closing flows --------",
-  "fuzzyNavigabiotnModal.info flow in active leaf": "flow in active leaf",
-  "fuzzyNavigabiotnModal.info other flows": "other flows",
-  "fuzzyNavigabiotnModal.info flow names": "flow names",
-  "fuzzyNavigabiotnModal.info titles": "titles",
+  "fuzzyNavigationModal.info flow in active leaf": "flow in active leaf",
+  "fuzzyNavigationModal.info other flows": "other flows",
+  "fuzzyNavigationModal.info flow names": "flow names",
+  "fuzzyNavigationModal.info titles": "titles",
 
   "--------- MAIN": "The main file that holds functions to deal with flow handling",
 

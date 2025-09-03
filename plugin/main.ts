@@ -141,6 +141,7 @@ export default class TextFlowPlugin extends Plugin {
   alreadyActivated: { [key: string]: { [key: string]: boolean } } = {}; // flowName: {leafID: true}
   lastActiveRegion: string = "";
   inactivityThreshold: number = 5 * 60 * 1000;
+  fuzzNav: boolean = false; // to avoid scrolling interference
 
   // ---------------- Global objects and variables -------------------------
 
@@ -1403,6 +1404,10 @@ ${pseudoElement}
             // if active leaf is flow, set it up; hash check happens in setup
             const isFlow = this.isFlowFile(activeLeafPath);
             if (isFlow) {
+              console.log(
+                "active-leaf-change calling setup for ",
+                basename(activeLeafPath)
+              );
               await this.setupFlowView(isFlow, leaf.view);
               this.mostRecentActiveFlowLeaf = leaf;
               return;
@@ -1791,7 +1796,7 @@ ${pseudoElement}
 
         if (noteIsOpen && noteIsOpen.view instanceof MarkdownView) {
           // Flow is already open, just set it up
-          await this.setupFlowView(flowName, noteIsOpen.view);
+          // await this.setupFlowView(flowName, noteIsOpen.view);
           this.app.workspace.setActiveLeaf(noteIsOpen.view.leaf, {
             focus: true,
           });
@@ -2261,11 +2266,7 @@ ${pseudoElement}
   };
 
   // The big bundle that centralises flow management
-  setupFlowView = async (
-    flowName: string,
-    view: MarkdownView,
-    cursorPos?: number
-  ) => {
+  setupFlowView = async (flowName: string, view: MarkdownView) => {
     const leafID = (view.leaf as any).id;
 
     // Keep track of the last active leaf for the fuzzNav
@@ -2297,11 +2298,14 @@ ${pseudoElement}
       // update activity
       this.lastActivity[flowName] = Date.now();
     }
+
+    // rebuild if appropriate
     if (this.settings.flows[flowName].flaggedForRebuild) {
       this.toggleEditable(view, false);
       await this.flowService.rebuildFlow(flowName, "setupFlowView");
       this.toggleEditable(view, true);
     }
+
     // now do the menu bar
     this.setupMenuBar(view, flowName);
 
@@ -2316,30 +2320,13 @@ ${pseudoElement}
     }
 
     // See if this is the inital activation of the flow/leaf and restore cursor
-    console.log("setupfFlowView got cursorPos ", cursorPos);
-    if (!cursorPos) {
-      // if we don't get a target and this is the first activation, we restore
-      if (!this.alreadyActivated[flowName]) {
-        this.alreadyActivated[flowName] = {};
-        this.alreadyActivated[flowName][leafID] = true;
-        this.flowService.restoreCursorPos(flowName, view, leafID);
-      } else if (!this.alreadyActivated[flowName].leafID) {
-        this.alreadyActivated[flowName][leafID] = true;
-        this.flowService.restoreCursorPos(flowName, view, leafID);
-      }
-    } else {
-      // if we do get a target, we set up or just scroll
-      const editor = view?.editor as ObsidianEditor;
-      if (!this.alreadyActivated[flowName]) {
-        this.alreadyActivated[flowName] = {};
-        this.alreadyActivated[flowName][leafID] = true;
-        this.flowService.scrollToPos(editor, cursorPos);
-      } else if (!this.alreadyActivated[flowName].leafID) {
-        this.alreadyActivated[flowName][leafID] = true;
-        this.flowService.scrollToPos(editor, cursorPos);
-      } else {
-        this.flowService.scrollToPos(editor, cursorPos);
-      }
+    if (!this.alreadyActivated[flowName]) {
+      this.alreadyActivated[flowName] = {};
+      this.alreadyActivated[flowName][leafID] = true;
+      this.flowService.restoreCursorPos(flowName, view, leafID);
+    } else if (!this.alreadyActivated[flowName][leafID]) {
+      this.alreadyActivated[flowName][leafID] = true;
+      this.flowService.restoreCursorPos(flowName, view, leafID);
     }
 
     // check scroll bar visibility

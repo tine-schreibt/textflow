@@ -216,10 +216,10 @@
   "backup.dismissButton.setButtonText dismiss": "Abbrechen",
 
   "-------------- FUZZY NAVIGATION MODAL": "Tastaturfreundliches Modal für das Öffnen und Schließen von Flows --------",
-  "fuzzyNavigabiotnModal.info flow in active leaf": "Flow im aktiven leaf",
-  "fuzzyNavigabiotnModal.info other flows": "andere Flows",
-  "fuzzyNavigabiotnModal.info flow names": "Flow-Namen",
-  "fuzzyNavigabiotnModal.info titles": "Titel",
+  "fuzzyNavigationModal.info flow in active leaf": "Flow im aktiven leaf",
+  "fuzzyNavigationModal.info other flows": "andere Flows",
+  "fuzzyNavigationModal.info flow names": "Flow-Namen",
+  "fuzzyNavigationModal.info titles": "Titel",
 
   "--------- MAIN": "Die Hauptdatei, die Funktionen für das Flow-Handling enthält",
 
