@@ -3021,6 +3021,7 @@ ${pseudoElement}
     item?: Types.SuggestionItem,
     currentCursor?: number
   ) => {
+    console.log("called with cursor pos: ", currentCursor)
     if (this.settings.flows[flowName].activeRegions) {
       if (!this.settings.flows[flowName].activeRegions[leafID]) {
         return;

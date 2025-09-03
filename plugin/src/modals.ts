@@ -1595,11 +1595,15 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
     // this is all my own code again
 
     // ------------- HELPER FUNCTIONS --------------
+    // For items that need leaf and cursor stuff done
     const prepareFlowLeafAndCallScroll = async (item: Types.SuggestionItem) => {
       let lastActiveLeafID = "";
 
       // if we have open leaves for the flow
-      if (this.plugin.settings.flows[item.flowName].activeRegions) {
+      if (
+        this.plugin.settings.flows[item.flowName].activeRegions &&
+        item.type != "flow-name"
+      ) {
         // targeting the last active leaf
         lastActiveLeafID =
           this.plugin.settings.flows[item.flowName].lastActiveLeaves[0];
@@ -1636,8 +1640,12 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
         } else {
           console.log("leaf is null");
         }
-      } else {
-        // if there are no active leaves we could target, open a new one
+      } else if (
+        !this.plugin.settings.flows[item.flowName].activeRegions ||
+        item.type === "flow-name"
+      ) {
+        // if there are no active leaves we could target or we want to open a new one
+        // I have no idea why this works so well for "flow-name" items
         const file = this.app.vault.getAbstractFileByPath(
           this.plugin.settings.flows[item.flowName].flowFilePath
         );
@@ -1655,13 +1663,13 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
               cursorPos
             );
             this.app.workspace.setActiveLeaf(leaf, { focus: true });
-            scrollToTarget(item);
+            scrollToTarget(item, cursorPos);
           }
         }
       }
     };
 
-    // if we got a region we find its start pos
+    // if we got a region instead of a cursorPos we find its start pos
     const findCursorPos = async (
       item: Types.SuggestionItem,
       leaf: WorkspaceLeaf
@@ -1703,58 +1711,25 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
       }
     };
 
-    // this only ever cares about the active view, which is why above we make sure to open, activate and focus
+    // this only ever cares about the active view, which is why we made sure to open, activate and focus
     const scrollToTarget = async (
       item: Types.SuggestionItem,
-      cursorPos?: string
+      cursorPos?: number
     ) => {
       const view = this.app.workspace.getActiveViewOfType(MarkdownView);
       const editor = view?.editor as ObsidianEditor | null;
       if (editor) {
         const cmEditor = editor.cm;
-
-        // if we have a cursor pos, just scroll there
-        if (item.cursorPos) {
+        if (cursorPos) {
+          this.plugin.flowService.scrollToPos(editor, cursorPos);
+        } else if (item.cursorPos) {
           this.plugin.flowService.scrollToPos(editor, item.cursorPos);
-        } else {
-          // IF WE DON'T HAVE ONE find the region's cursor pos
-          let text = "";
-          if (cmEditor) {
-            text = cmEditor.state.doc.toString();
-          }
-          let flowOrder = 0;
-          if (item.region) {
-            flowOrder =
-              this.plugin.settings.flows[item.flowName].flowMap[item.region]
-                .flowOrder;
-          }
-
-          const startPosInFlow = this.plugin.findStartOfRegion(
-            this.settings.flows[item.flowName],
-            flowOrder,
-            text
-          );
-
-          if (startPosInFlow) {
-            // then we call scrollToPos
-            this.plugin.flowService.scrollToPos(editor, startPosInFlow);
-            // it also automatically focuses the editor
-          }
         }
       }
     };
 
     // -------- DOING STUFF WITH THE HELPER FUNCTIONS --------------
 
-    if (
-      this.activeFlowName &&
-      (item.type === "active-flow-path" || item.type === "active-flow-cursor")
-    ) {
-      // If we're looking at the active leaf, just target that
-      scrollToTarget(item);
-    } else {
-      // if not, go on a little journey...
-      prepareFlowLeafAndCallScroll(item);
-    }
+    prepareFlowLeafAndCallScroll(item);
   }
 }
