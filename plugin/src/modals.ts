@@ -1604,19 +1604,16 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
         lastActiveLeafID =
           this.plugin.settings.flows[item.flowName].lastActiveLeaves[0];
 
-        console.log("Last active leaf: ", lastActiveLeafID);
-        // Now get that leaf and do the thing
+          // Now get that leaf and do the thing
         this.app.workspace.iterateAllLeaves((iteratorLeaf) => {
           const leafViewState = iteratorLeaf.getViewState();
           if (leafViewState.type === "markdown") {
             const iteratorLeafID = (iteratorLeaf as any).id;
-            console.log("iteratorLeafID ", iteratorLeafID);
             if (lastActiveLeafID === iteratorLeafID) {
               let cursorPos = item.cursorPos;
               if (!item.cursorPos) {
                 cursorPos = findCursorPos(item);
               }
-              console.log("storing cursor pos", cursorPos);
               this.plugin.manageCursorPos(
                 item.flowName,
                 lastActiveLeafID,
