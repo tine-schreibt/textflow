@@ -1596,38 +1596,95 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
 
     // ------------- HELPER FUNCTIONS --------------
     const prepareFlowLeafAndCallScroll = async (item: Types.SuggestionItem) => {
-      let leafID = "";
+      let lastActiveLeafID = "";
 
       // if we have open leaves for the flow
       if (this.plugin.settings.flows[item.flowName].activeRegions) {
         // targeting the last active leaf
-        leafID = this.plugin.settings.flows[item.flowName].lastActiveLeaves[0];
+        lastActiveLeafID =
+          this.plugin.settings.flows[item.flowName].lastActiveLeaves[0];
 
+        console.log("Last active leaf: ", lastActiveLeafID);
         // Now get that leaf and do the thing
-        const leaves = this.app.workspace.getLeavesOfType("markdown");
-        const targetLeaf = leaves.find((leaf) => (leaf as any).id === leafID);
-        if (targetLeaf) {
-          this.app.workspace.setActiveLeaf(targetLeaf, { focus: true });
-          scrollToTarget(item);
-          return;
+        this.app.workspace.iterateAllLeaves((iteratorLeaf) => {
+          const leafViewState = iteratorLeaf.getViewState();
+          if (leafViewState.type === "markdown") {
+            const iteratorLeafID = (iteratorLeaf as any).id;
+            console.log("iteratorLeafID ", iteratorLeafID);
+            if (lastActiveLeafID === iteratorLeafID) {
+              let cursorPos = item.cursorPos;
+              if (!item.cursorPos) {
+                cursorPos = findCursorPos(item);
+              }
+              console.log("storing cursor pos", cursorPos);
+              this.plugin.manageCursorPos(
+                item.flowName,
+                lastActiveLeafID,
+                item,
+                cursorPos
+              );
+              this.app.workspace.setActiveLeaf(iteratorLeaf, { focus: true });
+              scrollToTarget(item);
+            }
+          }
+        });
+      } else {
+        // if there are no active leaves we could target, open a new one
+        const file = this.app.vault.getAbstractFileByPath(
+          this.plugin.settings.flows[item.flowName].flowFilePath
+        );
+        if (file instanceof TFile) {
+          const leaf = this.app.workspace.getLeaf("tab");
+          await leaf.openFile(file);
+          leaf.setPinned(true);
+          const cursorPos = findCursorPos(item);
+          const leafID = (leaf as any).id;
+          if (cursorPos) {
+            await this.plugin.manageCursorPos(
+              item.flowName,
+              leafID,
+              item,
+              cursorPos
+            );
+            this.app.workspace.setActiveLeaf(leaf, { focus: true });
+            scrollToTarget(item);
+          }
         }
       }
+    };
 
-      // if there are no active leaves we could target, open a new one
-      const file = this.app.vault.getAbstractFileByPath(
-        this.plugin.settings.flows[item.flowName].flowFilePath
-      );
-      if (file instanceof TFile) {
-        const leaf = this.app.workspace.getLeaf("tab");
-        await leaf.openFile(file);
-        leaf.setPinned(true);
-        this.app.workspace.setActiveLeaf(leaf, { focus: true });
-        scrollToTarget(item);
+    // if we got a region we find its start pos
+    const findCursorPos = (item: Types.SuggestionItem) => {
+      // IF WE DON'T HAVE ONE find the region's cursor pos
+      let text = "";
+      const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+      const editor = view?.editor as ObsidianEditor | null;
+      if (editor) {
+        const cmEditor = editor.cm;
+        if (cmEditor) {
+          text = cmEditor.state.doc.toString();
+        }
+        let flowOrder = 0;
+        if (item.region) {
+          flowOrder =
+            this.plugin.settings.flows[item.flowName].flowMap[item.region]
+              .flowOrder;
+        }
+
+        const startPosInFlow = this.plugin.findStartOfRegion(
+          this.settings.flows[item.flowName],
+          flowOrder,
+          text
+        );
+        return startPosInFlow;
       }
     };
 
     // this only ever cares about the active view, which is why above we make sure to open, activate and focus
-    const scrollToTarget = async (item: Types.SuggestionItem) => {
+    const scrollToTarget = async (
+      item: Types.SuggestionItem,
+      cursorPos?: string
+    ) => {
       const view = this.app.workspace.getActiveViewOfType(MarkdownView);
       const editor = view?.editor as ObsidianEditor | null;
       if (editor) {

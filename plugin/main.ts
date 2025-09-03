@@ -1404,10 +1404,6 @@ ${pseudoElement}
             // if active leaf is flow, set it up; hash check happens in setup
             const isFlow = this.isFlowFile(activeLeafPath);
             if (isFlow) {
-              console.log(
-                "active-leaf-change calling setup for ",
-                basename(activeLeafPath)
-              );
               await this.setupFlowView(isFlow, leaf.view);
               this.mostRecentActiveFlowLeaf = leaf;
               return;
@@ -2378,8 +2374,6 @@ ${pseudoElement}
       const flowName = this.isFlowFile(filePath);
       if (!flowName) continue;
 
-      const leafID = (leaf as any).id;
-
       // check if leaf is properly initialised
       if (!(leaf instanceof MarkdownView)) {
         // reopen note if it's not
@@ -3018,20 +3012,31 @@ ${pseudoElement}
   };
 
   // ------ Functions: Misc
-  manageCursorPos = (flowName: string, leafID: string) => {
+  manageCursorPos = async (
+    flowName: string,
+    leafID: string,
+    // these args come from the fuzzyNavModal
+    item?: Types.SuggestionItem,
+    currentCursor?: number
+  ) => {
     if (this.settings.flows[flowName].activeRegions) {
       if (!this.settings.flows[flowName].activeRegions[leafID]) {
         return;
       }
-      const currentLeaf = this.settings.flows[flowName].activeRegions[leafID];
 
-      // check because of possible undefined
       let regionPath = "";
-      if (currentLeaf.path) {
-        regionPath = currentLeaf.path;
+      if (item) {
+        if (item.path) {
+          regionPath = item.path;
+        }
+      } else if (this.settings.flows[flowName].activeRegions[leafID].path) {
+        regionPath = this.settings.flows[flowName].activeRegions[leafID].path;
       }
 
-      const currentCursor = currentLeaf.currentCursorPos;
+      if (!currentCursor) {
+        currentCursor =
+          this.settings.flows[flowName].activeRegions[leafID].currentCursorPos;
+      }
       // Initialise if doesn't exist
       if (!this.settings.flows[flowName].persistentCursors) {
         this.settings.flows[flowName].persistentCursors = {};
@@ -3056,10 +3061,24 @@ ${pseudoElement}
         return;
       }
 
-      // Check if there's already an entry for the leaf and region and delete if present
+      // Cap at two entries for the region so at most three are present
+      const countAndDelete = (tuples: [string, number][]) => {
+        let counter = 0;
+        const filteredTuples = [];
+        for (let tuple of tuples) {
+          if (tuple[0] !== regionPath) {
+            filteredTuples.push(tuple);
+          } else if (counter < 2) {
+            filteredTuples.push(tuple);
+            counter++;
+          }
+        }
+        return filteredTuples;
+      };
+
       this.settings.flows[flowName].persistentCursors[leafID].cursors =
-        this.settings.flows[flowName].persistentCursors[leafID].cursors.filter(
-          (tuple) => tuple[0] !== regionPath
+        countAndDelete(
+          this.settings.flows[flowName].persistentCursors[leafID].cursors
         );
 
       // Then add the new cursor
@@ -3072,10 +3091,10 @@ ${pseudoElement}
       this.settings.flows[flowName].persistentCursors[leafID].update =
         Date.now();
 
-      // Cap at five entries
+      // Cap at nine entries so we get three cursors for three regions
       if (
         this.settings.flows[flowName].persistentCursors[leafID].cursors.length >
-        5
+        9
       ) {
         this.settings.flows[flowName].persistentCursors[leafID].cursors.pop();
       }

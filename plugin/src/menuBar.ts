@@ -594,14 +594,18 @@ export class MenuBar {
       });
 
       // initial content
-      let cursorDropdownHeadline = `No stored cursors found`;
+      let cursorDropdownHeadline = this.plugin.t(
+        "menubar.cursor history no stored cursors"
+      );
       if (this.plugin.settings.flows[this.flowName].persistentCursors) {
         if (
           Object.keys(
             this.plugin.settings.flows[this.flowName].persistentCursors
           ).length > 0
         ) {
-          cursorDropdownHeadline = `Stored cursor positions`;
+          cursorDropdownHeadline = this.plugin.t(
+            "menubar.cursor history stored cursors"
+          );
         }
       }
 
@@ -682,11 +686,7 @@ export class MenuBar {
           // create headline entry that's not clickable
           const cursorDropdownEntryDate = cursorDropdownScrollable.createDiv({
             cls: `text-emphasis align-off-center`,
-            text: `${
-              this.plugin.settings.flows[this.flowName].persistentCursors[
-                this.leafID
-              ].leafNickname
-            }`,
+            text: this.plugin.t("menubar.cursor history this leaf"),
           });
 
           // now iterate through the cursor positions that belong to the leaf
@@ -704,7 +704,7 @@ export class MenuBar {
 
             const cursorDropdownEntryPos = cursorDropdownScrollable.createDiv({
               cls: "blah",
-              text: `${this.makeNavPath(data[0])} - ${cursorArray[index][1]}`,
+              text: `${this.makeNavPath(data[0])} (${cursorArray[index][1]})`,
             });
             const cursorPos = cursorArray[index][1];
             const editor = this.associatedView.editor as ObsidianEditor;
@@ -719,6 +719,12 @@ export class MenuBar {
         }
 
         // get leaves by timestamp again, but exclude the current leaf
+
+        // create headline entry that's not clickable
+        const cursorDropdownEntryDate = cursorDropdownScrollable.createDiv({
+          cls: `text-emphasis align-off-center`,
+          text: this.plugin.t("menubar.cursor history other leaves"),
+        });
         for (let timestamp of timestampArray) {
           Object.keys(
             this.plugin.settings.flows[this.flowName].persistentCursors
@@ -730,16 +736,6 @@ export class MenuBar {
                   leafID
                 ].update === timestamp
               ) {
-                // create headline entry that's not clickable
-                const cursorDropdownEntryDate =
-                  cursorDropdownScrollable.createDiv({
-                    cls: `text-emphasis align-off-center`,
-                    text: `${
-                      this.plugin.settings.flows[this.flowName]
-                        .persistentCursors[leafID].leafNickname
-                    }`,
-                  });
-
                 // divs for the cursors
                 const cursorArray =
                   this.plugin.settings.flows[this.flowName].persistentCursors[
@@ -750,9 +746,9 @@ export class MenuBar {
                   const cursorDropdownEntryPos =
                     cursorDropdownScrollable.createDiv({
                       cls: `blah`,
-                      text: `${cursorArray[index][1]} - ${this.makeNavPath(
-                        data[0]
-                      )}`,
+                      text: `${this.makeNavPath(data[0])} (${
+                        cursorArray[index][1]
+                      })`,
                     });
 
                   const cursorPos = cursorArray[index][1];
