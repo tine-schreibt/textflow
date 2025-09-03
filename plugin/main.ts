@@ -2240,8 +2240,10 @@ ${pseudoElement}
 
     if (previousRegion) {
       const [previousRegionPath, previousRegionMap] = previousRegion;
+      console.log("FindStartOfRegion: previous region is ", previousRegionPath);
       const invisibleUID = previousRegionMap.invisibleUUID;
       const index = text.indexOf(invisibleUID);
+      console.log("find start index is ", index);
       const startPos = index + (invisibleUID + "<hr>").length + 1;
       return startPos;
     } else {
@@ -3068,7 +3070,7 @@ ${pseudoElement}
         for (let tuple of tuples) {
           if (tuple[0] !== regionPath) {
             filteredTuples.push(tuple);
-          } else if (counter < 2) {
+          } else if (counter < 2 && tuple[1] != currentCursor) {
             filteredTuples.push(tuple);
             counter++;
           }

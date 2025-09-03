@@ -1604,27 +1604,38 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
         lastActiveLeafID =
           this.plugin.settings.flows[item.flowName].lastActiveLeaves[0];
 
-          // Now get that leaf and do the thing
+        // Now get that leaf and do the thing
+        let leaf: WorkspaceLeaf | null = null;
         this.app.workspace.iterateAllLeaves((iteratorLeaf) => {
           const leafViewState = iteratorLeaf.getViewState();
           if (leafViewState.type === "markdown") {
             const iteratorLeafID = (iteratorLeaf as any).id;
             if (lastActiveLeafID === iteratorLeafID) {
-              let cursorPos = item.cursorPos;
-              if (!item.cursorPos) {
-                cursorPos = findCursorPos(item);
-              }
-              this.plugin.manageCursorPos(
-                item.flowName,
-                lastActiveLeafID,
-                item,
-                cursorPos
-              );
-              this.app.workspace.setActiveLeaf(iteratorLeaf, { focus: true });
-              scrollToTarget(item);
+              console.log(lastActiveLeafID);
+              leaf = iteratorLeaf;
             }
           }
         });
+
+        let cursorPos = item.cursorPos;
+        if (!item.cursorPos && leaf) {
+          console.log("leaf: ", leaf);
+          cursorPos = await findCursorPos(item, leaf);
+        }
+        // Set this for convenience but maybe also necessary for scrolling when activating leaf
+        // I don't even know anymore, I've been fighting with this part of the code for so long
+        this.plugin.manageCursorPos(
+          item.flowName,
+          lastActiveLeafID,
+          item,
+          cursorPos
+        );
+        if (leaf) {
+          this.app.workspace.setActiveLeaf(leaf, { focus: true });
+          scrollToTarget(item);
+        } else {
+          console.log("leaf is null");
+        }
       } else {
         // if there are no active leaves we could target, open a new one
         const file = this.app.vault.getAbstractFileByPath(
@@ -1634,7 +1645,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
           const leaf = this.app.workspace.getLeaf("tab");
           await leaf.openFile(file);
           leaf.setPinned(true);
-          const cursorPos = findCursorPos(item);
+          const cursorPos = await findCursorPos(item, leaf);
           const leafID = (leaf as any).id;
           if (cursorPos) {
             await this.plugin.manageCursorPos(
@@ -1651,29 +1662,44 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
     };
 
     // if we got a region we find its start pos
-    const findCursorPos = (item: Types.SuggestionItem) => {
-      // IF WE DON'T HAVE ONE find the region's cursor pos
-      let text = "";
-      const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-      const editor = view?.editor as ObsidianEditor | null;
-      if (editor) {
-        const cmEditor = editor.cm;
-        if (cmEditor) {
-          text = cmEditor.state.doc.toString();
-        }
-        let flowOrder = 0;
-        if (item.region) {
-          flowOrder =
-            this.plugin.settings.flows[item.flowName].flowMap[item.region]
-              .flowOrder;
-        }
-
-        const startPosInFlow = this.plugin.findStartOfRegion(
-          this.settings.flows[item.flowName],
-          flowOrder,
-          text
+    const findCursorPos = async (
+      item: Types.SuggestionItem,
+      leaf: WorkspaceLeaf
+    ) => {
+      // initialise the leaf
+      if (!(leaf instanceof MarkdownView)) {
+        const flowFile = this.app.vault.getAbstractFileByPath(
+          this.plugin.settings.flows[item.flowName].flowFilePath
         );
-        return startPosInFlow;
+        if (flowFile instanceof TFile) {
+          await leaf.openFile(flowFile);
+        }
+      }
+
+      let text = "";
+      const view = leaf.view as MarkdownView;
+      if (view) {
+        const editor = view?.editor as ObsidianEditor | null;
+        if (editor) {
+          console.log("editor exists");
+          const cmEditor = editor.cm;
+          if (cmEditor) {
+            text = cmEditor.state.doc.toString();
+            console.log(text.slice(0, 100));
+          }
+          let flowOrder = 0;
+          if (item.region) {
+            flowOrder =
+              this.plugin.settings.flows[item.flowName].flowMap[item.region]
+                .flowOrder;
+          }
+          const startPosInFlow = this.plugin.findStartOfRegion(
+            this.settings.flows[item.flowName],
+            flowOrder,
+            text
+          );
+          return startPosInFlow;
+        }
       }
     };
 
