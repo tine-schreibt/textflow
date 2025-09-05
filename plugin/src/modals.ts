@@ -1620,21 +1620,23 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
           }
         });
 
-        let cursorPos = item.cursorPos;
-        if (!item.cursorPos && leaf) {
-          cursorPos = await findCursorPos(item, leaf);
-        }
-        // Set this for convenience but maybe also necessary for scrolling when activating leaf
-        // I don't even know anymore, I've been fighting with this part of the code for so long
-        this.plugin.manageCursorPos(
-          item.flowName,
-          lastActiveLeafID,
-          item,
-          cursorPos
-        );
         if (leaf) {
+          let cursorPos = item.cursorPos;
+          if (!item.cursorPos && leaf) {
+            cursorPos = await findCursorPos(item, leaf);
+          }
+          // Set this for convenience but maybe also necessary for scrolling when activating leaf
+          // I don't even know anymore, I've been fighting with this part of the code for so long
+          this.plugin.manageCursorPos(
+            item.flowName,
+            lastActiveLeafID,
+            item,
+            cursorPos
+          );
           this.app.workspace.setActiveLeaf(leaf, { focus: true });
-          scrollToTarget(item);
+          if (cursorPos) {
+            scrollToTarget(item, cursorPos);
+          }
         } else {
         }
       } else if (
@@ -1650,7 +1652,11 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
           const leaf = this.app.workspace.getLeaf("tab");
           await leaf.openFile(file);
           leaf.setPinned(true);
-          const cursorPos = await findCursorPos(item, leaf);
+
+          let cursorPos = item.cursorPos;
+          if (!item.cursorPos && leaf) {
+            cursorPos = await findCursorPos(item, leaf);
+          }
           const leafID = (leaf as any).id;
           if (cursorPos) {
             this.plugin.manageCursorPos(item.flowName, leafID, item, cursorPos);
