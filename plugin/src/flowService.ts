@@ -352,7 +352,7 @@ export class FlowService {
                 (leaf) => (leaf as any).id === leafID
               );
               if (targetLeaf) {
-                await targetLeaf.detach();
+                targetLeaf.detach();
               }
             });
           }
@@ -406,9 +406,7 @@ export class FlowService {
     unselectedButton1.buttonEl.removeClass("settings-radio-button-active");
   }
 
-  createFlowDefinition = async (
-    flowBuildBasket: Types.flowBuildBasket
-  ): Promise<void> => {
+  createFlowDefinition = (flowBuildBasket: Types.flowBuildBasket) => {
     // -------- Putting the finalRecipe together by fetching/filtering all paths
     try {
       // ----------- FINAL RECIPE FOR BOOKMARKS ---------------------
@@ -421,20 +419,17 @@ export class FlowService {
             this.plugin.t("createFlowDefinition.notice enter bookmark group")
           );
           flowBuildBasket.success = false;
-          return Promise.reject(Error);
         } else {
-          const bookmarkPathArray = await this.getBookmarkPathsByGroupName(
-            flowBuildBasket
-          );
+          const bookmarkPathArray =
+            this.getBookmarkPathsByGroupName(flowBuildBasket);
           flowBuildBasket.finalRecipe = { bookmarks: bookmarkPathArray };
         }
 
         // ------ FINAL RECIPE FOR PATH TAG PROPERTY -----------------------
       } else {
-        await this.ensureNoUndefined(flowBuildBasket);
-        const foldersTagsPropsPathArray = await this.getPathsByFoldersTagsProps(
-          flowBuildBasket
-        );
+        this.ensureNoUndefined(flowBuildBasket);
+        const foldersTagsPropsPathArray =
+          this.getPathsByFoldersTagsProps(flowBuildBasket);
         flowBuildBasket.finalRecipe = {
           foldersTagsProps: foldersTagsPropsPathArray,
         };
@@ -470,9 +465,7 @@ export class FlowService {
   // Also we're using the opportunity to get a clean cookbook (user input) for storage
 
   // ---- GET PATHS IN BOOKMARK GROUP ----------------
-  getBookmarkPathsByGroupName = async (
-    flowBuildBasket: Types.flowBuildBasket
-  ) => {
+  getBookmarkPathsByGroupName = (flowBuildBasket: Types.flowBuildBasket) => {
     let groupName = flowBuildBasket.flowCookbook.bookmarks;
 
     // since groupName could be a path, prepare it for further processing:
@@ -676,33 +669,33 @@ export class FlowService {
         flowBuildBasket.flowCookbook.bookmarksSortOrder === "depthFirst" ||
         flowBuildBasket.flowCookbook.bookmarksSortOrder === undefined
       ) {
-        bookmarkedNotePathsArray = await collectPathsDepthFirst(
+        bookmarkedNotePathsArray = collectPathsDepthFirst(
           finalGroup.items,
           flowBuildBasket,
           groupPathArray[groupPathArray.length - 1]
         );
-        return Promise.resolve(bookmarkedNotePathsArray);
+        return bookmarkedNotePathsArray;
       } else if (
         flowBuildBasket.flowCookbook.bookmarksSortOrder === "filesFirst"
       ) {
-        bookmarkedNotePathsArray = await collectPathsFilesFirst(
+        bookmarkedNotePathsArray = collectPathsFilesFirst(
           finalGroup.items,
           flowBuildBasket,
           groupPathArray[groupPathArray.length - 1]
         );
-        return Promise.resolve(bookmarkedNotePathsArray);
+        return bookmarkedNotePathsArray;
       } else {
-        bookmarkedNotePathsArray = await collectPathsPreserveOrder(
+        bookmarkedNotePathsArray = collectPathsPreserveOrder(
           finalGroup.items,
           flowBuildBasket
         );
-        return Promise.resolve(bookmarkedNotePathsArray);
+        return bookmarkedNotePathsArray;
       }
     } else {
       new Notice(
         this.plugin.t("createFlowDefinition.notice bookmark group not found")
       );
-      return Promise.reject(Error);
+      return [];
     }
   };
 
@@ -728,14 +721,11 @@ export class FlowService {
       flowBuildBasket.flowCookbook.propsExcluded = "";
     }
     this.plugin.saveSettings();
-    return Promise.resolve();
   };
 
   // --- Function to get the paths -------
 
-  getPathsByFoldersTagsProps = async (
-    flowBuildBasket: Types.flowBuildBasket
-  ) => {
+  getPathsByFoldersTagsProps = (flowBuildBasket: Types.flowBuildBasket) => {
     const dv = getAPI();
     if (!dv) {
       new Notice(
@@ -743,7 +733,7 @@ export class FlowService {
           "getPathsByFoldersTagsProps.notice dataview not installed"
         )
       );
-      return Promise.reject(Error);
+      return [];
     }
     // unpack into shorthand for easier reading
     const shCookbook = flowBuildBasket.flowCookbook;
@@ -1064,7 +1054,7 @@ export class FlowService {
     flowBuildBasket.flowCookbook = shCookbook;
 
     // presto
-    return Promise.resolve(pathArrayWithFolderTitles);
+    return pathArrayWithFolderTitles;
   };
 
   // ----- Save the stuff we just put together --------------
@@ -1159,9 +1149,7 @@ export class FlowService {
   };
 
   // --- Reset flowBuildBasket -------------
-  resetFlowBuildBasket = async (
-    resetFlowBuildBasket: Types.flowBuildBasket
-  ) => {
+  resetFlowBuildBasket = (resetFlowBuildBasket: Types.flowBuildBasket) => {
     resetFlowBuildBasket.createOrEdit = "create";
     resetFlowBuildBasket.dataviewSearchPath = "";
     resetFlowBuildBasket.success = false;
@@ -1198,7 +1186,7 @@ export class FlowService {
     };
 
     // do the thing
-    await this.createFlowDefinition(flowReBuildBasket);
+    this.createFlowDefinition(flowReBuildBasket);
 
     // exit; error messages are sent by createFlowDefinition
     if (!flowReBuildBasket.success) {
@@ -1212,9 +1200,9 @@ export class FlowService {
     await this.writeFlowDef(this.plugin.settings, flowReBuildBasket);
 
     // update conflicts, reset flag, clean up the basket
-    await this.syncConflictObjects(flowReBuildBasket); // null unsavedRegions
+    this.syncConflictObjects(flowReBuildBasket); // null unsavedRegions
     this.plugin.settings.flows[flowName].flaggedForRebuild = false;
-    await this.resetFlowBuildBasket(flowReBuildBasket);
+    this.resetFlowBuildBasket(flowReBuildBasket);
     await this.plugin.saveSettings();
 
     // Get a fresh reference now that we've written the def
@@ -1310,14 +1298,8 @@ export class FlowService {
             );
             if (leaf) {
               // make sure the leaf has ben properly initialised
-              if (!(leaf instanceof MarkdownView)) {
-                const flowFile = this.app.vault.getAbstractFileByPath(
-                  this.plugin.settings.flows[flowName].flowFilePath
-                );
-                if (flowFile instanceof TFile) {
-                  await leaf.openFile(flowFile);
-                }
-              }
+              await leaf.loadIfDeferred();
+
               IDAndEditorObject[leafID] = leaf;
               progressOverlays[leafID] = new LoadingOverlay(
                 leaf,
@@ -1396,7 +1378,7 @@ export class FlowService {
       // If the ingredient (array entry) is a title
       if (ingredient.startsWith("#")) {
         mapValueBasket.flowOrder++;
-        await this.createInvisibleUID(mapValueBasket);
+        this.createInvisibleUID(mapValueBasket);
         // make the proper divider
         const divider = `\r${mapValueBasket.invisibleUUID}<hr>\r\r`;
 
@@ -1427,7 +1409,7 @@ export class FlowService {
       // if the ingredient is a path
       else {
         mapValueBasket.flowOrder++;
-        await this.createInvisibleUID(mapValueBasket);
+        this.createInvisibleUID(mapValueBasket);
 
         // unencoded divider for debugging purposes (there's also debugUID())
         // const divider = `\r${mapValueBasket.identifier}<hr>\r\r`;
@@ -1577,7 +1559,7 @@ export class FlowService {
   };
 
   // ---- Like it says....
-  createInvisibleUID = async (mapValueBasket: Types.mapValueBasket) => {
+  createInvisibleUID = (mapValueBasket: Types.mapValueBasket) => {
     const invisibleChars = [
       "\u200B", // Zero-width space 0
       "\u200C", // Zero-width non-joiner 1
@@ -1897,7 +1879,7 @@ export class FlowService {
     }
   };
 
-  selectActiveRegion = async (
+  selectActiveRegion = (
     flowName: string,
     path: string,
     text: string,
@@ -1905,7 +1887,7 @@ export class FlowService {
   ) => {
     const map = this.plugin.settings.flows[flowName].flowMap;
 
-    const startPos = await this.plugin.findStartOfRegion(
+    const startPos = this.plugin.findStartOfRegion(
       this.plugin.settings.flows[flowName],
       this.plugin.settings.flows[flowName].flowMap[path].flowOrder,
       text

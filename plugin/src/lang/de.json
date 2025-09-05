@@ -252,14 +252,14 @@
   "main.checkStats check stats feedback mtime": "textFlow: mtime unterscheidet sich für ${path}; Flows wurden für Neubau geflaggt.",
   "main.checkStats check stats feedback hash": "textFlow: hash unterscheidet sich für ${path}; Flows wurden für Neubau geflaggt.",
   "main.checkStats no changes": "textFlow: Es wurden keine externen Bearbeitungen festgestellt.",
+  "main.checkStats changes detected": "textFlow: Externe Bearbeitung festgestellt für:\n${changeString}",
 
-  "main.checkStatsForNote source note not found": "textFlow: Die Quellnotiz der aktiven Region konnte unter ${path} nicht gefunden werden. Bitte kopiere die Region, um Datenverlust zu vermeiden und stelle sicher, dass die Quellnotiz nicht versehentlich gelöscht wurde, ehe du den Flow neu baust.",
+  "main.checkStatsForNote source note not found": "textFlow: Die Quellnotiz der aktiven Region konnte unter ${path} nicht gefunden werden. Bitte kopiere die Region, um Datenverlust zu vermeiden, und stelle sicher, dass die Quellnotiz nicht versehentlich gelöscht wurde, ehe du den Flow manuell neu baust.",
 
   "main.cursorListener.notice tracking failed": "textFlow:\n Cursor-Tracking für ${flowName} fehlgeschlagen!\nBitte schließe und öffne den Flow erneut.\nWenn dieser Fehler weiterhin auftritt, lade deinen Vault neu.",
   "main.cursorTracker.notice": "textFlow: Externe Bearbeitung festgestellt. Flow ${flowName} wurde neugebaut.",
 
   "textChangeListener.notice error setting up listener": "textFlow Plugin: Fehler beim Einrichten des Änderungstrackings.\nBitte melde dieses Problem auf github.",
-  "textChangeListener.notice hash interrupt": "textFlow: Die Quellnotiz der aktiven Region - ${path} - wurde extern bearbeitet, also nachdem du den Flow ${flowName} (neu)gebaut hast. \nBitte prüfe, ob du sie überschreiben willst. \nVorgehen zum Überschreiben: \n1. Kopiere die Änderungen, die du gerade gemacht hast. \n2. Baue den Flow neu. \n3. Füge die Änderungen an ihrem alten Platz ein. \n4. Synchronisiere den Flow.",
 
   "activateFlow.notice flow name not found": "textFlow: Keinen Flow mit Namen ${flowName} gefunden.",
   "activateFlow.notice flow file not found": "textFlow: Flow-Datei nicht gefunden: ${flow.flowFilePath}\nBitte klicke in den Settings auf den 'Verschieben' Button für textFlows Systemordner.",
@@ -267,6 +267,7 @@
   "manageActiveFlowObject.notice sync upon closing flow failed": "textFlow: Sync fehlgeschlagen. Die Notiz ${path} konnte nicht gefunden werden.",
 
   "syncBackToSource.notice sync failed source note": "textFlow: Quellnotiz ${path} nicht gefunden.",
+  "syncBackToSource.failedStatCheck": "textFlow: Der Synchronisierungsprozess wurde abgebrochen, da die Notiz ${path} extern bearbeitet wurde. \nBitte prüfe, ob du sie überschreiben willst. \nVorgehen zum Überschreiben: \n1. Kopiere die Änderungen, die du gerade gemacht hast. \n2. Baue den Flow neu (benutze den Button in den Plugin-Einstellungen). \n3. Füge die Änderungen an ihrem alten Platz ein. \n4. Synchronisiere den Flow.",
   "syncBackToSource.notice sync failed flow note": "textFlow: Sync fehlgeschlagen. Der Flow ${path} konnte nicht gefunden werden.",
   "syncBackToSource.notice other random error": "textFlow: Ein Fehler ist aufgetreten, während versucht wurde, ${flowName} zu ${path} zu synchronisieren. \nBitte versuche es in einer Sekunde erneut. \nWenn der Fehler weiterhin auftritt, lies die 'Fehlerbehebung' Sektion des Readmes.",
 

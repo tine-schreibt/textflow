@@ -182,7 +182,7 @@ export class CreateFlowFromFolder extends Modal {
         this.plugin.flowService.renameFlow();
 
         // if checks and flow creation haven't been performed by the preview button
-        const validation = await this.plugin.flowService.isValidFlowName(
+        const validation = this.plugin.flowService.isValidFlowName(
           this.plugin.settings.flowBuildBasket.flowName
         );
         if (!validation.valid && validation.reason) {
@@ -194,7 +194,7 @@ export class CreateFlowFromFolder extends Modal {
         this.plugin.settings.flowBuildBasket.oldFlowName =
           this.plugin.settings.flowBuildBasket.flowName;
 
-        await this.plugin.flowService.createFlowDefinition(
+        this.plugin.flowService.createFlowDefinition(
           this.plugin.settings.flowBuildBasket
         );
         if (!this.plugin.settings.flowBuildBasket.success) {
@@ -208,7 +208,7 @@ export class CreateFlowFromFolder extends Modal {
         );
 
         // update conflicts,
-        await this.plugin.flowService.syncConflictObjects(
+        this.plugin.flowService.syncConflictObjects(
           this.plugin.settings.flowBuildBasket
         );
 
@@ -225,7 +225,7 @@ export class CreateFlowFromFolder extends Modal {
         );
 
         // and clean up the basket.
-        await this.plugin.flowService.resetFlowBuildBasket(
+        this.plugin.flowService.resetFlowBuildBasket(
           this.plugin.settings.flowBuildBasket
         );
 
@@ -237,7 +237,7 @@ export class CreateFlowFromFolder extends Modal {
     const closeButton = new ButtonComponent(contentEl)
       .setButtonText(this.plugin.t("PreviewModal.button close preview"))
       .onClick(async () => {
-        await this.plugin.flowService.resetFlowBuildBasket(
+        this.plugin.flowService.resetFlowBuildBasket(
           this.plugin.settings.flowBuildBasket
         );
         this.close();
@@ -246,7 +246,7 @@ export class CreateFlowFromFolder extends Modal {
 
   async onClose() {
     // and clean up the basket.
-    await this.plugin.flowService.resetFlowBuildBasket(
+    this.plugin.flowService.resetFlowBuildBasket(
       this.plugin.settings.flowBuildBasket
     );
     this.plugin.saveSettings();
@@ -759,7 +759,7 @@ export class RestoreFlowDefModal extends Modal {
       okayButton
         .setButtonText(this.plugin.t("backup.okayButton.setButtonText okay"))
         .onClick(async (buttonEl: MouseEvent) => {
-          const replaceDef = async () => {
+          const replaceDef = () => {
             Object.keys(this.decisionBasket.replace).forEach((flowName) => {
               const starIndex = flowName.indexOf("*");
               const cleanedFlowName = flowName.slice(0, starIndex);
@@ -779,7 +779,7 @@ export class RestoreFlowDefModal extends Modal {
               }
             });
           };
-          const restoreDef = async () => {
+          const restoreDef = () => {
             Object.keys(this.decisionBasket.restore).forEach((flowName) => {
               const cleanedName = flowName.replace("*", " ");
               this.plugin.settings.flows[cleanedName] = parsedJson[flowName];
@@ -790,9 +790,9 @@ export class RestoreFlowDefModal extends Modal {
               delete parsedJson[flowName];
             });
           };
-          await replaceDef();
-          await restoreDef();
-          await deleteDef();
+          replaceDef();
+          restoreDef();
+          deleteDef();
 
           this.plugin.saveSettings();
 
@@ -1099,7 +1099,7 @@ export class FlowSwitcherModal extends Modal {
                 (leaf) => (leaf as any).id === leafID
               );
               if (targetLeaf) {
-                await targetLeaf.detach();
+                targetLeaf.detach();
                 this.plugin.manageActiveFlowObject();
                 await this.plugin.saveSettings();
                 this.updateActiveLeafID();
@@ -1615,7 +1615,6 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
           if (leafViewState.type === "markdown") {
             const iteratorLeafID = (iteratorLeaf as any).id;
             if (lastActiveLeafID === iteratorLeafID) {
-              console.log(lastActiveLeafID);
               leaf = iteratorLeaf;
             }
           }
@@ -1623,7 +1622,6 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
 
         let cursorPos = item.cursorPos;
         if (!item.cursorPos && leaf) {
-          console.log("leaf: ", leaf);
           cursorPos = await findCursorPos(item, leaf);
         }
         // Set this for convenience but maybe also necessary for scrolling when activating leaf
@@ -1638,7 +1636,6 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
           this.app.workspace.setActiveLeaf(leaf, { focus: true });
           scrollToTarget(item);
         } else {
-          console.log("leaf is null");
         }
       } else if (
         !this.plugin.settings.flows[item.flowName].activeRegions ||
@@ -1656,12 +1653,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
           const cursorPos = await findCursorPos(item, leaf);
           const leafID = (leaf as any).id;
           if (cursorPos) {
-            await this.plugin.manageCursorPos(
-              item.flowName,
-              leafID,
-              item,
-              cursorPos
-            );
+            this.plugin.manageCursorPos(item.flowName, leafID, item, cursorPos);
             this.app.workspace.setActiveLeaf(leaf, { focus: true });
             scrollToTarget(item, cursorPos);
           }
@@ -1675,25 +1667,17 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
       leaf: WorkspaceLeaf
     ) => {
       // initialise the leaf
-      if (!(leaf instanceof MarkdownView)) {
-        const flowFile = this.app.vault.getAbstractFileByPath(
-          this.plugin.settings.flows[item.flowName].flowFilePath
-        );
-        if (flowFile instanceof TFile) {
-          await leaf.openFile(flowFile);
-        }
-      }
+
+      await leaf.loadIfDeferred();
 
       let text = "";
       const view = leaf.view as MarkdownView;
       if (view) {
         const editor = view?.editor as ObsidianEditor | null;
         if (editor) {
-          console.log("editor exists");
           const cmEditor = editor.cm;
           if (cmEditor) {
             text = cmEditor.state.doc.toString();
-            console.log(text.slice(0, 100));
           }
           let flowOrder = 0;
           if (item.region) {
@@ -1729,7 +1713,6 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
     };
 
     // -------- DOING STUFF WITH THE HELPER FUNCTIONS --------------
-
     prepareFlowLeafAndCallScroll(item);
   }
 }

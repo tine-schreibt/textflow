@@ -258,11 +258,11 @@
   "main.checkStats check stats feedback mtime": "textFlow: mtime differs for ${path}; flows have been flagged for rebuild.",
   "main.checkStats check stats feedback hash": "textFlow: hash differs for ${path}; flows have been flagged for rebuild.",
   "main.checkStats no changes": "textFlow: No external edits have been detected.",
+  "main.checkStats changes detected": "textFlow: Externe Bearbeitung festgestellt für:\n${changeString}",
 
-  "main.checkStatsForNote source note not found": "textFlow: The source note for the active region could not be found at ${path}. Please copy the active region to prevent data loss and make sure the source note wasn't accidentally deleted before you rebuild the flow.",
+  "main.checkStatsForNote source note not found": "textFlow: The source note for the active region could not be found at ${path}. Please copy the active region to prevent data loss and make sure the source note wasn't accidentally deleted before manually rebuilding the flow.",
 
   "textChangeListener.notice error setting up listener": "textFlow Plugin: Error setting up change tracking.\nPlease report this issue on github.",
-  "textChangeListener.notice hash interrupt": "textFlow: The source note of the active region - ${path} - has been edited externally after you (re)built flow ${flowName}. \nPlease check if you really want to overwrite it. \nProcedure for overwriting: \n1. Copy the edits you just made. \n2. Rebuild the flow. \n3. Paste the edits back in. \n4. Sync the flow.",
 
   "activateFlow.notice flow name not found": "textFlow: No flow with name ${flowName} found.",
   "activateFlow.notice flow file not found": "textFlow: Flow file not found: ${flow.flowFilePath}\nTry clicking the 'Move' button for the system folder location (in settings).",
@@ -270,9 +270,9 @@
   "manageActiveFlowObject.notice sync upon closing flow failed": "textFlow: Sync failed. The note at ${path} couldn't be found.",
 
   "syncBackToSource.notice sync failed source note": "textFlow: Source file not found at path: ${path}",
+  "syncBackToSource.failedStatCheck": "textFlow: Synchronisation has been aborted since the note at ${path} has been edited externally.\nPlease check if you really want to overwrite it. \nProcedure to overwrite: \n1. Copy the edit you just made.\n2. Rebuild the flow (via the settings panel). \n3. Paste the edit back into its spot. \n 4. Sync the flow.",
   "syncBackToSource.notice sync failed flow note": "textFlow: Sync failed. The flow at ${path} couldn't be found.",
   "syncBackToSource.notice other random error": "textFlow: An error occurred while trying to sync from ${flowName} to ${path}. \nPlease try again in a second. \nIf the error persists, consult the 'Fixing problems' section of the readme.",
-  "syncBackToSource.notice hash interrupt": "textFlow: The note at ${path} has been externally edited at ${timestamp}, which is after you last (re)built flow ${flowName}. \nPlease check if you really want to overwrite it. \nProcedure to overwrite: \n1. Copy the edit you just made.\n2. Rebuild the flow. \n3. Paste the edit back into its spot. \n 4. Sync the flow.",
 
   "checkActiveRegion.notice region tracking error": "textFlow: Region tracking error for ${flowName}.\nYour are most likely seeing this because you a) renamed the flow's source folder or b) undid (cmd+z) your way into the state before a rebuild.\n Case a: Please update the flow's definition and rebuild it. \nCase b: \nPlease redo (cmd+shift+z) your way back into the current version of things.\nIf that doesn't seem to work, please rebuild ${flowName}.\nThis may lead to further error messages. Please follow their instructions.",
   "checkActiveRegion.notice overlap detected": "The current region ${regionName} is overlapping with the following flow(s): ${overlapString}",

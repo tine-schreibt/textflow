@@ -719,7 +719,6 @@ export class MenuBar {
         }
 
         // get leaves by timestamp again, but exclude the current leaf
-
         // create headline entry that's not clickable
         const cursorDropdownEntryDate = cursorDropdownScrollable.createDiv({
           cls: `text-emphasis align-off-center`,
@@ -802,7 +801,7 @@ export class MenuBar {
           .setTooltip(
             mostRecentCursor != 0 && mostRecentRegion != ""
               ? `${mostRecentRegion} - ${mostRecentCursor}`
-              : "No cursor positions stored"
+              : this.plugin.t("menubar.cursor history no stored cursors")
           )
           .onClick(() => {
             const editor = this.associatedView.editor as ObsidianEditor;

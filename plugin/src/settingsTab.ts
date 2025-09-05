@@ -1208,7 +1208,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           return;
         }
         // do the logic that leads to a list of note paths
-        await this.plugin.flowService.createFlowDefinition(
+        this.plugin.flowService.createFlowDefinition(
           this.plugin.settings.flowBuildBasket
         );
 
@@ -1237,7 +1237,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         this.plugin.flowService.renameFlow();
 
         // if checks and flow creation haven't been performed by the preview button
-        const validation = await this.plugin.flowService.isValidFlowName(
+        const validation = this.plugin.flowService.isValidFlowName(
           this.plugin.settings.flowBuildBasket.flowName
         );
         if (!validation.valid && validation.reason) {
@@ -1245,7 +1245,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           return;
         }
 
-        await this.plugin.flowService.createFlowDefinition(
+       this.plugin.flowService.createFlowDefinition(
           this.plugin.settings.flowBuildBasket
         );
         if (!this.plugin.settings.flowBuildBasket.success) {
@@ -1259,7 +1259,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         );
 
         // update conflicts,
-        await this.plugin.flowService.syncConflictObjects(
+       this.plugin.flowService.syncConflictObjects(
           this.plugin.settings.flowBuildBasket
         );
 
@@ -1270,7 +1270,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         );
 
         // and clean up the basket.
-        await this.plugin.flowService.resetFlowBuildBasket(
+       this.plugin.flowService.resetFlowBuildBasket(
           this.plugin.settings.flowBuildBasket
         );
 
