@@ -3099,7 +3099,28 @@ ${pseudoElement}
       ) {
         this.settings.flows[flowName].persistentCursors[leafID].cursors.pop();
       }
+
+      // also remove ancient entries, but leave the last ones intact
+      if (
+        this.settings.flows[flowName].persistentCursors[leafID].cursors.length >
+        2
+      ) {
+        Object.keys(this.settings.flows[flowName].persistentCursors).forEach(
+          (leafID) => {
+            if (
+              Math.abs(
+                this.settings.flows[flowName].persistentCursors[leafID].update -
+                  Date.now()
+              ) >
+              1000 * 60 * 60 * 24 // if other entries are older than 24 hours
+            ) {
+              delete this.settings.flows[flowName].persistentCursors[leafID];
+            }
+          }
+        );
+      }
     }
+    this.saveSettings();
   };
 
   notifyOfOverlap = (path: string, activeFlow: string) => {

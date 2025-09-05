@@ -528,7 +528,7 @@
   left: 0;
   right: 0;
   z-index: 1;
-  background: var(--background-primary); /* Ensure it has a background */
+  background-color: rgba(255, 0, 0, 0); /* Ensure it has a background */
   padding: 5px;
   margin-top: 30px;
   margin-left: 5px;
@@ -724,7 +724,6 @@
 .sync-rebuild-protection {
   color: var(--text-muted);
 }
-
 
 /*----- THE FLOW CREATION MODAL -------- */
 /* Flow Creation Modal */
