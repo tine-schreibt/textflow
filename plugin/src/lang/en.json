@@ -16,6 +16,7 @@
   "setSystemFolder.addButton.setButtonText.alt move": "Move",
   "setSystemFolder.addButton.notice folder successfully moved": "textFlow: ${textFlowSystemFolderName} moved to ${_newSystemFolderParent}",
   "setSystemFolder.addButton.notice failed to move folder": "textFlow: Failed to move folder: ${error_message}",
+  "sysFolder please setup": "textFlow: Please set up a system folder in the settings tab.",
 
   "------ SWITCHER MODAL POSITION": "How do they want to access the flow switcher modal?  ----------------",
   "switcherModalPosition.setName access flow switcher via": "Access to the flow switcher modal via...",
@@ -45,10 +46,11 @@
   "-------- ACTIVE REGION HIGHLIGHT": "Choose a decoration style for the active region's source note",
   "activeRegionDeco.setName choose highlight type for active region": "Choose active region highlight style",
   "activeRegionDeco.setDesc what does this do?": "How do you want the active region's source note to be highlighted?",
-  "activeRegionDeco.addOption.1 background accent colour": "Background: Accent colour.",
-  "activeRegionDeco.addOption.2 background text muted": "Background: Muted text colour.",
-  "activeRegionDeco.addOption.3 outline full": "Outline: Text colour. ",
-  "activeRegionDeco.addOption.4 outline muted": "Outline: Muted text colour.",
+  "activeRegionDeco.addOption.1 background accent colour": "Background: Accent colour",
+  "activeRegionDeco.addOption.2 background text muted": "--- Muted text colour",
+  "activeRegionDeco.addOption.3 outline accent": "Outline: Accent colour",
+  "activeRegionDeco.addOption.4 outline full": "--- Text colour ",
+  "activeRegionDeco.addOption.5 outline muted": "--- Muted text colour",
 
   "-------- QUALITY OF LIVE SETTINGS": "Some settings to clean up/debug the UI",
   "qol.createSpan.text quality of life settings": "Adanced settings",
@@ -246,6 +248,8 @@
   "main.fileMenuListener.context create new file": "textFlow: Create a new note in this folder",
   "main.fileMenuListener.context make flow from folder": "textFlow: Define new Flow from this folder",
 
+  "main.editorListener Reveal source": "textFlow: Reveal source not in file explorer",
+
   "main.renameListener.notice don't rename system folder": "textFlow: Please don't rename ${textFlowSystemFolderName}. Revert the change so textFlow can work again.",
   "main.renameListener.notice use settings to rename": "textFlow: Please use textFlow settings to rename flows.",
   "main.renameListener.notice use export to export": "textFlow: Please use the export function to get a copy of your flow outside the textFlowSystemFolder (see menu bar or command palette).",
@@ -256,6 +260,10 @@
 
   "main.cursorListener.notice tracking failed": "textFlow: Cursor tracking failed for ${flowName}!\nPlease close and reopen the flow.\nIf this error persists, reload your vault.",
   "main.cursorTracker.notice": "textFlow: External edit found. Flow ${flowName} was rebuilt.",
+
+  "setupFlowView.statsCheck initial": "textFlow: Initial check for external edits for ${flowName}",
+  "setupFlowView.statsCheck idle": "textFlow: Checking for external edits for ${flowName}",
+  "setupFlowView.statsCheck done": "textFlow: Check complete (${elapsedTime}s)",
 
   "main.checkStats check stats feedback mtime": "textFlow: mtime differs for ${path}; flows have been flagged for rebuild.",
   "main.checkStats check stats feedback hash": "textFlow: hash differs for ${path}; flows have been flagged for rebuild.",

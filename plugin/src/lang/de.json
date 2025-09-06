@@ -9,41 +9,44 @@
   "basicSettings.headline": "Grundeinstellungen",
 
   "------ SET SYSTEM FOLDER": "Here the user chooses which path the system folder should have ----------------",
-  "setSystemFolder.setName choose existing folder": "Wähle einen bestehenden Ordner, in dem textFlows Systemordner - ${textFlowSystemFolderName} - erzeugt werden soll.",
-  "setSystemFolder.setDesc.1 what is system folder used for": "TextFlow braucht einen (versteckten) Ordner, um deine Flows darin zu speichern",
+  "setSystemFolder.setName choose existing folder": "Wähle einen bestehenden Ordner, in dem textFlows Systemordner - ${textFlowSystemFolderName} - erzeugt werden soll",
+  "setSystemFolder.setDesc.1 what is system folder used for": "TextFlow braucht einen (versteckten) Ordner, um deine Flows darin zu speichern.",
   "setSystemFolder.setDesc.2 how to enter root": "Gib / oder . ein, um den Root-Ordner auszuwählen.",
   "setSystemFolder.addButton.setButtonText.alt create": "Erzeugen",
   "setSystemFolder.addButton.setButtonText.alt move": "Verschieben",
   "setSystemFolder.addButton.notice folder successfully moved": "text Flow: ${textFlowSystemFolderName} wurde nach ${_newSystemFolderParent} verschoben.",
-  "setSystemFolder.addButton.notice failed to move folder": "textFlow: Verschieben des Ordners fehlgeschagen: ${error_message}",
+  "setSystemFolder.addButton.notice failed to move folder": "textFlow: Verschieben des Ordners fehlgeschagen: ${error_message}.",
+
+  "sysFolder please setup": "textFlow: Bitte richte in den Einstellungen einen Systemordner ein.",
 
   "------ SWITCHER MODAL POSITION": "How do they want to access the flow switcher modal? ----------------",
   "switcherModalPosition.setName access flow switcher via": "Öffne den Flow-Switcher per...",
   "switcherModalPosition.setDesc changes need reload to take effect": "Änderungen treten erst nach einem Neustart in Kraft.",
   "switcherModalPosition.addDropdown.addOption.alt Status bar": "Statusleiste",
-  "switcherModalPosition.addDropdown.addOption.alt ribbon": "Menüband",
+  "switcherModalPosition.addDropdown.addOption.alt ribbon": "Werkzeugleiste",
   "switcherModalPosition.addDropdown.addOption.alt command palette only": "nur Befehlspalette",
 
   "------ EXPLORER DECORATION": "Choose unicode characters to decorate source notes in file explorer ----------------",
-  "explorerDeco.setName.1 choose deco": "Wähle eine Dekoration für den Dateiexplorer.",
+  "explorerDeco.setName.1 choose deco": "Wähle eine Dekoration für den Dateiexplorer",
   "explorerDeco.setDesc.2 what does deco do": "Kennzeichnet die Quellnotizen aller aktiven (geöffneten) Flows.",
   "explorerDeco.setDesc.3 what do symbols mean": "Erstes Symbol: Aktuell; zweites Symbol: Wartet auf Synchronisation.",
   "explorerDeco.setDesc.4 how to set colour": "Die Farbe ist der Akzent, den du in Obsidians Einstellungen unter 'Darstellung' augewählt hast.",
 
   "-------- ACTIVE REGION HIGHLIGHT": "Choose a decoration style for the active region's source note",
   "activeRegionDeco.setName choose highlight type for active region": "Wähle ein Highlight für die aktive Region",
-  "activeRegionDeco.setDesc what does this do?": "Wie soll die aktive Region hervorgehoben werden? ?",
-  "activeRegionDeco.addOption.1 background accent colour": "Hintergrund: Akzentfarbe.",
-  "activeRegionDeco.addOption.2 background text muted": "Hintergrund: Gedeckte Textfarbe.",
-  "activeRegionDeco.addOption.3 outline full": "Umriss: Textfarbe.",
-  "activeRegionDeco.addOption.4 outline muted": "Umriss: Gedeckte Textfarbe.",
+  "activeRegionDeco.setDesc what does this do?": "Wie soll die aktive Region hervorgehoben werden?",
+  "activeRegionDeco.addOption.1 background accent colour": "Hintergrund: Akzentfarbe",
+  "activeRegionDeco.addOption.2 background text muted": "--- Gedeckte Textfarbe",
+  "activeRegionDeco.addOption.3 outline accent": "Umriss: Aktenzfarbe",
+  "activeRegionDeco.addOption.4 outline full": "--- Textfarbe",
+  "activeRegionDeco.addOption.5 outline muted": "--- Gedeckte Textfarbe",
 
   "-------- QUALITY OF LIVE SETTINGS": "Ein paar Settings, die die UI verbessern",
   "qol.createSpan.text quality of life settings": "Erweitere Einstellungen",
 
   "qol.hideExplorerDeco.setName hide explorer deco": "Verstecke DateiExplorer-Deco",
 
-  "qol.navListener.setName disable explorer nav": "Navigation per Dateiexplorer ausschalten.",
+  "qol.navListener.setName disable explorer nav": "Navigation per Dateiexplorer ausschalten",
   "qol.navListener.setDesc what is disable explorer nav for": "Falls du die Multi-Auswahl brauchst. Es gibt auch einen Befehl dafür.",
 
   "qol.scrollbar.setName hide scoll bar": "Scrollbar verstecken",
@@ -56,7 +59,7 @@
   "qol.hash.setName hash?": "Prüfe auf externe Bearbeitung",
   "qol.hash.setDesc.1 when should you check?": "Falls du diesen Vault auf Geräten bearbeitest, auf denen textFlow nicht läuft (z.B. deinem Handy).",
   "qol.hash.setDesc.2 mtime": "Schnell und sicher genug für 99% der Usecases - Änderungsdatum wird verglichen.",
-  "qol.hash.setDesc.3 xxhash": "Falls du unnötige Rebuilds bekommest - vergleicht hashes, wenn mtime abweicht.",
+  "qol.hash.setDesc.3 xxhash": "Falls du unnötige Rebuilds bekommest - vergleicht zusätzlich hashes, wenn mtime abweicht.",
   "qol.hash.setDesc.4 always hash": "Falls du deinem Sync-Tool nicht vertraust - vergleicht immer hashes.",
   "qol.hash.addDropdown.addOption.1 don't check": "Nicht prüfen.",
 
@@ -246,6 +249,8 @@
   "main.fileMenuListener.context create new file": "textFlow: Erstelle eine neue Notiz in diesem Ordner",
   "main.fileMenuListener.context make flow from folder": "textFlow: Definiere Flow aus diesem Ordner",
 
+  "main.editorListener Reveal source": "textFlow: Zeige Quellnotiz in Dateiexplorer",
+
   "main.renameListener.notice don't rename system folder": "textFlow: Bitte benenne ${textFlowSystemFolderName} nicht um. Nimm die Änderung zurück, damit textFlow wieder richtig funktioniert.",
   "main.renameListener.notice use settings to rename": "textFlow: Bitte benutze textFlow's Einstellungen, um Flows umzubenennen.",
   "main.renameListener.notice use export to export": "textFlow: Bitte benutze die Export-Funktion, um eine Kopie deines Flows außerhalb von textFlowSystemFolder zu erhalten (siehe Menüleiste oder Befehlspalette).",
@@ -255,6 +260,9 @@
   "main.checkStats check stats feedback hash": "textFlow: hash unterscheidet sich für ${path}; Flows wurden für Neubau geflaggt.",
   "main.checkStats no changes": "textFlow: Es wurden keine externen Bearbeitungen festgestellt.",
   "main.checkStats changes detected": "textFlow: Externe Bearbeitung festgestellt für:\n${changeString}",
+
+  "main.statsOverlay initial notice": "textFlow: Check auf externe Edits für ${flowName}",
+  "setupFlowView.statsCheck done": "textFlow: Check abgeschlossen (${elapsedTime}s)",
 
   "main.checkStatsForNote source note not found": "textFlow: Die Quellnotiz der aktiven Region konnte unter ${path} nicht gefunden werden. Bitte kopiere die Region, um Datenverlust zu vermeiden, und stelle sicher, dass die Quellnotiz nicht versehentlich gelöscht wurde, ehe du den Flow manuell neu baust.",
 

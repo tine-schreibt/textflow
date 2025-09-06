@@ -235,7 +235,7 @@ export class CreateFlowFromFolder extends Modal {
       });
 
     const closeButton = new ButtonComponent(contentEl)
-      .setButtonText(this.plugin.t("PreviewModal.button close preview"))
+      .setButtonText(this.plugin.t("CreateFlowFromFolderModal.close"))
       .onClick(async () => {
         this.plugin.flowService.resetFlowBuildBasket(
           this.plugin.settings.flowBuildBasket
@@ -759,6 +759,7 @@ export class RestoreFlowDefModal extends Modal {
       okayButton
         .setButtonText(this.plugin.t("backup.okayButton.setButtonText okay"))
         .onClick(async (buttonEl: MouseEvent) => {
+          // function that replaces existing definitions or puts defs back with a cleaned up name
           const replaceDef = () => {
             Object.keys(this.decisionBasket.replace).forEach((flowName) => {
               const starIndex = flowName.indexOf("*");
@@ -775,26 +776,33 @@ export class RestoreFlowDefModal extends Modal {
                   true;
               } else {
                 // otherwise create it fresh
-                this.plugin.settings.flows[flowName] = parsedJson[flowName];
+                this.plugin.settings.flows[cleanedFlowName] =
+                  parsedJson[flowName];
               }
             });
           };
+
+          // function that just puts the definition back as is
           const restoreDef = () => {
             Object.keys(this.decisionBasket.restore).forEach((flowName) => {
               const cleanedName = flowName.replace("*", " ");
               this.plugin.settings.flows[cleanedName] = parsedJson[flowName];
             });
           };
+
+          // function that deletes definitions.
           const deleteDef = () => {
             Object.keys(this.decisionBasket.delete).forEach((flowName) => {
               delete parsedJson[flowName];
             });
           };
+
+          // the calls
           replaceDef();
           restoreDef();
           deleteDef();
 
-          this.plugin.saveSettings();
+          await this.plugin.saveSettings();
 
           await fs.writeFile(
             backupPath,
@@ -1063,7 +1071,7 @@ export class FlowSwitcherModal extends Modal {
       // Button to rebuild
       const rebuildButton = new ButtonComponent(flowHeader)
         .setIcon("rotate-cw")
-        .setClass(`menu-bar-button-rebuild-${goRebuild}`)
+        .setClass(`flow-switch-modal-header-button-rebuild-${goRebuild}`)
         .setClass("clickable-icon")
         .onClick(async () => {
           if (goRebuild === "neutral" || goRebuild === "must") {

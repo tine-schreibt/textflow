@@ -1,5 +1,7 @@
 import {
+  App,
   Editor,
+  FileManager,
   MarkdownView,
   moment,
   normalizePath,
@@ -33,6 +35,9 @@ import { dirname, basename } from "path";
 //-----------------------------------------------------------------------------------------
 // TOC
 //-----------------------------------------------------------------------------------------
+// - Misc globals
+// - StatsOverlay
+// ----------------------------------------------------------------------------------------
 // - Utility functions
 //-----------------------------------------------------------------------------------------
 //    - load and save
@@ -112,6 +117,54 @@ import { dirname, basename } from "path";
 // - ONUNLOAD
 //-----------------------------------------------------------------------------------------
 
+class StatsOverlay {
+  private plugin: TextFlowPlugin;
+  private container: HTMLElement;
+  private progressText: HTMLElement;
+  private flowName: string;
+  private t: (key: string, variables?: Record<string, string>) => string;
+
+  constructor(
+    leaf: WorkspaceLeaf,
+    flowName: string,
+    app: App,
+    plugin: TextFlowPlugin,
+    translate: (key: string, variables?: Record<string, string>) => string
+  ) {
+    this.plugin = plugin;
+    this.flowName = flowName;
+    this.t = translate;
+
+    if (!(leaf.view instanceof MarkdownView)) {
+      throw new Error("LoadingOverlay: view is not a MarkdownView");
+    }
+
+    // Create overlay container
+    this.container = leaf.view.contentEl.createDiv({
+      cls: "textflow-loading-container",
+    });
+
+    const symbol = this.plugin.flowService.explorerDecoArray[0][0];
+    this.progressText = this.container.createDiv({
+      cls: "textflow-loading-text",
+      text: this.t("main.statsOverlay initial notice", {
+        this_flowName: this.flowName,
+      }),
+    });
+  }
+
+  updateProgress(elapsedTime: number) {
+    const text = this.t("setupFlowView.statsCheck done", {
+      elapsedTime: elapsedTime.toString(),
+    });
+    this.progressText.setText(text);
+  }
+
+  remove() {
+    this.container.remove();
+  }
+}
+
 // so the menu bar can be kept within the view
 declare module "obsidian" {
   interface MarkdownView {
@@ -184,6 +237,8 @@ export default class TextFlowPlugin extends Plugin {
   // ---------------------------------------------------------------
   // see also: discernAndSetSystemFolderState for UI
   async ensureSystemFolder() {
+    if (this.settings.firstLaunch) return;
+
     const systemFolder = this.app.vault
       .getAllLoadedFiles()
       .find(
@@ -191,10 +246,9 @@ export default class TextFlowPlugin extends Plugin {
           file instanceof TFolder && file.name === this.textFlowSystemFolderName
       );
 
-    if (this.settings.firstLaunch) return;
-
     if (systemFolder) {
       // if there is a systemFolder
+      this.discernAndSetSystemFolderState();
       if (
         // but expected path doesn't agree with actual place/path
         this.settings.systemFolderPath != systemFolder.path
@@ -212,6 +266,15 @@ export default class TextFlowPlugin extends Plugin {
           });
         }
         await this.saveSettings();
+      }
+    } else {
+      if (this.settings.systemFolderPath) {
+        await this.flowService.createSystemFolder(
+          this.settings.systemFolderPath
+        );
+        this.discernAndSetSystemFolderState();
+      } else {
+        new Notice(this.t("sysFolder please setup"));
       }
     }
   }
@@ -315,9 +378,7 @@ export default class TextFlowPlugin extends Plugin {
           const awaitableFlowArray = Object.keys(this.settings.flows);
           const changeArray = [];
           for (let flowName of awaitableFlowArray) {
-            console.log("checking stats for ", flowName);
             const changes = await this.checkStatsForFlow(flowName);
-            console.log("changes detected: ", changes);
             if (changes) {
               changeArray.push(flowName);
             }
@@ -520,13 +581,9 @@ export default class TextFlowPlugin extends Plugin {
 
   // ----- is called onload and sets the visibility of textFlowSystemFolderName
 
-  discernAndSetSystemFolderState = (
-    systemFolderHidden?: boolean,
-    systemFolderPath?: string
-  ): void => {
-    if (systemFolderPath) {
-      systemFolderPath = normalizePath(systemFolderPath);
-    }
+  discernAndSetSystemFolderState = (): void => {
+    const systemFolderPath = this.settings.systemFolderPath;
+    const systemFolderHidden = this.settings.systemFolderPath;
 
     // Remove any existing style
     const existingStyle = document.head.querySelector(
@@ -695,10 +752,14 @@ export default class TextFlowPlugin extends Plugin {
         } else {
           // If they want an outline instead...
           // check the colour
-          activeColour = `var(--nav-item-color)`;
-          opacity =
-            this.settings.activeRegionHighlight === "olText" ? `0.5` : `0.2`;
-
+          if (this.settings.activeRegionHighlight === "olAccent") {
+            activeColour = `var(--color-accent)`;
+            opacity = "1";
+          } else {
+            activeColour = `var(--nav-item-color)`;
+            opacity =
+              this.settings.activeRegionHighlight === "olText" ? `0.5` : `0.2`;
+          }
           pseudoElement = `position: relative !important;
         }
         div[data-path='${this.escapeSelector(cleanPath)}']::before {
@@ -1092,8 +1153,6 @@ ${pseudoElement}
         });
       })
     );
-
-    // ------------- FILE EVENTS ---------------------
 
     // ------------- FILE EVENTS ---------------------
     // modify events
@@ -2263,37 +2322,64 @@ ${pseudoElement}
 
   // The big bundle that centralises flow management
   setupFlowView = async (flowName: string, view: MarkdownView) => {
-    const leafID = (view.leaf as any).id;
+    // ------------- PROTECTION ---------------------
+    // set up the editor with its other extensions and listeners
+    this.addWriteProtection(view, "divider");
+    this.addCursorListener(view);
+    this.addTextChangeListener(view);
 
-    // Keep track of the last active leaf for the fuzzNav
-    if (this.settings.flows[flowName].lastActiveLeaves.contains(leafID)) {
-      this.settings.flows[flowName].lastActiveLeaves = this.settings.flows[
-        flowName
-      ].lastActiveLeaves.filter((id) => id !== leafID);
-    }
-    this.settings.flows[flowName].lastActiveLeaves.unshift(leafID);
-
+    // ------------- VISUALS ---------------------
     // this has to happen first so the menuBar can just be set up
     await this.manageActiveFlowObject();
+    // now do the menu bar
+    this.setupMenuBar(view, flowName);
+    // check scroll bar visibility
+    this.flowService.updateScrollbarVisibility();
+    // Update the switcher modal in case it's open
+    if (this.modalUpdateCallback) {
+      this.modalUpdateCallback();
+    }
 
-    // add this so we can safely rebuild
-    this.addWriteProtection(view, "sync");
-
+    // ------------- DATA INTEGRITY ---------------------
     // check if the flow needs a rebuild due to changes from outside
     if (this.settings.checkExternalEdits != "no") {
-      // if the flow has been newly opened
       if (!this.lastActivity[flowName]) {
+        // if the flow has been newly opened
+        const startTimer = Date.now();
+        const statsOverlay = new StatsOverlay(
+          view.leaf,
+          flowName,
+          this.app,
+          this,
+          this.t
+        );
         await this.checkStatsForFlow(flowName);
+        statsOverlay.updateProgress((Date.now() - startTimer) / 1000);
+        statsOverlay.remove();
       } else if (
         // if it's been dormant for at least five minutes
         this.lastActivity[flowName] - Date.now() >
         this.inactivityThreshold
       ) {
+        const startTimer = Date.now();
+        const statsOverlay = new StatsOverlay(
+          view.leaf,
+          flowName,
+          this.app,
+          this,
+          this.t
+        );
         await this.checkStatsForFlow(flowName);
+        statsOverlay.updateProgress((Date.now() - startTimer) / 1000);
+        statsOverlay.remove();
       }
       // update activity
       this.lastActivity[flowName] = Date.now();
     }
+
+    // ------------- REBUILDING ---------------------
+    // add this so we can safely rebuild
+    this.addWriteProtection(view, "sync");
 
     // rebuild if appropriate
     if (this.settings.flows[flowName].flaggedForRebuild) {
@@ -2302,19 +2388,8 @@ ${pseudoElement}
       this.toggleEditable(view, true);
     }
 
-    // now do the menu bar
-    this.setupMenuBar(view, flowName);
-
-    // set up the editor with its other extensions and listeners
-    this.addWriteProtection(view, "divider");
-    this.addCursorListener(view);
-    this.addTextChangeListener(view);
-
-    // Update the switcher modal in case it's open
-    if (this.modalUpdateCallback) {
-      this.modalUpdateCallback();
-    }
-
+    const leafID = (view.leaf as any).id;
+    // ------------- SCROLLING ---------------------
     // See if this is the inital activation of the flow/leaf and restore cursor
     if (!this.alreadyActivated[flowName]) {
       this.alreadyActivated[flowName] = {};
@@ -2325,8 +2400,14 @@ ${pseudoElement}
       this.flowService.restoreCursorPos(flowName, view, leafID);
     }
 
-    // check scroll bar visibility
-    this.flowService.updateScrollbarVisibility();
+    // ------------- HOUSEKEEPING ---------------------
+    // Keep track of the last active leaf for the fuzzNav
+    if (this.settings.flows[flowName].lastActiveLeaves.contains(leafID)) {
+      this.settings.flows[flowName].lastActiveLeaves = this.settings.flows[
+        flowName
+      ].lastActiveLeaves.filter((id) => id !== leafID);
+    }
+    this.settings.flows[flowName].lastActiveLeaves.unshift(leafID);
 
     // Do a blanket refresh of all the menu bars involved with the flow
     const allLeaves = this.app.workspace.getLeavesOfType("markdown");
@@ -2856,78 +2937,58 @@ ${pseudoElement}
     if (this.settings.checkExternalEdits === "no") return;
     if (this.settings.flows[flowName].flaggedForRebuild) return;
 
-    let changed = false;
-    const interruptablePathArray = Object.keys(
-      this.settings.flows[flowName].flowMap
-    ).filter((path) => !path.startsWith("#")); // filtering out titles
+    let key = this.settings.flows[flowName].flowRecipe.bookmarks
+      ? "bookmarks"
+      : "foldersTagsProps";
 
     // iterating over the paths
-    for (let path of interruptablePathArray) {
-      const sourceFile = this.app.vault.getFileByPath(path);
-      if (!sourceFile) {
-        if (this.settings.hashes[path]) {
-          delete this.settings.hashes[path];
-        }
-        changed = true;
-        continue;
-      }
+    // Use Promise.all for parallel execution:
+    const pathsToCheck = this.settings.flows[flowName].flowRecipe[key].filter(
+      (path) => !path.startsWith("#")
+    ); // filter out titles
 
-      // if user wants to always hash, do that and move
-      if (this.settings.checkExternalEdits === "always hash") {
-        const check = await this.checkHash(sourceFile, path, flowName);
-        await this.saveSettings();
-        if (check) changed = true; // avoid resetting to false
-        continue;
-      }
+    const checkPromises = pathsToCheck.map((path) =>
+      this.checkStatsForNote(flowName, path)
+    );
 
-      // otherwise get the mtimes to compare
-      const oldMtime = this.settings.flows[flowName].flowMap[path].mtime;
-      const newMtime = sourceFile.stat.mtime;
+    const results = await Promise.all(checkPromises);
+    const changed = results.some((check) => check === true);
 
-      if (Math.abs(newMtime - oldMtime) > this.MTIME_EPSILON) {
-        if (this.settings.checkExternalEdits === "mtime") {
-          changed = true;
-          // check if the flow is active/in active leaf
-          if (this.settings.activeFlowObject[flowName]) {
-            const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-            if (view?.file?.path.endsWith(`${flowName}.md`)) {
-              // rebuild right away
-              this.flowService.rebuildFlow(flowName, "switcher");
-            }
-          }
-        } else {
-          const check = await this.checkHash(sourceFile, path, flowName);
-          if (check) changed = true; // avoid resetting to false
+    if (changed) {
+      this.settings.flows[flowName].flaggedForRebuild = true;
+      await this.saveSettings();
+      // check if the flow is active/in active leaf
+      if (this.settings.activeFlowObject[flowName]) {
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (view?.file?.path.endsWith(`${flowName}.md`)) {
+          this.flowService.rebuildFlow(flowName, "switcher");
         }
       }
     }
-    if (changed) this.settings.flows[flowName].flaggedForRebuild = true;
-    await this.saveSettings();
     return changed;
   };
 
-  // same checks but for a single note (called when new region is entered)
+  // The actual checking logic
   checkStatsForNote = async (flowName: string, path: string) => {
     if (this.settings.checkExternalEdits === "no") return;
     if (this.settings.flows[flowName].flaggedForRebuild) return;
     if (path.startsWith("#")) return; // excluding titles
 
     let changed = false;
+
     const sourceFile = this.app.vault.getFileByPath(path);
     if (!sourceFile) {
       if (this.settings.hashes[path]) {
         delete this.settings.hashes[path];
         changed = true;
       }
-      new Notice(
-        this.t("main.checkStatsForNote source note not found", { path: path })
-      );
-      return;
+      return changed;
     }
 
     if (this.settings.checkExternalEdits === "always hash") {
       if (this.settings.checkExternalEdits === "always hash") {
         const check = await this.checkHash(sourceFile, path, flowName);
+        console.log("stats check for ", path, ": ", check);
         if (check) changed = true;
       }
     }
@@ -2937,15 +2998,6 @@ ${pseudoElement}
     if (Math.abs(newMtime - oldMtime) > this.MTIME_EPSILON) {
       if (this.settings.checkExternalEdits === "mtime") {
         changed = true;
-        Object.keys(this.settings.flows).forEach((flowName) => {
-          if (!this.settings.flows[flowName].flaggedForRebuild) {
-            // rebuild is taken care of by the edit handler,
-            // since we know which flow is in active leaf
-            if (this.settings.flows[flowName].flowMap[path]) {
-              this.settings.flows[flowName].flaggedForRebuild = true;
-            }
-          }
-        });
         this.settings.flows[flowName].flaggedForRebuild = true;
       } else {
         const checked = await this.checkHash(sourceFile, path, flowName);
@@ -2953,7 +3005,20 @@ ${pseudoElement}
       }
     }
 
-    if (changed) this.settings.flows[flowName].flaggedForRebuild = true;
+    if (changed) {
+      this.settings.flows[flowName].flaggedForRebuild = true;
+      Object.keys(this.settings.flows).forEach((iteratorFlowName) => {
+        if (
+          !this.settings.flows[iteratorFlowName].flaggedForRebuild &&
+          iteratorFlowName != flowName
+        ) {
+          // rebuild of active leaf is taken care of by the caller
+          if (this.settings.flows[iteratorFlowName].flowMap[path]) {
+            this.settings.flows[iteratorFlowName].flaggedForRebuild = true;
+          }
+        }
+      });
+    }
     await this.saveSettings();
     return changed;
   };
@@ -3168,8 +3233,7 @@ ${pseudoElement}
     // Wait for the file explorer to be available in the DOM
     this.app.workspace.onLayoutReady(async () => {
       // make sure we know where our stuff is
-      this.ensureSystemFolder();
-      this.discernAndSetSystemFolderState();
+      this.ensureSystemFolder(); // also calls state discernment to hide
 
       // ---- Set up UI
       // ----------------------------------------------

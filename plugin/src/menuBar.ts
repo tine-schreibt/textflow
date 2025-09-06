@@ -231,7 +231,7 @@ export class MenuBar {
       const overlap = this.getOverlap();
       if (overlap[1].includes(path)) {
         navPath = `${navPath} ⚭`;
-        titleClass = `highlighted`;
+        titleClass = `underlined`;
         overlapText =
           overlap[0].join(", ").length > 0
             ? `Flow overlaps with: ${overlap[0].join(", ")}`
@@ -409,7 +409,7 @@ export class MenuBar {
         const overlap = this.getOverlap();
         if (overlap[1].includes(activeRegion)) {
           activeRegionNoteName = `${activeRegion} ⚭`;
-          titleClass = `highlighted`;
+          titleClass = `underlined`;
         }
       }
 
@@ -723,57 +723,67 @@ export class MenuBar {
           }
         }
 
-        // get leaves by timestamp again, but exclude the current leaf
-        // create headline entry that's not clickable
-        const cursorDropdownEntryDate = cursorDropdownScrollable.createDiv({
-          cls: `text-emphasis align-off-center`,
-          text: this.plugin.t("menubar.cursor history other leaves"),
-        });
-        const collectedCursors: [string, number][] = [];
-        Object.keys(
-          this.plugin.settings.flows[this.flowName].persistentCursors
-        ).forEach((leafID) => {
-          // exclude the active leaf
-          if (leafID != this.leafID) {
-            if (
-              this.plugin.settings.flows[this.flowName].persistentCursors[
-                leafID
-              ].cursors
-            ) {
-              for (let cursor of this.plugin.settings.flows[this.flowName]
-                .persistentCursors[leafID].cursors) {
-                collectedCursors.push(cursor);
+        if (
+          Object.keys(
+            this.plugin.settings.flows[this.flowName].persistentCursors
+          ).length > 1
+        ) {
+          // get leaves by timestamp again, but exclude the current leaf
+          // create headline entry that's not clickable
+          const cursorDropdownEntryDate = cursorDropdownScrollable.createDiv({
+            cls: `text-emphasis align-off-center`,
+            text: this.plugin.t("menubar.cursor history other leaves"),
+          });
+          const collectedCursors: [string, number][] = [];
+          Object.keys(
+            this.plugin.settings.flows[this.flowName].persistentCursors
+          ).forEach((leafID) => {
+            // exclude the active leaf
+            if (leafID != this.leafID) {
+              if (
+                this.plugin.settings.flows[this.flowName].persistentCursors[
+                  leafID
+                ].cursors
+              ) {
+                for (let cursor of this.plugin.settings.flows[this.flowName]
+                  .persistentCursors[leafID].cursors) {
+                  collectedCursors.push(cursor);
+                }
               }
             }
-          }
-        });
-        // this sorting was written by an anonymous model in the Cursor app
-        collectedCursors.sort((a, b) => {
-          // First compare the strings
-          const stringComparison = a[0].localeCompare(b[0]);
+          });
+          // this sorting was written by an anonymous model in the Cursor app
+          collectedCursors.sort((a, b) => {
+            // First compare the strings
+            const stringComparison = a[0].localeCompare(b[0]);
 
-          // If strings are equal, compare the numbers
-          if (stringComparison === 0) {
-            return a[1] - b[1]; // ascending order for numbers
-          }
+            // If strings are equal, compare the numbers
+            if (stringComparison === 0) {
+              return a[1] - b[1]; // ascending order for numbers
+            }
 
-          return stringComparison;
-        });
-
-        for (const [index, data] of collectedCursors.entries()) {
-          const cursorDropdownEntryPos = cursorDropdownScrollable.createDiv({
-            cls: `blah`,
-            text: `${this.makeNavPath(data[0])} (${
-              collectedCursors[index][1]
-            })`,
+            return stringComparison;
           });
 
-          const cursorPos = collectedCursors[index][1];
+          for (const [index, data] of collectedCursors.entries()) {
+            const cursorDropdownEntryPos = cursorDropdownScrollable.createDiv({
+              cls: `blah`,
+              text: `${this.makeNavPath(data[0])} (${
+                collectedCursors[index][1]
+              })`,
+            });
 
-          this.addManagedListener(cursorDropdownEntryPos, "click", (event) => {
-            const editor = this.associatedView.editor as ObsidianEditor;
-            this.plugin.flowService.scrollToPos(editor, cursorPos);
-          });
+            const cursorPos = collectedCursors[index][1];
+
+            this.addManagedListener(
+              cursorDropdownEntryPos,
+              "click",
+              (event) => {
+                const editor = this.associatedView.editor as ObsidianEditor;
+                this.plugin.flowService.scrollToPos(editor, cursorPos);
+              }
+            );
+          }
         }
 
         // get the most recent cursor position for the fast travel button

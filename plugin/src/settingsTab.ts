@@ -72,8 +72,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         })
       );
 
-    this.plugin.ensureSystemFolder();
-
     setSystemFolder
       .addText((newSystemFolderInput) =>
         newSystemFolderInput
@@ -112,10 +110,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               this.plugin.textFlowOperation = false;
 
               // set the folder hidden if appropriate
-              this.plugin.discernAndSetSystemFolderState(
-                this.plugin.settings.systemFolderHidden,
-                newSystemFolderParent
-              );
+              this.plugin.discernAndSetSystemFolderState();
             } else {
               // Move SystemFolder
               try {
@@ -124,10 +119,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
                 this.plugin.textFlowOperation = false;
 
                 // hide if appropriate
-                this.plugin.discernAndSetSystemFolderState(
-                  this.plugin.settings.systemFolderHidden,
-                  newSystemFolderParent
-                );
+                this.plugin.discernAndSetSystemFolderState();
 
                 // Update the flowFilePaths
                 if (this.plugin.settings.flows) {
@@ -337,12 +329,16 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             this.plugin.t("activeRegionDeco.addOption.2 background text muted")
           )
           .addOption(
+            "olAccent",
+            this.plugin.t("activeRegionDeco.addOption.3 outline accent")
+          )
+          .addOption(
             "olText",
-            this.plugin.t("activeRegionDeco.addOption.3 outline full")
+            this.plugin.t("activeRegionDeco.addOption.4 outline full")
           )
           .addOption(
             "olMuted",
-            this.plugin.t("activeRegionDeco.addOption.4 outline muted")
+            this.plugin.t("activeRegionDeco.addOption.5 outline muted")
           )
           .setValue(this.plugin.settings.activeRegionHighlight)
           .onChange(async (value) => {
@@ -494,14 +490,27 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .addOption("always hash", "hash")
           .setValue(this.plugin.settings.checkExternalEdits)
           .onChange(async (value) => {
-            this.plugin.settings.checkExternalEdits =
-              value as Types.ExternalEditsType;
-            if (value === "no" || value === "mtime") {
-              // if the user may have stopped hashing, delete hashes to prevent stale data
+            if (
+              // if the user upgrades their checking level to include hashes
+              // mtime is always stored in flowMaps, regardless of settings
+              !this.plugin.settings.checkExternalEdits.includes("hash") &&
+              value.includes("hash")
+            ) {
+              Object.keys(this.plugin.settings.flows).forEach((flowName) => {
+                this.plugin.initialHashing(flowName);
+              });
+            } else if (
+              // if they stop using hashes, delete the record to prevent stale data
+              this.plugin.settings.checkExternalEdits.includes("hash") &&
+              !value.includes("hash")
+            ) {
               if (Object.keys(this.plugin.settings.hashes).length > 0) {
                 this.plugin.settings.hashes = {};
               }
             }
+
+            this.plugin.settings.checkExternalEdits =
+              value as Types.ExternalEditsType;
             await this.plugin.saveSettings();
           });
       });
@@ -539,13 +548,11 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .setValue(this.plugin.settings.systemFolderHidden)
           .onChange(async (value) => {
             this.plugin.settings.systemFolderHidden = value;
-            if (this.plugin.settings.systemFolderPath) {
-              this.plugin.discernAndSetSystemFolderState(
-                value,
-                normalizePath(this.plugin.settings.systemFolderPath)
-              );
-            }
             await this.plugin.saveSettings();
+
+            if (this.plugin.settings.systemFolderPath) {
+              this.plugin.discernAndSetSystemFolderState();
+            }
           });
       });
 
@@ -1245,7 +1252,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           return;
         }
 
-       this.plugin.flowService.createFlowDefinition(
+        this.plugin.flowService.createFlowDefinition(
           this.plugin.settings.flowBuildBasket
         );
         if (!this.plugin.settings.flowBuildBasket.success) {
@@ -1259,7 +1266,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         );
 
         // update conflicts,
-       this.plugin.flowService.syncConflictObjects(
+        this.plugin.flowService.syncConflictObjects(
           this.plugin.settings.flowBuildBasket
         );
 
@@ -1270,7 +1277,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         );
 
         // and clean up the basket.
-       this.plugin.flowService.resetFlowBuildBasket(
+        this.plugin.flowService.resetFlowBuildBasket(
           this.plugin.settings.flowBuildBasket
         );
 

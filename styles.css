@@ -10,7 +10,7 @@
   padding-left: 7px;
 }
 
-.highlighted {
+.underlined {
   text-decoration: underline;
   text-decoration-color: color-mix(
     in srgb,
@@ -20,7 +20,7 @@
 }
 
 .active {
-  background-color: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  background-color: color-mix(in srgb, var(--color-accent) 20%, transparent);
 }
 
 .textflow-menu-bar-div .setting-item.no-border {
@@ -402,9 +402,10 @@
 }
 
 .flow-switch-modal-header-button-neutral {
-  background-color: var(--background-primary);
+  background-color: rgba(255, 0, 0, 0);
   color: var(--text-normal);
   align-items: center;
+  margin-top: -4px;
   width: 30px;
 }
 
@@ -412,6 +413,7 @@
   background-color: var(--background-primary);
   color: var(--text-faint);
   align-items: center;
+  margin-top: -4px;
   width: 30px;
 }
 
@@ -419,11 +421,37 @@
   background-color: var(--text-accent);
   color: var(--text-on-accent);
   align-items: center;
+  margin-top: -4px;
   width: 30px;
 }
 
 .flow-switch-modal-header-button-down {
   transform: rotate(90deg);
+}
+
+.flow-switch-modal-header-button-rebuild-neutral {
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+  align-items: center;
+  margin-top: -4px;
+  width: 30px;
+}
+
+.flow-switch-modal-header-button-rebuild-no-go {
+  background-color: var(--background-primary);
+  color: var(--text-faint);
+  align-items: center;
+  margin-top: -4px;
+  width: 30px;
+}
+
+.flow-switch-modal-header-rebuild-must {
+  background-color: var(--text-accent);
+  color: var(--text-on-accent);
+  box-shadow: 0 0 4px 1px var(--text-accent);
+  align-items: center;
+  margin-top: -4px;
+  width: 30px;
 }
 
 /* ACTIVE REGION */
@@ -528,10 +556,10 @@
   left: 0;
   right: 0;
   z-index: 1;
-  background-color: rgba(255, 0, 0, 0); /* Ensure it has a background */
+  background-color: rgba(255, 0, 0, 0);
   padding: 5px;
   margin-top: 30px;
-  margin-left: 5px;
+  margin-left: 0px;
   margin-right: 5px;
   justify-content: start;
 }
@@ -664,9 +692,10 @@
   position: absolute;
   top: 100%;
   left: 0;
-  width: 100%;
+  min-width: 100%; /* Changed from width: 100% to min-width: 100% */
+  max-width: 50vw; /* Add a reasonable maximum width */
   max-height: 80vh;
-  overflow-y: scroll; /* Changed from auto to scroll to force scrollbar */
+  overflow-y: scroll;
   overflow-x: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
