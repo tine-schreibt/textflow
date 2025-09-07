@@ -28,6 +28,8 @@ import { MenuBar } from "./src/menuBar";
 import { FlowService } from "./src/flowService";
 import XXH from "xxhashjs";
 import path, { dirname, basename } from "path";
+import en from "./src/lang/en.json";
+import de from "./src/lang/de.json";
 
 //-----------------------------------------------------------------------------------------
 // This file is too big, but I feel like splitting it up
@@ -283,24 +285,19 @@ export default class TextFlowPlugin extends Plugin {
 
   // -------- Localisation (this part was quite obviously written by Claude 4 Sonnet)
   // Prepare translation
+
   private loadLanguage = async () => {
+    const languages = {
+      en,
+      de,
+    };
     const locale = moment.locale() || "en";
 
-    try {
-      // make the path
-      const pluginDir = `${this.app.vault.configDir}/plugins/${this.manifest.id}`;
-      const langPath = `${pluginDir}/lang/${locale}.json`;
-
-      const langFile = await this.app.vault.adapter.read(langPath);
-
-      // Try to load the user's locale
-      this.i18n = JSON.parse(langFile);
-    } catch (error) {
-      // Fallback to English if the locale file doesn't exist
-      const fallbackFile = await this.app.vault.adapter.read(
-        `./src/lang/en.json`
-      );
-      this.i18n = JSON.parse(fallbackFile);
+    // Use bundled languages instead of reading from file system
+    if (locale in languages) {
+      this.i18n = languages[locale as keyof typeof languages];
+    } else {
+      this.i18n = languages.en;
     }
   };
 
@@ -1180,7 +1177,8 @@ ${pseudoElement}
               );
               // put defaults in
               this.settings.flowBuildBasket.flowName = this.t("modal_flowName");
-              this.settings.flowBuildBasket.oldFlowName = this.t("modal_flowName");
+              this.settings.flowBuildBasket.oldFlowName =
+                this.t("modal_flowName");
               this.settings.flowBuildBasket.flowCookbook.folderIncluded =
                 inclusionPathArray.join(",");
               this.settings.flowBuildBasket.definitionMode = "foldersTagsProps";
