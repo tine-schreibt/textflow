@@ -9,19 +9,15 @@ Grunde ist textFlow der Versuch, Scrivenings in Obsidian zu holen - intuitiv,
 flexibel und leicht in die meisten Arbeitsabläufe zu integrieren - ob du nun
 lieber mit der Tastatur oder der Maus navigierst.
 
-Doch genug des Werbesprechs: Unter der Haube ist textFlow ein einziges großes
-Workaround für den Umstand, dass Obsidian explizit für die Arbeit mit einzelnen,
-kleinen Notizen gedacht ist. Und auch wenn textFlow sein Ding mit einer gewissen
-Eleganz macht, hat es seine Einschränkungen und Unannehmlichkeiten, die dieses
-Readme erklärt. Oder erklären sie dieses Readme? Wahrscheinlich beides...
-
-Außerdem ist das Ding neu, weshalb noch nicht alle Eigenheiten
+Die weniger glorreiche Version: textFlow ist ein Workaround für den Fakt, dass
+Obsidian explizit für die Arbeit mit einzelnen, kleinen Notizen gedacht ist.
+Außerdem ist es neu, weshalb noch nicht alle Eigenheiten und Reibungspunkte
 bekannt/gefixt/mit Workaround versehen sind. Falls du etwas aufstöberst, das
 dieses Readme nicht erwähnt,
-[lass es mich wissen](#12-melde-einen-bug--zeig-deine-liebe). _Bitte ziehe in
-Erwägung, Obsidians eigenes Datenwiederherstellung-Plugin oder 'Edit history'
-von Antonio Tejada mitlaufen zu lassen, bis textFlow dein Vertrauen verdient
-hat._
+[lass es mich wissen](#12-melde-einen-bug--zeig-deine-liebe). Bitte ziehe
+außerdem in Erwägung, Obsidians eigenes Datenwiederherstellung-Plugin oder 'Edit
+history' von Antonio Tejada mitlaufen zu lassen, mindestens bis textFlow dein
+Vertrauen verdient hat.
 
 **Du willst immer noch gleich loslegen?**
 
@@ -60,10 +56,10 @@ stressfrei benutzen kannst?**
    textFlow das und baut automatisch alle relevanten Flows neu, um die Änderung
    widerzuspiegeln. Wenn du die Eigenschaften einer Notiz änderst, so dass sie
    in einen neuen Flow eingeschlossen wird, musst du von Hand neu bauen.
-   - **Praktisch:** Rechts-Klick auf Ordner gibt die Option:
-     `textFlow: Erzeuge neuen Flow aus diesem Ordner`. Die Definition kann dann
-     in den Settings verfeinert werden. <small>Für Lesezeichengruppen ist diese
-     Funktionalität derzeit leider nicht verfügbar.</small>
+   - **Praktisch:** Rechts-Klick auf einen Ordner gibt die Option:
+     `textFlow: Erzeuge neuen Flow aus diesem Ordner`. Das Ganze funktioniert
+     auch für eine Mehrfachauswahl. Ihr könnt die Definition in den
+     Einstellungen mit Tags und Eigenschaften verfeinern.
 2. **Strukturiere deine Flows:**
    - Flows, die über Ordner, Tags oder Eigenschaften definiert sind, habe zwei
      Sortieroptionen:
@@ -119,11 +115,13 @@ stressfrei benutzen kannst?**
      unzusammenhängende Flows zu navigieren, oder falls dir die
      Explorer-Navigation zu fickelig ist. Das Menü hat auch eine Fuzzy Search,
      damit du schneller findest, wo du hin willst.
-   - **Deinen Cursor-Verlauf:** textFlow speichert die Cursor-Position für die
-     fünf zuletzt besuchten Regionen der fünf zuletzt geöffneten Leaves für alle
-     deine Flows (Updates passieren mit jeder Synchronisation in die
-     Quellnotizen). Es gibt auch einen praktischen Button und Befehl, um
-     automatisch zur letzten bekannten Position zurückzuspringen.
+   - **Deinen Cursor-Verlauf:** textFlow speichert die letzten drei
+     Cursor-Position für die letzten drei Regionen der drei zuletzt geöffneten
+     Leaves für alle deine Flows (Updates passieren mit jeder Synchronisation in
+     die Quellnotizen). Es gibt auch einen praktischen Button und Befehl, um
+     automatisch zur letzten bekannten Position zurückzuspringen. Leaves, die
+     älter als 24 Stunden sind, werden gelöscht - mit Ausnahme der beiden
+     jüngsten.
    - **Einen Auswahl-Button für die aktive Region:** Falls du eine
      Copy/Paste-Operation brauchst. Auch hierfür gibt es einen Befehl.
    - **Einen Export-Button:** Dieser Button macht eine Kopie deines Flows, ohne
@@ -207,7 +205,7 @@ stressfrei benutzen kannst?**
         2. ... wenn du zwei überlappende Flows aktiv hast und eine der Regionen
            bearbeitest, an denen sie sich überlappen (diese Regionen sind im
            Navigationsdropdown markiert, bzw. du bekommst eine Benachrichtigung,
-           wenn du in eine Überlappung clickst). **WICHTIG:** _Das ist wirklich
+           wenn du in eine Überlappung klickst). **WICHTIG:** _Das ist wirklich
            **nur eine Sicherheitsvorkehrung** für versehentliche edits, und
            nicht dazu gedacht, ausgenutzt zu werden, um routinemäßig in
            Überlappungen zu arbeiten; **das Feature wird sogar instabil**, wenn
@@ -323,7 +321,7 @@ Plugins:** Falls du noch ein anderes Plugin benutzt, das verändert, wie
 Links-Klicks in den Datei-Explorer gehandhabt werden, ist es wahrscheinlich,
 dass es zu Interferenzen mit textFlows preventDefault() kommt. Also falls du da
 Probleme hast, versuch mal, textFlows Klick-Listener abzuschalten, so wie du es
-für Mulit-Select tun würdest.
+für Multi-Select tun würdest.
 
 #### Der andere Kram, nach Kategorie sortiert:
 
@@ -431,17 +429,16 @@ In keiner besonderen Reihenfolge:
    Schalter in textFlows Einstellungen.
 3. **Implizite Größenbeschränkung für Flows:** Obsidians handhabt offene Notizen
    im RAM. Wenn du also dein Viertelmillion Worte langes Epos offen hast - sei
-   es in einem Flow oder auf mehrere verteilt - kann die UI ein bisschen langsam
-   werden. Also halt deine Flows eher klein und öffne nur, was du unbedingt
-   brauchst. Außerdem:
+   es in einem Flow oder auf mehrere verteilt - können die UI und textFlow
+   ziemlich langsam werden. Also halt deine Flows eher klein und öffne nur, was
+   du unbedingt brauchst. Außerdem:
 4. **Vollständiges Neuschreiben von Flows:** Obsidian macht keine partiellen
-   Updates von Dateien. Wenn du also einen langen Flow offen hast, schreibt
+   Updates von Dateien. Wenn du also einen langen Flow editierst, schreibt
    Obsidian das komplette Ding, von oben bis unten, wieder und wieder auf die
-   Platte, während du daran arbeitest. _Für moderne SSD-Karten ist das kein
-   Problem_, aber wenn du mit einer sehr kleinen, sehr alten SSD arbeitest,
-   solltest du, wieder mal, deine Flows eher klein halten. (Zum Vergleich: Dein
-   unfertiger 50.000-Wort Roman hat unter 400kB, während dein 250.000-Wort Epos
-   die 2MB knackt).
+   Platte. _Für moderne SSD-Karten ist das kein Problem_, aber wenn du mit einer
+   sehr kleinen, sehr alten SSD arbeitest, solltest du, wieder mal, deine Flows
+   eher klein halten. (Zum Vergleich: Dein unfertiger 50.000-Wort Roman hat
+   unter 400kB, während dein 250.000-Wort Epos die 2MB knackt).
 5. **Kein Auto-Sync wenn du Obsidian schließt:** Onunload gibt Obsidian Plugins
    kaum genug Zeit, ihren Kram aufzuräumen und Einstellungen zu speichern. Du
    musst also von Hand speichern und neu laden, falls du cmd+q benutzt, um
@@ -610,7 +607,7 @@ werden.
 - **Flow im aktiven Leaf exportieren:** Falls du die Menüleiste nicht aktiviert
   hast.
 
-- **Fuzzy-Navigation öffnen:** Für die Navigation per Tastatur.
+- **Fuzzy-Navigation öffnen:** Für die Navigation per Tastatur
 - **Flow-Switcher öffnen:** Falls du das Modal nicht mit Buttons öffnen willst,
   kannst du stattdessen diesen Befehl nutzen.
 - **Menüleiste umschalten:** Wie die Beschreibung schon sagt.
@@ -948,7 +945,7 @@ und Lösungen. Falls du dein Problem hier nicht findest, sag bescheid (siehe auc
   und zurück in die Quelle syncst, weicht der zweite Flow vom ersten, sowie den
   Quellen ab. Er wird daher für einen Neubau markiert und neu gebaut, sobald du
   das nächste Mal mit ihm interagierst.
-- **Flow:** Eine Notiz, die aus einer Auswahl von Notizen erzeugt (concateniert)
+- **Flow:** Eine Notiz, die aus einer Auswahl von Notizen erzeugt (kompiliert)
   wurde, und mit UUIDs ausgestattet wurde, um Funktionalität wie das Tracking
   von Cursor-Position und Textänderungen zu ermöglichen, und diese Änderungen in
   die Quelle zurück zu syncen.
@@ -1017,17 +1014,13 @@ wann solltest du beide zusammen benutzen?
     deinen Arbeitsbereich nach jedem Neustart neu zurecht klicken.
   - Der Datei-Explorer hingegen merkt sich über Neustarts hinweg, welche Ordner
     ausgeklappt waren und welche nicht.
-- **Schnappschüsse:**
-  - Wenn du einen Schnappschuss eines bestimmten Abschnittes machen willst,
-    musst du in Outline per copy/past vorgehen, eine neue Notiz erstellen und
-    sie von Hand betiteln.
-  - Mit textFlow existieren all deine Quellnotizen noch und du kannst
-    Schnappschüsse von jeder machen (versuch mal 'Backitup' von hammadXP -
-    funktioniert am besten zusammen mit 'Diff view' von Till Friebe, um
-    Versionen zu vergleichen und selektiv wiederherzustellen.)
-
-**Die Vorteile von Outline**
-
+- **Schnappschüsse:** - Wenn du einen Schnappschuss eines bestimmten Abschnittes
+  machen willst, musst du in Outline per copy/past vorgehen, eine neue Notiz
+  erstellen und sie von Hand betiteln. - Mit textFlow existieren all deine
+  Quellnotizen noch und du kannst Schnappschüsse von jeder machen (versuch mal
+  'Backitup' von hammadXP - funktioniert am besten zusammen mit 'Diff view' von
+  Till Friebe, um Versionen zu vergleichen und selektiv wiederherzustellen.) -
+  **Die Vorteile von Outline**
 - Keine Daten-Duplikation wie sie für textFlow nötig ist.
 - Du kannst deine Dokumente in jedem beliebigen Editor öffnen und bearbeiten,
   wie es dir gefällt.
