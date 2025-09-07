@@ -129,9 +129,14 @@ smoothly?**
 
 ##### Maybe coming in the future if enough people ask for it:
 
+- **Bespoke artisanal flows:** The option to input a file list as flow source
+  (for example csv exports by Bases).
 - **Favourites for the switcher modal:** In case you have a gazillion flows,
   need help staying on top of them, and frontmatter/dataview seem scary to you.
 - **Open wiki-links inside flow:** This would be a right-click thing, I guess.
+- **More languages:** So far the plugin has an English and German language file.
+  If you'd like to contribute:
+  [https://github.com/tine-schreibt/textFlow/tree/main/plugin/src/lang](https://github.com/tine-schreibt/textFlow/tree/main/plugin/src/lang)
 
 <hr>
 
