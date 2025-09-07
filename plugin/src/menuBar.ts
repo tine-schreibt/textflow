@@ -233,8 +233,8 @@ export class MenuBar {
         navPath = `${navPath} ⚭`;
         titleClass = `underlined`;
         overlapText =
-          overlap[0].join(", ").length > 0
-            ? `Flow overlaps with: ${overlap[0].join(", ")}`
+          overlap[0].join(",").length > 0
+            ? `${this.plugin.t("menuBar flow overlap")} ${overlap[0].join(", ")}`
             : "";
       }
 

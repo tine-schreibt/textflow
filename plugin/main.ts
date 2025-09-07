@@ -148,7 +148,7 @@ class StatsOverlay {
     this.progressText = this.container.createDiv({
       cls: "textflow-loading-text",
       text: this.t("main.statsOverlay initial notice", {
-        this_flowName: this.flowName,
+        flowName: this.flowName,
       }),
     });
   }
@@ -1116,6 +1116,7 @@ ${pseudoElement}
     // ---------------   // thing to make flow from selected folder
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file) => {
+        if (file instanceof TFile) return;
         menu.addItem((item) => {
           item
             .setTitle(
@@ -1133,6 +1134,9 @@ ${pseudoElement}
               );
               // put defaults in
               this.settings.flowBuildBasket.flowName = `${basename(
+                parentFolder
+              )}`;
+              this.settings.flowBuildBasket.oldFlowName = `${basename(
                 parentFolder
               )}`;
               this.settings.flowBuildBasket.flowCookbook.folderIncluded =
@@ -1154,86 +1158,31 @@ ${pseudoElement}
       })
     );
 
+    // ------ same thing but for multiple folders
     this.registerEvent(
       this.app.workspace.on("files-menu", (menu, files) => {
         menu.addItem((item) => {
           item
             .setTitle(
-              this.t("main.fileMenuListener.context make flow from folder")
+              this.t("main.fileMenuListener.context make flow from folderssss")
             )
             .onClick(async () => {
-              const inclusionFolderArray = files.filter(
-                (item) => item instanceof TFolder
-              );
-              const inclusionPathArray: string[] = [];
-              for (let folder of inclusionFolderArray) {
-                inclusionPathArray.push(normalizePath(folder.path));
-              }
-              console.log("included", inclusionPathArray);
-              const deconstructedPathArray: string[] = [];
-              for (let path of inclusionPathArray) {
-                let successivePath = "";
-                for (let fragment of path.split("/")) {
-                  if (!fragment.endsWith(".md")) {
-                    successivePath += `${fragment}/`;
-                    deconstructedPathArray.push(fragment);
-                  }
+              const inclusionPathArray = [];
+              for (let file of files) {
+                if (file instanceof TFolder) {
+                  inclusionPathArray.push(file.path);
                 }
               }
-
-              // get all the folders
-              const completeFolderArray: TFolder[] = [];
-              // put it in a funciton for recursion
-              const getFolders = (folder: TFolder) => {
-                const folders = folder.children.filter(
-                  (child): child is TFolder => child instanceof TFolder
-                );
-
-                for (const subfolder of folders) {
-                  completeFolderArray.push(subfolder);
-                  getFolders(subfolder);
-                }
-              };
-
-              // we now have to call it, of course -.-
-              getFolders(this.app.vault.getRoot());
-
-              // to make an exclusion array
-              const exclusionArray: string[] = [];
-              for (const folder of completeFolderArray) {
-                const pathToCheck = normalizePath(folder.path);
-                console.log(pathToCheck);
-                if (!exclusionArray.contains(pathToCheck)) {
-                  console.log("not in exclusionArray");
-                  if (!deconstructedPathArray.contains(pathToCheck)) {
-                    console.log("not in deconstructedPathArray");
-                    // Check if this folder should be excluded
-                    let shouldExclude = true;
-                    for (let includedPath of inclusionPathArray) {
-                      // if it's a child of an included folder, don't exclude it
-                      if (pathToCheck.startsWith(includedPath)) {
-                        shouldExclude = false;
-                        break;
-                      }
-                    }
-                    if (shouldExclude) {
-                      exclusionArray.push(folder.path);
-                    }
-                  }
-                }
-              }
-              console.log("exclusionArray: ", exclusionArray);
 
               // empty the basket, just in case
               this.flowService.resetFlowBuildBasket(
                 this.settings.flowBuildBasket
               );
               // put defaults in
-              this.settings.flowBuildBasket.flowName = "Multi-select";
+              this.settings.flowBuildBasket.flowName = this.t("modal_flowName");
+              this.settings.flowBuildBasket.oldFlowName = this.t("modal_flowName");
               this.settings.flowBuildBasket.flowCookbook.folderIncluded =
-                "root";
-              this.settings.flowBuildBasket.flowCookbook.folderExcluded =
-                exclusionArray.join(", ");
+                inclusionPathArray.join(",");
               this.settings.flowBuildBasket.definitionMode = "foldersTagsProps";
               this.settings.flowBuildBasket.flowCookbook.pathsTagsPropertiesSortOrder =
                 "depthFirst";
@@ -3303,7 +3252,7 @@ ${pseudoElement}
         }
       }
       if (overlappingFlows.length > 0) {
-        const overlapString = overlapArray.join(", ");
+        const overlapString = overlapArray.join(",");
         const regionName = basename(path);
         new Notice(
           this.t("checkActiveRegion.notice overlap detected", {

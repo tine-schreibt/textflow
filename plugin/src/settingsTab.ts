@@ -882,6 +882,18 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             "headlineChoosePathsTagsProperties.setDesc.1 inputs are optional, explanation of logic"
           ),
         });
+        desc.createSpan({
+          text: this.plugin.t(
+            "headlineChoosePathsTagsProperties.setDesc.1 inputs are optional, explanation of logic emphasis"
+          ),
+          cls: "text-emphasis",
+        });
+        desc.createEl("br");
+        desc.createSpan({
+          text: this.plugin.t(
+            "headlineChoosePathsTagsProperties.setDesc.1 inputs are optional, explanation of logic ctd"
+          ),
+        });
         desc.createEl("br");
         desc.createSpan({
           text: this.plugin.t(
@@ -899,9 +911,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     folderIncludeInput.setDesc(
       createFragment((desc) => {
         desc.createSpan({
-          text: this.plugin.t(
-            "folderIncludeInput.setDesc.1 choose single folder"
-          ),
+          text: this.plugin.t("folderIncludeInput.setDesc.1 sources"),
         });
         desc.createEl("br");
         desc.createSpan({
@@ -969,12 +979,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               "folderExcludeInput.setDesc.1 choose paths to exclude"
             ),
           });
-          desc.createEl("br");
-          desc.createSpan({
-            text: this.plugin.t(
-              "folderExcludeInput.setDesc.2 comma separated list"
-            ),
-          });
         })
       )
       .addText((chooseExcludedFolders) => {
@@ -1006,12 +1010,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               "tagsIncludeInput.setDesc.1 choose tags to include"
             ),
           });
-          desc.createEl("br");
-          desc.createSpan({
-            text: this.plugin.t(
-              "tagsIncludeInput.setDesc.2 comma separated list"
-            ),
-          });
         })
       )
       .addText((chooseIncludedTags) => {
@@ -1039,12 +1037,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           desc.createSpan({
             text: this.plugin.t(
               "tagsExcludeInput.setDesc.1 choose tags to exclude"
-            ),
-          });
-          desc.createEl("br");
-          desc.createSpan({
-            text: this.plugin.t(
-              "tagsExcludeInput.setDesc.2 comma separated list"
             ),
           });
         })
@@ -1079,12 +1071,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           desc.createEl("br");
           desc.createSpan({
             text: this.plugin.t(
-              "propertiesIncludeInput.setDesc.2 comma separated list"
-            ),
-          });
-          desc.createEl("br");
-          desc.createSpan({
-            text: this.plugin.t(
               "propertiesIncludeInput.setDesc.3 property = value is valid"
             ),
           });
@@ -1114,12 +1100,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           desc.createSpan({
             text: this.plugin.t(
               "propertiesExcludeInput.setDesc.1 choose properties to exclude"
-            ),
-          });
-          desc.createEl("br");
-          desc.createSpan({
-            text: this.plugin.t(
-              "propertiesExcludeInput.setDesc.2 comma separated list"
             ),
           });
           desc.createEl("br");
@@ -1203,7 +1183,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       )
       .onClick(async (buttonEl: MouseEvent) => {
         // set up missing values
-        this.plugin.settings.flowBuildBasket.dataviewSearchPath = "";
+        this.plugin.settings.flowBuildBasket.dataviewSearchArray = [];
         this.plugin.settings.flowBuildBasket.success = false;
 
         // Make sure the flow name is okay
@@ -1332,7 +1312,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       ) {
         source += "/";
       } else {
-        source += `/${shownFlow.flowCookbook.folderIncluded}`;
+        source += `${shownFlow.flowCookbook.folderIncluded}`;
       }
 
       // INCLUSION
@@ -1455,7 +1435,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               // putting values in the flowBuildBasket
               this.plugin.settings.flowBuildBasket = {
                 createOrEdit: "edit",
-                dataviewSearchPath: "",
+                dataviewSearchArray: [],
                 success: true,
                 flowName: flowName,
                 oldFlowName: flowName,

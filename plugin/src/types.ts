@@ -77,7 +77,7 @@ export type ActiveRegionHighlight =
 
 export interface flowBuildBasket {
   createOrEdit: string;
-  dataviewSearchPath: string;
+  dataviewSearchArray: [string, string][];
   success: boolean;
   flowName: string;
   oldFlowName: string;
@@ -173,7 +173,7 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
   maxMenuBar: true,
   flowBuildBasket: {
     createOrEdit: "create",
-    dataviewSearchPath: "",
+    dataviewSearchArray: [],
     success: false,
     flowName: "",
     oldFlowName: "",

@@ -89,6 +89,9 @@
   "createFlows.chooseFlowName.setPlaceholder enter a unique name": "Enter a unique name",
 
   "toggleFolderTitles.setName include folder / bookmark group titles": "Include folder / bookmark group titles in flow",
+  "modal_flowName": "Collection",
+  "modal_toggleFolderTitles.setName include folder": "Include folder titles in flow",
+  "modal_toggleSubfolders.setName exclude subfolders": "Exclude subfolders",
   "toggleFolderTitles.setDesc will also turn off titles in nav dropdown": "This will also turn off folder titles in the flow navigation dropdown.",
 
   "defineFlow.setName define your flow": "Define your flow...",
@@ -123,32 +126,29 @@
   "sortFlowPathsTagsProperties.addDropdown.addOption.1 depth first": "Depth first",
   "sortFlowPathsTagsProperties.addDropdown.addOption.2 files first": "Files first",
 
-  "headlineChoosePathsTagsProperties.setDesc.1 inputs are optional, explanation of logic": "All inputs are optional. For inclusion, ALL given criteria must be true; for exclusion only ONE criterion must be true.",
+  "headlineChoosePathsTagsProperties.setDesc.1 inputs are optional, explanation of logic": "All inputs are optional and expect a ",
+  "headlineChoosePathsTagsProperties.setDesc.1 inputs are optional, explanation of logic emphasis": "comma separated list",
+  "headlineChoosePathsTagsProperties.setDesc.1 inputs are optional, explanation of logic ctd": "For inclusion, ALL given criteria must be true; for exclusion only ONE criterion must be true.",
   "headlineChoosePathsTagsProperties.setDesc.2 use dataview for complex logic": "If you need more complex logic, consider defining your flow using a dataview query and tagging the results with your flow's name.",
 
-  "folderIncludeInput.setDesc.1 choose single folder": "Choose a single source folder.",
-  "folderIncludeInput.setDesc.2 default is root": "If you leave this blank, the root folder will be used.",
-  "folderIncludeInput.setDesc.3 how to exlude subfolders": "End path with / to not include subfolders.",
+  "folderIncludeInput.setDesc.1 sources": "Include by PATH",
+  "folderIncludeInput.setDesc.2 default is root": "Default is root.",
+  "folderIncludeInput.setDesc.3 how to exlude subfolders": "Enter a singular path and end it with / to exclude subfolders.",
   "folderIncludeInput.setPlaceholder": "root",
 
   "folderExcludeInput.setDesc.1 choose paths to exclude": "EXclude subfolder(s) by PATH.",
-  "folderExcludeInput.setDesc.2 comma separated list": "Input comma separated list.",
   "tagsIncludeInput.setPlaceholder": "#CuddleScene, #Draft02",
 
   "tagsIncludeInput.setDesc.1 choose tags to include": "INclude by #TAG.",
-  "tagsIncludeInput.setDesc.2 comma separated list": "Input comma separated list.",
   "tagsExcludeInput.setPlaceholder": "#Draft01, #unfinished",
 
   "tagsExcludeInput.setDesc.1 choose tags to exclude": "EXclude by #TAG.",
-  "tagsExcludeInput.setDesc.2 comma separated list": "Input comma separated list.",
 
   "propertiesIncludeInput.setDesc.1 choose properties to include": "INclude by PROPERTY",
-  "propertiesIncludeInput.setDesc.2 comma separated list": "Input comma separated list.",
   "propertiesIncludeInput.setDesc.3 property = value is valid": "You can use property = \"value\"",
   "propertiesIncludeInput.setPlaceholder": "CuddleScene, NarrativeThread = \"In the forest\"",
 
   "propertiesExcludeInput.setDesc.1 choose properties to exclude": "EXclude by PROPERTY",
-  "propertiesExcludeInput.setDesc.2 comma separated list": "Input comma separated list.",
   "propertiesExcludeInput.setDesc.3 property = value is valid": "You can use property = \"value\"",
   "propertiesExcludeInput.setPlaceholder": "Date = 2125-08-11",
 
@@ -188,6 +188,7 @@
 
   "-------- MENU BAR": "The menu bar.-------------",
   "menubar Expand menu bar": "Expand menu bar",
+  "menuBar flow overlap": "Overlaps with",
   "menubar.cursor history no stored cursors": "No stored cursors found",
   "menubar.cursor history stored cursors": "Stored cursor positons",
   "menubar.cursor history this leaf": "--- This leaf ---",
@@ -246,7 +247,8 @@
 
   "main.fileMenuListener.context flag flows for rebuild": "textFlow: Flag flows including \"${baseName}\" for rebuild",
   "main.fileMenuListener.context create new file": "textFlow: Create a new note in this folder",
-  "main.fileMenuListener.context make flow from folder": "textFlow: Define new Flow from this folder",
+  "main.fileMenuListener.context make flow from folder": "textFlow: Define flow from selected folder",
+  "main.fileMenuListener.context make flow from folderssss": "textFlow: Define flow from selected folders",
 
   "main.editorListener Reveal source": "textFlow: Reveal source not in file explorer",
 
@@ -298,7 +300,6 @@
   "createFlowDefinition.notice random error, please check console": "textFlow: An error occurred while creating the finalRecipe for your flow. Please check the console (cmd+alt+i) for details.",
   "createFlowDefinition.notice bookmark group not found": "textFlow: Please check the name of the bookmark group you submitted.",
   "getPathsByFoldersTagsProps.notice dataview not installed": "textFlow: Dataview API not available. Please make sure you have installed the dataview plugin (Settings > Community plugins > Browse).",
-  "getPathsByFoldersTagsProps.notice only one inclusion folder please": "textFlow: Folder inclusion can only contain a single folder.",
 
   "flowBuilder.notice system folder not found": "textFlow: ${textFlowSystemFolderName} not found.",
   "flowBuilder.notice ingredient not found": "textFlow: The note at ${ingredient} couldn't be found.",

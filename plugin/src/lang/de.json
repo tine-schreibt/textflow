@@ -77,6 +77,9 @@
   "validFlowNameCheck.error.2 flow already exists": "textFlow: Ein Flow namens ${flowName} existiert bereits. Bitte wähle einen anderen.",
 
   "toggleFolderTitles.setName include folder / bookmark group titles": "Füge Gruppen-/Ordnertitel in den Flow ein",
+  "modal_flowName": "Sammlung",
+  "modal_toggleFolderTitles.setName include folder": "Füge Ordnertitel in Flow ein",
+  "modal_toggleSubfolders.setName exclude subfolders": "Schließe Unterordner aus",
   "toggleFolderTitles.setDesc will also turn off titles in nav dropdown": "Dieses Setting legt auch fest, ob Titel im Navigationsdropdown zu sehen sind.",
 
   "defineFlow.setName define your flow": "Definiere deinen Flow...",
@@ -112,32 +115,31 @@
   "sortFlowPathsTagsProperties.addDropdown.addOption.1 depth first": "Tiefe zuerst",
   "sortFlowPathsTagsProperties.addDropdown.addOption.2 files first": "Notizen zuerst",
 
-  "headlineChoosePathsTagsProperties.setDesc.1 inputs are optional, explanation of logic": "Alle Inputs sind optional. Bei der Inklusion müssen ALLE gegebenen Kriterien wahr sein; für Exklusion muss nur EIN Kriterium falsch sein.",
+  "headlineChoosePathsTagsProperties.setDesc.1 inputs are optional, explanation of logic": "Alle Inputs sind optional und erwarten eine ",
+  "headlineChoosePathsTagsProperties.setDesc.1 inputs are optional, explanation of logic emphasis": "kommagetrennte Liste",
+  "headlineChoosePathsTagsProperties.setDesc.1 inputs are optional, explanation of logic ctd": "Bei der Inklusion müssen ALLE gegebenen Kriterien wahr sein; für Exklusion muss nur EIN Kriterium falsch sein.",
   "headlineChoosePathsTagsProperties.setDesc.2 use dataview for complex logic": "Falls du komplexere Logik brauchst, kannst du deinen Flow mit einer Dataview-Abfrage definieren und die Ergebnisse mit deinem Flow-Namen taggen.",
 
-  "folderIncludeInput.setDesc.1 choose single folder": "Wähle einen einzelnen Quellordner.",
-  "folderIncludeInput.setDesc.2 default is root": "Ist das Feld leer, wird der Root-Ordner verwendet.",
-  "folderIncludeInput.setDesc.3 how to exlude subfolders": "Beende den Pfad mit / um Unterordner auszuschließen.",
+  "folderIncludeInput.setDesc.1 sources": "Schließe Ordner per PFAD EIN",
+  "folderIncludeInput.setDesc.2 default is root": "Standard ist das Wurzelverzeichnis.",
+  "folderIncludeInput.setDesc.3 how to exlude subfolders": "Gib einen einzigen Pfad mit am Ende ein / um seine Unterordner auszuschließen.",
   "folderIncludeInput.setPlaceholder": "root",
 
   "folderExcludeInput.setDesc.1 choose paths to exclude": "Schließe Ordner per PFAD AUS.",
   "folderExcludeInput.setPlaceholder": "Kapitel04/Szene09, Kapitel05",
 
   "tagsIncludeInput.setDesc.1 choose tags to include": "Schließe per #TAG EIN.",
-  "folderExcludeInput.setDesc.2 comma separated list": "Füge eine kommagetrennte Liste ein.",
+
   "tagsIncludeInput.setPlaceholder": "#Kuschelszene, #Überarbeitung02",
 
   "tagsExcludeInput.setDesc.1 choose tags to exclude": "Schließe per #TAG AUS.",
-  "tagsIncludeInput.setDesc.2 comma separated list": "Füge eine kommagetrennte Liste ein.",
   "tagsExcludeInput.setPlaceholder": "#Entwurf, #unfertig",
 
   "propertiesIncludeInput.setDesc.1 choose properties to include": "Schließe per PROPERTY EIN.",
-  "tagsExcludeInput.setDesc.2 comma separated list": "Füge eine kommagetrennte Liste ein.",
   "propertiesIncludeInput.setDesc.3 property = value is valid": "Du kannst property = \"value\" verwenden",
   "propertiesIncludeInput.setPlaceholder": "Kampfsezenen, Erzählstrang = \"Im Wald\"",
 
   "propertiesExcludeInput.setDesc.1 choose properties to exclude": "Schließe per PROPERTY AUS.",
-  "propertiesExcludeInput.setDesc.2 comma separated list": "Füge eine kommagetrennte Liste ein.",
   "propertiesExcludeInput.setDesc.3 property = value is valid": "Du kannst property = \"value\" verwenden",
   "propertiesExcludeInput.setPlaceholder": "Datum = 2125-08-11",
 
@@ -177,6 +179,7 @@
 
   "-------- MENU BAR": "The menu bar.-------------",
   "menubar Expand menu bar": "Menüleiste ausklappen",
+  "menuBar flow overlap": "Überlappt sich mit",
   "menubar.cursor history no stored cursors": "Keine Cursor gefunden",
   "menubar.cursor history stored cursors": "Gespeicherte Cursor",
   "menubar.cursor history this leaf": "--- Dieses Leaf ---",
@@ -248,6 +251,7 @@
   "main.fileMenuListener.context flag flows for rebuild": "textFlow: Flagge alle Flows, die \"${baseName}\" enthalten, für Neubau.",
   "main.fileMenuListener.context create new file": "textFlow: Erstelle eine neue Notiz in diesem Ordner",
   "main.fileMenuListener.context make flow from folder": "textFlow: Definiere Flow aus diesem Ordner",
+  "main.fileMenuListener.context make flow from folderssss": "textFlow: Definiere Flow aus diesen Ordnern",
 
   "main.editorListener Reveal source": "textFlow: Zeige Quellnotiz in Dateiexplorer",
 
@@ -295,7 +299,6 @@
   "createFlowDefinition.notice random error, please check console": "textFlow: Ein Fehler ist aufgetreten, während das finalReceipe für deinen Flow erzeugt wurde. Bitte sieh in die Konsole (cmd+alt+i), um Details zu erfahren.",
   "createFlowDefinition.notice bookmark group not found": "textFlow: Bitte prüfe den Namen der eingegebenen Lesezeichengruppe.",
   "getPathsByFoldersTagsProps.notice dataview not installed": "textFlow: Dataview API nicht verfügbar. Bitte stelle sicher, dass du das Dataview-Plugin installiert hast (Einstellungen > Externe Plugins > Durchsuchen)",
-  "getPathsByFoldersTagsProps.notice only one inclusion folder please": "textFlow: Bei der Ordner-Inklusion darf nur ein einzelner Ordner angegeben werden.",
 
   "flowBuilder.notice system folder not found": "textFlow: ${textFlowSystemFolderName} konnte nicht gefunden werden.",
   "flowBuilder.notice ingredient not found": "textFlow: Die Notiz ${ingredient} konnte nicht gefunden werden.",

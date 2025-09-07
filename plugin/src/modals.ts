@@ -82,11 +82,7 @@ export class CreateFlowFromFolder extends Modal {
 
     // FOLDER TITLES TOGGLE
     const toggleFolderTitles = new Setting(contentEl)
-      .setName(
-        this.plugin.t(
-          "toggleFolderTitles.setName include folder / bookmark group titles"
-        )
-      )
+      .setName(this.plugin.t("modal_toggleFolderTitles.setName include folder"))
       .setDesc(
         this.plugin.t(
           "toggleFolderTitles.setDesc will also turn off titles in nav dropdown"
@@ -168,6 +164,17 @@ export class CreateFlowFromFolder extends Modal {
       });
     });
 
+    let subfoldersExcluded = false;
+    const excludeSubfolders = new Setting(contentEl)
+      .setName(
+        this.plugin.t("modal_toggleSubfolders.setName exclude subfolders")
+      )
+      .addToggle((sortToggle) => {
+        sortToggle.setValue(subfoldersExcluded).onChange(async (value) => {
+          subfoldersExcluded = value;
+        });
+      });
+
     const saveButton = new ButtonComponent(contentEl);
     saveButton
       .setButtonText(this.plugin.t("saveButton.setButtonText save flow def"))
@@ -178,8 +185,6 @@ export class CreateFlowFromFolder extends Modal {
           );
           return;
         }
-
-        this.plugin.flowService.renameFlow();
 
         // if checks and flow creation haven't been performed by the preview button
         const validation = this.plugin.flowService.isValidFlowName(
@@ -194,9 +199,26 @@ export class CreateFlowFromFolder extends Modal {
         this.plugin.settings.flowBuildBasket.oldFlowName =
           this.plugin.settings.flowBuildBasket.flowName;
 
+        if (subfoldersExcluded) {
+          const folderArray =
+            this.plugin.settings.flowBuildBasket.flowCookbook.folderIncluded.split(
+              ","
+            );
+          const excludedArray = [];
+          for (let folder of folderArray) {
+            excludedArray.push(`${folder}/`);
+          }
+          this.plugin.settings.flowBuildBasket.flowCookbook.folderIncluded =
+            excludedArray.join(",");
+        }
+
+        // It really helps to save stuff... -.-
+        await this.plugin.saveSettings();
+
         this.plugin.flowService.createFlowDefinition(
           this.plugin.settings.flowBuildBasket
         );
+
         if (!this.plugin.settings.flowBuildBasket.success) {
           return;
         }
