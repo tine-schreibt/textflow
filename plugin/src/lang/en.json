@@ -77,7 +77,6 @@
   "qol.hidesystemFolder.setName hide system folder": "Hide ${textFlowSystemFolderName}",
   "qol.hidesystemFolder.setDesc.1 hiding is recommended": "Hiding this folder is recommended to protect its contents, but ultimately, it's an aesthetic and practical choice.",
   "qol.hidesystemFolder.setDesc.2 edits are still tracked": "If you open flows directly from the folder, they will still be protected and tracked.",
-  "qol.hidesystemFolder.setDesc.3 unhiding needs vault reload": "Unhiding the folder needs a vault reload to take effect.",
 
   "-------- CREATE FLOWS": "Here the user can define flows-------------------------------------",
   "createFlows.createEl.text create a new flow": "Create a new flow",

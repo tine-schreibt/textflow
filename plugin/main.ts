@@ -580,7 +580,7 @@ export default class TextFlowPlugin extends Plugin {
 
   discernAndSetSystemFolderState = (): void => {
     const systemFolderPath = this.settings.systemFolderPath;
-    const systemFolderHidden = this.settings.systemFolderPath;
+    const systemFolderHidden = this.settings.systemFolderHidden;
 
     // Remove any existing style
     const existingStyle = document.head.querySelector(
@@ -611,7 +611,6 @@ export default class TextFlowPlugin extends Plugin {
 
     // Try immediately and also with a small delay to ensure DOM is ready
     addStyle();
-    setTimeout(addStyle, 500); // Add style again after 500ms
   };
 
   // ----- DECORATE SOURCE NOTES IN FILE EXPLORER -----------

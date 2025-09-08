@@ -539,12 +539,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               "qol.hidesystemFolder.setDesc.2 edits are still tracked"
             ),
           });
-          desc.createEl("br");
-          desc.createSpan({
-            text: this.plugin.t(
-              "qol.hidesystemFolder.setDesc.3 unhiding needs vault reload"
-            ),
-          });
         })
       )
       .addToggle((hideSystemFolderToggle) => {

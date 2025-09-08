@@ -66,7 +66,6 @@
   "qol.hidesystemFolder.setName hide system folder": "${textFlowSystemFolderName} verstecken",
   "qol.hidesystemFolder.setDesc.1 hiding is recommended": "Es wird empfohlen, diesen Ordner versteckt zu halten, um seine Inhalte zu schützen, aber letztendlich ist es eine ästhetische/praktische Entscheidung.",
   "qol.hidesystemFolder.setDesc.2 edits are still tracked": "Wenn du einen Flow direkt aus diesem Ordner heraus öffnest, wird er ebenfalls getrackt und hat Schreibschutz usw.",
-  "qol.hidesystemFolder.setDesc.3 unhiding needs vault reload": "Es braucht einen Neustart, um den Ordner nicht mehr zu verstecken.",
 
   "-------- CREATE FLOWS": "Here the user can define flows-------------------------------------",
   "createFlows.createEl.text create a new flow": "Baue einen neuen Flow",
