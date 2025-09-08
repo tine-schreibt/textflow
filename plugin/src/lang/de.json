@@ -40,6 +40,7 @@
   "activeRegionDeco.addOption.3 outline accent": "Umriss: Aktenzfarbe",
   "activeRegionDeco.addOption.4 outline full": "--- Textfarbe",
   "activeRegionDeco.addOption.5 outline muted": "--- Gedeckte Textfarbe",
+  "activeRegionDeco.addOption.6 off": "Keine Hervorhebung",
 
   "-------- QUALITY OF LIVE SETTINGS": "Ein paar Settings, die die UI verbessern",
   "qol.createSpan.text quality of life settings": "Erweitere Einstellungen",

@@ -51,6 +51,7 @@
   "activeRegionDeco.addOption.3 outline accent": "Outline: Accent colour",
   "activeRegionDeco.addOption.4 outline full": "--- Text colour ",
   "activeRegionDeco.addOption.5 outline muted": "--- Muted text colour",
+  "activeRegionDeco.addOption.6 off": "Don't highlight",
 
   "-------- QUALITY OF LIVE SETTINGS": "Some settings to clean up/debug the UI",
   "qol.createSpan.text quality of life settings": "Adanced settings",

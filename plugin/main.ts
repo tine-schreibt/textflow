@@ -711,7 +711,10 @@ export default class TextFlowPlugin extends Plugin {
       let activeColour = "";
       let opacity = "";
 
-      if (activeRegionPath === path) {
+      if (
+        activeRegionPath === path &&
+        this.settings.activeRegionHighlight != "off"
+      ) {
         // if the user would like their active source notes highlighted with a background
         if (
           this.settings.activeRegionHighlight === "bgAccent" ||

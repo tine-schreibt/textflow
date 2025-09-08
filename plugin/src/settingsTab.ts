@@ -344,6 +344,10 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             "olMuted",
             this.plugin.t("activeRegionDeco.addOption.5 outline muted")
           )
+          .addOption(
+            "off",
+            this.plugin.t("activeRegionDeco.addOption.6 off")
+          )
           .setValue(this.plugin.settings.activeRegionHighlight)
           .onChange(async (value) => {
             this.plugin.settings.activeRegionHighlight = value;
