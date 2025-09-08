@@ -1,7 +1,7 @@
 {
-  "id": "_a_textFlow",
-  "name": "_a_textFlow",
-  "version": "0.1.0",
+  "id": "textFlow",
+  "name": "textFlow",
+  "version": "0.1.1",
   "minAppVersion": "1.4.0",
   "description": "Display, browse and edit multiple notes as one continuous document (flow). Flows can be defined using bookmarks, paths, tags and properties, and automatically sync with their source notes.",
   "author": "tine-schreibt",

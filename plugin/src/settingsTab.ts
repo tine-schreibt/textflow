@@ -1478,10 +1478,18 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     if (this.plugin.settings.firstLaunch) {
       // path for the file in the vault
       const basePath = (this.app.vault.adapter as any).basePath;
-      const searchPath = path.join(basePath, "textFlowDefBackup.json");
+
+      let existingBackupPath = path.join(basePath, "textFlowDefBackup.json");
+      if (systemFolder) {
+        existingBackupPath = path.join(
+          basePath,
+          systemFolder.path,
+          "textFlowDefBackup.json"
+        );
+      }
 
       // path for the file in .obsidian/plugins/textFlow
-      const createPath = path.join(
+      const newBackupPath = path.join(
         basePath,
         this.app.vault.configDir,
         "plugins",
@@ -1490,13 +1498,13 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       );
 
       const fileExists = await this.plugin.flowService.doesFileExistFs(
-        searchPath
+        existingBackupPath
       );
       if (fileExists) {
-        const rawContents = await fs.readFile(searchPath, "utf-8");
-        await fs.writeFile(createPath, rawContents, "utf-8");
+        const rawContents = await fs.readFile(existingBackupPath, "utf-8");
+        await fs.writeFile(newBackupPath, rawContents, "utf-8");
         // once we copied the contents, we can delete the source file
-        await fs.unlink(searchPath);
+        await fs.unlink(existingBackupPath);
         new Notice(
           this.plugin.t(
             "restoreSettings.notice .json has been restored to .obsidian"
@@ -1537,7 +1545,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .onClick(async () => {
             // create the path for the file in .obsidian/plugins/textFlow
             const basePath = (this.app.vault.adapter as any).basePath;
-            const searchPath = path.join(
+            const existingBackupPath = path.join(
               basePath,
               this.app.vault.configDir,
               "plugins",
@@ -1546,9 +1554,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             );
 
             // and the path for where we'll put the plugin
-            let createPath = path.join(basePath, "textFlowDefBackup.json");
+            let newBackupPath = path.join(basePath, "textFlowDefBackup.json");
             if (systemFolder) {
-              createPath = path.join(
+              newBackupPath = path.join(
                 basePath,
                 systemFolder.path,
                 "textFlowDefBackup.json"
@@ -1556,12 +1564,15 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             }
 
             const fileExists = await this.plugin.flowService.doesFileExistFs(
-              searchPath
+              existingBackupPath
             );
             if (fileExists) {
               // get the contents and write them into the new file
-              const rawContents = await fs.readFile(searchPath, "utf-8");
-              await fs.writeFile(createPath, rawContents, "utf-8");
+              const rawContents = await fs.readFile(
+                existingBackupPath,
+                "utf-8"
+              );
+              await fs.writeFile(newBackupPath, rawContents, "utf-8");
               let noticePath = "/";
               if (systemFolder) {
                 noticePath = systemFolder.path;
