@@ -50,6 +50,10 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     // ###############   SET UP A SYSTEM FOLDER   ###########################
 
     const systemFolder = this.plugin.flowService.checkSystemFolder();
+    if (systemFolder) {
+      this.plugin.settings.systemFolderPath = systemFolder.path;
+      this.plugin.saveSettings();
+    }
     let newSystemFolderParent = "";
 
     const setSystemFolder = new Setting(setUpTextFlow)
@@ -1522,8 +1526,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         })
       )
 
-      .addButton((rebuildButton) => {
-        rebuildButton
+      .addButton((restore) => {
+        restore
           .setButtonText(
             this.plugin.t("restoreSettings.setButtonText restore definitions")
           )
@@ -1548,7 +1552,14 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             );
 
             // and the path for where we'll put the plugin
-            const createPath = path.join(basePath, "textFlowDefBackup.json");
+            let createPath = path.join(basePath, "textFlowDefBackup.json");
+            if (systemFolder) {
+              createPath = path.join(
+                basePath,
+                systemFolder.path,
+                "textFlowDefBackup.json"
+              );
+            }
 
             const fileExists = await this.plugin.flowService.doesFileExistFs(
               searchPath
@@ -1557,8 +1568,14 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               // get the contents and write them into the new file
               const rawContents = await fs.readFile(searchPath, "utf-8");
               await fs.writeFile(createPath, rawContents, "utf-8");
+              let noticePath = "/";
+              if (systemFolder) {
+                noticePath = systemFolder.path;
+              }
               new Notice(
-                this.plugin.t("restoreSettings.notice .json has been copied")
+                this.plugin.t("restoreSettings.notice .json has been copied", {
+                  systemFolder: noticePath,
+                })
               );
             }
           });

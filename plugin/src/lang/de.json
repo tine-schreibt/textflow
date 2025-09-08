@@ -172,10 +172,10 @@
   "restoreSettings.notice .json has been restored to .obsidian": "textFlowDefBackup.json wurde nach .obsidian/plugins/textFlow kopiert und aus deinem Vault gelöscht.",
   "restoreSettings.setName restore definitions": "Stelle alte Flow-Definitionen wieder her",
   "restoreSettings.setDesc1 explanation": "Kopiere die Backups in deinen Vault, bevor du das Plugin de/reinstallierst.",
-  "restoreSettings.setDesc2 explanation": "Sie werden nach dem nächsten Start wieder hier verfügbar sein.",
+  "restoreSettings.setDesc2 explanation": "Sie werden nach dem nächsten Start automatisch wieder hier verfügbar sein.",
   "restoreSettings.setButtonText restore definitions": "Zeige Backups",
   "restoreSettings.setButtonText copy to vault": "Kopiere in Vault",
-  "restoreSettings.notice .json has been copied": "textFlowDefBackup.json wurde im Wurzelordner erstellt.",
+  "restoreSettings.notice .json has been copied": "textFlowDefBackup.json wurde in ${systemFolder} erstellt.",
 
   "-------- MENU BAR": "The menu bar.-------------",
   "menubar Expand menu bar": "Menüleiste ausklappen",
