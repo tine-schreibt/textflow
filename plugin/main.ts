@@ -1163,6 +1163,7 @@ ${pseudoElement}
               this.t("main.fileMenuListener.context make flow from folderssss")
             )
             .onClick(async () => {
+              files.sort();
               const inclusionPathArray = [];
               for (let file of files) {
                 if (file instanceof TFolder) {
