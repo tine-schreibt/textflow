@@ -322,6 +322,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       )
       .addDropdown((highlightDropdown) => {
         highlightDropdown
+          .addOption("off", this.plugin.t("activeRegionDeco.addOption.6 off"))
           .addOption(
             "bgAccent",
             this.plugin.t(
@@ -344,10 +345,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             "olMuted",
             this.plugin.t("activeRegionDeco.addOption.5 outline muted")
           )
-          .addOption(
-            "off",
-            this.plugin.t("activeRegionDeco.addOption.6 off")
-          )
+
           .setValue(this.plugin.settings.activeRegionHighlight)
           .onChange(async (value) => {
             this.plugin.settings.activeRegionHighlight = value;
@@ -370,23 +368,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       });
 
     const qolSettings = qol.createDiv();
-
-    // hide explorer deco
-    const hideExplorerDeco = new Setting(qol)
-      .setName(this.plugin.t("qol.hideExplorerDeco.setName hide explorer deco"))
-      .addToggle((decoToggle) => {
-        decoToggle
-          .setValue(!this.plugin.settings.showExplorerDeco)
-          .onChange(async (value) => {
-            this.plugin.settings.showExplorerDeco = !value;
-            if (value) {
-              this.plugin.unDecorateSourceNotes();
-            } else {
-              this.plugin.decorateSourceNotes("redo");
-            }
-            await this.plugin.saveSettings();
-          });
-      });
 
     // -------------- Multi-select -----------------
     const navListener = new Setting(qol)

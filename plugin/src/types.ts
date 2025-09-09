@@ -46,7 +46,6 @@ export interface TextFlowSettings {
   checkExternalEdits: ExternalEditsType;
   hashes: { [key: string]: string }; // path: hash
   explorerDecoStyle: string[];
-  showExplorerDeco: boolean;
   activeRegionHighlight: string;
   explorerDecoDropdownOpen: boolean;
   explorerListener: boolean;
@@ -163,7 +162,6 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
     "large-high-contrast-neutral",
     "large-high-contrast-unsynced",
   ],
-  showExplorerDeco: true,
   activeRegionHighlight: "bgAccent",
   explorerDecoDropdownOpen: false,
   explorerListener: true,

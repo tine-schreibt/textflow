@@ -699,7 +699,7 @@ export default class TextFlowPlugin extends Plugin {
       let neutralSymbol = "";
       let unsyncedSymbol = "";
 
-      if (this.settings.showExplorerDeco) {
+      if (this.settings.explorerDecoStyle[0] != "--") {
         // show these symbols only when deco is activated
         neutralSymbol = this.settings.explorerDecoStyle[0];
         unsyncedSymbol = this.settings.explorerDecoStyle[1];
@@ -936,7 +936,7 @@ ${pseudoElement}
   // removing all styles on deactivation
 
   unDecorateSourceNotes = async () => {
-    if (this.settings.showExplorerDeco) return;
+    if (this.settings.explorerDecoStyle[0] != "--") return;
     let path = "";
     let handledPathsArray: string[] = [];
 
@@ -1759,7 +1759,7 @@ ${pseudoElement}
             }
 
             // update source decoration
-            if (plugin.settings.showExplorerDeco) {
+            if (plugin.settings.explorerDecoStyle[0] != "--") {
               plugin.decorateSourceNotes("update");
             }
           }, 250);
@@ -2956,7 +2956,7 @@ ${pseudoElement}
       this.manageCursorPos(flowName, leafID);
       this.refreshMenuBars();
       await this.saveSettings();
-      if (this.settings.showExplorerDeco) {
+      if (this.settings.explorerDecoStyle[0] != "--") {
         this.decorateSourceNotes("update");
       }
     }
@@ -3284,7 +3284,7 @@ ${pseudoElement}
 
       // ---- Set up UI
       // ----------------------------------------------
-      if (this.settings.showExplorerDeco) {
+      if (this.settings.explorerDecoStyle[0] != "--") {
         this.decorateSourceNotes("redo");
       }
 

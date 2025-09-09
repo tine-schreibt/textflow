@@ -1972,6 +1972,13 @@ export class FlowService {
 
   // The arrays with the deco stuff, which I made, by hand. I like pain sometimes.
   explorerDecoArray: Types.DecorationEntry[] = [
+    [
+      "--",
+      "",
+      "large-high-contrast-neutral",
+      "large-high-contrast-unsynced",
+    ],
+
     ["○", "●", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
     ["○", "●", "large-low-contrast-neutral", "large-low-contrast-unsynced"],
     ["○", "●", "small-high-contrast-neutral", "small-high-contrast-unsynced"],
