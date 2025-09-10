@@ -679,11 +679,6 @@ export default class TextFlowPlugin extends Plugin {
         }
       });
 
-      // Return early if we're just removing styles
-      if (decoStyle === "none") {
-        return;
-      }
-
       const fileElement = document.querySelector(
         `div[data-path='${this.escapeSelector(cleanPath)}']`
       );
@@ -715,6 +710,11 @@ export default class TextFlowPlugin extends Plugin {
         activeRegionPath === path &&
         this.settings.activeRegionHighlight != "off"
       ) {
+        // if the user chose the arrow for highlighting, add that
+        if (this.settings.activeRegionHighlight === "arrow") {
+          neutralSymbol = `${neutralSymbol} ⬌`;
+          unsyncedSymbol = `${unsyncedSymbol} ⬌`;
+        }
         // if the user would like their active source notes highlighted with a background
         if (
           this.settings.activeRegionHighlight === "bgAccent" ||
@@ -773,6 +773,7 @@ export default class TextFlowPlugin extends Plugin {
           border-radius: 3px !important;
           pointer-events: none !important;
           z-index: 1 !important;
+          }
         div[data-path='${this.escapeSelector(
           cleanPath
         )}'] .nav-file-title-content,
@@ -799,7 +800,7 @@ ${pseudoElement}
     cleanPath
   )}'] .nav-folder-title-content::after 
   {
-  content: " ${neutralSymbol}" !important;
+  content: ${JSON.stringify(" " + neutralSymbol)} !important;
   --nav-item-color: ${
     neutralStyle.includes("high") ? "var(--text-muted)" : "var(--text-faint)"
   } !important;
@@ -810,7 +811,7 @@ ${pseudoElement}
   font-size: ${neutralStyle.includes("large") ? "1.2em" : "1em"} !important;
   font-family: monospace !important;
   vertical-align: middle !important;
-  };
+  }
     div[data-path='${this.escapeSelector(
       cleanPath
     )}'] .tree-item-self.nav-file-title,
@@ -858,22 +859,23 @@ ${pseudoElement}
         div[data-path='${this.escapeSelector(
           cleanPath
         )}'] .nav-folder-title-content::after {
-  content: " ${unsyncedSymbol}" !important;
+  content: ${JSON.stringify(" " + unsyncedSymbol)} !important;  
   --nav-item-color: ${
     neutralStyle.includes("high")
-      ? "var(--color-accent);"
+      ? "var(--color-accent)"
       : "color-mix(in srgb, var(--color-accent) 80%, transparent)"
   } !important;
   color: ${
     neutralStyle.includes("high")
-      ? "var(--color-accent);"
+      ? "var(--color-accent)"
       : "color-mix(in srgb, var(--color-accent) 80%, transparent)"
   } !important;
   opacity: 1;
   font-size: ${neutralStyle.includes("large") ? "1.2em" : "1em"} !important;
   font-family: monospace !important;
   vertical-align: middle !important;
-        }
+    }
+  }
       `;
       }
       style.textContent = styleContent;

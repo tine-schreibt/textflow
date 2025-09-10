@@ -322,7 +322,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       )
       .addDropdown((highlightDropdown) => {
         highlightDropdown
-          .addOption("off", this.plugin.t("activeRegionDeco.addOption.6 off"))
+          .addOption("off", this.plugin.t("activeRegionDeco.addOption.0 off"))
           .addOption(
             "bgAccent",
             this.plugin.t(
@@ -345,7 +345,10 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             "olMuted",
             this.plugin.t("activeRegionDeco.addOption.5 outline muted")
           )
-
+          .addOption(
+            "arrow",
+            this.plugin.t("activeRegionDeco.addOption.6 arrow")
+          )
           .setValue(this.plugin.settings.activeRegionHighlight)
           .onChange(async (value) => {
             this.plugin.settings.activeRegionHighlight = value;
