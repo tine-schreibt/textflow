@@ -1,9 +1,9 @@
 {
   "id": "textFlow",
   "name": "textFlow",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "minAppVersion": "1.4.0",
-  "description": "Display, browse and edit multiple notes as one continuous document (flow). Flows can be defined using bookmarks, paths, tags and properties, and automatically sync with their source notes.",
+  "description": "Display, browse and edit multiple notes as one continuous document (flow). Flows can be defined using bookmarks, paths, tags and properties. Edits are automatically synced back to their source notes.",
   "author": "tine-schreibt",
   "authorUrl": "https://github.com/tine-schreibt",
   "isDesktopOnly": true
