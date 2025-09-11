@@ -1,16 +1,3 @@
-name: Release textFlow
-
-on:
-  push:
-    tags:
-      - "*"
-
-env:
-  PLUGIN_NAME: textFlow
-
-permissions:
-  contents: write
-
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -21,6 +8,13 @@ jobs:
           ref: ${{ github.ref }}
           fetch-depth: 0
 
+      - name: Print env and files
+        run: |
+          set -x
+          echo "Ref: $GITHUB_REF  Name: $GITHUB_REF_NAME"
+          ls -la
+          test -f yarn.lock && echo "yarn.lock found" || echo "yarn.lock MISSING"
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -28,17 +22,24 @@ jobs:
           cache: "yarn"
 
       - name: Install
-        run: yarn --frozen-lockfile
+        run: |
+          set -x
+          yarn --version
+          yarn --frozen-lockfile
 
       - name: Build
-        run: yarn build
+        run: |
+          set -x
+          yarn build
 
       - name: Verify version equals tag
         run: |
+          set -x
           node -e "const fs=require('fs');const v=JSON.parse(fs.readFileSync('manifest.json','utf8')).version;const t=process.env.GITHUB_REF_NAME; if(v!==t){console.error(`Tag (${t}) does not match manifest.json version (${v})`);process.exit(1)}"
 
       - name: Package
         run: |
+          set -x
           mkdir -p "${{ env.PLUGIN_NAME }}"
           cp manifest.json "${{ env.PLUGIN_NAME }}/"
           cp main.js "${{ env.PLUGIN_NAME }}/"
@@ -56,3 +57,11 @@ jobs:
             main.js
             manifest.json
             styles.css
+
+      - name: Dump git state (always)
+        if: always()
+        run: |
+          set -x
+          git status || true
+          git rev-parse HEAD || true
+          git tag --points-at HEAD || true
