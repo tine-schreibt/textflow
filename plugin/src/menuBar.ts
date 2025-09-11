@@ -234,7 +234,9 @@ export class MenuBar {
         titleClass = `underlined`;
         overlapText =
           overlap[0].join(",").length > 0
-            ? `${this.plugin.t("menuBar flow overlap")} ${overlap[0].join(", ")}`
+            ? `${this.plugin.t("menuBar flow overlap")} ${overlap[0].join(
+                ", "
+              )}`
             : "";
       }
 
@@ -309,8 +311,11 @@ export class MenuBar {
         cls: `hide`,
       });
       return menuBarEl;
+    } else if (
       // if the menuBar is MINIMISED
-    } else if (!this.plugin.settings.maxMenuBar) {
+      this.plugin.settings.flows[this.flowName].activeRegions[this.leafID]
+        .leafMenuBarSettings.menuBarDisplayState === "hide"
+    ) {
       const menuBarEl = this.associatedView.contentEl.createDiv({
         cls: "textflow-menu-bar-min",
       });
@@ -321,8 +326,10 @@ export class MenuBar {
         .setClass("clickable-icon")
         .setTooltip(this.plugin.t("Expand menu bar"))
         .onClick(() => {
-          this.plugin.settings.maxMenuBar = true;
-          this.refresh(this.associatedView.contentEl);
+          this.plugin.settings.flows[this.flowName].activeRegions[
+            this.leafID
+          ].leafMenuBarSettings.menuBarDisplayState = "show";
+          this.plugin.refreshMenuBars();
         });
       return menuBarEl;
     } else {
@@ -871,8 +878,10 @@ export class MenuBar {
         .setClass("clickable-icon")
         .setTooltip(this.plugin.t("menubar Collapse menu bar"))
         .onClick(() => {
-          this.plugin.settings.maxMenuBar = false;
-          this.refresh(this.associatedView.contentEl);
+          this.plugin.settings.flows[this.flowName].activeRegions[
+            this.leafID
+          ].leafMenuBarSettings.menuBarDisplayState = "hide";
+          this.plugin.refreshMenuBars();
         });
 
       // there we go.

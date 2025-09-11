@@ -129,8 +129,8 @@ smoothly?**
 
 ##### Maybe coming in the future if enough people ask for it:
 
-- **Bespoke artisanal flows:** The option to input a file list as flow source
-  (for example csv exports by Bases).
+- **Bespoke artisanal flows:** The option to input a random file list as flow
+  source.
 - **Favourites for the switcher modal:** In case you have a gazillion flows,
   need help staying on top of them, and frontmatter/dataview seem scary to you.
 - **Open wiki-links inside flow:** This would be a right-click thing, I guess.
@@ -611,7 +611,7 @@ If you want to know why: [Safety features](#2-safety-features) /
 
 #### How to properties
 
-- Go to `Settings > Editor > Properties in document` and choose `visible`
+- Open a note.
 - Type `cmd + p` to open the command palette.
 - Type the word `properties`.
 - You'll see the command `Show file properties`
@@ -623,6 +623,8 @@ If you want to know why: [Safety features](#2-safety-features) /
 - Afterwards, click the hamburger menu to the left to choose a type for your
   property. You can research what they mean, but the names are pretty self
   explanatory
+- You can also in `Settings > Editor > Properties in document` choose `visible`
+  to have properties displayed at the top of you notes.
 - I warmly recommend the plugin 'Multi Properties' by technohiker. It allows you
   to set, remove and edit properties for multiple notes at once.
 
@@ -645,15 +647,9 @@ If you want to know why: [Safety features](#2-safety-features) /
     - `: FlowName`
 
 **How to navigate with the modal** Results for the flow in the active leaf
-always target the active leaf. Results for other flows try to target their
-attached leafID. If the ID is stale they default to the last active leaf for the
-flow; if there's no leaf for the flow, they open a new one. Results for flows
-always open a new leaf.
-
-So by choosing which leaf is active when you open the modal, and which exact
-result you click, you can target your navigation quite a bit. To get an overview
-over your workspace (as it pertains to flows) as well as active leafIDs, open
-the flow switcher modal.
+always target the active leaf. Results for other flows try to target the last
+active leaf for the flow; if there's none, they open a new one. Results for
+flows always open a new leaf.
 
 <hr>
 

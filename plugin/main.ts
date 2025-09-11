@@ -477,15 +477,12 @@ export default class TextFlowPlugin extends Plugin {
       id: "text-flow-toggle-menu-bar",
       name: this.t("main.registerCommand toggle menu bar"),
       callback: () => {
+        // toggle the setting
         this.settings.showMenuBar
           ? (this.settings.showMenuBar = false)
           : (this.settings.showMenuBar = true);
-        this.settings.maxMenuBar = true;
-        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (!view) return;
-
-        view.menuBar?.refresh(view.contentEl);
         this.saveSettings();
+        this.refreshMenuBars();
       },
     });
 
@@ -712,8 +709,8 @@ export default class TextFlowPlugin extends Plugin {
       ) {
         // if the user chose the arrow for highlighting, add that
         if (this.settings.activeRegionHighlight === "arrow") {
-          neutralSymbol = `${neutralSymbol} ⬌`;
-          unsyncedSymbol = `${unsyncedSymbol} ⬌`;
+          neutralSymbol = `${neutralSymbol}⬌`;
+          unsyncedSymbol = `${unsyncedSymbol}⬌`;
         }
         // if the user would like their active source notes highlighted with a background
         if (
@@ -754,10 +751,12 @@ export default class TextFlowPlugin extends Plugin {
           if (this.settings.activeRegionHighlight === "olAccent") {
             activeColour = `var(--color-accent)`;
             opacity = "1";
-          } else {
+          } else if (this.settings.activeRegionHighlight === "olText") {
             activeColour = `var(--nav-item-color)`;
             opacity =
               this.settings.activeRegionHighlight === "olText" ? `0.5` : `0.2`;
+          } else if (this.settings.activeRegionHighlight === "arrow") {
+            opacity = "0";
           }
           pseudoElement = `position: relative !important;
         }
@@ -808,7 +807,7 @@ ${pseudoElement}
     neutralStyle.includes("high") ? "var(--text-muted)" : "var(--text-faint)"
   } !important;
   opacity: 1;
-  font-size: ${neutralStyle.includes("large") ? "1.2em" : "1em"} !important;
+  font-size: ${neutralStyle.includes("large") ? "1em" : "0.8em"} !important;
   font-family: monospace !important;
   vertical-align: middle !important;
   }
@@ -871,7 +870,7 @@ ${pseudoElement}
       : "color-mix(in srgb, var(--color-accent) 80%, transparent)"
   } !important;
   opacity: 1;
-  font-size: ${neutralStyle.includes("large") ? "1.2em" : "1em"} !important;
+  font-size: ${neutralStyle.includes("large") ? "1em" : "0.8em"} !important;
   font-family: monospace !important;
   vertical-align: middle !important;
     }
@@ -1550,7 +1549,7 @@ ${pseudoElement}
     if (!view) {
       return;
     }
-    const leafID: number = (view.leaf as any).id;
+    const leafID: string = (view.leaf as any).id;
     if (!leafID) return;
 
     if (this.listenerBasket[leafID]) {
@@ -2060,7 +2059,7 @@ ${pseudoElement}
   private checkActiveRegion = async (
     flow: Types.FlowDef,
     flowName: string,
-    leafID: number,
+    leafID: string,
     cursorOffset: number,
     view: MarkdownView
   ) => {
@@ -2094,7 +2093,7 @@ ${pseudoElement}
         if (activeRegionObject.path) {
           this.lastActiveRegion = activeRegionObject.path;
           this.decorateSourceNotes("update");
-          this.notifyOfOverlap(activeRegionObject.path, flowName);
+          this.notifyOfOverlap(activeRegionObject.path, flowName, leafID);
         }
 
         await this.saveSettings();
@@ -2156,7 +2155,7 @@ ${pseudoElement}
           view.menuBar.refresh(view.contentEl);
         }
         if (activeRegion.path) {
-          this.notifyOfOverlap(activeRegion.path, flowName);
+          this.notifyOfOverlap(activeRegion.path, flowName, leafID);
         }
       } else {
         // if the compass just cirles, notify the user
@@ -2204,7 +2203,7 @@ ${pseudoElement}
   private findActiveRegion = (
     flow: Types.FlowDef,
     editor: ObsidianEditor,
-    leafID: number,
+    leafID: string,
     cursorOffset: number,
     text: string
   ) => {
@@ -3237,8 +3236,12 @@ ${pseudoElement}
     this.saveSettings();
   };
 
-  notifyOfOverlap = (path: string, activeFlow: string) => {
-    if (!this.settings.showMenuBar || !this.settings.maxMenuBar) {
+  notifyOfOverlap = (path: string, activeFlow: string, leafID: string) => {
+    if (
+      !this.settings.showMenuBar ||
+      this.settings.flows[activeFlow].activeRegions[leafID].leafMenuBarSettings
+        .menuBarDisplayState === "hide"
+    ) {
       const overlapArray = Object.keys(this.settings.activeFlowObject);
       let overlappingFlows: string[] = [];
       for (let flowName of overlapArray) {

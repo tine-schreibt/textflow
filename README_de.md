@@ -146,8 +146,8 @@ stressfrei benutzen kannst?**
 
 ##### Kommt vielleicht in der Zukunft, wenn genug Leute danach fragen:
 
-- **Handgemachte Flows:** Die Möglichkeit, eine Dateiliste als Quelle für Flows
-  einzugeben (z.B. csv-Exporte von Bases).
+- **Handgemachte Flows:** Die Möglichkeit, eine beliebige Dateiliste als Quelle
+  für Flows einzugeben.
 - **Favoriten für das Switcher-Modal:** Falls du eine metrische Tonne Flows
   hast, Hilfe brauchst, um nicht den Überblick zu verlieren, und
   Eigenschaften/Dataview dir unheimlich sind.
@@ -679,6 +679,9 @@ Wenn du wissen willst, warum: [Sicherheitsfeatures](#2-safetyfeatures) /
 - Klick dann auf das Icon mit den drei Strichen. Jetzt kannst du einen Typ für
   deine Eigenschaften aussuchen. Was genau die bedeuten, kannst du selber
   recherchieren, aber die Namen sind recht selbsterklärend.
+- Du kannst auch in den Einstellungen unter
+  `Einstellungen > Editor > Eigenschaften im Dokument` auswählen, ob du
+  Eigenschaften immer oben in deinen Notizen angezeigt bekommen möchtest.
 - Ich empfehle außerdem wärmstens das Plugin 'Multi Properties' von technohiker.
   Damit kannst du die Eigenschaften von mehreren Notizen gleichzeitig
   bearbeiten.
@@ -702,16 +705,9 @@ Wenn du wissen willst, warum: [Sicherheitsfeatures](#2-safetyfeatures) /
     - `: FlowName`
 
 **Mit dem Modal navigieren** Ergebnisse für den Flow im aktiven Leaf führen
-immer ins aktive Leaf. Ergebnisse für andere Flows versuchen, die mit ihnen
-gespeicherte LeafID anzusteuern. Wenn die ID veraltet ist, fallen sie auf das
-zuletzt aktive Leaf des Flows zurück. Gibt es auch das nicht, öffnen sie sich in
-einem neuen Leaf. Ergebnisse für Flow-Namen öffnen sich immer in einem neuen
-Leaf.
-
-Indem du wählst, welches Leaf aktiv ist, wenn du das Modal öffnest, und welches
-Ergebnis du klickst, kannst du also recht gezielt navigieren. Um einen Überblick
-über deinen Arbeitsbereich (sofern es Flows betrifft) und die involvierten
-LeafIDs zu bekommen, öffne das Switcher-Modal.
+immer ins aktive Leaf. Ergebnisse für andere Flows führen in das zuletzt aktive
+Leaf des Flows zurück. Gibt es das nicht, öffnen sie sich in einem neuen Leaf.
+Ergebnisse für Flow-Namen öffnen sich immer in einem neuen Leaf.
 
 <hr>
 
@@ -741,6 +737,15 @@ und Lösungen. Falls du dein Problem hier nicht findest, sag bescheid (siehe auc
 6. [Mehr Probleme](#mehr-probleme)
 
 #### Flow-Erzeugung
+
+- **Problem:** Ich habe einen Flow aus Ordnern definiert, aber manche Ordner
+  werden einfach ignoriert.
+
+  - **Lösung:**
+    - Deine Ordnernamen könnten unzulässige Zeichen enthalten, z.B. Kommas.
+    - Ersetze die unzulässigen Zeichen durch zulässige - z.B. Komma durch
+      Semikolon.
+    - Oder füge Anführungszeichen um die Pfade ein.
 
 - **Problem:** Die Notizen in deiner Preview sind in einer ganz anderen
   Reihenfolge als die die Notizen in deinem Datei-Explorer, obwohl du 'Tiefe

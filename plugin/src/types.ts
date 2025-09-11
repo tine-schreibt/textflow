@@ -52,7 +52,6 @@ export interface TextFlowSettings {
   hideScrollbar: string;
   switcherPos: string;
   showMenuBar: boolean;
-  maxMenuBar: boolean;
   flowBuildBasket: flowBuildBasket;
   activeFlowObject: { [key: string]: { [key: string]: boolean } }; // flow Name[leafID] = boolean
   flows: { [key: string]: FlowDef };
@@ -168,7 +167,6 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
   hideScrollbar: "none",
   switcherPos: "statusBar",
   showMenuBar: true,
-  maxMenuBar: true,
   flowBuildBasket: {
     createOrEdit: "create",
     dataviewSearchArray: [],
