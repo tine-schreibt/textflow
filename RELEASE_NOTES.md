@@ -1,6 +1,4 @@
-A test release to see if the workflow does what I need it to do.
-
-Also, there's some small new features, which, I guess, means a new middle number:
+It finally works; it just needs to include this file's contents a release notes....
 
 - added a highlight style with just a symbol (in case your theme really hates
   the pseudo-element)
