@@ -15,38 +15,44 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-     - uses: actions/checkout@v4
-       with:
+      - uses: actions/checkout@v4
+        with:
           fetch-depth: 0
           fetch-tags: true
 
-     - name: Diagnose workspace
-       run: |
+      - name: Show ref and commit
+        run: |
+          echo "Ref: $GITHUB_REF  Name: $GITHUB_REF_NAME"
+          git rev-parse HEAD
+          git tag --points-at HEAD || true
+
+      - name: Diagnose workspace
+        run: |
           echo "Ref: $GITHUB_REF  Name: $GITHUB_REF_NAME"
           ls -la
           test -f yarn.lock && echo "yarn.lock found" || echo "yarn.lock MISSING"
           test -f RELEASE_NOTES.md && echo "RELEASE_NOTES.md found" || echo "RELEASE_NOTES.md MISSING"
 
-     - name: Install dependencies
-       run: yarn --frozen-lockfile
+      - name: Install dependencies
+        run: yarn --frozen-lockfile
 
-     - name: Build
-       run: yarn build
-     - name: Verify version matches tag (no jq needed)
-       run: |
+      - name: Build
+        run: yarn build
+      - name: Verify version matches tag (no jq needed)
+        run: |
           node -e "const fs=require('fs');const v=JSON.parse(fs.readFileSync('manifest.json','utf8')).version;const t=process.env.GITHUB_REF_NAME; if(v!==t){console.error(\`Tag (\${t}) does not match manifest.json version (\${v})\`);process.exit(1)}"
 
-     - name: Ensure release notes file exists
-       run: |
+      - name: Ensure release notes file exists
+        run: |
           if [ ! -f RELEASE_NOTES.md ]; then
             echo "# ${GITHUB_REF_NAME}" > RELEASE_NOTES.md
             echo "" >> RELEASE_NOTES.md
             echo "- Initial notes" >> RELEASE_NOTES.md
           fi
 
-     - name: Create GitHub Release and upload assets
-       uses: softprops/action-gh-release@v2
-       with:
+      - name: Create GitHub Release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
           draft: false
