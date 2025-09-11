@@ -34,6 +34,11 @@ jobs:
           node-version: "20"
           cache: "yarn"
 
+      - name: Rewrite SSH git URLs to HTTPS
+        run: |
+          git config --global url."https://github.com/".insteadOf ssh://git@github.com/
+          git config --global url."https://github.com/".insteadOf git@github.com:
+
       - name: Install
         run: |
           set -x
