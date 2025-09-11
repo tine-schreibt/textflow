@@ -14,5 +14,13 @@
 !README_de.md 
 !RELEASE_NOTES.md
 
+# and I guess we need these for workflows
+!.github/
+!.github/**
+!package.json
+!yarn.lock
+!esbuild.config.mjs
+!tsconfig.json
+
 # but especially ignore node_modules! 
 node_modules/
