@@ -1,3 +1,16 @@
+name: Release textFlow
+
+on:
+  push:
+    tags:
+      - "*"
+
+env:
+  PLUGIN_NAME: textFlow
+
+permissions:
+  contents: write
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -57,11 +70,3 @@ jobs:
             main.js
             manifest.json
             styles.css
-
-      - name: Dump git state (always)
-        if: always()
-        run: |
-          set -x
-          git status || true
-          git rev-parse HEAD || true
-          git tag --points-at HEAD || true
