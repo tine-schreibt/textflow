@@ -20,11 +20,11 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Show ref and commit
-        run: |
-          echo "Ref: $GITHUB_REF  Name: $GITHUB_REF_NAME"
-          git rev-parse HEAD
-          git tag --points-at HEAD || true
+      #     - name: Show ref and commit
+      #      run: |
+      #        echo "Ref: $GITHUB_REF  Name: $GITHUB_REF_NAME"
+      #        git rev-parse HEAD
+      #        git tag --points-at HEAD || true
 
       - name: Diagnose workspace
         run: |
@@ -49,6 +49,14 @@ jobs:
             echo "" >> RELEASE_NOTES.md
             echo "- Initial notes" >> RELEASE_NOTES.md
           fi
+
+      - name: Package plugin
+        run: |
+          mkdir -p "${{ env.PLUGIN_NAME }}"
+          cp manifest.json "${{ env.PLUGIN_NAME }}/"
+          cp main.js "${{ env.PLUGIN_NAME }}/"
+          if [ -f styles.css ]; then cp styles.css "${{ env.PLUGIN_NAME }}/"; fi
+          zip -r "${{ env.PLUGIN_NAME }}.zip" "${{ env.PLUGIN_NAME }}"
 
       - name: Create GitHub Release and upload assets
         uses: softprops/action-gh-release@v2
