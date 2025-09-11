@@ -15,40 +15,38 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Use Node.js
-        uses: actions/setup-node@v4
+     - uses: actions/checkout@v4
         with:
-          node-version: "20"
-          cache: "yarn"
+          fetch-depth: 0
+          fetch-tags: true
 
-      - name: Install dependencies
-        run: yarn --frozen-lockfile
+     - name: Diagnose workspace
+       run: |
+          echo "Ref: $GITHUB_REF  Name: $GITHUB_REF_NAME"
+          ls -la
+          test -f yarn.lock && echo "yarn.lock found" || echo "yarn.lock MISSING"
+          test -f RELEASE_NOTES.md && echo "RELEASE_NOTES.md found" || echo "RELEASE_NOTES.md MISSING"
 
-      - name: Build
-        run: yarn build
+     - name: Install dependencies
+       run: yarn --frozen-lockfile
 
-      - name: Verify version matches tag
-        run: |
-          TAG="${GITHUB_REF_NAME}"
-          MANIFEST_VERSION=$(jq -r .version manifest.json)
-          if [ "$TAG" != "$MANIFEST_VERSION" ]; then
-            echo "Tag ($TAG) does not match manifest.json version ($MANIFEST_VERSION)."
-            exit 1
+     - name: Build
+       run: yarn build
+     - name: Verify version matches tag (no jq needed)
+       run: |
+          node -e "const fs=require('fs');const v=JSON.parse(fs.readFileSync('manifest.json','utf8')).version;const t=process.env.GITHUB_REF_NAME; if(v!==t){console.error(\`Tag (\${t}) does not match manifest.json version (\${v})\`);process.exit(1)}"
+
+     - name: Ensure release notes file exists
+       run: |
+          if [ ! -f RELEASE_NOTES.md ]; then
+            echo "# ${GITHUB_REF_NAME}" > RELEASE_NOTES.md
+            echo "" >> RELEASE_NOTES.md
+            echo "- Initial notes" >> RELEASE_NOTES.md
           fi
 
-      - name: Package plugin (only required files)
-        run: |
-          mkdir -p "${{ env.PLUGIN_NAME }}"
-          cp manifest.json "${{ env.PLUGIN_NAME }}/"
-          if [ -f main.js ]; then cp main.js "${{ env.PLUGIN_NAME }}/"; else echo "main.js missing" && exit 1; fi
-          if [ -f styles.css ]; then cp styles.css "${{ env.PLUGIN_NAME }}/"; fi
-          zip -r "${{ env.PLUGIN_NAME }}.zip" "${{ env.PLUGIN_NAME }}"
-
-      - name: Create GitHub Release and upload assets
-        uses: softprops/action-gh-release@v2
-        with:
+     - name: Create GitHub Release and upload assets
+       uses: softprops/action-gh-release@v2
+       with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
           draft: false
