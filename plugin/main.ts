@@ -3043,7 +3043,6 @@ ${pseudoElement}
     if (this.settings.checkExternalEdits === "always hash") {
       if (this.settings.checkExternalEdits === "always hash") {
         const check = await this.checkHash(sourceFile, path, flowName);
-        console.log("stats check for ", path, ": ", check);
         if (check) changed = true;
       }
     }

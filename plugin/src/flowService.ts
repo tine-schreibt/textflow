@@ -760,11 +760,6 @@ export class FlowService {
         includedFolder != "."
       ) {
         excludeSubfolders = includedFolder.endsWith("/");
-        console.log(
-          "trailing slash found on ",
-          includedFolder,
-          excludeSubfolders
-        );
       }
 
       includedFolder = normalizePath(includedFolder.trim());
@@ -785,7 +780,6 @@ export class FlowService {
       // save cleaned path with trailing slash if we exclude subfolders
       if (excludeSubfolders) {
         includedFolder = `${includedFolder}/`;
-        console.log("adding slash back in", excludeSubfolders);
         cleanFolderInclusionArray.push(includedFolder);
       } else {
         cleanFolderInclusionArray.push(includedFolder);
@@ -1943,7 +1937,6 @@ export class FlowService {
         if (leaf.view instanceof MarkdownView && leaf.view.file) {
           // check if it's a flow
           const flowName = this.plugin.isFlowFile(leaf.view.file.path);
-          console.log(flowName);
           if (!flowName) {
             // remove the class
             leaf.view.containerEl.removeClass("hide-scrollbar");
