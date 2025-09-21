@@ -198,7 +198,7 @@ export interface mapValueBasket {
   idDivider: string;
 }
 
-export type SortOrder = "depthFirst" | "filesFirst" | "custom";
+export type SortOrder = "noteOrder" | "folderOrder" | "custom";
 
 // ------ used to get bookmarks (flow creation)
 export interface ObsidianApp extends App {
@@ -252,7 +252,7 @@ export type DVNote = {
 // for the writelock
 export type ProtectionType = "divider" | "sync";
 
-// needed for scoll into view
+// needed for scroll into view
 export interface ObsidianEditor extends Editor {
   cm?: EditorView;
 }

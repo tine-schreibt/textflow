@@ -93,7 +93,7 @@ export class CreateFlowFromFolder extends Modal {
           .setValue(this.plugin.settings.flowBuildBasket.folderTitles)
           .onChange(async (value) => {
             this.plugin.settings.flowBuildBasket.folderTitles = value;
-            this.plugin.saveSettings();
+            await this.plugin.saveSettings();
           });
       });
 
@@ -105,25 +105,25 @@ export class CreateFlowFromFolder extends Modal {
       createFragment((desc) => {
         desc.createSpan({
           text: this.plugin.t(
-            "sortFlowPathsTagsProperties.setDesc.1 depth first"
+            "sortFlowPathsTagsProperties.setDesc.1 note order"
           ),
           cls: "text-emphasis",
         });
         desc.createSpan({
           text: this.plugin.t(
-            "sortFlowPathsTagsProperties.setDesc.2 description of depth first"
+            "sortFlowPathsTagsProperties.setDesc.2 description of note order"
           ),
         });
         desc.createEl("br");
         desc.createSpan({
           text: this.plugin.t(
-            "sortFlowPathsTagsProperties.setDesc.3 notes first"
+            "sortFlowPathsTagsProperties.setDesc.3 folder order"
           ),
           cls: "text-emphasis",
         });
         desc.createSpan({
           text: this.plugin.t(
-            "sortFlowPathsTagsProperties.setDesc.4 description of notes first"
+            "sortFlowPathsTagsProperties.setDesc.4 description of folder order"
           ),
         });
         desc.createEl("br");
@@ -138,15 +138,15 @@ export class CreateFlowFromFolder extends Modal {
     sortFlowPathsTagsProperties.addDropdown((dropdown) => {
       dropdown
         .addOption(
-          "depthFirst",
+          "noteOrder",
           this.plugin.t(
-            "sortFlowPathsTagsProperties.addDropdown.addOption.1 depth first"
+            "sortFlowPathsTagsProperties.addDropdown.addOption.1 note order"
           )
         )
         .addOption(
-          "filesFirst",
+          "folderOrder",
           this.plugin.t(
-            "sortFlowPathsTagsProperties.addDropdown.addOption.2 files first"
+            "sortFlowPathsTagsProperties.addDropdown.addOption.2 folder order"
           )
         );
       dropdown.setValue(
@@ -155,12 +155,12 @@ export class CreateFlowFromFolder extends Modal {
           .pathsTagsPropertiesSortOrder
           ? this.plugin.settings.flowBuildBasket.flowCookbook
               .pathsTagsPropertiesSortOrder
-          : "depthFirst"
+          : "noteOrder"
       );
-      dropdown.onChange((value) => {
+      dropdown.onChange(async (value) => {
         this.plugin.settings.flowBuildBasket.flowCookbook.pathsTagsPropertiesSortOrder =
           value as Types.SortOrder;
-        this.plugin.saveSettings();
+        await this.plugin.saveSettings();
       });
     });
 
@@ -235,7 +235,7 @@ export class CreateFlowFromFolder extends Modal {
         );
 
         // save so we can pull our backup
-        this.plugin.saveSettings();
+        await this.plugin.saveSettings();
         await this.plugin.flowService.backupFlowDef(
           this.plugin.settings.flowBuildBasket.flowName
         );
@@ -251,7 +251,7 @@ export class CreateFlowFromFolder extends Modal {
           this.plugin.settings.flowBuildBasket
         );
 
-        this.plugin.saveSettings();
+        await this.plugin.saveSettings();
 
         this.close();
       });
@@ -271,7 +271,7 @@ export class CreateFlowFromFolder extends Modal {
     this.plugin.flowService.resetFlowBuildBasket(
       this.plugin.settings.flowBuildBasket
     );
-    this.plugin.saveSettings();
+    await this.plugin.saveSettings();
   }
 }
 
@@ -779,6 +779,7 @@ export class RestoreFlowDefModal extends Modal {
       }
       const okayButton = new ButtonComponent(contentEl);
       okayButton
+        .setClass("setting-tab-button-spacing")
         .setButtonText(this.plugin.t("backup.okayButton.setButtonText okay"))
         .onClick(async (buttonEl: MouseEvent) => {
           // function that replaces existing definitions or puts defs back with a cleaned up name
@@ -1027,6 +1028,7 @@ export class FlowSwitcherModal extends Modal {
         .setIcon("play")
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
         .setClass("clickable-icon")
+        .setTooltip(this.plugin.t("switcherModal.buttons new tab"))
         .onClick(async () => {
           if (goOpen === "neutral" || goOpen === "must") {
             await this.plugin.syncAllLeaves();
@@ -1036,7 +1038,7 @@ export class FlowSwitcherModal extends Modal {
             );
             if (file instanceof TFile) {
               const leaf = this.app.workspace.getLeaf("tab");
-              this.flowOpeningStuff(leaf, file);
+              await this.flowOpeningStuff(leaf, file);
             }
           }
         });
@@ -1046,6 +1048,7 @@ export class FlowSwitcherModal extends Modal {
         .setIcon("step-forward")
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
         .setClass("clickable-icon")
+        .setTooltip(this.plugin.t("switcherModal.buttons split right"))
         .onClick(async () => {
           if (goOpen === "neutral" || goOpen === "must") {
             const file = this.app.vault.getAbstractFileByPath(
@@ -1053,7 +1056,7 @@ export class FlowSwitcherModal extends Modal {
             );
             if (file instanceof TFile) {
               const leaf = this.app.workspace.getLeaf("split");
-              this.flowOpeningStuff(leaf, file);
+              await this.flowOpeningStuff(leaf, file);
             }
           }
         });
@@ -1064,6 +1067,7 @@ export class FlowSwitcherModal extends Modal {
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
         .setClass("flow-switch-modal-header-button-down")
         .setClass("clickable-icon")
+        .setTooltip(this.plugin.t("switcherModal.buttons split down"))
         .onClick(async () => {
           if (goOpen === "neutral" || goOpen === "must") {
             const file = this.app.vault.getAbstractFileByPath(
@@ -1071,6 +1075,7 @@ export class FlowSwitcherModal extends Modal {
             );
             if (file instanceof TFile) {
               const leaf = this.app.workspace.getLeaf("split", "horizontal");
+              await this.flowOpeningStuff(leaf, file);
             }
           }
         });
@@ -1323,6 +1328,7 @@ export class FlowSwitcherModal extends Modal {
         .setIcon("play")
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
         .setClass("clickable-icon")
+        .setTooltip(this.plugin.t("switcherModal.buttons new tab"))
         .onClick(async () => {
           if (goOpen === "neutral" || goOpen === "must") {
             const file = this.app.vault.getAbstractFileByPath(
@@ -1340,6 +1346,7 @@ export class FlowSwitcherModal extends Modal {
         .setIcon("step-forward")
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
         .setClass("clickable-icon")
+        .setTooltip(this.plugin.t("switcherModal.buttons split right"))
         .onClick(async () => {
           if (goOpen === "neutral" || goOpen === "must") {
             const file = this.app.vault.getAbstractFileByPath(
@@ -1347,7 +1354,7 @@ export class FlowSwitcherModal extends Modal {
             );
             if (file instanceof TFile) {
               const leaf = this.app.workspace.getLeaf("split");
-              this.flowOpeningStuff(leaf, file);
+              await this.flowOpeningStuff(leaf, file);
             }
           }
         });
@@ -1357,6 +1364,7 @@ export class FlowSwitcherModal extends Modal {
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
         .setClass("flow-switch-modal-header-button-down")
         .setClass("clickable-icon")
+        .setTooltip(this.plugin.t("switcherModal.buttons split down"))
         .onClick(async () => {
           if (goOpen === "neutral" || goOpen === "must") {
             const file = this.app.vault.getAbstractFileByPath(
@@ -1364,7 +1372,7 @@ export class FlowSwitcherModal extends Modal {
             );
             if (file instanceof TFile) {
               const leaf = this.app.workspace.getLeaf("split", "horizontal");
-              this.flowOpeningStuff(leaf, file);
+              await this.flowOpeningStuff(leaf, file);
             }
           }
         });
@@ -1374,6 +1382,7 @@ export class FlowSwitcherModal extends Modal {
         .setIcon("download")
         .setClass(`flow-switch-modal-header-button-${goSync}`)
         .setClass("clickable-icon")
+        .setTooltip(this.plugin.t("switcherModal.buttons sync"))
         .onClick(async () => {
           if (goSync === "neutral" || goSync === "must") {
             if (goSync === "neutral" || goSync === "must") {
@@ -1393,6 +1402,7 @@ export class FlowSwitcherModal extends Modal {
         .setIcon("rotate-cw")
         .setClass(`flow-switch-modal-header-button-${goRebuild}`)
         .setClass("clickable-icon")
+        .setTooltip(this.plugin.t("switcherModal.buttons rebuild"))
         .onClick(async () => {
           if (goRebuild === "neutral" || goRebuild === "must") {
             await this.plugin.flowService.rebuildFlow(inactiveFlow, "switcher");

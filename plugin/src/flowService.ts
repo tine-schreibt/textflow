@@ -514,7 +514,7 @@ export class FlowService {
     //-- as the midspouse, I shed quite some sweat, though, and maybe even some tears-------
 
     //-- Function to collect stuff DEPTH FIRST
-    const collectPathsDepthFirst = (
+    const collectPathsNoteOrder = (
       items: Types.BookmarkItem[],
       flowBuildBasket: Types.flowBuildBasket,
       topLevelTitle: string // Add parameter for top level title
@@ -571,8 +571,8 @@ export class FlowService {
       return bookmarkedNotePathsArray;
     };
 
-    // ---- FILES FIRST
-    const collectPathsFilesFirst = (
+    // ---- notes first
+    const collectPathsFolderOrder = (
       items: Types.BookmarkItem[],
       flowBuildBasket: Types.flowBuildBasket,
       topLevelTitle: string
@@ -667,19 +667,19 @@ export class FlowService {
     // Call to the function we just defined
     if (finalGroup?.items) {
       if (
-        flowBuildBasket.flowCookbook.bookmarksSortOrder === "depthFirst" ||
+        flowBuildBasket.flowCookbook.bookmarksSortOrder === "noteOrder" ||
         flowBuildBasket.flowCookbook.bookmarksSortOrder === undefined
       ) {
-        bookmarkedNotePathsArray = collectPathsDepthFirst(
+        bookmarkedNotePathsArray = collectPathsNoteOrder(
           finalGroup.items,
           flowBuildBasket,
           groupPathArray[groupPathArray.length - 1]
         );
         return bookmarkedNotePathsArray;
       } else if (
-        flowBuildBasket.flowCookbook.bookmarksSortOrder === "filesFirst"
+        flowBuildBasket.flowCookbook.bookmarksSortOrder === "folderOrder"
       ) {
-        bookmarkedNotePathsArray = collectPathsFilesFirst(
+        bookmarkedNotePathsArray = collectPathsFolderOrder(
           finalGroup.items,
           flowBuildBasket,
           groupPathArray[groupPathArray.length - 1]
@@ -702,7 +702,7 @@ export class FlowService {
 
   // --- GET ALL PATHS FROM FOLDER TAG PROPERTY ---------------------------
   // But first we snappily ensure we don't have undefineds and make the ! type assertion later on safe to use
-  ensureNoUndefined = (flowBuildBasket: Types.flowBuildBasket) => {
+  ensureNoUndefined = async (flowBuildBasket: Types.flowBuildBasket) => {
     if (flowBuildBasket.flowCookbook.folderIncluded === undefined) {
       flowBuildBasket.flowCookbook.folderIncluded = "";
     }
@@ -721,7 +721,7 @@ export class FlowService {
     if (flowBuildBasket.flowCookbook.propsExcluded === undefined) {
       flowBuildBasket.flowCookbook.propsExcluded = "";
     }
-    this.plugin.saveSettings();
+    await this.plugin.saveSettings();
   };
 
   // --- Function to get the paths -------
@@ -818,6 +818,11 @@ export class FlowService {
       flowBuildBasket.flowCookbook.folderExcluded = "";
     }
 
+    // add the system folder path so it gets exluded
+    if (this.plugin.settings.systemFolderPath) {
+      cleanFolderExclusionArray.push(this.plugin.settings.systemFolderPath);
+    }
+
     //--- INCLUDED and EXCLUDED TAGS - strip #
     const tagCleanup = (tagString: string) => {
       let nonEmptyTagArray: string[] = [];
@@ -890,7 +895,7 @@ export class FlowService {
     const vault = this.app.vault;
 
     // Build tree in the same order as seen in fileExplorer
-    const buildDepthFirstFileTree = (folder: TFolder) => {
+    const buildNoteOrderFileTree = (folder: TFolder) => {
       // Split and sort folders and files separately
       const folders = folder.children
         .filter((child): child is TFolder => child instanceof TFolder)
@@ -902,7 +907,7 @@ export class FlowService {
 
       // then recurse into subfolders, if we don't exclude them
       for (const subfolder of folders) {
-        buildDepthFirstFileTree(subfolder);
+        buildNoteOrderFileTree(subfolder);
       }
 
       // Always process files in current folder
@@ -911,13 +916,13 @@ export class FlowService {
       }
     };
 
-    // Recursive function to build file tree files first (changes order)
-    const buildFilesFirstFileTree = (folder: TFolder) => {
+    // Recursive function to build file tree notes first (changes order)
+    const buildFolderOrderFileTree = (folder: TFolder) => {
       const children = folder.children.sort((a, b) =>
         a.name.localeCompare(b.name)
       );
 
-      // Get files first
+      // Get notes first
       for (const child of children) {
         if (child instanceof TFile) {
           fileTreeArray.push(child.path);
@@ -926,18 +931,18 @@ export class FlowService {
       // then recurse into subfolders, if we don't exclude them
       for (const child of children) {
         if (child instanceof TFolder) {
-          buildFilesFirstFileTree(child);
+          buildFolderOrderFileTree(child);
         }
       }
     };
 
     // Build the complete file tree (which puts results in fileTreeArray)
     this.plugin.settings.flowBuildBasket.flowCookbook
-      .pathsTagsPropertiesSortOrder === "depthFirst" ||
+      .pathsTagsPropertiesSortOrder === "noteOrder" ||
     this.plugin.settings.flowBuildBasket.flowCookbook
       .pathsTagsPropertiesSortOrder === undefined
-      ? buildDepthFirstFileTree(vault.getRoot())
-      : buildFilesFirstFileTree(vault.getRoot());
+      ? buildNoteOrderFileTree(vault.getRoot())
+      : buildFolderOrderFileTree(vault.getRoot());
 
     // ---- CALL DATAVIEW API to fetch all included, then filter
     let finalPathArray: string[] = [];
@@ -957,7 +962,7 @@ export class FlowService {
 
       const filteredNotes = allNotes.where((note: Types.DVNote) => {
         return (
-          // exlude folders
+          // exclude folders
           !cleanFolderExclusionArray.some((path) =>
             note.file.path.startsWith(path)
           ) &&
@@ -1015,7 +1020,7 @@ export class FlowService {
     // Helper functions for including folder titles
 
     // Depth first approach
-    const findFolderTitlesDepthFirst = (
+    const findFolderTitlesNoteOrder = (
       finalPathArray: string[],
       flowBuildBasket: Types.flowBuildBasket
     ) => {
@@ -1053,7 +1058,7 @@ export class FlowService {
 
     //-- function call for folder titles
 
-    let pathArrayWithFolderTitles = findFolderTitlesDepthFirst(
+    let pathArrayWithFolderTitles = findFolderTitlesNoteOrder(
       finalPathArray,
       flowBuildBasket
     );
@@ -1200,7 +1205,7 @@ export class FlowService {
     if (!flowReBuildBasket.success) {
       // clean up and save
       this.resetFlowBuildBasket(flowReBuildBasket);
-      this.plugin.saveSettings();
+      await this.plugin.saveSettings();
       return;
     }
 
@@ -1259,7 +1264,7 @@ export class FlowService {
       idDivider: "",
     };
 
-    this.plugin.saveSettings();
+    await this.plugin.saveSettings();
   };
 
   // ------ The flowBuilder --------------------------
@@ -1562,7 +1567,7 @@ export class FlowService {
       );
 
       // remove the flags
-      this.plugin.saveSettings();
+      await this.plugin.saveSettings();
     }
   };
 
@@ -1828,11 +1833,9 @@ export class FlowService {
     parsedJson[backupName] = exportObj[backupName];
 
     //count entries and delete stale ones
-    const flowArray = Object.keys(this.plugin.settings.flows);
-    for (let flowName of flowArray) {
+    for (let flowName of Object.keys(this.plugin.settings.flows)) {
       let counter = 0;
-      const backupArray = Object.keys(parsedJson);
-      const sortedBackups = backupArray.sort();
+      const sortedBackups = Object.keys(parsedJson).sort();
       for (let backup of sortedBackups) {
         if (backup.startsWith(flowName)) {
           counter++;
@@ -1921,7 +1924,7 @@ export class FlowService {
     }
   };
 
-  updateScrollbarVisibility() {
+  updateScrollbarVisibility = async () => {
     // Handle all leaves
     // add hider if all are hidden
     if (this.plugin.settings.hideScrollbar === "all") {
@@ -1929,33 +1932,37 @@ export class FlowService {
       body.classList.remove("hide-scrollbar");
       body.classList.add("hide-scrollbar");
     } else {
-      // otherwise remove the hiding
+      // otherwise remove hiding from class list
       const body = document.body;
       body.classList.remove("hide-scrollbar");
-    }
 
-    // Handle flow leaves
-    // get all the leaves and check they're valid
-    const allLeaves = this.app.workspace.getLeavesOfType("markdown");
-    for (let leaf of allLeaves) {
-      if (leaf.view instanceof MarkdownView && leaf.view.file) {
-        // check if it's a flow
-        const flowName = this.plugin.isFlowFile(leaf.view.file.path);
-        if (!flowName) return;
+      // then check for container classes
+      const allLeaves = this.app.workspace.getLeavesOfType("markdown");
+      for (let leaf of allLeaves) {
+        await leaf.loadIfDeferred();
+        if (leaf.view instanceof MarkdownView && leaf.view.file) {
+          // check if it's a flow
+          const flowName = this.plugin.isFlowFile(leaf.view.file.path);
+          console.log(flowName);
+          if (!flowName) {
+            // remove the class
+            leaf.view.containerEl.removeClass("hide-scrollbar");
+            continue;
+          }
 
-        // if only flows are hidden, add the hiding
-        if (
-          this.plugin.settings.hideScrollbar === "flows" &&
-          !leaf.view.containerEl.hasClass("hide-scrollbar")
-        ) {
-          leaf.view.containerEl.addClass("hide-scrollbar");
-        } else {
-          // if none or all are hidden, remove it
-          leaf.view.containerEl.removeClass("hide-scrollbar");
+          // If the leaf is a flow and we want to hide
+          if (this.plugin.settings.hideScrollbar === "flows") {
+            if (!leaf.view.containerEl.hasClass("hide-scrollbar")) {
+              leaf.view.containerEl.addClass("hide-scrollbar");
+            }
+          } else {
+            // unhide it
+            leaf.view.containerEl.removeClass("hide-scrollbar");
+          }
         }
       }
     }
-  }
+  };
 
   // this was written by Claude 3.5 Sonnet
   getTimestamp = (timestamp?: number): string => {
@@ -1972,12 +1979,7 @@ export class FlowService {
 
   // The arrays with the deco stuff, which I made, by hand. I like pain sometimes.
   explorerDecoArray: Types.DecorationEntry[] = [
-    [
-      "--",
-      "",
-      "large-high-contrast-neutral",
-      "large-high-contrast-unsynced",
-    ],
+    ["--", "", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
 
     ["○", "●", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
     ["○", "●", "large-low-contrast-neutral", "large-low-contrast-unsynced"],

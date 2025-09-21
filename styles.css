@@ -84,6 +84,11 @@
   width: 210px;
 }
 
+/* settings tab button spacing*/
+button.setting-tab-button-spacing {
+  margin-right: var(--size-4-2);
+}
+
 /* */
 /* Remove bottom borders except for last item */
 .setting-item.border-top-none {

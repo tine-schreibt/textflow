@@ -18,7 +18,7 @@
   "setSystemFolder.addButton.notice failed to move folder": "textFlow: Failed to move folder: ${error_message}",
   "sysFolder please setup": "textFlow: Please set up a system folder in the settings tab.",
 
-  "------ SWITCHER MODAL POSITION": "How do they want to access the flow switcher modal?  ----------------",
+  "------ SWITCHER MODAL POSITION": "How do they want to access the flow switcher modal? ----------------",
   "switcherModalPosition.setName access flow switcher via": "Access to the flow switcher modal via...",
   "switcherModalPosition.setDesc changes need reload to take effect": "Changes need a vault reload to take effect.",
   "switcherModalPosition.addDropdown.addOption.alt Status bar": "Status bar",
@@ -26,16 +26,16 @@
   "switcherModalPosition.addDropdown.addOption.alt command palette only": "Command palette only",
 
   "---------- BACKUP MODAL": "Modal, which allows the user to restore flows from backups ----------",
-  "backup.description restore": "Your backups",
+  "backup.headline": "Your backups",
   "backup.explanation empty": "You don't have any backups. Create or edit a flow to create one.",
-  "backup.explanation replace": "If you select the 'replace' option, the old definition will be downloaded without a timestamp in its name, replacing any definition that has the same name.",
-  "backup.explanation restore": "If you select 'download' it will be downloaded with its timestamped name.",
+  "backup.explanation replace": "If you select the 'replace' option, the old definition will be saved without a timestamp in its name, replacing any definition that has the same name.",
+  "backup.explanation restore": "If you select 'save' it will be saved with its timestamped name.",
   "backup.explanation select": "Click once to select, a second time to deselect.",
   "backup.restoreButton.setButtonText replace": "Replace",
-  "backup.restoreButton.setButtonText restore": "Download",
+  "backup.restoreButton.setButtonText restore": "Save",
   "backup.deleteButton.setButtonText delete": "Delete",
   "backup.okayButton.setButtonText okay": "Okay",
-  "backup.closeButton.setButtonText close": "Close",
+  "backup.dismissButton.setButtonText dismiss": "Dismiss",
 
   "------ EXPLORER DECORATION": "Choose unicode characters to decorate source notes in file explorer ----------------",
   "explorerDeco.setName.1 choose deco": "Choose a file explorer decoration",
@@ -55,15 +55,15 @@
   "activeRegionDeco.addOption.6 arrow": "Arrow symbol: ⬌",
 
   "-------- QUALITY OF LIVE SETTINGS": "Some settings to clean up/debug the UI",
-  "qol.createSpan.text quality of life settings": "Adanced settings",
+  "qol.createSpan.text quality of life settings": "Advanced settings",
 
   "qol.hideExplorerDeco.setName hide explorer deco": "Hide explorer deco",
 
   "qol.navListener.setName disable explorer nav": "Disable navigation via file explorer",
-  "qol.navListener.setDesc what is disable explorer nav for": "Toggle this on if you need multi-select to work correctly. There's command, too.",
+  "qol.navListener.setDesc what is disable explorer nav for": "Toggle this on if you need multi-select to work correctly. There's a command, too.",
 
-  "qol.scrollbar.setName hide scoll bar": "Hide scrollbar",
-  "qol.scrollbar.setName.1 what is hide scoll bar for": "When long notes/sections are on the screen, the scroll bar starts twitching. If that annoys you, you can hide it.",
+  "qol.scrollbar.setName hide scroll bar": "Hide scrollbar",
+  "qol.scrollbar.setName.1 what is hide scroll bar for": "When long notes/sections are on the screen, the scroll bar starts twitching. If that annoys you, you can hide it.",
   "qol.scrollbar.setName.2 there's a toggle, too": "There's also a command to toggle between 'hide everywhere' and 'don't hide'.",
   "qol.scrollbar.addDropdown.addOption.1 hide only in flows": "Hide only in flows",
   "qol.scrollbar.addDropdown.addOption.2 hide everywhere": "Hide everywhere",
@@ -71,9 +71,9 @@
 
   "qol.hash.setName hash?": "Check for external edits",
   "qol.hash.setDesc.1 when should you check?": "If you also edit this vault on devices that can't run textFlow (i.e. your phone).",
-  "qol.hash.setDesc.2 mtime": "Fast and safe enough for 99% of use cases - modification dates will be compared.",
-  "qol.hash.setDesc.3 xxhash": "Best if you get unnecessary rebuilds - compares hash if mtime differs.",
-  "qol.hash.setDesc.4 always hash": "Best if you don't trust your sync tool - always compares hashes.",
+  "qol.hash.setDesc.2 mtime": "Modification dates will be compared - fast and safe enough for 99% of use cases.",
+  "qol.hash.setDesc.3 xxhash": "Compares hash if mtime differs - best if you get unnecessary rebuilds.",
+  "qol.hash.setDesc.4 always hash": "Always compares hashes - best if you don't trust your sync tool.",
   "qol.hash.addDropdown.addOption.1 don't check": "No checks",
 
   "qol.hidesystemFolder.setName hide system folder": "Hide ${textFlowSystemFolderName}",
@@ -81,7 +81,7 @@
   "qol.hidesystemFolder.setDesc.2 edits are still tracked": "If you open flows directly from the folder, they will still be protected and tracked.",
 
   "-------- CREATE FLOWS": "Here the user can define flows-------------------------------------",
-  "createFlows.createEl.text create a new flow": "Create a new flow",
+  "createFlows.createEl.text define a new flow": "Define a new flow",
   "createFlows.chooseFlowName.setName name your flow": "Name your flow",
   "createFlows.chooseFlowName.setDesc some characters can't be part of a flow name": "The following characters can't be part of a flow name:",
   "validFlowNameCheck.error.1 missing flow name": "Please give your flow a name.",
@@ -93,24 +93,24 @@
   "modal_flowName": "Collection",
   "modal_toggleFolderTitles.setName include folder": "Include folder titles in flow",
   "modal_toggleSubfolders.setName exclude subfolders": "Exclude subfolders",
-  "toggleFolderTitles.setDesc will also turn off titles in nav dropdown": "This will also turn off folder titles in the flow navigation dropdown.",
+  "toggleFolderTitles.setDesc will also turn off titles in nav dropdown": "This will also determine if folder titles are visible in the flow navigation dropdown.",
 
   "defineFlow.setName define your flow": "Define your flow...",
-  "defineFlow.setDesc.1 only active method will be used": "Only the active definition method will be used for your definition.",
+  "defineFlow.setDesc.1 only active method will be used": "Only the active definition method will be used for your flow.",
 
   "buttons.bookmarks.setButtonText by bookmark group": "... by a bookmark group",
   "buttons.foldersTagsProps.setButtonText by folders, tags, props": "... by folders, tags, properties",
 
   "bookmarksSortOrder.setName sort order": "Sort order",
-  "bookmarksSortOrder.setDesc.1 depth first": "Depth first: ",
-  "bookmarksSortOrder.setDesc.2 description of depth first": "Note order overrides folder order. Best for flat hierarchy (and group titles off).",
-  "bookmarksSortOrder.setDesc.3 notes first": "Notes first: ",
-  "bookmarksSortOrder.setDesc.4 description of notes first": "Folder order overrides note order. Best for deep hierarchy (and group titles on).",
+  "bookmarksSortOrder.setDesc.1 note order": "Notes: ",
+  "bookmarksSortOrder.setDesc.2 description of note order": "Flow will reflect the order of the notes in your bookmarks explorer. Best for flat hierarchy.",
+  "bookmarksSortOrder.setDesc.3 folder order": "Groups: ",
+  "bookmarksSortOrder.setDesc.4 description of folder order": "Flow will reflect the order of groups. Best for deep hierarchy (and group titles on).",
   "bookmarksSortOrder.setDesc.5 custom": "Custom",
   "bookmarksSortOrder.setDesc.6 description of custom": "Exact order of groups and notes is preserved. Best with group titles off.",
   "bookmarksSortOrder.setDesc.7 test them all out": "Test out all options in the preview to see which order fits you best.",
-  "bookmarksSortOrder.addDropdown.addOption.1 depth first": "Depth first",
-  "bookmarksSortOrder.addDropdown.addOption.2 files first": "Files first",
+  "bookmarksSortOrder.addDropdown.addOption.1 note order": "Notes",
+  "bookmarksSortOrder.addDropdown.addOption.2 folder order": "Groups",
   "bookmarksSortOrder.addDropdown.addOption.3 custom": "Custom",
 
   "chooseBookmarks.setDesc.1 input the name of a bookmarks group": "Input the name of a bookmarks group.",
@@ -119,22 +119,22 @@
   "chooseBookmarks.setDesc.4 how to exclude subgroup": "To exclude a group's subgroups end its name or path with /",
 
   "sortFlowPathsTagsProperties.setName sort order": "Sort order",
-  "sortFlowPathsTagsProperties.setDesc.1 depth first": "Depth first: ",
-  "sortFlowPathsTagsProperties.setDesc.2 description of depth first": "Note order overrides folder order. Best for flat hierarchy (and folder titles off).",
-  "sortFlowPathsTagsProperties.setDesc.3 notes first": "Notes first: ",
-  "sortFlowPathsTagsProperties.setDesc.4 description of notes first": "Folder order overrides note order. Best for deep hierarchy (and folder titles on).",
+  "sortFlowPathsTagsProperties.setDesc.1 note order": "Notes: ",
+  "sortFlowPathsTagsProperties.setDesc.2 description of note order": "Flow will reflect the order of the notes in your file explorer. Best for flat hierarchy.",
+  "sortFlowPathsTagsProperties.setDesc.3 folder order": "Folders: ",
+  "sortFlowPathsTagsProperties.setDesc.4 description of folder order": "Flow will reflect the order of folders. Best for deep hierarchy (and folder titles on).",
   "sortFlowPathsTagsProperties.setDesc.5 test them all out": "Test out all options in the preview to see which order fits you best.",
-  "sortFlowPathsTagsProperties.addDropdown.addOption.1 depth first": "Depth first",
-  "sortFlowPathsTagsProperties.addDropdown.addOption.2 files first": "Files first",
+  "sortFlowPathsTagsProperties.addDropdown.addOption.1 note order": "Notes",
+  "sortFlowPathsTagsProperties.addDropdown.addOption.2 folder order": "Folders",
 
   "headlineChoosePathsTagsProperties.setDesc.1 inputs are optional, explanation of logic": "All inputs are optional and expect a ",
   "headlineChoosePathsTagsProperties.setDesc.1 inputs are optional, explanation of logic emphasis": "comma separated list",
   "headlineChoosePathsTagsProperties.setDesc.1 inputs are optional, explanation of logic ctd": "For inclusion, ALL given criteria must be true; for exclusion only ONE criterion must be true.",
-  "headlineChoosePathsTagsProperties.setDesc.2 use dataview for complex logic": "If you need more complex logic, consider defining your flow using a dataview query and tagging the results with your flow's name.",
+  "headlineChoosePathsTagsProperties.setDesc.2 use dataview for complex logic": "If you need more complex logic, consider defining your flow using a Dataview query and tagging the results with your flow's name.",
 
   "folderIncludeInput.setDesc.1 sources": "Include by PATH",
-  "folderIncludeInput.setDesc.2 default is root": "Default is root.",
-  "folderIncludeInput.setDesc.3 how to exlude subfolders": "Enter a singular path and end it with / to exclude subfolders.",
+  "folderIncludeInput.setDesc.2 default is root": "Leave empty to include everything.",
+  "folderIncludeInput.setDesc.3 how to exclude subfolders": "End a path with / to exclude its subfolders.",
   "folderIncludeInput.setPlaceholder": "root",
 
   "folderExcludeInput.setDesc.1 choose paths to exclude": "EXclude subfolder(s) by PATH.",
@@ -153,9 +153,9 @@
   "propertiesExcludeInput.setDesc.3 property = value is valid": "You can use property = \"value\"",
   "propertiesExcludeInput.setPlaceholder": "Date = 2125-08-11",
 
-  "previewButton.setButtonText preview your flow structure": "Preview your flow structure",
+  "previewButton.setButtonText preview your flow structure": "Preview",
 
-  "saveButton.setButtonText save flow def": "Save flow definition",
+  "saveButton.setButtonText save flow def": "Save",
   "saveButton.notice create sys folder first": "textFlow: Please choose a path for textFlow's system folder first",
 
   "clearValues.setButtonText clear values": "Clear values",
@@ -191,7 +191,7 @@
   "menubar Expand menu bar": "Expand menu bar",
   "menuBar flow overlap": "Overlaps with",
   "menubar.cursor history no stored cursors": "No stored cursors found",
-  "menubar.cursor history stored cursors": "Stored cursor positons",
+  "menubar.cursor history stored cursors": "Stored cursor positions",
   "menubar.cursor history this leaf": "--- This leaf ---",
   "menubar.cursor history other leaves": "--- Other leaves ---",
   "menuBar.selectButton.setTooltip select active region": "Select active region",
@@ -224,6 +224,11 @@
   "switcherModal.info no active flows found": "No active flows found",
   "switcherModal.info overlapping regions": "This region also occurs in other flows: ${overlapString}",
   "switcherModal.info no inactive flows found": "No inactive flows found",
+  "switcherModal.buttons new tab": "New tab",
+  "switcherModal.buttons split right": "Split right",
+  "switcherModal.buttons split down": "Split down",
+  "switcherModal.buttons sync": "Sync",
+  "switcherModal.buttons rebuild": "(Re)build",
 
   "-------------- FUZZY NAVIGATION MODAL": "Keyboard accessible modal for opening and closing flows --------",
   "fuzzyNavigationModal.info flow in active leaf": "flow in active leaf",
@@ -249,7 +254,7 @@
   "main.fileMenuListener.context flag flows for rebuild": "textFlow: Flag flows including \"${baseName}\" for rebuild",
   "main.fileMenuListener.context create new file": "textFlow: Create a new note in this folder",
   "main.fileMenuListener.context make flow from folder": "textFlow: Define flow from selected folder",
-  "main.fileMenuListener.context make flow from folderssss": "textFlow: Define flow from selected folders",
+  "main.fileMenuListener.context make flow from folderS": "textFlow: Define flow from selected folders",
 
   "main.editorListener Reveal source": "textFlow: Reveal source not in file explorer",
 
@@ -275,7 +280,7 @@
 
   "main.checkStatsForNote source note not found": "textFlow: The source note for the active region could not be found at ${path}. Please copy the active region to prevent data loss and make sure the source note wasn't accidentally deleted before manually rebuilding the flow.",
 
-  "textChangeListener.notice error setting up listener": "textFlow Plugin: Error setting up change tracking.\nPlease report this issue on github.",
+  "textChangeListener.notice error setting up listener": "textFlow Plugin: Error setting up change tracking.\nPlease report this issue on Github.",
 
   "activateFlow.notice flow name not found": "textFlow: No flow with name ${flowName} found.",
   "activateFlow.notice flow file not found": "textFlow: Flow file not found: ${flow.flowFilePath}\nTry clicking the 'Move' button for the system folder location (in settings).",
@@ -300,11 +305,11 @@
   "createFlowDefinition.notice definition leads to empty flow": "textFlow: Your definition leads to an empty flow. Please check for typos or make your criteria less restrictive.",
   "createFlowDefinition.notice random error, please check console": "textFlow: An error occurred while creating the finalRecipe for your flow. Please check the console (cmd+alt+i) for details.",
   "createFlowDefinition.notice bookmark group not found": "textFlow: Please check the name of the bookmark group you submitted.",
-  "getPathsByFoldersTagsProps.notice dataview not installed": "textFlow: Dataview API not available. Please make sure you have installed the dataview plugin (Settings > Community plugins > Browse).",
+  "getPathsByFoldersTagsProps.notice dataview not installed": "textFlow: Dataview API not available. Please make sure you have installed the Dataview plugin (Settings > Community plugins > Browse).",
 
   "flowBuilder.notice system folder not found": "textFlow: ${textFlowSystemFolderName} not found.",
   "flowBuilder.notice ingredient not found": "textFlow: The note at ${ingredient} couldn't be found.",
-  "flowBUilder.notice UUID found in source note": "textFlow: The note\n ${ingredient}\n of flow\n ${flowName}\n contains at least one UUID.\n This can come about due to sync errors.\nHow to proceed safely: \n1. Export ${flowName} to prevent any loss of edits and backup your vault, just to be safe.\n2. Check the mentioned note for any additional regions that were accidentally copied into it (search for '<hr>'), and cut them out.\n3. Check the source notes of these regions to make sure they are up to date; if they aren't, copy/paste the latest version from your exported flow.\nTo make all of this easier, turn off navigation via file explorer (in the settings tab or command palette).\nAfterwards try another rebuild.",
+  "flowBUilder.notice UUID found in source note": "textFlow: The note\n ${ingredient}\n of flow\n ${flowName}\n contains at least one UUID.\n This can come about due to sync errors.\nHow to proceed safely: \n1. Export ${flowName} to prevent any loss of edits and backup your vault, just to be safe.\n2. Check the mentioned note for any additional regions that have been accidentally copied into it (search for '<hr>'), and cut them out.\n3. Check the source notes of these regions to make sure they are up to date; if they aren't, copy/paste the latest version from your exported flow.\nTo make all of this easier, turn off navigation via file explorer (in the settings tab or command palette).\nAfterwards try another rebuild.",
 
   "----------- The Blurb": " This is added as README to the system folder ---------------------------",
   "readme": "This folder is textFlow's system folder. \n \n **What it should contain:**\n - this README \n - your flows\n \n **You may:** \n - delete flow files from this folder\n - move this entire folder to a different location\n \n **But please do not:** \n - add files to this folder\n - rename this folder\n - rename files in this folder (to rename flows, use the settings tab)\n \n **For further information, please refer to [the complete readme](https://github.com/tine-schreibt/textFlow/blob/main/README.md)**"

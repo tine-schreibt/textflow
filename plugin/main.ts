@@ -174,7 +174,7 @@ declare module "obsidian" {
   }
 }
 
-// needed for scoll into view stuff
+// needed for scroll into view stuff
 interface ObsidianEditor extends Editor {
   cm?: EditorView;
 }
@@ -232,13 +232,13 @@ export default class TextFlowPlugin extends Plugin {
   }
 
   // ---------------------------------------------------------------
-  async saveSettings() {
+  saveSettings = async () => {
     await this.saveData(this.settings);
-  }
+  };
 
   // ---------------------------------------------------------------
   // see also: discernAndSetSystemFolderState for UI
-  async ensureSystemFolder() {
+  ensureSystemFolder = async () => {
     if (this.settings.firstLaunch) return;
 
     const systemFolder = this.app.vault
@@ -279,7 +279,7 @@ export default class TextFlowPlugin extends Plugin {
         new Notice(this.t("sysFolder please setup"));
       }
     }
-  }
+  };
 
   // ---------------- Functions: Utilities: UI/UX -------------------------
 
@@ -322,22 +322,21 @@ export default class TextFlowPlugin extends Plugin {
   // cleanup for the menu bar
   // creation happens in setupFlowView, using menuBar.ts
 
-  cleanupMenuBar(leaf: WorkspaceLeaf) {
+  cleanupMenuBar = (leaf: WorkspaceLeaf) => {
     if (leaf.view instanceof MarkdownView && leaf.view.menuBar) {
       leaf.view.menuBar.detach();
       delete leaf.view.menuBar;
     }
-  }
+  };
 
   // ---------------- all our nice commands
-  registerCommands() {
+  registerCommands = () => {
     // Command for syncing
     this.addCommand({
       id: `text-flow-sync`,
       name: this.t("main.registerCommand sync all leaves"),
       callback: async () => {
         await this.syncAllLeaves();
-        await this.saveSettings();
       },
     });
 
@@ -347,10 +346,10 @@ export default class TextFlowPlugin extends Plugin {
         name: this.t("main.registerCommand flag for rebuild"),
         callback: async () => {
           // flag for rebuild
-          Object.keys(this.settings.flows).forEach((flowName) => {
+          for (let flowName of Object.keys(this.settings.flows)) {
             this.settings.flows[flowName].flaggedForRebuild = true;
-            this.saveSettings();
-          });
+            await this.saveSettings();
+          }
           // refresh menu bars
           const allLeaves = this.app.workspace.getLeavesOfType("markdown");
           for (const leaf of allLeaves) {
@@ -372,9 +371,8 @@ export default class TextFlowPlugin extends Plugin {
         name: this.t("main.registerCommand check stats"),
         callback: async () => {
           // flag for rebuild
-          const awaitableFlowArray = Object.keys(this.settings.flows);
           const changeArray = [];
-          for (let flowName of awaitableFlowArray) {
+          for (let flowName of Object.keys(this.settings.flows)) {
             const changes = await this.checkStatsForFlow(flowName);
             if (changes) {
               changeArray.push(flowName);
@@ -464,11 +462,11 @@ export default class TextFlowPlugin extends Plugin {
     this.addCommand({
       id: "text-flow-toggle-explorer-listener",
       name: this.t("main.registerCommand toggle explorer navigation"),
-      callback: () => {
+      callback: async () => {
         this.settings.explorerListener
           ? (this.settings.explorerListener = false)
           : (this.settings.explorerListener = true);
-        this.saveSettings();
+        await this.saveSettings();
       },
     });
 
@@ -476,12 +474,12 @@ export default class TextFlowPlugin extends Plugin {
     this.addCommand({
       id: "text-flow-toggle-menu-bar",
       name: this.t("main.registerCommand toggle menu bar"),
-      callback: () => {
+      callback: async () => {
         // toggle the setting
         this.settings.showMenuBar
           ? (this.settings.showMenuBar = false)
           : (this.settings.showMenuBar = true);
-        this.saveSettings();
+        await this.saveSettings();
         this.refreshMenuBars();
       },
     });
@@ -571,7 +569,7 @@ export default class TextFlowPlugin extends Plugin {
         }
       },
     });
-  }
+  };
 
   // ----- is called onload and sets the visibility of textFlowSystemFolderName
 
@@ -630,8 +628,7 @@ export default class TextFlowPlugin extends Plugin {
           if (flowName) {
             const leafID = (activeView.leaf as any).id;
 
-            const flowNameArray = Object.keys(this.settings.activeFlowObject);
-            for (let flowName of flowNameArray) {
+            for (let flowName of Object.keys(this.settings.activeFlowObject)) {
               if (this.settings.flows[flowName].activeRegions[leafID]) {
                 activeRegionPath =
                   this.settings.flows[flowName].activeRegions[leafID].path;
@@ -1035,36 +1032,36 @@ ${pseudoElement}
                 })
               )
               .setIcon("rotate-cw")
-              .onClick(() => {
+              .onClick(async () => {
                 const normalisedPath = normalizePath(file.path);
 
                 if (file instanceof TFile) {
                   // if it's a file, search for the path
-                  Object.keys(this.settings.flows).forEach((flowName) => {
+                  for (let flowName of Object.keys(this.settings.flows)) {
                     if (
                       !this.settings.flows[flowName].flaggedForRebuild &&
                       this.settings.flows[flowName].flowMap[normalisedPath]
                     ) {
                       this.settings.flows[flowName].flaggedForRebuild = true;
-                      this.saveSettings();
+                      await this.saveSettings();
                     }
-                  });
+                  }
                 } else {
                   // if it's a folder
-                  const continuableFlowNameArray = Object.keys(
+                  flowNameLoop: for (let flowName of Object.keys(
                     this.settings.flows
-                  );
-                  flowNameLoop: for (let flowName of continuableFlowNameArray) {
-                    const continuablePathArray = Object.keys(
+                  )) {
+                    pathLoop: for (let path of Object.keys(
                       this.settings.flows[flowName].flowMap
-                    );
-                    pathLoop: for (let path of continuablePathArray) {
+                    )) {
                       if (!this.settings.flows[flowName].flaggedForRebuild) {
-                        for (let path of continuablePathArray) {
+                        for (let path of Object.keys(
+                          this.settings.flows[flowName].flowMap
+                        )) {
                           if (path.startsWith(normalisedPath)) {
                             this.settings.flows[flowName].flaggedForRebuild =
                               true;
-                            this.saveSettings();
+                            await this.saveSettings();
                             // we just need one path, so let's move on to the next flow
                             continue flowNameLoop;
                           }
@@ -1143,7 +1140,7 @@ ${pseudoElement}
                 parentFolder;
               this.settings.flowBuildBasket.definitionMode = "foldersTagsProps";
               this.settings.flowBuildBasket.flowCookbook.pathsTagsPropertiesSortOrder =
-                "depthFirst";
+                "noteOrder";
               this.settings.flowBuildBasket.folderTitles = true;
               // reset of the basket happens in the modal
               await this.saveSettings();
@@ -1164,7 +1161,7 @@ ${pseudoElement}
         menu.addItem((item) => {
           item
             .setTitle(
-              this.t("main.fileMenuListener.context make flow from folderssss")
+              this.t("main.fileMenuListener.context make flow from folderS")
             )
             .onClick(async () => {
               files.sort();
@@ -1187,7 +1184,7 @@ ${pseudoElement}
                 inclusionPathArray.join(",");
               this.settings.flowBuildBasket.definitionMode = "foldersTagsProps";
               this.settings.flowBuildBasket.flowCookbook.pathsTagsPropertiesSortOrder =
-                "depthFirst";
+                "noteOrder";
               this.settings.flowBuildBasket.folderTitles = true;
               // reset of the basket happens in the modal
               await this.saveSettings();
@@ -1205,7 +1202,7 @@ ${pseudoElement}
     // ------------- FILE EVENTS ---------------------
     // modify events
     this.registerEvent(
-      this.app.vault.on("modify", (file: TAbstractFile) => {
+      this.app.vault.on("modify", async (file: TAbstractFile) => {
         if (this.textFlowOperation) return;
 
         if (file instanceof TFile) {
@@ -1226,7 +1223,7 @@ ${pseudoElement}
               this.settings.flows[flowName].flowMap[file.path]
             ) {
               this.settings.flows[flowName].flaggedForRebuild = true;
-              this.saveSettings();
+              await this.saveSettings();
             }
           }
         }
@@ -1269,12 +1266,11 @@ ${pseudoElement}
           } // or if they moved the system folder
           else if (basename(oldPath) === this.textFlowSystemFolderName) {
             // update system folder data
-            this.ensureSystemFolder();
+            await this.ensureSystemFolder();
             return;
           }
 
-          const continuableCheckPaths = Object.keys(this.settings.flows);
-          for (let flowName of continuableCheckPaths) {
+          for (let flowName of Object.keys(this.settings.flows)) {
             // check if the user renamed or moved a flow
             if (basename(oldPath) === `${flowName}.md`) {
               if (basename(file.path) != `${flowName}.md`) {
@@ -1390,13 +1386,12 @@ ${pseudoElement}
               { newFilePath: newFilePath }
             )
           );
-          this.ensureSystemFolder();
+          await this.ensureSystemFolder();
           return;
         }
 
         // actual checks for flagging
-        const continuableCheckPaths = Object.keys(this.settings.flows);
-        for (let flowName of continuableCheckPaths) {
+        for (let flowName of Object.keys(this.settings.flows)) {
           if (this.settings.flows[flowName].flaggedForRebuild) continue;
           // if the flow is made from bookmarks, move on
           if (this.settings.flows[flowName].definitionMode === "bookmarks")
@@ -1433,7 +1428,7 @@ ${pseudoElement}
 
     // Delete events
     this.registerEvent(
-      this.app.vault.on("delete", (file: TAbstractFile) => {
+      this.app.vault.on("delete", async (file: TAbstractFile) => {
         const normalisedPath = normalizePath(file.path);
         let parentFolder = normalizePath(dirname(file.path));
         if (file instanceof TFolder) {
@@ -1441,19 +1436,18 @@ ${pseudoElement}
         }
 
         if (parentFolder.endsWith(this.textFlowSystemFolderName)) {
-          this.ensureSystemFolder();
+          await this.ensureSystemFolder();
           return;
         }
 
         //
         if (file instanceof TFile) {
-          const continuableCheckPaths = Object.keys(this.settings.flows);
-          for (let flowName of continuableCheckPaths) {
+          for (let flowName of Object.keys(this.settings.flows)) {
             // check if the user delete a flow file and flag it for rebuild
             if (basename(parentFolder) === flowName) {
               if (!this.settings.flows[flowName].flaggedForRebuild) {
                 this.settings.flows[flowName].flaggedForRebuild = true;
-                this.saveSettings();
+                await this.saveSettings();
                 continue;
               }
             }
@@ -1475,7 +1469,7 @@ ${pseudoElement}
               // now check if we need to flag
               if (!this.settings.flows[flowName].flaggedForRebuild) {
                 this.settings.flows[flowName].flaggedForRebuild = true;
-                this.saveSettings();
+                await this.saveSettings();
                 continue;
               }
             }
@@ -1488,14 +1482,12 @@ ${pseudoElement}
     // ----------------- Auto-sync and checks on blur or focus  -------------------------------
     this.registerDomEvent(window, "blur", async () => {
       await this.syncAllLeaves();
-      const awaitableFlowArray = Object.keys(this.settings.activeFlowObject);
-      for (let flowName of awaitableFlowArray) {
+      for (let flowName of Object.keys(this.settings.activeFlowObject)) {
         await this.checkStatsForFlow(flowName);
       }
     });
     this.registerDomEvent(window, "focus", async () => {
-      const awaitableFlowArray = Object.keys(this.settings.activeFlowObject);
-      for (let flowName of awaitableFlowArray) {
+      for (let flowName of Object.keys(this.settings.activeFlowObject)) {
         await this.checkStatsForFlow(flowName);
       }
     });
@@ -1751,7 +1743,7 @@ ${pseudoElement}
               plugin.settings.flows[flowName].unsyncedRegionsArray.push(
                 activeRegionPath
               );
-              plugin.saveSettings();
+              await plugin.saveSettings();
             }
 
             // update the menu bar to show unsynced status
@@ -2381,8 +2373,6 @@ ${pseudoElement}
     await this.manageActiveFlowObject();
     // now do the menu bar
     this.setupMenuBar(view, flowName);
-    // check scroll bar visibility
-    this.flowService.updateScrollbarVisibility();
     // Update the switcher modal in case it's open
     if (this.modalUpdateCallback) {
       this.modalUpdateCallback();
@@ -2437,6 +2427,7 @@ ${pseudoElement}
     }
 
     const leafID = (view.leaf as any).id;
+
     // ------------- SCROLLING ---------------------
     // See if this is the inital activation of the flow/leaf and restore cursor
     if (!this.alreadyActivated[flowName]) {
@@ -2449,6 +2440,16 @@ ${pseudoElement}
     }
 
     // ------------- HOUSEKEEPING ---------------------
+    // scrollbar hiding if necessary
+    if (this.settings.hideScrollbar === "flows") {
+      const leaf = view.leaf;
+      if (leaf.view instanceof MarkdownView && leaf.view.file) {
+        if (!leaf.view.containerEl.hasClass("hide-scrollbar")) {
+          leaf.view.containerEl.addClass("hide-scrollbar");
+        }
+      }
+    }
+
     // Keep track of the last active leaf for the fuzzNav
     if (this.settings.flows[flowName].lastActiveLeaves.contains(leafID)) {
       this.settings.flows[flowName].lastActiveLeaves = this.settings.flows[
@@ -2686,9 +2687,6 @@ ${pseudoElement}
       view.menuBar.detach();
     }
 
-    // reveal scrollbar
-    this.flowService.updateScrollbarVisibility();
-
     const leafID = (view.leaf as any).id;
     if (this.editableCompartments?.[leafID]) {
       delete this.editableCompartments[leafID];
@@ -2702,6 +2700,16 @@ ${pseudoElement}
         this.alreadyActivated[flowName];
         if (this.alreadyActivated[flowName].leafID) {
           delete this.alreadyActivated[flowName].leafID;
+        }
+      }
+    }
+
+    // take care of the scroll bar
+    if (this.settings.hideScrollbar === "flows") {
+      const leaf = view.leaf;
+      if (leaf.view instanceof MarkdownView && leaf.view.file) {
+        if (leaf.view.containerEl.hasClass("hide-scrollbar")) {
+          leaf.view.containerEl.removeClass("hide-scrollbar");
         }
       }
     }
@@ -2856,8 +2864,7 @@ ${pseudoElement}
     // Perform syncs
     this.textFlowOperation = true; // suspends modify listener
 
-    const awaitableFlowLevaesArray = Object.keys(flowLeaves);
-    for (let flowName of awaitableFlowLevaesArray) {
+    for (let flowName of Object.keys(flowLeaves)) {
       for (let view of flowLeaves[flowName]) {
         const text = view.editor.getValue();
         const leafID = (view.leaf as any).id;
@@ -2866,18 +2873,18 @@ ${pseudoElement}
         this.toggleEditable(view, true);
       }
       // before we get to actually modifying, let's flag other flows
-      Object.keys(this.settings.flows).forEach((otherFlowName) => {
+      for (let otherFlowName of Object.keys(this.settings.flows)) {
         if (flowName != otherFlowName) {
           if (!this.settings.flows[otherFlowName].flaggedForRebuild) {
             for (let path of this.settings.flows[flowName]
               .unsyncedRegionsArray) {
               if (this.settings.flows[otherFlowName].flowMap[path])
                 this.settings.flows[otherFlowName].flaggedForRebuild = true;
-              this.saveSettings();
+              await this.saveSettings();
             }
           }
         }
-      });
+      }
     }
     this.textFlowOperation = false; // unsuspends modify listener
   };
@@ -3073,8 +3080,7 @@ ${pseudoElement}
 
   // so we got hashes to compare against
   initialHashing = async (flowName: string) => {
-    const awaitableArray = Object.keys(this.settings.flows[flowName].flowMap);
-    for (const path of awaitableArray) {
+    for (const path of Object.keys(this.settings.flows[flowName].flowMap)) {
       if (!this.settings.hashes[path]) {
         const sourceFile = this.app.vault.getFileByPath(path);
         if (sourceFile instanceof TFile) {
@@ -3126,7 +3132,7 @@ ${pseudoElement}
   };
 
   // ------ Functions: Misc
-  manageCursorPos = (
+  manageCursorPos = async (
     flowName: string,
     leafID: string,
     // these args come from the fuzzyNavModal
@@ -3218,22 +3224,22 @@ ${pseudoElement}
         this.settings.flows[flowName].persistentCursors[leafID].cursors.length >
         2
       ) {
-        Object.keys(this.settings.flows[flowName].persistentCursors).forEach(
-          (leafID) => {
-            if (
-              Math.abs(
-                this.settings.flows[flowName].persistentCursors[leafID].update -
-                  Date.now()
-              ) >
-              1000 * 60 * 60 * 24 // if other entries are older than 24 hours
-            ) {
-              delete this.settings.flows[flowName].persistentCursors[leafID];
-            }
+        for (let leafID of Object.keys(
+          this.settings.flows[flowName].persistentCursors
+        )) {
+          if (
+            Math.abs(
+              this.settings.flows[flowName].persistentCursors[leafID].update -
+                Date.now()
+            ) >
+            1000 * 60 * 60 * 24 // if other entries are older than 24 hours
+          ) {
+            delete this.settings.flows[flowName].persistentCursors[leafID];
           }
-        );
+        }
       }
     }
-    this.saveSettings();
+    await this.saveSettings();
   };
 
   notifyOfOverlap = (path: string, activeFlow: string, leafID: string) => {
@@ -3242,15 +3248,13 @@ ${pseudoElement}
       this.settings.flows[activeFlow].activeRegions[leafID].leafMenuBarSettings
         .menuBarDisplayState === "hide"
     ) {
-      const overlapArray = Object.keys(this.settings.activeFlowObject);
       let overlappingFlows: string[] = [];
-      for (let flowName of overlapArray) {
+      for (let flowName of Object.keys(this.settings.activeFlowObject)) {
         if (flowName != activeFlow) {
           if (this.settings.flows[flowName].flowMap) {
-            const pathArray = Object.keys(
-              this.settings.flows[flowName].flowMap
-            );
-            if (pathArray.includes(path)) {
+            if (
+              Object.keys(this.settings.flows[flowName].flowMap).includes(path)
+            ) {
               overlappingFlows.push(flowName);
               continue;
             }
@@ -3258,7 +3262,9 @@ ${pseudoElement}
         }
       }
       if (overlappingFlows.length > 0) {
-        const overlapString = overlapArray.join(",");
+        const overlapString = Object.keys(this.settings.activeFlowObject).join(
+          ","
+        );
         const regionName = basename(path);
         new Notice(
           this.t("checkActiveRegion.notice overlap detected", {
@@ -3277,7 +3283,7 @@ ${pseudoElement}
     this.settings = await this.loadSettings();
     await this.loadLanguage();
 
-    // set up the class to access its functions
+    // set up the class so main.ts can act as an access hub to the functions in flowService.ts
     this.flowService = new FlowService(this, this.app);
 
     // -------------------------------------------------------------------
@@ -3285,10 +3291,10 @@ ${pseudoElement}
     // Wait for the file explorer to be available in the DOM
     this.app.workspace.onLayoutReady(async () => {
       // make sure we know where our stuff is
-      this.ensureSystemFolder(); // also calls state discernment to hide
+      await this.ensureSystemFolder(); // also calls state discernment to hide
 
       // ---- Set up UI
-      // ----------------------------------------------
+      // ---------------- various stuff ------------------------
       if (this.settings.explorerDecoStyle[0] != "--") {
         this.decorateSourceNotes("redo");
       }
@@ -3297,7 +3303,7 @@ ${pseudoElement}
 
       this.addSettingTab(new TextFlowSettingsTab(this.app, this));
 
-      // --- Flow switcher modal ---------------------
+      // ---------------- Flow switcher modal ---------------------
       if (this.settings.switcherPos === "statusBar") {
         const flowSwitcher = this.addStatusBarItem();
         flowSwitcher.addClass("mod-clickable");
@@ -3331,8 +3337,8 @@ ${pseudoElement}
         );
       }
 
-      // ----------- listeners and commands
-      // Listener vor navigation
+      // -- listeners and commands --------------------------
+      // ------------------------- Listener for navigation
       this.fileExplorerOpenClickListener();
       const fileExplorer = document.querySelector(".nav-files-container");
       if (fileExplorer && this.boundFileExplorerClick) {
@@ -3340,7 +3346,7 @@ ${pseudoElement}
       }
     });
 
-    // ----------- ONLOAD: add global listeners ------------------------------------
+    // ------------------------- global listeners -------------
 
     this.addListeners();
     this.registerCommands();
@@ -3365,8 +3371,7 @@ ${pseudoElement}
       fileExplorer.removeEventListener("click", this.boundFileExplorerClick);
     }
 
-    const iterableLeafIDs = Object.keys(this.listenerBasket);
-    for (let leafID of iterableLeafIDs) {
+    for (let leafID of Object.keys(this.listenerBasket)) {
       // skip the text change entries (we're removing both listeners anyway)
       if (leafID.endsWith("-changes")) continue;
 

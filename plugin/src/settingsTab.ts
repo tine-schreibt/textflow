@@ -52,7 +52,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     const systemFolder = this.plugin.flowService.checkSystemFolder();
     if (systemFolder) {
       this.plugin.settings.systemFolderPath = systemFolder.path;
-      this.plugin.saveSettings();
+      await this.plugin.saveSettings();
     }
     let newSystemFolderParent = "";
 
@@ -195,9 +195,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             )
           );
         dropdown.setValue(this.plugin.settings.switcherPos);
-        dropdown.onChange((value) => {
+        dropdown.onChange(async (value) => {
           this.plugin.settings.switcherPos = value;
-          this.plugin.saveSettings();
+          await this.plugin.saveSettings();
         });
       });
 
@@ -395,12 +395,12 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
     // ------------- scrollbar ------------
     const scrollbar = new Setting(qol)
-      .setName(this.plugin.t("qol.scrollbar.setName hide scoll bar"))
+      .setName(this.plugin.t("qol.scrollbar.setName hide scroll bar"))
       .setDesc(
         createFragment((desc) => {
           desc.createSpan({
             text: this.plugin.t(
-              "qol.scrollbar.setName.1 what is hide scoll bar for"
+              "qol.scrollbar.setName.1 what is hide scroll bar for"
             ),
           });
           desc.createEl("br");
@@ -547,7 +547,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       cls: "headline-container",
     });
     createFlows.createEl("h3", {
-      text: this.plugin.t("createFlows.createEl.text create a new flow"),
+      text: this.plugin.t("createFlows.createEl.text define a new flow"),
       cls: "headline-text",
     });
 
@@ -580,7 +580,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
       setFlowName.onChange(async (value) => {
         this.plugin.settings.flowBuildBasket.flowName = value.trim();
-        this.plugin.flowService.debouncedSaveSettings();
+        await this.plugin.flowService.debouncedSaveSettings();
       });
     });
 
@@ -601,7 +601,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .setValue(this.plugin.settings.flowBuildBasket.folderTitles)
           .onChange(async (value) => {
             this.plugin.settings.flowBuildBasket.folderTitles = value;
-            this.plugin.saveSettings();
+            await this.plugin.saveSettings();
           });
       });
 
@@ -660,22 +660,22 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       .setDesc(
         createFragment((desc) => {
           desc.createSpan({
-            text: this.plugin.t("bookmarksSortOrder.setDesc.1 depth first"),
+            text: this.plugin.t("bookmarksSortOrder.setDesc.1 note order"),
             cls: "text-emphasis",
           });
           desc.createSpan({
             text: this.plugin.t(
-              "bookmarksSortOrder.setDesc.2 description of depth first"
+              "bookmarksSortOrder.setDesc.2 description of note order"
             ),
           });
           desc.createEl("br");
           desc.createSpan({
-            text: this.plugin.t("bookmarksSortOrder.setDesc.3 notes first"),
+            text: this.plugin.t("bookmarksSortOrder.setDesc.3 folder order"),
             cls: "text-emphasis",
           });
           desc.createSpan({
             text: this.plugin.t(
-              "bookmarksSortOrder.setDesc.4 description of notes first"
+              "bookmarksSortOrder.setDesc.4 description of folder order"
             ),
           });
           desc.createEl("br");
@@ -699,15 +699,15 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       .addDropdown((dropdown) => {
         dropdown
           .addOption(
-            "depthFirst",
+            "noteOrder",
             this.plugin.t(
-              "bookmarksSortOrder.addDropdown.addOption.1 depth first"
+              "bookmarksSortOrder.addDropdown.addOption.1 note order"
             )
           )
           .addOption(
-            "filesFirst",
+            "folderOrder",
             this.plugin.t(
-              "bookmarksSortOrder.addDropdown.addOption.2 files first"
+              "bookmarksSortOrder.addDropdown.addOption.2 folder order"
             )
           )
           .addOption(
@@ -716,12 +716,12 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           );
         dropdown.setValue(
           this.plugin.settings.flowBuildBasket.flowCookbook
-            .bookmarksSortOrder ?? "depthFirst"
+            .bookmarksSortOrder ?? "noteOrder"
         );
-        dropdown.onChange((value) => {
+        dropdown.onChange(async (value) => {
           this.plugin.settings.flowBuildBasket.flowCookbook.bookmarksSortOrder =
             value as Types.SortOrder;
-          this.plugin.saveSettings();
+          await this.plugin.saveSettings();
         });
       });
 
@@ -757,7 +757,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       setBookmarksGroup.onChange(async (value) => {
         this.plugin.settings.flowBuildBasket.flowCookbook.bookmarks =
           value.trim();
-        this.plugin.flowService.debouncedSaveSettings();
+        await this.plugin.flowService.debouncedSaveSettings();
       });
     });
 
@@ -800,25 +800,25 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       createFragment((desc) => {
         desc.createSpan({
           text: this.plugin.t(
-            "sortFlowPathsTagsProperties.setDesc.1 depth first"
+            "sortFlowPathsTagsProperties.setDesc.1 note order"
           ),
           cls: "text-emphasis",
         });
         desc.createSpan({
           text: this.plugin.t(
-            "sortFlowPathsTagsProperties.setDesc.2 description of depth first"
+            "sortFlowPathsTagsProperties.setDesc.2 description of note order"
           ),
         });
         desc.createEl("br");
         desc.createSpan({
           text: this.plugin.t(
-            "sortFlowPathsTagsProperties.setDesc.3 notes first"
+            "sortFlowPathsTagsProperties.setDesc.3 folder order"
           ),
           cls: "text-emphasis",
         });
         desc.createSpan({
           text: this.plugin.t(
-            "sortFlowPathsTagsProperties.setDesc.4 description of notes first"
+            "sortFlowPathsTagsProperties.setDesc.4 description of folder order"
           ),
         });
         desc.createEl("br");
@@ -833,15 +833,15 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     sortFlowPathsTagsProperties.addDropdown((dropdown) => {
       dropdown
         .addOption(
-          "depthFirst",
+          "noteOrder",
           this.plugin.t(
-            "sortFlowPathsTagsProperties.addDropdown.addOption.1 depth first"
+            "sortFlowPathsTagsProperties.addDropdown.addOption.1 note order"
           )
         )
         .addOption(
-          "filesFirst",
+          "folderOrder",
           this.plugin.t(
-            "sortFlowPathsTagsProperties.addDropdown.addOption.2 files first"
+            "sortFlowPathsTagsProperties.addDropdown.addOption.2 folder order"
           )
         );
       dropdown.setValue(
@@ -850,12 +850,12 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .pathsTagsPropertiesSortOrder
           ? this.plugin.settings.flowBuildBasket.flowCookbook
               .pathsTagsPropertiesSortOrder
-          : "depthFirst"
+          : "noteOrder"
       );
-      dropdown.onChange((value) => {
+      dropdown.onChange(async (value) => {
         this.plugin.settings.flowBuildBasket.flowCookbook.pathsTagsPropertiesSortOrder =
           value as Types.SortOrder;
-        this.plugin.saveSettings();
+        await this.plugin.saveSettings();
       });
     });
 
@@ -906,7 +906,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         desc.createEl("br");
         desc.createSpan({
           text: this.plugin.t(
-            "folderIncludeInput.setDesc.3 how to exlude subfolders"
+            "folderIncludeInput.setDesc.3 how to exclude subfolders"
           ),
         });
       })
@@ -948,7 +948,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           value === "."
             ? ""
             : value;
-        this.plugin.flowService.debouncedSaveSettings();
+        await this.plugin.flowService.debouncedSaveSettings();
       });
     });
 
@@ -979,7 +979,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           this.plugin.settings.flowBuildBasket.flowCookbook.folderExcluded =
             value;
 
-          this.plugin.flowService.debouncedSaveSettings();
+          await this.plugin.flowService.debouncedSaveSettings();
         });
       });
 
@@ -1010,7 +1010,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           this.plugin.settings.flowBuildBasket.flowCookbook.tagsIncluded =
             value;
 
-          this.plugin.flowService.debouncedSaveSettings();
+          await this.plugin.flowService.debouncedSaveSettings();
         });
       });
     const tagsExcludeInput = new Setting(createFlows);
@@ -1038,7 +1038,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           // cleanup happens on preview/save
           this.plugin.settings.flowBuildBasket.flowCookbook.tagsExcluded =
             value;
-          this.plugin.flowService.debouncedSaveSettings();
+          await this.plugin.flowService.debouncedSaveSettings();
         });
       });
     // ----- Properties
@@ -1073,7 +1073,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           // cleanup happens on preview/save
           this.plugin.settings.flowBuildBasket.flowCookbook.propsIncluded =
             value;
-          this.plugin.flowService.debouncedSaveSettings();
+          await this.plugin.flowService.debouncedSaveSettings();
         });
       });
     const propertiesExcludeInput = new Setting(createFlows);
@@ -1107,7 +1107,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           // cleanup happens on preview/save
           this.plugin.settings.flowBuildBasket.flowCookbook.propsExcluded =
             value;
-          this.plugin.flowService.debouncedSaveSettings();
+          await this.plugin.flowService.debouncedSaveSettings();
         });
       });
 
@@ -1120,7 +1120,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     }
 
     // onClick for the BOOKMARKS button
-    buttons.bookmarks.onClick(() => {
+    buttons.bookmarks.onClick(async () => {
       // set correct definition mode and show/hide correct elements
       this.plugin.settings.flowBuildBasket.definitionMode = "bookmarks";
       // update button
@@ -1133,7 +1133,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       bookmarksSortOrder.settingEl.show();
       chooseBookmarks.settingEl.show();
       showOrHideAlLFoldersTagsProps("hide");
-      this.plugin.saveSettings();
+      await this.plugin.saveSettings();
       this.display();
     });
 
@@ -1147,7 +1147,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     }
 
     // onClick for the foldersTagsProps button
-    buttons.foldersTagsProps.onClick(() => {
+    buttons.foldersTagsProps.onClick(async () => {
       this.plugin.settings.flowBuildBasket.definitionMode = "foldersTagsProps";
       this.plugin.flowService.radioButtonManager(
         buttons.foldersTagsProps,
@@ -1157,13 +1157,14 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       bookmarksSortOrder.settingEl.hide();
       chooseBookmarks.settingEl.hide();
       showOrHideAlLFoldersTagsProps("show");
-      this.plugin.saveSettings();
+      await this.plugin.saveSettings();
       this.display();
     });
 
     // ----------- Preview and save BUTTONS --------------------
     const previewButton = new ButtonComponent(containerEl);
     previewButton
+      .setClass("setting-tab-button-spacing")
       .setButtonText(
         this.plugin.t("previewButton.setButtonText preview your flow structure")
       )
@@ -1198,6 +1199,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
     const saveButton = new ButtonComponent(containerEl);
     saveButton
+      .setClass("setting-tab-button-spacing")
       .setButtonText(this.plugin.t("saveButton.setButtonText save flow def"))
       .onClick(async (buttonEl: MouseEvent) => {
         if (!this.plugin.settings.systemFolderPath) {
@@ -1237,7 +1239,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         );
 
         // save so we can pull our backup
-        this.plugin.saveSettings();
+        await this.plugin.saveSettings();
         await this.plugin.flowService.backupFlowDef(
           this.plugin.settings.flowBuildBasket.flowName
         );
@@ -1247,7 +1249,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           this.plugin.settings.flowBuildBasket
         );
 
-        this.plugin.saveSettings();
+        await this.plugin.saveSettings();
 
         this.display();
       });
@@ -1261,9 +1263,10 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         this.plugin.flowService.resetFlowBuildBasket(
           this.plugin.settings.flowBuildBasket
         );
-        this.plugin.saveSettings();
+        await this.plugin.saveSettings();
         this.display();
       });
+
     // ------- FLOW DISPLAY -----------------------------
     const flowDisplay = containerEl.createDiv({
       cls: "headline-container",
@@ -1436,7 +1439,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               };
 
               // save to make them stick
-              this.plugin.saveSettings();
+              await this.plugin.saveSettings();
 
               // rebuild display so values are shown in the input mask
               this.display();

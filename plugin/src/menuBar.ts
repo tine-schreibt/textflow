@@ -118,7 +118,10 @@ export class MenuBar {
   }
 
   // self explanatory
-  private setDropdownState(dropdown: string, state: "show" | "hide") {
+  private setDropdownState = async (
+    dropdown: string,
+    state: "show" | "hide"
+  ) => {
     if (
       dropdown === "nav" &&
       this.plugin.settings.flows[this.flowName].activeRegions[this.leafID]
@@ -127,7 +130,7 @@ export class MenuBar {
         this.leafID
       ].leafMenuBarSettings.navDropdownState = state;
 
-      this.plugin.saveSettings();
+      await this.plugin.saveSettings();
     }
     if (
       dropdown === "cursor" &&
@@ -137,9 +140,9 @@ export class MenuBar {
         this.leafID
       ].leafMenuBarSettings.cursorDropdownState = state;
 
-      this.plugin.saveSettings();
+      await this.plugin.saveSettings();
     }
-  }
+  };
 
   // -------- FUNCTIONS AND VARIABLES TO MANAGE THE MENU BAR INTERNALLY
 
@@ -367,6 +370,8 @@ export class MenuBar {
         .setClass(`menu-bar-button-sync-${goSync}`)
         .setClass("spacing")
         .setClass("clickable-icon")
+        .setTooltip(this.plugin.t("switcherModal.buttons sync"))
+
         .onClick(async () => {
           if (goSync === "neutral" || goSync === "must") {
             this.plugin.textFlowOperation = true;
@@ -389,6 +394,7 @@ export class MenuBar {
         .setClass(`menu-bar-button-rebuild-${goRebuild}`)
         .setClass("spacing")
         .setClass("clickable-icon")
+        .setTooltip(this.plugin.t("switcherModal.buttons rebuild"))
         .onClick(async () => {
           if (goRebuild === "neutral" || goRebuild === "must") {
             this.plugin.toggleEditable(this.associatedView, false);
