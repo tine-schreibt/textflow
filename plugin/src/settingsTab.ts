@@ -10,9 +10,8 @@ import {
 } from "obsidian";
 import TextFlow from "../main";
 import * as Types from "./types";
-import { dirname } from "path";
 import fs from "fs/promises";
-import path from "path";
+import path, { dirname, basename } from "path";
 
 // ----------------------------------
 // Find TOC by looking at settingsTab

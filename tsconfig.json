@@ -18,6 +18,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "typeRoots": ["./node_modules/@types", "./types"],
+    "types": ["node"],
     "resolveJsonModule": true
   },
   "include": ["plugin/**/*", "tsconfig.json", "plugin/main.ts", "plugin/src"]

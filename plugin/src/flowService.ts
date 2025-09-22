@@ -1,4 +1,3 @@
-import { getAPI } from "obsidian-dataview";
 import {
   App,
   ButtonComponent,
@@ -15,7 +14,8 @@ import { EditorView } from "@codemirror/view";
 import TextFlow from "../main";
 import * as Types from "./types";
 import fs from "fs/promises";
-import { posix as path, dirname, basename } from "path";
+import path, { dirname, basename } from "path";
+import { getAPI } from "obsidian-dataview";
 
 //-----------------------------------------------------------------------------------------
 // TOC
