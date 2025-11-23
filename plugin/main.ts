@@ -196,7 +196,6 @@ export default class TextFlowPlugin extends Plugin {
   alreadyActivated: { [key: string]: { [key: string]: boolean } } = {}; // flowName: {leafID: true}
   lastActiveRegion: string = "";
   inactivityThreshold: number = 5 * 60 * 1000;
-  fuzzNav: boolean = false; // to avoid scrolling interference
 
   // ---------------- Global objects and variables -------------------------
 
@@ -372,6 +371,7 @@ export default class TextFlowPlugin extends Plugin {
         callback: async () => {
           // flag for rebuild
           const changeArray = [];
+
           for (let flowName of Object.keys(this.settings.flows)) {
             const changes = await this.checkStatsForFlow(flowName);
             if (changes) {
@@ -2055,7 +2055,7 @@ ${pseudoElement}
     cursorOffset: number,
     view: MarkdownView
   ) => {
-    // this is to prevent error messages when activating a leaf triggers a rebuild
+    // this is to prevent error messages when activating a leaf triggers a check and/or rebuild
     if (this.settings.flows[flowName].flaggedForRebuild) return;
 
     const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
@@ -2150,7 +2150,7 @@ ${pseudoElement}
           this.notifyOfOverlap(activeRegion.path, flowName, leafID);
         }
       } else {
-        // if the compass just cirles, notify the user
+        // if the compass just cirles, check if it's just a tracking error
         new Notice(
           this.t("checkActiveRegion.notice region tracking error", {
             flowName: flowName,
@@ -2291,7 +2291,7 @@ ${pseudoElement}
         const endInFlow =
           text.indexOf(foundRegionMap.invisibleUUID) + matches[0].length;
 
-        // put together the object
+        // put the object together
         const activeRegionObject: Types.ActiveRegion = {
           currentCursorPos: cursorOffset,
           type: foundRegionMap.type,
@@ -2317,7 +2317,48 @@ ${pseudoElement}
         };
         return activeRegionObject;
       } else {
-        console.error("No matching region found for UID");
+        // If the UUID can't be found, we need to check if the flow was rebuilt
+        for (let region in Object.keys(flow.flowMap)) {
+          if (flow.flowMap[region].flowOrder === 1) {
+            // So grab the UUID of the first region of our flow object
+            if (!text.includes(flow.flowMap[region].invisibleUUID)) {
+              // If it can't be found in the text, there's something really wrong
+              console.error("No matching region found for UID");
+              return undefined;
+            } else {
+              // if we find the UUID, we make a placeholder region object
+              // the next cursor movement will replace it with correct data
+              const placeholderRegionObject: Types.ActiveRegion = {
+                currentCursorPos: cursorOffset,
+                type: flow.flowMap[region].type,
+                path: flow.flowMap[region].path,
+                invisibleUUID: UID,
+                flowOrder: flow.flowMap[region].flowOrder,
+                startInFlow: 0,
+                endInFlow:
+                  text.lastIndexOf(flow.flowMap[region].invisibleUUID) +
+                  flow.flowMap[region].invisibleUUID.length +
+                  4,
+                leafMenuBarSettings: {
+                  menuBarDisplayState:
+                    flow.activeRegions[leafID].leafMenuBarSettings
+                      .menuBarDisplayState,
+                  navDropdownState:
+                    flow.activeRegions[leafID].leafMenuBarSettings
+                      .navDropdownState,
+                  navDropdownSearchTerm:
+                    flow.activeRegions[leafID].leafMenuBarSettings
+                      .navDropdownSearchTerm,
+
+                  cursorDropdownState:
+                    flow.activeRegions[leafID].leafMenuBarSettings
+                      .cursorDropdownState,
+                },
+              };
+              return placeholderRegionObject;
+            }
+          }
+        }
       }
     } else {
       console.error("No marker found in text after cursor");
@@ -2392,7 +2433,6 @@ ${pseudoElement}
           this.t
         );
         await this.checkStatsForFlow(flowName);
-        statsOverlay.updateProgress((Date.now() - startTimer) / 1000);
         statsOverlay.remove();
       } else if (
         // if it's been dormant for at least five minutes
@@ -2408,7 +2448,6 @@ ${pseudoElement}
           this.t
         );
         await this.checkStatsForFlow(flowName);
-        statsOverlay.updateProgress((Date.now() - startTimer) / 1000);
         statsOverlay.remove();
       }
       // update activity
@@ -3101,8 +3140,7 @@ ${pseudoElement}
     let changed = false;
     let fileContent: string = await this.app.vault.read(sourceFile);
     const newHash = this.makeHash(fileContent);
-    // if there's no hash yet, it's because user just activated hashing
-    // so do a quick once-over for the flow
+    // if there's no hash yet for some reason, do a quick once-over for the flow
     if (!this.settings.hashes[path]) {
       await this.initialHashing(flowName);
     }
@@ -3117,11 +3155,6 @@ ${pseudoElement}
       } else {
         this.settings.flows[flowName].flaggedForRebuild = true;
       }
-      new Notice(
-        this.t("main.checkStats check stats feedback hash", {
-          path: path,
-        })
-      );
       this.settings.hashes[path] = newHash;
 
       changed = true;
