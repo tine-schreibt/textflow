@@ -413,7 +413,7 @@ export default class TextFlowPlugin extends Plugin {
         const flowName = this.isFlowFile(activeLeafPath);
         if (!flowName) return;
         // rebuild
-        this.flowService.rebuildFlow(flowName, "switcher");
+        await this.flowService.rebuildFlow(flowName, "switcher");
       },
     });
 
@@ -1594,7 +1594,6 @@ ${pseudoElement}
               }
               // this sets off a chain of functions which updates the active Region
               await plugin.checkActiveRegion(
-                plugin.settings.flows[flowName],
                 flowName,
                 leafID,
                 cursorOffset,
@@ -2049,7 +2048,6 @@ ${pseudoElement}
 
   // --------------- Listeners: Tracking helpers -----------------------------------------
   private checkActiveRegion = async (
-    flow: Types.FlowDef,
     flowName: string,
     leafID: string,
     cursorOffset: number,
@@ -2069,9 +2067,9 @@ ${pseudoElement}
     const text = cmEditor.state.doc.toString();
 
     // if this is the initial call for the leaf, give it an active region
-    if (!flow.activeRegions[leafID]) {
+    if (!this.settings.flows[flowName].activeRegions[leafID]) {
       let activeRegionObject = this.findActiveRegion(
-        flow,
+        flowName,
         editor,
         leafID,
         cursorOffset,
@@ -2080,7 +2078,8 @@ ${pseudoElement}
 
       // double check because active region could come back undefined
       if (activeRegionObject) {
-        flow.activeRegions[leafID] = activeRegionObject;
+        this.settings.flows[flowName].activeRegions[leafID] =
+          activeRegionObject;
         // then check if the active region overlaps and sent a notice
         if (activeRegionObject.path) {
           this.lastActiveRegion = activeRegionObject.path;
@@ -2093,21 +2092,26 @@ ${pseudoElement}
       }
     } else if (
       // if there are values, use those to check if we're still in our known region
-      cursorOffset > flow.activeRegions[leafID].startInFlow &&
-      cursorOffset < flow.activeRegions[leafID].endInFlow
+      cursorOffset >
+        this.settings.flows[flowName].activeRegions[leafID].startInFlow &&
+      cursorOffset <
+        this.settings.flows[flowName].activeRegions[leafID].endInFlow
     ) {
-      flow.activeRegions[leafID].currentCursorPos = cursorOffset;
-      if (flow.activeRegions[leafID].path) {
-        this.lastActiveRegion = flow.activeRegions[leafID].path;
+      this.settings.flows[flowName].activeRegions[leafID].currentCursorPos =
+        cursorOffset;
+      if (this.settings.flows[flowName].activeRegions[leafID].path) {
+        this.lastActiveRegion =
+          this.settings.flows[flowName].activeRegions[leafID].path;
       }
       await this.saveSettings();
       return;
     } else {
       // new terrain!
-      flow.activeRegions[leafID].currentCursorPos = cursorOffset;
+      this.settings.flows[flowName].activeRegions[leafID].currentCursorPos =
+        cursorOffset;
       // Use a map and compass
       let activeRegion = this.findActiveRegion(
-        flow,
+        flowName,
         editor,
         leafID,
         cursorOffset,
@@ -2130,7 +2134,7 @@ ${pseudoElement}
               activeRegionPath
             );
             if (flowHasEdits) {
-              this.flowService.rebuildFlow(flowName, "menuBar");
+              await this.flowService.rebuildFlow(flowName, "menuBar");
               new Notice(
                 this.t("main.cursorTracker.notice", {
                   flowName: flowName,
@@ -2140,7 +2144,7 @@ ${pseudoElement}
             }
           }
         }
-        flow.activeRegions[leafID] = activeRegion;
+        this.settings.flows[flowName].activeRegions[leafID] = activeRegion;
         await this.saveSettings();
         this.decorateSourceNotes("update");
         if (view.menuBar) {
@@ -2192,8 +2196,9 @@ ${pseudoElement}
   };
 
   // ------------- region tracking utilities ----------------------
+  // returns an activeRegion object
   private findActiveRegion = (
-    flow: Types.FlowDef,
+    flowName: string,
     editor: ObsidianEditor,
     leafID: string,
     cursorOffset: number,
@@ -2205,9 +2210,9 @@ ${pseudoElement}
     // Handle extreme conditions
     if (cursorOffset === 0) {
       // Get first region from flow map
-      const firstRegion = Object.entries(flow.flowMap).find(
-        ([_, regionMap]) => regionMap.flowOrder === 1
-      );
+      const firstRegion = Object.entries(
+        this.settings.flows[flowName].flowMap
+      ).find(([_, regionMap]) => regionMap.flowOrder === 1);
 
       if (firstRegion) {
         const [path, regionMap] = firstRegion;
@@ -2227,16 +2232,21 @@ ${pseudoElement}
             text.indexOf(regionMap.invisibleUUID) +
             regionMap.invisibleUUID.length +
             4,
-          leafMenuBarSettings: flow.activeRegions[leafID].leafMenuBarSettings,
+          leafMenuBarSettings:
+            this.settings.flows[flowName].activeRegions[leafID]
+              .leafMenuBarSettings,
         };
       }
     }
 
     if (cursorOffset >= text.length - 46) {
       // Get last region from flow map
-      const lastRegion = Object.entries(flow.flowMap).find(
+      const lastRegion = Object.entries(
+        this.settings.flows[flowName].flowMap
+      ).find(
         ([_, regionMap]) =>
-          regionMap.flowOrder === Object.keys(flow.flowMap).length
+          regionMap.flowOrder ===
+          Object.keys(this.settings.flows[flowName].flowMap).length
       );
 
       if (lastRegion) {
@@ -2253,12 +2263,18 @@ ${pseudoElement}
           invisibleUUID: regionMap.invisibleUUID,
           flowOrder: regionMap.flowOrder,
           startInFlow:
-            this.findStartOfRegion(flow, regionMap.flowOrder, text) || 0,
+            this.findStartOfRegion(
+              this.settings.flows[flowName],
+              regionMap.flowOrder,
+              text
+            ) || 0,
           endInFlow:
             text.lastIndexOf(regionMap.invisibleUUID) +
             regionMap.invisibleUUID.length +
             4,
-          leafMenuBarSettings: flow.activeRegions[leafID].leafMenuBarSettings,
+          leafMenuBarSettings:
+            this.settings.flows[flowName].activeRegions[leafID]
+              .leafMenuBarSettings,
         };
       }
     }
@@ -2271,9 +2287,9 @@ ${pseudoElement}
       const UIDLength = matches[0].length - 4;
       const UID = matches[0].slice(0, UIDLength);
 
-      const foundRegion = Object.entries(flow.flowMap).find(
-        ([_, foundRegionMap]) => foundRegionMap.invisibleUUID === UID
-      );
+      const foundRegion = Object.entries(
+        this.settings.flows[flowName].flowMap
+      ).find(([_, foundRegionMap]) => foundRegionMap.invisibleUUID === UID);
 
       if (foundRegion) {
         const [foundRegionPath, foundRegionMap] = foundRegion;
@@ -2282,7 +2298,11 @@ ${pseudoElement}
         let newStartInFlow;
         if (foundRegionMap.flowOrder > 1) {
           newStartInFlow =
-            this.findStartOfRegion(flow, foundRegionMap.flowOrder, text) || 0;
+            this.findStartOfRegion(
+              this.settings.flows[flowName],
+              foundRegionMap.flowOrder,
+              text
+            ) || 0;
         } else {
           newStartInFlow = 0;
         }
@@ -2302,68 +2322,26 @@ ${pseudoElement}
           endInFlow: endInFlow,
           leafMenuBarSettings: {
             menuBarDisplayState:
-              flow.activeRegions[leafID].leafMenuBarSettings
-                .menuBarDisplayState,
+              this.settings.flows[flowName].activeRegions[leafID]
+                .leafMenuBarSettings.menuBarDisplayState,
             navDropdownState:
-              flow.activeRegions[leafID].leafMenuBarSettings.navDropdownState,
+              this.settings.flows[flowName].activeRegions[leafID]
+                .leafMenuBarSettings.navDropdownState,
             navDropdownSearchTerm:
-              flow.activeRegions[leafID].leafMenuBarSettings
-                .navDropdownSearchTerm,
+              this.settings.flows[flowName].activeRegions[leafID]
+                .leafMenuBarSettings.navDropdownSearchTerm,
 
             cursorDropdownState:
-              flow.activeRegions[leafID].leafMenuBarSettings
-                .cursorDropdownState,
+              this.settings.flows[flowName].activeRegions[leafID]
+                .leafMenuBarSettings.cursorDropdownState,
           },
         };
         return activeRegionObject;
-      } else {
-        // If the UUID can't be found, we need to check if the flow was rebuilt
-        for (let region in Object.keys(flow.flowMap)) {
-          if (flow.flowMap[region].flowOrder === 1) {
-            // So grab the UUID of the first region of our flow object
-            if (!text.includes(flow.flowMap[region].invisibleUUID)) {
-              // If it can't be found in the text, there's something really wrong
-              console.error("No matching region found for UID");
-              return undefined;
-            } else {
-              // if we find the UUID, we make a placeholder region object
-              // the next cursor movement will replace it with correct data
-              const placeholderRegionObject: Types.ActiveRegion = {
-                currentCursorPos: cursorOffset,
-                type: flow.flowMap[region].type,
-                path: flow.flowMap[region].path,
-                invisibleUUID: UID,
-                flowOrder: flow.flowMap[region].flowOrder,
-                startInFlow: 0,
-                endInFlow:
-                  text.lastIndexOf(flow.flowMap[region].invisibleUUID) +
-                  flow.flowMap[region].invisibleUUID.length +
-                  4,
-                leafMenuBarSettings: {
-                  menuBarDisplayState:
-                    flow.activeRegions[leafID].leafMenuBarSettings
-                      .menuBarDisplayState,
-                  navDropdownState:
-                    flow.activeRegions[leafID].leafMenuBarSettings
-                      .navDropdownState,
-                  navDropdownSearchTerm:
-                    flow.activeRegions[leafID].leafMenuBarSettings
-                      .navDropdownSearchTerm,
-
-                  cursorDropdownState:
-                    flow.activeRegions[leafID].leafMenuBarSettings
-                      .cursorDropdownState,
-                },
-              };
-              return placeholderRegionObject;
-            }
-          }
-        }
       }
     } else {
-      console.error("No marker found in text after cursor");
+      console.error("textFlow: No UUID marker found in this.");
+      return undefined;
     }
-    return undefined;
   };
 
   // ------------------
@@ -3049,14 +3027,17 @@ ${pseudoElement}
     const changed = results.some((check) => check === true);
 
     if (changed) {
-      this.settings.flows[flowName].flaggedForRebuild = true;
-      await this.saveSettings();
       // check if the flow is active/in active leaf
       if (this.settings.activeFlowObject[flowName]) {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (view?.file?.path.endsWith(`${flowName}.md`)) {
-          this.flowService.rebuildFlow(flowName, "switcher");
+          // rebuild immediately
+          await this.flowService.rebuildFlow(flowName, "switcher");
         }
+      } else {
+        // if it's inactive, just flag for rebuild
+        this.settings.flows[flowName].flaggedForRebuild = true;
+        await this.saveSettings();
       }
     }
     return changed;
@@ -3091,7 +3072,6 @@ ${pseudoElement}
     if (Math.abs(newMtime - oldMtime) > this.MTIME_EPSILON) {
       if (this.settings.checkExternalEdits === "mtime") {
         changed = true;
-        this.settings.flows[flowName].flaggedForRebuild = true;
       } else {
         const checked = await this.checkHash(sourceFile, path, flowName);
         if (checked) changed = true;
@@ -3149,14 +3129,8 @@ ${pseudoElement}
       const newMtime = sourceFile.stat.mtime;
       this.settings.flows[flowName].flowMap[path].mtime = newMtime;
     } else {
-      // if there's been an actual edit to the content, flag the flow
-      if (this.settings.activeFlowObject[flowName]) {
-        this.flowService.rebuildFlow(flowName, "switcher");
-      } else {
-        this.settings.flows[flowName].flaggedForRebuild = true;
-      }
+      // if there's been an actual edit to the content, update the hash
       this.settings.hashes[path] = newHash;
-
       changed = true;
     }
     await this.saveSettings();
