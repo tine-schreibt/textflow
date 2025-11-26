@@ -1295,30 +1295,26 @@ export class FlowService {
     // Get an object started for the rest of cases
     let progressOverlays: { [key: string]: LoadingOverlay } = {};
     const IDAndEditorObject: { [key: string]: WorkspaceLeaf } = {};
-    if (caller != "settingsTab") {
-      if (this.plugin.settings.activeFlowObject[flowName]) {
-        Object.keys(this.plugin.settings.flows[flowName].activeRegions).forEach(
-          async (leafID) => {
-            const leaves = this.app.workspace.getLeavesOfType("markdown");
-            const leaf = leaves.find(
-              (newLeaf) => (newLeaf as any).id === leafID
-            );
-            if (leaf) {
-              // make sure the leaf has ben properly initialised
-              await leaf.loadIfDeferred();
+    if (this.plugin.settings.activeFlowObject[flowName]) {
+      Object.keys(this.plugin.settings.flows[flowName].activeRegions).forEach(
+        async (leafID) => {
+          const leaves = this.app.workspace.getLeavesOfType("markdown");
+          const leaf = leaves.find((newLeaf) => (newLeaf as any).id === leafID);
+          if (leaf) {
+            // make sure the leaf has ben properly initialised
+            await leaf.loadIfDeferred();
 
-              IDAndEditorObject[leafID] = leaf;
-              progressOverlays[leafID] = new LoadingOverlay(
-                leaf,
-                flowName,
-                this.app,
-                this.plugin,
-                this.plugin.t
-              );
-            }
+            IDAndEditorObject[leafID] = leaf;
+            progressOverlays[leafID] = new LoadingOverlay(
+              leaf,
+              flowName,
+              this.app,
+              this.plugin,
+              this.plugin.t
+            );
           }
-        );
-      }
+        }
+      );
     }
 
     // the part that persists flow frontmatter
@@ -1462,49 +1458,6 @@ export class FlowService {
               }),
               0
             );
-
-            // remove the overlay/dismiss the progress toast
-            if (caller === "settingsTab") {
-              if (progressToast) {
-                progressToast.close();
-              }
-            } else {
-              Object.keys(progressOverlays).forEach((leafID) => {
-                Object.keys(this.plugin.settings.activeFlowObject).forEach(
-                  (flowName) => {
-                    if (
-                      this.plugin.settings.activeFlowObject[flowName].leafID
-                    ) {
-                      if (
-                        this.plugin.settings.flows[flowName].activeRegions[
-                          leafID
-                        ]
-                      ) {
-                        // check if we got a cursor position
-                        if (
-                          !this.plugin.settings.flows[flowName]
-                            .persistentCursors ||
-                          !this.plugin.settings.flows[flowName]
-                            .persistentCursors[leafID] ||
-                          !this.plugin.settings.flows[flowName]
-                            .persistentCursors[leafID].cursors
-                        ) {
-                          // if we don't that's it
-                          progressOverlays[leafID].remove();
-                        } else {
-                          // if we do, we first scroll there
-                          const view = IDAndEditorObject[leafID];
-                          if (view instanceof MarkdownView) {
-                            this.restoreCursorPos(flowName, view, leafID);
-                          }
-                          progressOverlays[leafID].remove();
-                        }
-                      }
-                    }
-                  }
-                );
-              });
-            }
             return;
           }
 
@@ -1560,7 +1513,47 @@ export class FlowService {
         mapValueBasket.concatenatedFileContents
       );
 
-      // remove the flags
+      // remove the progress toast if it exists
+      if (progressToast) {
+        progressToast.close();
+      }
+      // and finally, scroll and remove progress overlay
+      Object.keys(progressOverlays).forEach((leafID) => {
+        Object.keys(this.plugin.settings.activeFlowObject).forEach(
+          (flowName) => {
+            if (this.plugin.settings.activeFlowObject[flowName][leafID]) {
+              if (this.plugin.settings.flows[flowName].activeRegions[leafID]) {
+                // check if we got a cursor position
+                if (
+                  !this.plugin.settings.flows[flowName].persistentCursors ||
+                  !this.plugin.settings.flows[flowName].persistentCursors[
+                    leafID
+                  ] ||
+                  !this.plugin.settings.flows[flowName].persistentCursors[
+                    leafID
+                  ].cursors
+                ) {
+                  // if we don't that's it
+                  return;
+                } else {
+                  // if we do, we first scroll there
+                  const leaf = IDAndEditorObject[leafID];
+                  if (!leaf || !(leaf.view instanceof MarkdownView)) {
+                    progressOverlays[leafID].remove();
+                    return;
+                  }
+                  const view = leaf.view;
+                  if (view instanceof MarkdownView) {
+                    this.restoreCursorPos(flowName, view, leafID);
+                  }
+                  progressOverlays[leafID].remove();
+                }
+              }
+            }
+          }
+        );
+      });
+
       await this.plugin.saveSettings();
     }
   };
@@ -1709,8 +1702,12 @@ export class FlowService {
     }
   };
 
-  // this was written by Claude 3.5 Sonnet
-  scrollToPos = (editor: Types.ObsidianEditor, cursorPos: number) => {
+  // this function was written by Claude 3.5 Sonnet
+  scrollToPos = (
+    editor: Types.ObsidianEditor,
+    cursorPos: number,
+    dontFocus?: boolean
+  ) => {
     const cmEditor = editor.cm;
     if (!cmEditor) return;
 
@@ -1740,7 +1737,9 @@ export class FlowService {
       const targetScrollTop = (targetLine - 1) * lineHeight;
       scrollDOM.scrollTop = targetScrollTop;
 
-      cmEditor.focus();
+      if (!dontFocus) {
+        cmEditor.focus();
+      }
     }
   };
 
