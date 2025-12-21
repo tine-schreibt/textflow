@@ -1208,9 +1208,10 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           return;
         }
 
+        // check if the user is renaming a flow
         this.plugin.flowService.renameFlow();
 
-        // if checks and flow creation haven't been performed by the preview button
+        // checks and flow creation 
         const validation = this.plugin.flowService.isValidFlowName(
           this.plugin.settings.flowBuildBasket.flowName
         );
