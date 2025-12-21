@@ -446,7 +446,6 @@ export default class TextFlowPlugin extends Plugin {
           }
         }
         if (flowName) {
-          let flow = this.settings.flows[flowName];
           new Modals.FuzzyNavModal(
             this.app,
             this,
@@ -1596,7 +1595,6 @@ ${pseudoElement}
               // this sets off a chain of functions which updates the active Region
               await plugin.checkActiveRegion(
                 flowName,
-                plugin.settings.flows[flowName],
                 leafID,
                 cursorOffset,
                 view
@@ -2051,13 +2049,12 @@ ${pseudoElement}
   // --------------- Listeners: Tracking helpers -----------------------------------------
   private checkActiveRegion = async (
     flowName: string,
-    flow: Types.FlowDef,
     leafID: string,
     cursorOffset: number,
     view: MarkdownView
   ) => {
     // this is to prevent error messages when activating a leaf triggers a check and/or rebuild
-    if (flow.flaggedForRebuild) return;
+    if (this.settings.flows[flowName].flaggedForRebuild) return;
 
     const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (!activeView) return;
@@ -2070,7 +2067,7 @@ ${pseudoElement}
     const text = cmEditor.state.doc.toString();
 
     // if this is the initial call for the leaf, give it an active region
-    if (!flow.activeRegions[leafID]) {
+    if (!this.settings.flows[flowName].activeRegions[leafID]) {
       let activeRegionObject = this.findActiveRegion(
         flowName,
         editor,
@@ -2081,7 +2078,8 @@ ${pseudoElement}
 
       // double check because active region could come back undefined
       if (activeRegionObject) {
-        flow.activeRegions[leafID] = activeRegionObject;
+        this.settings.flows[flowName].activeRegions[leafID] =
+          activeRegionObject;
         // then check if the active region overlaps and sent a notice
         if (activeRegionObject.path) {
           this.lastActiveRegion = activeRegionObject.path;
@@ -2094,18 +2092,23 @@ ${pseudoElement}
       }
     } else if (
       // if there are values, use those to check if we're still in our known region
-      cursorOffset > flow.activeRegions[leafID].startInFlow &&
-      cursorOffset < flow.activeRegions[leafID].endInFlow
+      cursorOffset >
+        this.settings.flows[flowName].activeRegions[leafID].startInFlow &&
+      cursorOffset <
+        this.settings.flows[flowName].activeRegions[leafID].endInFlow
     ) {
-      flow.activeRegions[leafID].currentCursorPos = cursorOffset;
-      if (flow.activeRegions[leafID].path) {
-        this.lastActiveRegion = flow.activeRegions[leafID].path;
+      this.settings.flows[flowName].activeRegions[leafID].currentCursorPos =
+        cursorOffset;
+      if (this.settings.flows[flowName].activeRegions[leafID].path) {
+        this.lastActiveRegion =
+          this.settings.flows[flowName].activeRegions[leafID].path;
       }
       await this.saveSettings();
       return;
     } else {
       // new terrain!
-      flow.activeRegions[leafID].currentCursorPos = cursorOffset;
+      this.settings.flows[flowName].activeRegions[leafID].currentCursorPos =
+        cursorOffset;
       // Use a map and compass
       let activeRegion = this.findActiveRegion(
         flowName,
@@ -2141,7 +2144,7 @@ ${pseudoElement}
             }
           }
         }
-        flow.activeRegions[leafID] = activeRegion;
+        this.settings.flows[flowName].activeRegions[leafID] = activeRegion;
         await this.saveSettings();
         this.decorateSourceNotes("update");
         if (view.menuBar) {

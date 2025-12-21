@@ -557,7 +557,7 @@ export class RestoreFlowDefModal extends Modal {
     const rawContents = await fs.readFile(backupPath, "utf-8");
     parsedJson = JSON.parse(rawContents);
 
-    console.log("parsedJson.length ", parsedJson.length)
+    console.log("parsedJson.length ", parsedJson.length);
     if (Object.keys(parsedJson).length < 5) return null;
 
     return { parsedJson, backupPath };
