@@ -1236,6 +1236,7 @@ ${pseudoElement}
       this.app.vault.on(
         "rename",
         async (file: TAbstractFile, oldPath: string) => {
+          // return early
           if (this.textFlowOperation) return;
 
           let newParentFolder = normalizePath(dirname(file.path));
@@ -1249,7 +1250,7 @@ ${pseudoElement}
             oldParentFolder = file.path;
           }
 
-          // Check if the user renamed the system folder
+          // CHECK FOR SYSTEM FOLDER ITSELF
           if (
             basename(oldPath) === this.textFlowSystemFolderName &&
             basename(file.path) != this.textFlowSystemFolderName
@@ -1270,32 +1271,53 @@ ${pseudoElement}
             return;
           }
 
-          for (let flowName of Object.keys(this.settings.flows)) {
-            // check if the user renamed or moved a flow
-            if (basename(oldPath) === `${flowName}.md`) {
-              if (basename(file.path) != `${flowName}.md`) {
-                // revert renaming
-                this.textFlowOperation = true;
-                await this.app.vault.rename(file, oldPath);
-                this.textFlowOperation = false;
-
+          // CHECK FOR FLOW FILES
+          let rawNewFileName = basename(file.path).slice(
+            0,
+            basename(file.path).length - 3
+          );
+          // is the file in sysFolder?
+          if (newParentFolder === this.textFlowSystemFolderName) {
+            // if it's a valid flow file, all is well
+            if (this.settings.flows[rawNewFileName]) {
+              return;
+            } // if it's not a valid flow file, check where it came from
+            else {
+              // notify the user
+              if (oldParentFolder === this.textFlowSystemFolderName) {
                 new Notice(
                   this.t("main.renameListener.notice use settings to rename")
                 );
-                return;
-              }
-              if (!newParentFolder.endsWith(this.textFlowSystemFolderName)) {
-                // revert move
-                this.textFlowOperation = true;
-                await this.app.vault.rename(file, oldPath);
-                this.textFlowOperation = false;
-
+              } else {
                 new Notice(
-                  this.t("main.renameListener.notice use export to export")
+                  this.t(
+                    "main.renameListener.notice element moved to system folder; was moved back"
+                  )
                 );
-                return;
               }
+              // then revert the rename
+              this.textFlowOperation = true;
+              await this.app.vault.rename(file, oldPath);
+              this.textFlowOperation = false;
+              return;
             }
+          } else {
+            // if it's outside the sys folder, check if it's a flow
+            if (this.settings.flows[rawNewFileName]) {
+              // and if they moved it from the sys folder
+              if (oldParentFolder === this.textFlowSystemFolderName) {
+                new Notice(this.t("main.renameListener.notice use export"));
+              }
+              // then revert the rename
+              this.textFlowOperation = true;
+              await this.app.vault.rename(file, oldPath);
+              this.textFlowOperation = false;
+              return;
+            }
+          }
+
+          // CHECK EVERYTHING ELSE
+          for (let flowName of Object.keys(this.settings.flows)) {
             if (this.settings.flows[flowName].flaggedForRebuild) continue;
 
             // if the flow contained the old path, flag and move on
@@ -1346,6 +1368,7 @@ ${pseudoElement}
 
     this.registerEvent(
       this.app.vault.on("create", async (file: TAbstractFile) => {
+        // return early if textFlow is doing stuff
         if (this.isLoading) return;
         if (this.textFlowOperation) return;
         if (this.isRebuilding) return;
@@ -1356,14 +1379,11 @@ ${pseudoElement}
         }
 
         if (
-          // if the user put a new file in the system folder
-          // the check for .md is so that stuff by - for example - Edit History doesn't get flagged
+          // if the user put a new file in the system folder the check for .md is so that stuff by - for example - Edit History doesn't get flagged
           parentFolder === this.settings.systemFolderPath &&
           file.path.endsWith(".md")
         ) {
-          // the user has set 'create new file in same folder as active file'
-          // so we simulate that behaviour by getting the path for last active region
-          // and moving the file in the respective folder
+          // If a new .md file gets created in the system folder, it's because the user has set 'create new file in same folder as active file' so we simulate that behaviour by getting the path for last active region and moving the file into the respective folder
           const baseName = basename(file.path);
           const basePath = dirname(this.lastActiveRegion);
           const newFileName = await this.getUniqueFileName(basePath, baseName);
@@ -1834,7 +1854,7 @@ ${pseudoElement}
   // it is removed onunload. It's also a nervous steed, so just admire it from afar.
   private boundFileExplorerClick: (event: MouseEvent) => void;
 
-  fileExplorerOpenClickListener() {
+  fileExplorerOpenClickListener = () => {
     this.boundFileExplorerClick = async (event: MouseEvent) => {
       if (!this.settings.explorerListener) {
         return;
@@ -1865,7 +1885,7 @@ ${pseudoElement}
       const activeFlowObjectSnapshot = this.settings.activeFlowObject;
 
       // check if the user likely isn't trying to open a file with their click
-      // it doesn't do much, though.
+      // it doesn't do much, though, with regards to the multi-select bug.
       if (event.shiftKey || event.ctrlKey || event.metaKey) {
         return;
       }
@@ -1877,6 +1897,7 @@ ${pseudoElement}
 
       let clickHandled = false;
 
+      // get all leaves and check if the note the user wants is already open
       const leaves = this.app.workspace.getLeavesOfType("markdown");
       const noteIsOpen = leaves.find(
         (leaf) =>
@@ -1884,6 +1905,7 @@ ${pseudoElement}
           (leaf.view as MarkdownView).file?.path === clickedFilePath
       );
 
+      // then check if it's a flow file
       const flowName = this.isFlowFile(clickedFilePath);
       if (flowName) {
         clickHandled = true;
@@ -2044,7 +2066,7 @@ ${pseudoElement}
         }
       }
     };
-  }
+  };
 
   // --------------- Listeners: Tracking helpers -----------------------------------------
   private checkActiveRegion = async (
@@ -2552,9 +2574,11 @@ ${pseudoElement}
       const leaf = this.app.workspace.getLeaf("tab"); // Prefer opening in a tab
       await leaf.openFile(flowFile);
 
-      // now set it up and focus it
+      // now open and focus the flow, pin it, and set up tracking and stuff
       if (leaf.view instanceof MarkdownView) {
-        this.app.workspace.setActiveLeaf(leaf, { focus: true }); // Make sure to activate the leaf with focus
+        this.app.workspace.setActiveLeaf(leaf, { focus: true });
+        leaf.setPinned(true);
+        this.setupFlowView(flowName, leaf.view);
       } else {
         console.error(
           "textFlow: View is not MarkdownView after opening flow file"
