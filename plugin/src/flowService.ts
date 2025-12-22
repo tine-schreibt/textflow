@@ -310,7 +310,8 @@ export class FlowService {
   };
 
   renameFlow = async () => {
-    this.plugin.textFlowOperation = true;
+    // this only handles the clean-up of the old version;
+    // the creation of the new version happens in the save button code
     if (
       this.plugin.settings.flowBuildBasket.flowName !=
         this.plugin.settings.flowBuildBasket.oldFlowName &&
@@ -321,24 +322,8 @@ export class FlowService {
       const newFlowName = this.plugin.settings.flowBuildBasket.flowName;
       const oldFlowName = this.plugin.settings.flowBuildBasket.oldFlowName;
 
+      // sync everything so no edits get lost
       this.plugin.syncAllLeaves();
-
-      // rename the file if it exists
-      const oldFlowPath = normalizePath(
-        `${this.plugin.settings.systemFolderPath}/${oldFlowName}.md`
-      );
-      const newFlowPath = normalizePath(
-        `${this.plugin.settings.systemFolderPath}/${newFlowName}.md`
-      );
-      const flowFile = this.app.vault.getAbstractFileByPath(oldFlowPath);
-      // rename file if present; in two steps to make TypeScript happy
-      if (flowFile) {
-        if (flowFile instanceof TFile) {
-          this.plugin.textFlowOperation = true;
-          await this.app.vault.rename(flowFile, newFlowPath);
-          this.plugin.textFlowOperation = false;
-        }
-      }
 
       // reset all active leaves of the flow
       const leaves = this.app.workspace.getLeavesOfType("markdown");
@@ -358,6 +343,7 @@ export class FlowService {
           }
         }
       );
+
       // nix the flow's activeRegions
       if (this.plugin.settings.flows[oldFlowName]) {
         if (this.plugin.settings.flows[oldFlowName].activeRegions) {
@@ -392,7 +378,22 @@ export class FlowService {
       // finally, delete the old object
       delete this.plugin.settings.flows[oldFlowName];
 
+      // save it all
       await this.plugin.saveSettings();
+
+      // and finally delete the flow file if it exists
+      const oldFlowPath = normalizePath(
+        `${this.plugin.settings.systemFolderPath}/${oldFlowName}.md`
+      );
+      const newFlowPath = normalizePath(
+        `${this.plugin.settings.systemFolderPath}/${newFlowName}.md`
+      );
+      const flowFile = this.app.vault.getAbstractFileByPath(oldFlowPath);
+      if (flowFile) {
+        if (flowFile instanceof TFile) {
+          await this.app.vault.delete(flowFile);
+        }
+      }
     }
   };
 

@@ -259,8 +259,9 @@
   "main.editorListener Reveal source": "textFlow: Reveal source not in file explorer",
 
   "main.renameListener.notice don't rename system folder": "textFlow: Please don't rename ${textFlowSystemFolderName}. Revert the change so textFlow can work again.",
+  "main.renameListener.notice use export": "textFlow: Please use the export function to copy flow files out of textFlows system folder.",
   "main.renameListener.notice use settings to rename": "textFlow: Please use textFlow settings to rename flows.",
-  "main.renameListener.notice use export to export": "textFlow: Please use the export function to get a copy of your flow outside the textFlowSystemFolder (see menu bar or command palette).",
+  "main.renameListener.notice element moved to system folder; was moved back": "textFlow: A file was moved to textFlow's system folder. The action has been reverted.",
   "main.renameListener.notice old file name was restored": "textFlow: Old file name/path has been restored.",
   "main.renameListener.notice new element created in system folder; please remove": "textFlow: You just created a new element in the system folder. Please move it somewhere else.",
 
