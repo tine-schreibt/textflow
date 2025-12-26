@@ -197,6 +197,11 @@ export default class TextFlowPlugin extends Plugin {
   lastActiveRegion: string = "";
   inactivityThreshold: number = 5 * 60 * 1000;
 
+  // ----- Stuff to avoid saveSettings race conditions
+  private saveQueue: Promise<void> = Promise.resolve();
+  private saveDebounceTimer: NodeJS.Timeout | null = null;
+  private readonly SAVE_DEBOUNCE_MS = 100; // Adjust as needed (100ms = batch saves within 100ms)
+
   // ---------------- Global objects and variables -------------------------
 
   textFlowSystemFolderName = "textFlowSystemFolder";
@@ -231,8 +236,33 @@ export default class TextFlowPlugin extends Plugin {
   }
 
   // ---------------------------------------------------------------
-  saveSettings = async () => {
-    await this.saveData(this.settings);
+  saveSettings = async (): Promise<void> => {
+    // Debug: log stack trace to see where this is called from
+    const stack = new Error().stack;
+    const caller = stack?.split("\n")[2]?.trim() || "unknown";
+    console.log(`saving settings from: ${caller}`); // Clear any pending debounce timer
+    if (this.saveDebounceTimer) {
+      clearTimeout(this.saveDebounceTimer);
+      this.saveDebounceTimer = null;
+    }
+
+    // Return a promise that will execute after the current save queue completes
+    return new Promise<void>((resolve, reject) => {
+      // Add to queue - this ensures sequential execution
+      this.saveQueue = this.saveQueue
+        .then(async () => {
+          try {
+            await this.saveData(this.settings);
+            resolve();
+          } catch (error) {
+            console.error("Failed to save settings:", error);
+            reject(error);
+          }
+        })
+        .catch((error) => {
+          reject(error);
+        });
+    });
   };
 
   // ---------------------------------------------------------------
@@ -2578,7 +2608,6 @@ ${pseudoElement}
         this.app.workspace.setActiveLeaf(leaf, { focus: true });
         this.setupFlowView(flowName, leaf.view);
         leaf.setPinned(true);
-
       } else {
         console.error(
           "textFlow: View is not MarkdownView after opening flow file"
@@ -3115,8 +3144,8 @@ ${pseudoElement}
           }
         }
       });
+      await this.saveSettings();
     }
-    await this.saveSettings();
     return changed;
   };
 
