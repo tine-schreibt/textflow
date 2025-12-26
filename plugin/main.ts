@@ -2213,7 +2213,6 @@ ${pseudoElement}
           0
         );
       }
-      await this.saveSettings();
       return;
     }
   };
@@ -3087,10 +3086,6 @@ ${pseudoElement}
           // rebuild immediately
           await this.flowService.rebuildFlow(flowName, "switcher");
         }
-      } else {
-        // if it's inactive, just flag for rebuild
-        this.settings.flows[flowName].flaggedForRebuild = true;
-        await this.saveSettings();
       }
     }
     return changed;
@@ -3104,6 +3099,7 @@ ${pseudoElement}
 
     let changed = false;
 
+    // check for deletions
     const sourceFile = this.app.vault.getFileByPath(path);
     if (!sourceFile) {
       if (this.settings.hashes[path]) {
@@ -3113,26 +3109,38 @@ ${pseudoElement}
       return changed;
     }
 
-    if (this.settings.checkExternalEdits === "always hash") {
-      if (this.settings.checkExternalEdits === "always hash") {
-        const check = await this.checkHash(sourceFile, path, flowName);
-        if (check) changed = true;
+    // check mtime
+    if (
+      this.settings.checkExternalEdits === "mtime" ||
+      this.settings.checkExternalEdits === "mtime+hash"
+    ) {
+      const oldMtime = this.settings.flows[flowName].flowMap[path].mtime;
+      const newMtime = sourceFile.stat.mtime;
+      if (Math.abs(newMtime - oldMtime) > this.MTIME_EPSILON) {
+        if (this.settings.checkExternalEdits === "mtime") {
+          changed = true;
+        } else {
+          const hashDiff = await this.checkHash(sourceFile, path, flowName);
+          if (hashDiff) changed = true;
+        }
       }
     }
 
-    const oldMtime = this.settings.flows[flowName].flowMap[path].mtime;
-    const newMtime = sourceFile.stat.mtime;
-    if (Math.abs(newMtime - oldMtime) > this.MTIME_EPSILON) {
-      if (this.settings.checkExternalEdits === "mtime") {
-        changed = true;
-      } else {
-        const checked = await this.checkHash(sourceFile, path, flowName);
-        if (checked) changed = true;
+    // check hash
+    if (this.settings.checkExternalEdits === "always hash") {
+      if (this.settings.checkExternalEdits === "always hash") {
+        const hashDiff = await this.checkHash(sourceFile, path, flowName);
+        if (hashDiff) changed = true;
       }
     }
 
     if (changed) {
-      this.settings.flows[flowName].flaggedForRebuild = true;
+      // handle the parent flow itself
+      if (!this.settings.flows[flowName].flaggedForRebuild) {
+        this.settings.flows[flowName].flaggedForRebuild = true;
+      }
+
+      // check other flows containing the changed note
       Object.keys(this.settings.flows).forEach((iteratorFlowName) => {
         if (
           !this.settings.flows[iteratorFlowName].flaggedForRebuild &&

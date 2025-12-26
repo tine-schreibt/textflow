@@ -1266,8 +1266,6 @@ export class FlowService {
       currentEnd: 0,
       idDivider: "",
     };
-
-    await this.plugin.saveSettings();
   };
 
   // ------ The flowBuilder --------------------------

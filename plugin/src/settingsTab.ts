@@ -51,7 +51,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     const systemFolder = this.plugin.flowService.checkSystemFolder();
     if (systemFolder) {
       this.plugin.settings.systemFolderPath = systemFolder.path;
-      await this.plugin.saveSettings();
     }
     let newSystemFolderParent = "";
 
@@ -85,7 +84,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           )
           .onChange(async (value) => {
             newSystemFolderParent = normalizePath(value);
-            await this.plugin.flowService.debouncedSaveSettings();
           })
       )
       .addButton((systemFolderCreateOrMoveButton) => {
@@ -104,7 +102,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               `${newSystemFolderParent}/${this.plugin.textFlowSystemFolderName}`
             );
             this.plugin.settings.systemFolderPath = newPath;
-            await this.plugin.saveSettings();
 
             // Create SystemFolder
             if (!systemFolder) {
@@ -134,7 +131,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
                         );
                     }
                   );
-                  await this.plugin.saveSettings();
                 }
                 const _newSystemFolderParent = newSystemFolderParent
                   ? newSystemFolderParent
@@ -196,7 +192,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         dropdown.setValue(this.plugin.settings.switcherPos);
         dropdown.onChange(async (value) => {
           this.plugin.settings.switcherPos = value;
-          await this.plugin.saveSettings();
         });
       });
 
@@ -255,7 +250,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       const isOpen = flowModeExplorerDecoContainer.classList.contains("show");
       flowModeExplorerDecoContainer.classList.toggle("show");
       this.plugin.settings.explorerDecoDropdownOpen = !isOpen;
-      await this.plugin.saveSettings();
     };
 
     flowModeExplorerDecoHeadline.addEventListener("click", toggleDropdown);
@@ -283,7 +277,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         flowModeExplorerDecoContainer.classList.remove("show");
         updateHeadlineDisplay(entry);
         this.plugin.decorateSourceNotes("redo");
-        await this.plugin.saveSettings();
       });
     });
 
@@ -292,7 +285,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       if (!dropdownContainer.contains(event.target as HTMLElement)) {
         flowModeExplorerDecoContainer.classList.remove("show");
         this.plugin.settings.explorerDecoDropdownOpen = false;
-        await this.plugin.saveSettings();
       }
     };
 
@@ -351,7 +343,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .setValue(this.plugin.settings.activeRegionHighlight)
           .onChange(async (value) => {
             this.plugin.settings.activeRegionHighlight = value;
-            await this.plugin.saveSettings();
             this.plugin.decorateSourceNotes("update");
           });
       });
@@ -388,7 +379,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .setValue(!this.plugin.settings.explorerListener)
           .onChange(async (value) => {
             this.plugin.settings.explorerListener = !value;
-            await this.plugin.saveSettings();
           });
       });
 
@@ -431,7 +421,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .setValue(this.plugin.settings.hideScrollbar)
           .onChange(async (value) => {
             this.plugin.settings.hideScrollbar = value;
-            await this.plugin.saveSettings();
             this.plugin.flowService.updateScrollbarVisibility();
           });
       });
@@ -502,7 +491,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
             this.plugin.settings.checkExternalEdits =
               value as Types.ExternalEditsType;
-            await this.plugin.saveSettings();
           });
       });
 
@@ -533,7 +521,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .setValue(this.plugin.settings.systemFolderHidden)
           .onChange(async (value) => {
             this.plugin.settings.systemFolderHidden = value;
-            await this.plugin.saveSettings();
 
             if (this.plugin.settings.systemFolderPath) {
               this.plugin.discernAndSetSystemFolderState();
@@ -600,7 +587,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .setValue(this.plugin.settings.flowBuildBasket.folderTitles)
           .onChange(async (value) => {
             this.plugin.settings.flowBuildBasket.folderTitles = value;
-            await this.plugin.saveSettings();
           });
       });
 
@@ -1012,6 +998,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           await this.plugin.flowService.debouncedSaveSettings();
         });
       });
+
     const tagsExcludeInput = new Setting(createFlows);
     tagsExcludeInput.settingEl.hide();
     tagsExcludeInput.settingEl.addClass("border-top-none");
@@ -1040,6 +1027,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           await this.plugin.flowService.debouncedSaveSettings();
         });
       });
+
     // ----- Properties
     const propertiesIncludeInput = new Setting(createFlows);
     propertiesIncludeInput.settingEl.hide();
@@ -1075,6 +1063,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           await this.plugin.flowService.debouncedSaveSettings();
         });
       });
+
     const propertiesExcludeInput = new Setting(createFlows);
     propertiesExcludeInput.settingEl.hide();
     propertiesExcludeInput.settingEl.addClass("border-top-none");
@@ -1132,7 +1121,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       bookmarksSortOrder.settingEl.show();
       chooseBookmarks.settingEl.show();
       showOrHideAlLFoldersTagsProps("hide");
-      await this.plugin.saveSettings();
       this.display();
     });
 
@@ -1156,7 +1144,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       bookmarksSortOrder.settingEl.hide();
       chooseBookmarks.settingEl.hide();
       showOrHideAlLFoldersTagsProps("show");
-      await this.plugin.saveSettings();
       this.display();
     });
 
@@ -1211,7 +1198,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         // check if the user is renaming a flow
         this.plugin.flowService.renameFlow();
 
-        // checks and flow creation 
+        // checks and flow creation
         const validation = this.plugin.flowService.isValidFlowName(
           this.plugin.settings.flowBuildBasket.flowName
         );
