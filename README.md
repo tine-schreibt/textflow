@@ -1,12 +1,16 @@
+# en_Readme
+
+<hr>
+
 ### TL;DR 
 
 **textFlow** lets you define flows - dynamic documents built from the contents
-of multiple notes - and edit them, with changes being tracked and automatically
-synced back to their sources. It's intended mainly for long form writers, but
-can be used by anyone who wants to see or work on multiple notes in context.
-Basically, textFlow is an attempt to bring Scrivenings to Obsidian - intuitive,
-flexible and easy to integrate into most workflows, whether you prefer the
-keyboard or the mouse.
+of multiple notes - and edit them, like any other note. All changes are
+automatically tracked and synced back to their sources. It's intended mainly for
+long form writers, but can be used by anyone who wants to see or work on
+multiple notes in context. Basically, textFlow is an attempt to bring
+Scrivenings to Obsidian - intuitive, flexible and easy to integrate into most
+workflows, whether you prefer the keyboard or the mouse.
 
 The less self-aggrandising version: textFlow is a workaround for the fact that
 Obsidian is explicitly intended to be used with lots of small notes. It's also
@@ -45,25 +49,27 @@ smoothly?**
 
 1. **Build 'smart' flows:** Select notes by using bookmark groups or folders,
    tags and [properties](#How-to-properties) as in/exclusion criteria and have
-   textFlow stitch them into a single note (a flow). When you move, add, or
-   delete a note (or folder) in your bookmarks or vault, textFlow will register
-   these actions and automatically rebuild the relevant flow to reflect the
-   changes. If you change a note's front matter so it gets included in a new
-   flow, you will have to rebuild manually. - **Convenient:** Right-click on a
-   folder gives the option: `textFlow: Create new flow from this folder`. This
-   also works for a selection of multiple folders. You can refine the definition
-   with tags and properties in the settings.
+   textFlow stitch them into a single note (a flow).
+   - **Convenient:**
+     - Whenever you move, add, or delete a note (or folder) in your bookmarks or
+       vault, textFlow will register these actions and automatically
+       flag/rebuild the relevant flow to reflect the changes.
+     - Right-click on a folder gives the option:
+       `textFlow: Create new flow from this folder`. This also works for a
+       selection of multiple folders. You can later refine the definition (using
+       tags and properties) in the settings.
 2. **Structure your flows:**
    - Flows built from folders, tags or properties have two sorting options:
      1. Mirror the order of your _notes_ as they appear in the file explorer.
      2. Mirror the order of your _folders_ as they appear in the file explorer.
-   - Flows built from bookmark groups can also mirror the plain order of objects
+   - Flows built from bookmark groups can also mirror the plain order of items
      regardless if they are notes or groups. Use whatever order feels more
-     intuitive/less confusing to you or fits better for the respective flow.
-     Some sort orders also work better with folder/group title deactivated.
+     intuitive/less confusing to you or better fits the respective flow. Some
+     sort orders also work better with folder/group title deactivated.
 3. **Edit flows like any other note:** textFlow keeps track of which region an
    edit happens in and automatically syncs it all back to the correct source
-   note whenever you click outside of your editor window (leaf).
+   note whenever you click outside of your editor window (leaf). You can also
+   sync manually anytime you like.
 4. **Add frontmatter to your flows:** Just use the properties plugin as usual.
    It will be preserved across rebuilds and is useful if you want to keep track
    of your flows without having to use the settings tab.
@@ -965,3 +971,5 @@ peek at the developer console for any error messages first. To do that:
 If you just love this plugin and want to tell me that, an email or a dm are a
 good way of doing that. Or if you got some coin to spare, you can tip me on
 kofi: https://ko-fi.com/tine_schreibt
+
+<hr>

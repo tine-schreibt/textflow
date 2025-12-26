@@ -312,6 +312,7 @@ export class FlowService {
   renameFlow = async () => {
     // this only handles the clean-up of the old version;
     // the creation of the new version happens in the save button code
+    this.plugin.textFlowOperation = true;
     if (
       this.plugin.settings.flowBuildBasket.flowName !=
         this.plugin.settings.flowBuildBasket.oldFlowName &&
@@ -322,7 +323,6 @@ export class FlowService {
       const newFlowName = this.plugin.settings.flowBuildBasket.flowName;
       const oldFlowName = this.plugin.settings.flowBuildBasket.oldFlowName;
 
-      // sync everything so no edits get lost
       this.plugin.syncAllLeaves();
 
       // reset all active leaves of the flow
@@ -381,17 +381,25 @@ export class FlowService {
       // save it all
       await this.plugin.saveSettings();
 
-      // and finally delete the flow file if it exists
+      // and finally rename the flow file if it exists
       const oldFlowPath = normalizePath(
         `${this.plugin.settings.systemFolderPath}/${oldFlowName}.md`
       );
       const newFlowPath = normalizePath(
         `${this.plugin.settings.systemFolderPath}/${newFlowName}.md`
       );
+
       const flowFile = this.app.vault.getAbstractFileByPath(oldFlowPath);
+
       if (flowFile) {
         if (flowFile instanceof TFile) {
-          await this.app.vault.delete(flowFile);
+          this.plugin.textFlowOperation = true;
+          await this.app.vault.rename(flowFile, newFlowPath);
+          console.log(
+            "DONE renaming, textFlowOperation is",
+            this.plugin.textFlowOperation
+          );
+          this.plugin.textFlowOperation = false;
         }
       }
     }

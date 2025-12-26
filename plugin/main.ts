@@ -1326,6 +1326,7 @@ ${pseudoElement}
               await this.saveSettings();
               continue;
             }
+
             // if the parent is included
             if (
               newParentFolder ===
@@ -1365,7 +1366,6 @@ ${pseudoElement}
     );
 
     // Create events
-
     this.registerEvent(
       this.app.vault.on("create", async (file: TAbstractFile) => {
         // return early if textFlow is doing stuff
@@ -1416,7 +1416,6 @@ ${pseudoElement}
           // if the flow is made from bookmarks, move on
           if (this.settings.flows[flowName].definitionMode === "bookmarks")
             continue;
-
           if (
             // if the path starts with the inclusion path, and either IS the inclusion path
             // or subfolders aren't excluded
@@ -2577,8 +2576,9 @@ ${pseudoElement}
       // now open and focus the flow, pin it, and set up tracking and stuff
       if (leaf.view instanceof MarkdownView) {
         this.app.workspace.setActiveLeaf(leaf, { focus: true });
-        leaf.setPinned(true);
         this.setupFlowView(flowName, leaf.view);
+        leaf.setPinned(true);
+
       } else {
         console.error(
           "textFlow: View is not MarkdownView after opening flow file"
