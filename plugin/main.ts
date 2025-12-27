@@ -236,6 +236,7 @@ export default class TextFlowPlugin extends Plugin {
   }
 
   // ---------------------------------------------------------------
+
   saveSettings = async (): Promise<void> => {
     // Debug: log stack trace to see where this is called from
     const stack = new Error().stack;
@@ -1217,7 +1218,6 @@ ${pseudoElement}
                 "noteOrder";
               this.settings.flowBuildBasket.folderTitles = true;
               // reset of the basket happens in the modal
-              await this.saveSettings();
 
               const flowCreationModal = new Modals.CreateFlowFromFolder(
                 this.app,
@@ -1535,6 +1535,7 @@ ${pseudoElement}
         await this.checkStatsForFlow(flowName);
       }
     });
+
     this.registerDomEvent(window, "focus", async () => {
       for (let flowName of Object.keys(this.settings.activeFlowObject)) {
         await this.checkStatsForFlow(flowName);
@@ -2104,6 +2105,26 @@ ${pseudoElement}
     cursorOffset: number,
     view: MarkdownView
   ) => {
+    console.log("checkActiveRegion was called");
+
+    // Add this debug check:
+    const flowMap = this.settings.flows[flowName].flowMap;
+    console.log("flowMap exists?", !!flowMap);
+    console.log(
+      "flowMap keys count:",
+      flowMap ? Object.keys(flowMap).length : 0
+    );
+    console.log(
+      "flowMap is same reference?",
+      flowMap === this.settings.flows[flowName].flowMap
+    );
+
+    // Also check if updatedFlow reference matches:
+    console.log(
+      "Direct access test:",
+      Object.keys(this.settings.flows[flowName]?.flowMap || {}).length
+    );
+
     // this is to prevent error messages when activating a leaf triggers a check and/or rebuild
     if (this.settings.flows[flowName].flaggedForRebuild) return;
 
@@ -2137,8 +2158,6 @@ ${pseudoElement}
           this.decorateSourceNotes("update");
           this.notifyOfOverlap(activeRegionObject.path, flowName, leafID);
         }
-
-        await this.saveSettings();
         return;
       }
     } else if (
@@ -2154,7 +2173,6 @@ ${pseudoElement}
         this.lastActiveRegion =
           this.settings.flows[flowName].activeRegions[leafID].path;
       }
-      await this.saveSettings();
       return;
     } else {
       // new terrain!
@@ -2205,7 +2223,7 @@ ${pseudoElement}
           this.notifyOfOverlap(activeRegion.path, flowName, leafID);
         }
       } else {
-        // if the compass just cirles, check if it's just a tracking error
+        // if the compass just cirles
         new Notice(
           this.t("checkActiveRegion.notice region tracking error", {
             flowName: flowName,
@@ -2241,7 +2259,7 @@ ${pseudoElement}
           cursorDropdownState: "hide",
         },
       };
-      await this.saveSettings();
+      //caller saves by default
     }
   };
 
@@ -2337,6 +2355,21 @@ ${pseudoElement}
       const UIDLength = matches[0].length - 4;
       const UID = matches[0].slice(0, UIDLength);
 
+      // Add debug logs here:
+      console.log("Found UUID in text:", UID.substring(0, 20) + "...");
+      const flowMapUUIDs = Object.values(
+        this.settings.flows[flowName].flowMap
+      ).map((r) => r.invisibleUUID);
+      console.log("UUIDs in flowMap:", flowMapUUIDs.length);
+      const matchingUUID = flowMapUUIDs.find((uuid) => uuid === UID);
+      console.log("UUID matches flowMap?", !!matchingUUID);
+      if (!matchingUUID) {
+        console.log(
+          "First few flowMap UUIDs:",
+          flowMapUUIDs.slice(0, 3).map((u) => u.substring(0, 20) + "...")
+        );
+      }
+
       const foundRegion = Object.entries(
         this.settings.flows[flowName].flowMap
       ).find(([_, foundRegionMap]) => foundRegionMap.invisibleUUID === UID);
@@ -2355,6 +2388,8 @@ ${pseudoElement}
             ) || 0;
         } else {
           newStartInFlow = 0;
+          console.error("UUID found in text but not in flowMap!");
+          console.error("Text UUID:", UID.substring(0, 50));
         }
 
         // calculate where it ends
@@ -2390,6 +2425,17 @@ ${pseudoElement}
       }
     } else {
       console.error("textFlow: No UUID marker found in this.");
+      console.error("No UUID marker found in text at cursor position");
+      console.error(
+        "Text length:",
+        text.length,
+        "Cursor offset:",
+        cursorOffset
+      );
+      console.error(
+        "Search start (first 200 chars):",
+        searchStart.substring(0, 200)
+      );
       return undefined;
     }
   };
@@ -2727,7 +2773,7 @@ ${pseudoElement}
       }
     });
 
-    // write that shit down
+    // Write that shit down
     await this.saveSettings();
 
     // And finally redraw the decoration and refresh the menu bars
@@ -2782,8 +2828,6 @@ ${pseudoElement}
         }
       }
     }
-
-    await this.saveSettings();
   };
 
   // ---- Functions: Data safety ----------------------------
@@ -2941,7 +2985,7 @@ ${pseudoElement}
         await this.syncBackToSource(flowName, text, leafID);
         this.toggleEditable(view, true);
       }
-      // before we get to actually modifying, let's flag other flows
+      // finally, let's flag other flows
       for (let otherFlowName of Object.keys(this.settings.flows)) {
         if (flowName != otherFlowName) {
           if (!this.settings.flows[otherFlowName].flaggedForRebuild) {
@@ -3029,10 +3073,9 @@ ${pseudoElement}
         }
       }
       this.settings.flows[flowName].unsyncedRegionsArray = remainingPaths;
-
+      // manageCursorPos always saves, therefore no extra save is necessary here
       this.manageCursorPos(flowName, leafID);
       this.refreshMenuBars();
-      await this.saveSettings();
       if (this.settings.explorerDecoStyle[0] != "--") {
         this.decorateSourceNotes("update");
       }
@@ -3043,14 +3086,13 @@ ${pseudoElement}
   updateStats = async (flowName: string, path: string, file: TFile) => {
     if (this.settings.flows[flowName].flowMap[path]) {
       this.settings.flows[flowName].flowMap[path].mtime = file.stat.mtime;
-      await this.saveSettings();
     }
     if (this.settings.checkExternalEdits === "mtime+hash") {
       let fileContent: string = await this.app.vault.read(file);
       const newHash = this.makeHash(fileContent);
       this.settings.hashes[path] = newHash;
-      await this.saveSettings();
     }
+    // caller saves by default
   };
 
   // a robot said I should do it like this, and who am I to question a robot?
@@ -3088,6 +3130,7 @@ ${pseudoElement}
         }
       }
     }
+    // saving is done by checkStatsForNote and rebuildFlow
     return changed;
   };
 
@@ -3194,7 +3237,7 @@ ${pseudoElement}
       this.settings.hashes[path] = newHash;
       changed = true;
     }
-    await this.saveSettings();
+    // saved by caller
     return changed;
   };
 

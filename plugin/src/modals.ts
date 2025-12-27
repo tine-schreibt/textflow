@@ -1688,6 +1688,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
       ) {
         // if there are no active leaves we could target or we want to open a new one
         // I have no idea why this works so well for "flow-name" items
+        console.log("no open flow leaf found");
         const file = this.app.vault.getAbstractFileByPath(
           this.plugin.settings.flows[item.flowName].flowFilePath
         );

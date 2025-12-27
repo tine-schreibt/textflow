@@ -1255,6 +1255,8 @@ export class FlowService {
       caller
     );
 
+    this.plugin.loadSettings();
+
     // null the basket, just to be thorough.
     mapValueBasket = {
       concatenatedFileContents: "",
