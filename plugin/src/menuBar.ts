@@ -129,8 +129,6 @@ export class MenuBar {
       this.plugin.settings.flows[this.flowName].activeRegions[
         this.leafID
       ].leafMenuBarSettings.navDropdownState = state;
-
-      await this.plugin.saveSettings();
     }
     if (
       dropdown === "cursor" &&
@@ -140,7 +138,6 @@ export class MenuBar {
         this.leafID
       ].leafMenuBarSettings.cursorDropdownState = state;
 
-      await this.plugin.saveSettings();
     }
   };
 

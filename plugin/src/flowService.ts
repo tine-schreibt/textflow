@@ -1247,6 +1247,7 @@ export class FlowService {
     await this.plugin.syncAllLeaves();
 
     // Call the build function; didn't think we'd get here...
+    console.log("calling flow builder for ", flowName);
     await this.flowBuilder(
       updatedFlow.flowRecipe[key],
       updatedFlow,
@@ -1254,8 +1255,6 @@ export class FlowService {
       mapValueBasket,
       caller
     );
-
-    this.plugin.loadSettings();
 
     // null the basket, just to be thorough.
     mapValueBasket = {
@@ -1268,6 +1267,8 @@ export class FlowService {
       currentEnd: 0,
       idDivider: "",
     };
+
+    await this.plugin.saveSettings();
   };
 
   // ------ The flowBuilder --------------------------
@@ -1389,6 +1390,7 @@ export class FlowService {
       // --- The actual handling of content ----------
       // If the ingredient (array entry) is a title
       if (ingredient.startsWith("#")) {
+        console.log(ingredient, mapValueBasket.flowOrder);
         mapValueBasket.flowOrder++;
         this.createInvisibleUID(mapValueBasket);
         // make the proper divider
@@ -1415,11 +1417,13 @@ export class FlowService {
         } as Types.SourceFileObject;
         mapValueBasket.initialIteration = false;
 
+        console.log(flow.flowMap[ingredient]);
         // Add content with marker before divider
         mapValueBasket.concatenatedFileContents += `${ingredientName}${mapValueBasket.idDivider}`;
       }
       // if the ingredient is a path
       else {
+        console.log(ingredient, mapValueBasket.flowOrder);
         mapValueBasket.flowOrder++;
         this.createInvisibleUID(mapValueBasket);
 
@@ -1502,6 +1506,7 @@ export class FlowService {
           } as Types.SourceFileObject;
 
           mapValueBasket.initialIteration = false;
+          console.log(flow.flowMap[ingredient]);
 
           // Add content with marker before divider
           mapValueBasket.concatenatedFileContents += `${mapValueBasket.singleFileContent}${mapValueBasket.idDivider}`;
