@@ -346,7 +346,7 @@ export class PreviewModal extends Modal {
 
     const key = this.flowBuildBasket.definitionMode;
 
-    const recipeItems = this.flowBuildBasket.finalRecipe[key] ?? [];
+    const recipeItems = this.flowBuildBasket.finalRecipe ?? [];
     if (recipeItems.length === 0) {
       previewContainer.setText(
         this.plugin.t(
@@ -355,7 +355,7 @@ export class PreviewModal extends Modal {
       );
     } else {
       // Format the elements of the array for display
-      for (let ingredient of this.flowBuildBasket.finalRecipe[key]!) {
+      for (let ingredient of this.flowBuildBasket.finalRecipe!) {
         if (ingredient.startsWith("#")) {
           previewContainer.createEl("p", {
             text: ingredient.replace("#", ""),
@@ -363,7 +363,7 @@ export class PreviewModal extends Modal {
           });
         } else {
           const ingredientArray = ingredient.split("/");
-          if (this.flowBuildBasket.finalRecipe.foldersTagsProps) {
+          if (this.flowBuildBasket.definitionMode === "foldersTagsProps") {
             // if we are not working with bookmarks
             let dashes = "";
             for (let i = 0; i < ingredientArray.length - 1; i++) dashes += "-";
@@ -531,8 +531,10 @@ export class RestoreFlowDefModal extends Modal {
   private doesFileExist = async (filePath: string): Promise<boolean> => {
     try {
       await fs.access(filePath);
+      console.log("file at ", filePath, " does exist");
       return true;
     } catch {
+      console.log("file at ", filePath, " does NOT exist");
       return false;
     }
   };
@@ -540,15 +542,19 @@ export class RestoreFlowDefModal extends Modal {
   private getBackup = async () => {
     // make the path of the backup.json
     const basePath = (this.app.vault.adapter as any).basePath;
-    const backupPath = path.join(
-      basePath,
-      this.app.vault.configDir,
-      "plugins",
-      this.plugin.manifest.id,
-      "textFlowDefBackup.json"
+    const backupPath = normalizePath(
+      path.join(
+        basePath,
+        this.app.vault.configDir,
+        "plugins",
+        this.plugin.manifest.id,
+        "textFlowDefBackup.json"
+      )
     );
 
     const fileExists = await this.doesFileExist(backupPath);
+
+    console.log("file exists is ", fileExists);
 
     if (!fileExists) return null;
 
@@ -582,6 +588,7 @@ export class RestoreFlowDefModal extends Modal {
     // check if we have something to display
     const exists = await this.getBackup();
     if (!exists) {
+      console.log("backup file not found");
       // if we don't, tell the user how to get something to display
       const flowExplanation = flowDisplay
         .createDiv()

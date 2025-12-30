@@ -395,10 +395,6 @@ export class FlowService {
         if (flowFile instanceof TFile) {
           this.plugin.textFlowOperation = true;
           await this.app.vault.rename(flowFile, newFlowPath);
-          console.log(
-            "DONE renaming, textFlowOperation is",
-            this.plugin.textFlowOperation
-          );
           this.plugin.textFlowOperation = false;
         }
       }
@@ -431,7 +427,7 @@ export class FlowService {
         } else {
           const bookmarkPathArray =
             this.getBookmarkPathsByGroupName(flowBuildBasket);
-          flowBuildBasket.finalRecipe = { bookmarks: bookmarkPathArray };
+          flowBuildBasket.finalRecipe = bookmarkPathArray;
         }
 
         // ------ FINAL RECIPE FOR PATH TAG PROPERTY -----------------------
@@ -440,17 +436,10 @@ export class FlowService {
 
         const foldersTagsPropsPathArray =
           this.getPathsByFoldersTagsProps(flowBuildBasket);
-        flowBuildBasket.finalRecipe = {
-          foldersTagsProps: foldersTagsPropsPathArray,
-        };
+        flowBuildBasket.finalRecipe = foldersTagsPropsPathArray;
       }
       // ---- Check for empty
-      if (
-        (flowBuildBasket.definitionMode === "bookmarks" &&
-          flowBuildBasket.finalRecipe.bookmarks.length === 0) ||
-        (flowBuildBasket.definitionMode == "foldersTagsProps" &&
-          flowBuildBasket.finalRecipe.foldersTagsProps.length === 0)
-      ) {
+      if (flowBuildBasket.finalRecipe.length === 0) {
         new Notice(
           this.plugin.t(
             "createFlowDefinition.notice definition leads to empty flow"
@@ -1091,7 +1080,6 @@ export class FlowService {
       ),
       definitionMode: flowBuildBasket.definitionMode,
       flowCookbook: flowBuildBasket.flowCookbook,
-      flowRecipe: flowBuildBasket.finalRecipe,
       folderTitles: flowBuildBasket.folderTitles,
       isFreshBuild: true,
       flowBuilt: false,
@@ -1117,7 +1105,7 @@ export class FlowService {
           referenceFlow != flowBuildBasket.oldFlowName &&
           referenceFlow != flowBuildBasket.flowName
         ) {
-          for (let path of flowBuildBasket.finalRecipe[key]) {
+          for (let path of flowBuildBasket.finalRecipe) {
             if (
               !path.startsWith("#") &&
               this.plugin.settings.flows[referenceFlow].flowMap[path]
@@ -1174,7 +1162,7 @@ export class FlowService {
     resetFlowBuildBasket.definitionMode = "";
     resetFlowBuildBasket.folderTitles = true;
     resetFlowBuildBasket.flowCookbook = {};
-    resetFlowBuildBasket.finalRecipe = {};
+    resetFlowBuildBasket.finalRecipe = [];
     resetFlowBuildBasket.conflictObject = {};
     resetFlowBuildBasket.activeRegions = {};
     resetFlowBuildBasket.lastActiveLeaves = [];
@@ -1194,7 +1182,7 @@ export class FlowService {
       definitionMode: this.plugin.settings.flows[flowName].definitionMode,
       folderTitles: this.plugin.settings.flows[flowName].folderTitles,
       flowCookbook: this.plugin.settings.flows[flowName].flowCookbook,
-      finalRecipe: {},
+      finalRecipe: [],
       conflictObject: this.plugin.settings.flows[flowName].conflictObject,
       activeRegions: this.plugin.settings.flows[flowName].activeRegions,
       lastActiveLeaves: this.plugin.settings.flows[flowName].lastActiveLeaves,
@@ -1218,7 +1206,6 @@ export class FlowService {
     // update conflicts, reset flag, clean up the basket
     this.syncConflictObjects(flowReBuildBasket); // null unsavedRegions
     this.plugin.settings.flows[flowName].flaggedForRebuild = false;
-    this.resetFlowBuildBasket(flowReBuildBasket);
     await this.plugin.saveSettings();
 
     // Get a fresh reference now that we've written the def
@@ -1237,19 +1224,25 @@ export class FlowService {
       idDivider: "",
     };
 
-    // for some reason, using definitionMode here doesn't work
     let key = "";
-    updatedFlow.flowRecipe.bookmarks
+    updatedFlow.definitionMode
       ? (key = "bookmarks")
       : (key = "foldersTagsProps");
 
     // this is to make sure we got the latest version of everything
     await this.plugin.syncAllLeaves();
 
+    let pathArray: string[] = [];
+    Object.keys(this.plugin.settings.flows[flowName].flowMap).forEach(
+      (note) => {
+        pathArray.push(this.plugin.settings.flows[flowName].flowMap[note].path);
+      }
+    );
+
     // Call the build function; didn't think we'd get here...
-    console.log("calling flow builder for ", flowName);
+
     await this.flowBuilder(
-      updatedFlow.flowRecipe[key],
+      flowReBuildBasket.finalRecipe,
       updatedFlow,
       flowName,
       mapValueBasket,
@@ -1267,7 +1260,7 @@ export class FlowService {
       currentEnd: 0,
       idDivider: "",
     };
-
+    this.resetFlowBuildBasket(flowReBuildBasket);
     await this.plugin.saveSettings();
   };
 
@@ -1390,7 +1383,6 @@ export class FlowService {
       // --- The actual handling of content ----------
       // If the ingredient (array entry) is a title
       if (ingredient.startsWith("#")) {
-        console.log(ingredient, mapValueBasket.flowOrder);
         mapValueBasket.flowOrder++;
         this.createInvisibleUID(mapValueBasket);
         // make the proper divider
@@ -1407,23 +1399,17 @@ export class FlowService {
         flow.flowMap[ingredient] = {
           type: "folder",
           path: ingredient,
-          itemName: ingredientName,
           basicUUID: mapValueBasket.basicUUID,
           invisibleUUID: mapValueBasket.invisibleUUID,
           flowOrder: mapValueBasket.flowOrder,
-          minLength: ingredientName.length,
-          lengthPlusDividers:
-            ingredientName.length + mapValueBasket.idDivider.length,
         } as Types.SourceFileObject;
         mapValueBasket.initialIteration = false;
 
-        console.log(flow.flowMap[ingredient]);
         // Add content with marker before divider
         mapValueBasket.concatenatedFileContents += `${ingredientName}${mapValueBasket.idDivider}`;
       }
       // if the ingredient is a path
       else {
-        console.log(ingredient, mapValueBasket.flowOrder);
         mapValueBasket.flowOrder++;
         this.createInvisibleUID(mapValueBasket);
 
@@ -1487,13 +1473,9 @@ export class FlowService {
             type: "file",
             mtime: mtime,
             path: ingredient,
-            itemName: note.name,
             basicUUID: mapValueBasket.basicUUID,
             invisibleUUID: mapValueBasket.invisibleUUID,
             flowOrder: mapValueBasket.flowOrder,
-            minLength: fileContent.length,
-            lengthPlusDividers:
-              fileContent.length + mapValueBasket.idDivider.length,
             startEndInFlow: {
               start: mapValueBasket.initialIteration
                 ? 0
@@ -1506,7 +1488,6 @@ export class FlowService {
           } as Types.SourceFileObject;
 
           mapValueBasket.initialIteration = false;
-          console.log(flow.flowMap[ingredient]);
 
           // Add content with marker before divider
           mapValueBasket.concatenatedFileContents += `${mapValueBasket.singleFileContent}${mapValueBasket.idDivider}`;
@@ -1765,6 +1746,33 @@ export class FlowService {
 
       if (existingFile instanceof TFile) {
         await vault.modify(existingFile, content);
+
+        // Reload the file in any open views
+        const leaves = this.app.workspace.getLeavesOfType("markdown");
+        for (const leaf of leaves) {
+          await leaf.loadIfDeferred();
+          if (
+            leaf.view instanceof MarkdownView &&
+            leaf.view.file?.path === path
+          ) {
+            const editor = leaf.view.editor as ObsidianEditor;
+            const cmEditor = editor.cm;
+
+            if (cmEditor) {
+              // Replace all content using CodeMirror's transaction API
+              const currentContent = cmEditor.state.doc.toString();
+              if (currentContent !== content) {
+                cmEditor.dispatch({
+                  changes: {
+                    from: 0,
+                    to: cmEditor.state.doc.length,
+                    insert: content,
+                  },
+                });
+              }
+            }
+          }
+        }
       } else {
         await vault.create(path, content);
       }
@@ -1788,6 +1796,7 @@ export class FlowService {
   };
 
   backupFlowDef = async (flowName: string) => {
+    console.log("backupFlowDef called");
     // make a clone of the flow, clean it and package it
     const currentDate = this.getTimestamp();
     // the * is the separator so we can remove the timestamp without regEx
@@ -1796,17 +1805,24 @@ export class FlowService {
     exportObj[backupName] = structuredClone(
       this.plugin.settings.flows[flowName]
     );
+
     // null or update properties that need to be nulled or updated
     exportObj[backupName].flowFilePath = normalizePath(
       `${this.plugin.settings.systemFolderPath}/${backupName}`
     );
-    exportObj[backupName].flowRecipe = {};
+    exportObj[backupName].flowBuilt = false;
     exportObj[backupName].flaggedForRebuild = true;
+    exportObj[backupName].conflictObject = {};
+    exportObj[backupName].activeRegions = {};
+    exportObj[backupName].lastActiveLeaves = [];
+    exportObj[backupName].persistentCursors = {};
+    exportObj[backupName].unsyncedRegionsArray = [];
     exportObj[backupName].flowMap = {};
     const output = JSON.stringify(exportObj, null, 2);
 
     // get the absolute path for the vault (we have to use the adapter here, sorry)
     const basePath = (this.app.vault.adapter as any).basePath;
+    console.log("basePath is ", basePath);
 
     // Make the path
     const backupPath = path.join(
@@ -1817,8 +1833,11 @@ export class FlowService {
       "textFlowDefBackup.json"
     );
 
+    console.log("backupPath is ", backupPath);
+
     const fileExists = await this.doesFileExistFs(backupPath);
 
+    console.log("checking file existence: ", fileExists);
     // variable to hold the contents if the file exists
     let parsedJson;
 

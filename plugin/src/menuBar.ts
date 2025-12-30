@@ -137,7 +137,6 @@ export class MenuBar {
       this.plugin.settings.flows[this.flowName].activeRegions[
         this.leafID
       ].leafMenuBarSettings.cursorDropdownState = state;
-
     }
   };
 
@@ -291,17 +290,23 @@ export class MenuBar {
       this.createNavDropdownEntry("No results", dropdownEntries);
     } else {
       // Re-create filtered entries
-      const key = this.plugin.settings.flows[this.flowName].flowRecipe.bookmarks
-        ? "bookmarks"
-        : "foldersTagsProps";
-
-      for (let path of this.plugin.settings.flows[this.flowName].flowRecipe[
-        key
-      ]) {
+      this.getPathArray().forEach((path) => {
         this.createNavDropdownEntry(path, dropdownEntries);
-      }
+      });
     }
   }
+
+  private getPathArray = () => {
+    let pathArray: string[] = [];
+    Object.keys(this.plugin.settings.flows[this.flowName].flowMap).forEach(
+      (note) => {
+        const path =
+          this.plugin.settings.flows[this.flowName].flowMap[note].path;
+        pathArray.push(path);
+      }
+    );
+    return pathArray;
+  };
 
   // ----------- THE MENU BAR ITSELF
   createMenuBarElement(): HTMLElement {
@@ -334,6 +339,8 @@ export class MenuBar {
       return menuBarEl;
     } else {
       // ---------- FUNCTIONS -----------------
+
+      const pathArray = this.getPathArray();
 
       // ----------- Preparatory checks
       let goSync = "neutral";
@@ -425,9 +432,8 @@ export class MenuBar {
 
       // If we don't have an active region - we always do, but still - be ready to use the first region
       const key = this.plugin.settings.flows[this.flowName].definitionMode;
-      const firstThing =
-        this.plugin.settings.flows[this.flowName].flowRecipe[key][0];
-      const firstThingNoteName = this.makeNavPath(firstThing);
+
+      const firstThingNoteName = this.makeNavPath(pathArray[0]);
 
       // --------- THE ACTUAL DROPDOWN COMPONENT ----------
 
@@ -518,9 +524,7 @@ export class MenuBar {
 
       // this function is in here so I don't have to hand over a million args
       const performSearch = (event: Event, query?: string) => {
-        const searchItems = this.plugin.settings.flows[
-          this.flowName
-        ].flowRecipe[key].map((path) => ({
+        const searchItems = pathArray.map((path) => ({
           path: path,
           displayName: `${this.makeNavPath(path)}`,
         }));
@@ -549,8 +553,7 @@ export class MenuBar {
 
         // If no query (yet), return all paths
         if (!query) {
-          this.filterList =
-            this.plugin.settings.flows[this.flowName].flowRecipe[key];
+          this.filterList = pathArray;
         }
 
         // Otherwise return filtered paths
@@ -566,8 +569,7 @@ export class MenuBar {
           this.refreshNavDropdownEntries(dropdownEntries, false);
         } else {
           // no entries because query has been deleted -> give whole list again
-          this.filterList =
-            this.plugin.settings.flows[this.flowName].flowRecipe[key];
+          this.filterList = pathArray;
           this.refreshNavDropdownEntries(dropdownEntries, false);
         }
       };
@@ -588,9 +590,7 @@ export class MenuBar {
         cls: "menu-bar-navigation-dropdown-entries",
       });
 
-      for (let path of this.plugin.settings.flows[this.flowName].flowRecipe[
-        key
-      ]) {
+      for (let path of pathArray) {
         this.createNavDropdownEntry(path, dropdownEntries);
       }
 

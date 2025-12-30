@@ -292,7 +292,7 @@
   "syncBackToSource.notice other random error": "textFlow: Ein Fehler ist aufgetreten, während versucht wurde, ${flowName} zu ${path} zu synchronisieren. \nBitte versuche es in einer Sekunde erneut. \nWenn der Fehler weiterhin auftritt, lies die 'Fehlerbehebung' Sektion des Readme.",
 
   "checkActiveRegion.notice region tracking error": "textFlow: Fehler beim Tracken der aktiven Region von ${flowName}. \nDu siehst diesen Fehler wahrscheinlich, weil du a) den Quellordner umbenannt hast, oder b) durch (cmd+z) in den Zustand vor einem Neubau zurückgesprungen bist. \nFalls a:\n Bitte ändere die Flow-Definition entsprechend. \n Falls b: \nBitte drücke cmd+Umschalt+z, bis du wieder im Zustand nach dem Neubau angekommen bist. \nWenn das nicht funktioniert, nimm einen Neubau an ${flowName} vor. \nDies kann zu weiteren Fehlermeldungen führen. Bitte folge ihren Anweisungen.",
-  "checkActiveRegion.notice overlap detected": "Die aktuelle Region \"&{basename(path)}\" überschneidet sich mit den folgenden Flows: \n${overlapString}",
+  "checkActiveRegion.notice overlap detected": "Die aktuelle Region \"${regionName}\" überschneidet sich mit den folgenden Flows: \n${overlapString}",
 
   "---------- FLOW SERVICE": "Eine Klasse die die meiste Funktionalität rund um den Settingtab usw. enthält",
   "flowService.progressNotice.notice initial notice": "textFlow: Baue ${this_flowName}: [oooooooooo] 0%",

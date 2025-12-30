@@ -1418,7 +1418,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
                 definitionMode: shownFlow.definitionMode,
                 folderTitles: shownFlow.folderTitles,
                 flowCookbook: shownFlow.flowCookbook,
-                finalRecipe: shownFlow.flowRecipe,
+                finalRecipe: [],
                 conflictObject: shownFlow.conflictObject,
                 activeRegions: shownFlow.activeRegions,
                 lastActiveLeaves: shownFlow.lastActiveLeaves,

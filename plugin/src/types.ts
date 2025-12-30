@@ -82,7 +82,7 @@ export interface flowBuildBasket {
   definitionMode: string;
   folderTitles: boolean;
   flowCookbook: { [key: string]: string };
-  finalRecipe: { [key: string]: string[] };
+  finalRecipe: string[];
   conflictObject: ConflictObject;
   activeRegions: { [key: number | string]: ActiveRegion };
   lastActiveLeaves: string[];
@@ -107,7 +107,6 @@ export interface FlowDef {
   flowFilePath: string;
   definitionMode: string;
   flowCookbook: { [key: string]: string }; // user input
-  flowRecipe: { [key: string]: string[] };
   folderTitles: boolean;
   isFreshBuild: boolean;
   flowBuilt: boolean;
@@ -141,12 +140,9 @@ export interface SourceFileObject {
   type: "file" | "folder";
   mtime: number;
   path: string;
-  itemName: string;
   basicUUID: string;
   invisibleUUID: string;
   flowOrder: number;
-  minLength: number;
-  lengthPlusDividers: number;
 }
 
 // --------- them defaults --------------------
@@ -176,7 +172,7 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
     definitionMode: "",
     folderTitles: true,
     flowCookbook: {},
-    finalRecipe: {},
+    finalRecipe: [],
     conflictObject: {},
     activeRegions: {},
     lastActiveLeaves: [],

@@ -2215,8 +2215,7 @@ ${pseudoElement}
         ([_, obj]) => obj.flowOrder === 1
       ) || [];
     if (targetObject) {
-      const { type, invisibleUUID, flowOrder, lengthPlusDividers } =
-        targetObject;
+      const { type, invisibleUUID, flowOrder } = targetObject;
       this.settings.flows[flowName].activeRegions[leafID] = {
         currentCursorPos: 0,
         type: targetObject.type,
@@ -2224,7 +2223,7 @@ ${pseudoElement}
         invisibleUUID: targetObject.invisibleUUID,
         flowOrder: 1,
         startInFlow: 0,
-        endInFlow: targetObject.lengthPlusDividers,
+        endInFlow: 0,
         leafMenuBarSettings: {
           menuBarDisplayState: "show",
           navDropdownState: "hide",
@@ -3056,15 +3055,20 @@ ${pseudoElement}
     if (this.settings.checkExternalEdits === "no") return;
     if (this.settings.flows[flowName].flaggedForRebuild) return;
 
-    let key = this.settings.flows[flowName].flowRecipe.bookmarks
+    let key = this.settings.flows[flowName].definitionMode
       ? "bookmarks"
       : "foldersTagsProps";
 
     // iterating over the paths
     // Use Promise.all for parallel execution:
-    const pathsToCheck = this.settings.flows[flowName].flowRecipe[key].filter(
-      (path) => !path.startsWith("#")
-    ); // filter out titles
+
+    let pathsToCheck: string[] = [];
+    Object.keys(this.settings.flows[flowName].flowMap).forEach((note) => {
+      // pick out only note paths
+      if (!this.settings.flows[flowName].flowMap[note].path.startsWith("#")) {
+        pathsToCheck.push(this.settings.flows[flowName].flowMap[note].path);
+      }
+    });
 
     const checkPromises = pathsToCheck.map((path) =>
       this.checkStatsForNote(flowName, path)
@@ -3296,36 +3300,30 @@ ${pseudoElement}
   };
 
   notifyOfOverlap = (path: string, activeFlow: string, leafID: string) => {
-    if (
-      !this.settings.showMenuBar ||
-      this.settings.flows[activeFlow].activeRegions[leafID].leafMenuBarSettings
-        .menuBarDisplayState === "hide"
-    ) {
-      let overlappingFlows: string[] = [];
-      for (let flowName of Object.keys(this.settings.activeFlowObject)) {
-        if (flowName != activeFlow) {
-          if (this.settings.flows[flowName].flowMap) {
-            if (
-              Object.keys(this.settings.flows[flowName].flowMap).includes(path)
-            ) {
-              overlappingFlows.push(flowName);
-              continue;
-            }
+    let overlappingFlows: string[] = [];
+    for (let flowName of Object.keys(this.settings.activeFlowObject)) {
+      if (flowName != activeFlow) {
+        if (this.settings.flows[flowName].flowMap) {
+          if (
+            Object.keys(this.settings.flows[flowName].flowMap).includes(path)
+          ) {
+            overlappingFlows.push(flowName);
+            continue;
           }
         }
       }
-      if (overlappingFlows.length > 0) {
-        const overlapString = Object.keys(this.settings.activeFlowObject).join(
-          ","
-        );
-        const regionName = basename(path);
-        new Notice(
-          this.t("checkActiveRegion.notice overlap detected", {
-            regionName: regionName,
-            overlapString: overlapString,
-          })
-        );
-      }
+    }
+    if (overlappingFlows.length > 0) {
+      const overlapString = Object.keys(this.settings.activeFlowObject).join(
+        ", "
+      );
+      const regionName = basename(path);
+      new Notice(
+        this.t("checkActiveRegion.notice overlap detected", {
+          regionName: regionName,
+          overlapString: overlapString,
+        })
+      );
     }
   };
 
