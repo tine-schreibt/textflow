@@ -198,9 +198,9 @@ export default class TextFlowPlugin extends Plugin {
   inactivityThreshold: number = 5 * 60 * 1000;
 
   // ----- Stuff to avoid saveSettings race conditions
-  private saveQueue: Promise<void> = Promise.resolve();
-  private saveDebounceTimer: NodeJS.Timeout | null = null;
-  private readonly SAVE_DEBOUNCE_MS = 100; // Adjust as needed (100ms = batch saves within 100ms)
+  private isSaving: boolean = false;
+  private pending: {} | null = null;
+  private morePending: boolean = false;
 
   // ---------------- Global objects and variables -------------------------
 
@@ -236,33 +236,23 @@ export default class TextFlowPlugin extends Plugin {
   }
 
   // ---------------------------------------------------------------
-  saveSettings = async (): Promise<void> => {
-    // Debug: log stack trace to see where this is called from
-    const stack = new Error().stack;
-    const caller = stack?.split("\n")[2]?.trim() || "unknown";
-    // console.log(`saving settings from: ${caller}`); // Clear any pending debounce timer
-    if (this.saveDebounceTimer) {
-      clearTimeout(this.saveDebounceTimer);
-      this.saveDebounceTimer = null;
-    }
+  // this was written by the Code Copilot version of ChatGPT
+  saveSettings = async () => {
+    this.pending = structuredClone(this.settings);
+    this.morePending = true;
 
-    // Return a promise that will execute after the current save queue completes
-    return new Promise<void>((resolve, reject) => {
-      // Add to queue - this ensures sequential execution
-      this.saveQueue = this.saveQueue
-        .then(async () => {
-          try {
-            await this.saveData(this.settings);
-            resolve();
-          } catch (error) {
-            console.error("Failed to save settings:", error);
-            reject(error);
-          }
-        })
-        .catch((error) => {
-          reject(error);
-        });
-    });
+    if (this.isSaving) return;
+
+    this.isSaving = true;
+
+    try {
+      while (this.morePending) {
+        this.morePending = false;
+        await this.saveData(this.pending);
+      }
+    } finally {
+      this.isSaving = false;
+    }
   };
 
   // ---------------------------------------------------------------
@@ -2333,6 +2323,8 @@ ${pseudoElement}
     // if we're already in a safe position
     const searchStart = text.slice(cursorOffset);
     const matches = searchStart.match(markerRegex);
+    if (!matches) {
+    }
 
     if (matches) {
       const UIDLength = matches[0].length - 4;
@@ -2342,6 +2334,8 @@ ${pseudoElement}
         this.settings.flows[flowName].flowMap
       ).find(([_, foundRegionMap]) => foundRegionMap.invisibleUUID === UID);
 
+      if (!foundRegion) {
+      }
       if (foundRegion) {
         const [foundRegionPath, foundRegionMap] = foundRegion;
 
