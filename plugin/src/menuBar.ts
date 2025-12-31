@@ -420,7 +420,7 @@ export class MenuBar {
       }
 
       let activeRegionNoteName = "";
-      let titleClass = "blargh"; // could also have been "lalalalalalalalalalalalalalalalalalal"
+      let titleClass = "blargh"; // could also have been "lalalalalalalalalalalalalalalalalalala"
       if (activeRegion) {
         activeRegionNoteName = this.makeNavPath(activeRegion);
         const overlap = this.getOverlap();

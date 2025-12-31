@@ -122,12 +122,8 @@ export interface FlowDef {
 // -------- subtypes of flowDef
 export interface ActiveRegion {
   currentCursorPos: number;
-  type: string;
   path?: string;
   invisibleUUID: string;
-  flowOrder: number;
-  startInFlow: number;
-  endInFlow: number;
   leafMenuBarSettings: {
     menuBarDisplayState: MenuBarDisplayState;
     navDropdownState: DropdownState;

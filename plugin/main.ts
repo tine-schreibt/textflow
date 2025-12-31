@@ -32,14 +32,13 @@ import en from "./src/lang/en.json";
 import de from "./src/lang/de.json";
 
 //-----------------------------------------------------------------------------------------
-// This file is too big, but I feel like splitting it up
-// would just move the complexity over to the file explorer
+// This file is still quite big, but everything is very interconnected, so that splitting it up further would add more complexity overhead without actually improving readability
 //-----------------------------------------------------------------------------------------
 // TOC
 //-----------------------------------------------------------------------------------------
-// - Misc globals
+// - Class variables and other global stuff
 // - StatsOverlay
-// ----------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 // - Utility functions
 //-----------------------------------------------------------------------------------------
 //    - load and save
@@ -117,6 +116,7 @@ import de from "./src/lang/de.json";
 // - ONLOAD
 //-----------------------------------------------------------------------------------------
 // - ONUNLOAD
+//-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
 
 class StatsOverlay {
@@ -201,6 +201,7 @@ export default class TextFlowPlugin extends Plugin {
   private isSaving: boolean = false;
   private pending: {} | null = null;
   private morePending: boolean = false;
+  private isUnloading: boolean = false;
 
   // ---------------- Global objects and variables -------------------------
 
@@ -238,20 +239,35 @@ export default class TextFlowPlugin extends Plugin {
   // ---------------------------------------------------------------
   // this was written by the Code Copilot version of ChatGPT
   saveSettings = async () => {
+    const stack = new Error().stack;
+    const caller = stack?.split("\n")[2]?.trim() || "unknown";
+    console.log(`saving settings from: ${caller}`);
+
     this.pending = structuredClone(this.settings);
     this.morePending = true;
 
-    if (this.isSaving) return;
+    if (this.isUnloading) this.debugLog("Blocked save during unload");
+
+    if (this.isSaving || this.isUnloading) {
+      console.log("save got blocked");
+      if (this.morePending) {
+        console.log("pending");
+      }
+      return;
+    }
 
     this.isSaving = true;
 
     try {
       while (this.morePending) {
+        if (this.isUnloading) return;
         this.morePending = false;
         await this.saveData(this.pending);
+        console.log("one save down");
       }
     } finally {
       this.isSaving = false;
+      console.log("all done");
     }
   };
 
@@ -286,7 +302,6 @@ export default class TextFlowPlugin extends Plugin {
             );
           });
         }
-        await this.saveSettings();
       }
     } else {
       if (this.settings.systemFolderPath) {
@@ -301,6 +316,11 @@ export default class TextFlowPlugin extends Plugin {
   };
 
   // ---------------- Functions: Utilities: UI/UX -------------------------
+
+  private debugLog(msg: string) {
+    const line = `[${new Date().toISOString()}] ${msg}\n`;
+    this.app.vault.adapter.append(`${this.manifest.id}.debug.log`, line);
+  }
 
   // -------- Localisation (this part was quite obviously written by Claude 4 Sonnet)
   // Prepare translation
@@ -1518,13 +1538,7 @@ ${pseudoElement}
     );
 
     // ---------- Window/Editor events
-    // ----------------- Auto-sync and checks on blur or focus  -------------------------------
-    this.registerDomEvent(window, "blur", async () => {
-      await this.syncAllLeaves();
-      for (let flowName of Object.keys(this.settings.activeFlowObject)) {
-        await this.checkStatsForFlow(flowName);
-      }
-    });
+    // ----------------- Auto-sync and checks on focus  -------------------------------
     this.registerDomEvent(window, "focus", async () => {
       for (let flowName of Object.keys(this.settings.activeFlowObject)) {
         await this.checkStatsForFlow(flowName);
@@ -1565,7 +1579,7 @@ ${pseudoElement}
       this.app.workspace.on("layout-change", () => {
         if (this.app.workspace.getLeavesOfType("markdown").length === 0) {
           // We're definitely in the "empty leaf" state
-          this.manageActiveFlowObject();
+          this.manageActiveFlowObject(); // also saves
         }
       })
     );
@@ -1745,11 +1759,6 @@ ${pseudoElement}
             // Ensure that active region for the leaf is of type 'file'
             if (!plugin.settings.flows[flowName].activeRegions) return;
             if (!plugin.settings.flows[flowName].activeRegions[leafID]) return;
-            if (
-              plugin.settings.flows[flowName].activeRegions[leafID].type !=
-              "file"
-            )
-              return;
 
             const activeRegionPath =
               plugin.settings.flows[flowName].activeRegions[leafID].path;
@@ -2121,7 +2130,7 @@ ${pseudoElement}
       if (activeRegionObject) {
         this.settings.flows[flowName].activeRegions[leafID] =
           activeRegionObject;
-        // then check if the active region overlaps and sent a notice
+        // then check if the active region overlaps and send a notice
         if (activeRegionObject.path) {
           this.lastActiveRegion = activeRegionObject.path;
           this.decorateSourceNotes("update");
@@ -2131,80 +2140,81 @@ ${pseudoElement}
         await this.saveSettings();
         return;
       }
-    } else if (
-      // if there are values, use those to check if we're still in our known region
-      cursorOffset >
-        this.settings.flows[flowName].activeRegions[leafID].startInFlow &&
-      cursorOffset <
-        this.settings.flows[flowName].activeRegions[leafID].endInFlow
-    ) {
-      this.settings.flows[flowName].activeRegions[leafID].currentCursorPos =
-        cursorOffset;
-      if (this.settings.flows[flowName].activeRegions[leafID].path) {
-        this.lastActiveRegion =
-          this.settings.flows[flowName].activeRegions[leafID].path;
-      }
-      await this.saveSettings();
-      return;
     } else {
-      // new terrain!
-      this.settings.flows[flowName].activeRegions[leafID].currentCursorPos =
-        cursorOffset;
-      // Use a map and compass
-      let activeRegion = this.findActiveRegion(
-        flowName,
-        editor,
-        leafID,
-        cursorOffset,
-        text
-      );
+      const markerRegex =
+        /[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46}<hr>/;
+      const searchStart = text.slice(cursorOffset);
+      const matches = searchStart.match(markerRegex);
 
-      if (activeRegion) {
-        if (activeRegion.path) {
-          this.lastActiveRegion = activeRegion.path;
-        }
-        const activeRegionPath = activeRegion.path;
-        // if the user wants checks, always check the new region
-        if (
-          !activeRegionPath?.startsWith("#") &&
-          this.settings.checkExternalEdits != "no"
-        ) {
-          if (activeRegionPath) {
-            const flowHasEdits = await this.checkStatsForNote(
-              flowName,
-              activeRegionPath
-            );
-            if (flowHasEdits) {
-              await this.flowService.rebuildFlow(flowName, "menuBar");
-              new Notice(
-                this.t("main.cursorTracker.notice", {
-                  flowName: flowName,
-                })
+      if (!matches) {
+        console.error("textFlow: No UUID marker found in this.");
+        return;
+      }
+
+      // Check if we're still in the same region
+      const UIDLength = matches[0].length - 4;
+      const nextUID = matches[0].slice(0, UIDLength);
+      if (
+        nextUID !=
+        this.settings.flows[flowName].activeRegions[leafID].invisibleUUID
+      ) {
+        // new terrain!
+        this.settings.flows[flowName].activeRegions[leafID].currentCursorPos =
+          cursorOffset;
+        // Use a map and compass
+        let activeRegion = this.findActiveRegion(
+          flowName,
+          editor,
+          leafID,
+          cursorOffset,
+          text
+        );
+
+        if (activeRegion) {
+          if (activeRegion.path) {
+            this.lastActiveRegion = activeRegion.path;
+          }
+          const activeRegionPath = activeRegion.path;
+          // if the user wants checks, always check the new region
+          if (
+            !activeRegionPath?.startsWith("#") &&
+            this.settings.checkExternalEdits != "no"
+          ) {
+            if (activeRegionPath) {
+              const flowHasEdits = await this.checkStatsForNote(
+                flowName,
+                activeRegionPath
               );
-              this.lastActivity[flowName] = Date.now();
+              if (flowHasEdits) {
+                await this.flowService.rebuildFlow(flowName, "menuBar");
+                new Notice(
+                  this.t("main.cursorTracker.notice", {
+                    flowName: flowName,
+                  })
+                );
+                this.lastActivity[flowName] = Date.now();
+              }
             }
           }
+          this.settings.flows[flowName].activeRegions[leafID] = activeRegion;
+          await this.saveSettings();
+          this.decorateSourceNotes("update");
+          if (view.menuBar) {
+            view.menuBar.refresh(view.contentEl);
+          }
+          if (activeRegion.path) {
+            this.notifyOfOverlap(activeRegion.path, flowName, leafID);
+          }
+        } else {
+          // if the compass just cirles, check if it's just a tracking error
+          new Notice(
+            this.t("checkActiveRegion.notice region tracking error", {
+              flowName: flowName,
+            }),
+            0
+          );
         }
-        this.settings.flows[flowName].activeRegions[leafID] = activeRegion;
-        await this.saveSettings();
-        this.decorateSourceNotes("update");
-        if (view.menuBar) {
-          view.menuBar.refresh(view.contentEl);
-        }
-        if (activeRegion.path) {
-          this.notifyOfOverlap(activeRegion.path, flowName, leafID);
-        }
-      } else {
-        // if the compass just cirles, check if it's just a tracking error
-        new Notice(
-          this.t("checkActiveRegion.notice region tracking error", {
-            flowName: flowName,
-          }),
-          0
-        );
       }
-      await this.saveSettings();
-      return;
     }
   };
 
@@ -2218,12 +2228,8 @@ ${pseudoElement}
       const { type, invisibleUUID, flowOrder } = targetObject;
       this.settings.flows[flowName].activeRegions[leafID] = {
         currentCursorPos: 0,
-        type: targetObject.type,
         path: path,
         invisibleUUID: targetObject.invisibleUUID,
-        flowOrder: 1,
-        startInFlow: 0,
-        endInFlow: 0,
         leafMenuBarSettings: {
           menuBarDisplayState: "show",
           navDropdownState: "hide",
@@ -2263,15 +2269,8 @@ ${pseudoElement}
         // then return region data
         return {
           currentCursorPos: safePos,
-          type: regionMap.type,
           path: path,
           invisibleUUID: regionMap.invisibleUUID,
-          flowOrder: 1,
-          startInFlow: 0,
-          endInFlow:
-            text.indexOf(regionMap.invisibleUUID) +
-            regionMap.invisibleUUID.length +
-            4,
           leafMenuBarSettings:
             this.settings.flows[flowName].activeRegions[leafID]
               .leafMenuBarSettings,
@@ -2298,20 +2297,8 @@ ${pseudoElement}
         // and return region data
         return {
           currentCursorPos: safePos,
-          type: regionMap.type,
           path: path,
           invisibleUUID: regionMap.invisibleUUID,
-          flowOrder: regionMap.flowOrder,
-          startInFlow:
-            this.findStartOfRegion(
-              this.settings.flows[flowName],
-              regionMap.flowOrder,
-              text
-            ) || 0,
-          endInFlow:
-            text.lastIndexOf(regionMap.invisibleUUID) +
-            regionMap.invisibleUUID.length +
-            4,
           leafMenuBarSettings:
             this.settings.flows[flowName].activeRegions[leafID]
               .leafMenuBarSettings,
@@ -2322,8 +2309,6 @@ ${pseudoElement}
     // if we're already in a safe position
     const searchStart = text.slice(cursorOffset);
     const matches = searchStart.match(markerRegex);
-    if (!matches) {
-    }
 
     if (matches) {
       const UIDLength = matches[0].length - 4;
@@ -2338,32 +2323,11 @@ ${pseudoElement}
       if (foundRegion) {
         const [foundRegionPath, foundRegionMap] = foundRegion;
 
-        // calculate where the region starts
-        let newStartInFlow;
-        if (foundRegionMap.flowOrder > 1) {
-          newStartInFlow =
-            this.findStartOfRegion(
-              this.settings.flows[flowName],
-              foundRegionMap.flowOrder,
-              text
-            ) || 0;
-        } else {
-          newStartInFlow = 0;
-        }
-
-        // calculate where it ends
-        const endInFlow =
-          text.indexOf(foundRegionMap.invisibleUUID) + matches[0].length;
-
         // put the object together
         const activeRegionObject: Types.ActiveRegion = {
           currentCursorPos: cursorOffset,
-          type: foundRegionMap.type,
           path: foundRegionPath,
           invisibleUUID: UID,
-          flowOrder: foundRegionMap.flowOrder,
-          startInFlow: newStartInFlow,
-          endInFlow: endInFlow,
           leafMenuBarSettings: {
             menuBarDisplayState:
               this.settings.flows[flowName].activeRegions[leafID]
@@ -2389,6 +2353,7 @@ ${pseudoElement}
   };
 
   // ------------------
+  // we still need this for scrolling, syncing and marking of regions!!!
   findStartOfRegion = (
     flow: Types.FlowDef,
     flowOrder: number,
@@ -2745,7 +2710,6 @@ ${pseudoElement}
     this.removeCursorListener(view);
     this.removeTextChangeListener(view);
     this.cleanupMenuBar(view.leaf);
-    this.manageActiveFlowObject();
     if (view.menuBar) {
       view.menuBar.detach();
     }
@@ -2776,8 +2740,8 @@ ${pseudoElement}
         }
       }
     }
-
-    await this.saveSettings();
+    // finally
+    this.manageActiveFlowObject(); // also saves
   };
 
   // ---- Functions: Data safety ----------------------------
@@ -3037,13 +3001,13 @@ ${pseudoElement}
   updateStats = async (flowName: string, path: string, file: TFile) => {
     if (this.settings.flows[flowName].flowMap[path]) {
       this.settings.flows[flowName].flowMap[path].mtime = file.stat.mtime;
-      await this.saveSettings();
+      // caller saves
     }
     if (this.settings.checkExternalEdits === "mtime+hash") {
       let fileContent: string = await this.app.vault.read(file);
       const newHash = this.makeHash(fileContent);
       this.settings.hashes[path] = newHash;
-      await this.saveSettings();
+      // caller saves
     }
   };
 
@@ -3229,7 +3193,7 @@ ${pseudoElement}
         );
         if (leaves.length > 5) {
           // cap at five entries
-          // by finding the leaf with the oldest timestamp using forbidden magic
+          // by finding the leaf with the oldest timestamp using forbidden magic that a robot showed me
           const [oldestLeafId] = leaves.reduce((oldest, current) => {
             return current[1].update < oldest[1].update ? current : oldest;
           });
@@ -3271,7 +3235,7 @@ ${pseudoElement}
       // Cap at nine entries so we get three cursors for three regions
       if (
         this.settings.flows[flowName].persistentCursors[leafID].cursors.length >
-        9
+        5
       ) {
         this.settings.flows[flowName].persistentCursors[leafID].cursors.pop();
       }
@@ -3296,7 +3260,6 @@ ${pseudoElement}
         }
       }
     }
-    await this.saveSettings();
   };
 
   notifyOfOverlap = (path: string, activeFlow: string, leafID: string) => {
@@ -3333,6 +3296,13 @@ ${pseudoElement}
   async onload() {
     this.settings = await this.loadSettings();
     await this.loadLanguage();
+
+    // this is to protect from data corruption when Obsidian starts unloading
+    // register is for unloading
+    this.register(() => {
+      this.debugLog("Plugin unload started");
+      this.isUnloading = true;
+    });
 
     // set up the class so main.ts can act as an access hub to the functions in flowService.ts
     this.flowService = new FlowService(this, this.app);

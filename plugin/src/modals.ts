@@ -22,20 +22,21 @@ import { EditorView } from "@codemirror/view";
 import fs from "fs/promises";
 import path from "path";
 
-// --------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------
 // TOC
-// --------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------
 // - CreateFlowFromFolder
 // - PreviewModal
 // - DeleteFlowDefModal
 // - RestoreFlowDefModal
 // - FlowSwitcherModal
 // - FuzzyNavModal
-// --------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
 
-// --------------------------------------------------------------------------------
-// ----------- CREATE FLOW FROM FOLDER
-// --------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------
+//----------- CREATE FLOW FROM FOLDER
+//--------------------------------------------------------------------------------
 
 export class CreateFlowFromFolder extends Modal {
   constructor(app: App, private plugin: TextFlowPlugin) {
@@ -917,7 +918,11 @@ export class FlowSwitcherModal extends Modal {
       // initialise
       activeFlowInfoObject[flowName] = {};
       // gather the info on the active flow's leaves:
-      if (this.plugin.settings.flows[flowName].activeRegions) {
+      if (
+        this.plugin.settings.flows[flowName].activeRegions &&
+        Object.keys(this.plugin.settings.flows[flowName].activeRegions).length >
+          0
+      ) {
         Object.keys(this.plugin.settings.flows[flowName].activeRegions).forEach(
           (leafID) => {
             // get the note name; normalisation of path not necessary
@@ -926,8 +931,9 @@ export class FlowSwitcherModal extends Modal {
             ) {
               if (
                 // if it's a file, get the basename
-                this.plugin.settings.flows[flowName].activeRegions[leafID]
-                  .type === "file"
+                !this.plugin.settings.flows[flowName].activeRegions[
+                  leafID
+                ].path.startsWith("#")
               ) {
                 const activeRegion = basename(
                   this.plugin.settings.flows[flowName].activeRegions[leafID]
@@ -936,8 +942,9 @@ export class FlowSwitcherModal extends Modal {
                 activeFlowInfoObject[flowName][leafID] = activeRegion;
               } else if (
                 // if it's a folder, just take the name
-                this.plugin.settings.flows[flowName].activeRegions[leafID]
-                  .type === "folder"
+                this.plugin.settings.flows[flowName].activeRegions[
+                  leafID
+                ].path.startsWith("#")
               ) {
                 const activeRegion =
                   this.plugin.settings.flows[flowName].activeRegions[leafID]

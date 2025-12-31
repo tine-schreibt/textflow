@@ -25,7 +25,7 @@ import { getAPI } from "obsidian-dataview";
 //    - class ProgressNotice
 //    - class LoadingOverlay
 //-----------------------------------------------------------------------------------------
-// - Required by settingsTab in order of appearance
+// - Required by settingsTab in order of mention
 //-----------------------------------------------------------------------------------------
 //    - checkSystemFolder
 //    - createSystemFolder
@@ -62,6 +62,8 @@ import { getAPI } from "obsidian-dataview";
 //    - updateScrollbarVisibility
 //    - getTimestamp
 //    - explorerDecoArray
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
 
 interface ObsidianEditor extends Editor {
   cm?: EditorView;
@@ -1796,7 +1798,6 @@ export class FlowService {
   };
 
   backupFlowDef = async (flowName: string) => {
-    console.log("backupFlowDef called");
     // make a clone of the flow, clean it and package it
     const currentDate = this.getTimestamp();
     // the * is the separator so we can remove the timestamp without regEx
@@ -1822,7 +1823,6 @@ export class FlowService {
 
     // get the absolute path for the vault (we have to use the adapter here, sorry)
     const basePath = (this.app.vault.adapter as any).basePath;
-    console.log("basePath is ", basePath);
 
     // Make the path
     const backupPath = path.join(
