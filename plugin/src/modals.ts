@@ -528,24 +528,10 @@ export class RestoreFlowDefModal extends Modal {
     delete: {},
   };
 
-  // check if the file exists
-  private doesFileExist = async (filePath: string): Promise<boolean> => {
-    try {
-      await fs.access(filePath);
-      console.log("file at ", filePath, " does exist");
-      return true;
-    } catch {
-      console.log("file at ", filePath, " does NOT exist");
-      return false;
-    }
-  };
-
   private getBackup = async () => {
     // make the path of the backup.json
-    const basePath = (this.app.vault.adapter as any).basePath;
     const backupPath = normalizePath(
       path.join(
-        basePath,
         this.app.vault.configDir,
         "plugins",
         this.plugin.manifest.id,
@@ -553,18 +539,18 @@ export class RestoreFlowDefModal extends Modal {
       )
     );
 
-    const fileExists = await this.doesFileExist(backupPath);
+    const fileExists = await this.app.vault.adapter.exists(backupPath);
 
-    console.log("file exists is ", fileExists);
+    console.log("file exists is ", fileExists, "for ", backupPath);
 
     if (!fileExists) return null;
 
     // variable to hold the contents if the file exists
     let parsedJson;
-    const rawContents = await fs.readFile(backupPath, "utf-8");
+    const rawContents = await this.app.vault.adapter.read(backupPath);
     parsedJson = JSON.parse(rawContents);
 
-    if (Object.keys(parsedJson).length < 5) return null;
+    if (Object.keys(parsedJson).length === 0) return null;
 
     return { parsedJson, backupPath };
   };
@@ -837,10 +823,10 @@ export class RestoreFlowDefModal extends Modal {
 
           await this.plugin.saveSettings();
 
-          await fs.writeFile(
+          console.log("writing backup file");
+          await this.app.vault.adapter.write(
             backupPath,
-            JSON.stringify(parsedJson, null, 2),
-            "utf-8"
+            JSON.stringify(parsedJson, null, 2)
           );
           this.settingsTab.display();
           this.close();

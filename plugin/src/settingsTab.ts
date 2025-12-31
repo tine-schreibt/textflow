@@ -1455,12 +1455,10 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     // Check if we got a backup of the backup in our vault
     if (this.plugin.settings.firstLaunch) {
       // path for the file in the vault
-      const basePath = (this.app.vault.adapter as any).basePath;
 
-      let existingBackupPath = path.join(basePath, "textFlowDefBackup.json");
+      let existingBackupPath = "";
       if (systemFolder) {
         existingBackupPath = path.join(
-          basePath,
           systemFolder.path,
           "textFlowDefBackup.json"
         );
@@ -1468,21 +1466,24 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
       // path for the file in .obsidian/plugins/textFlow
       const newBackupPath = path.join(
-        basePath,
         this.app.vault.configDir,
         "plugins",
         this.plugin.manifest.id,
         "textFlowDefBackup.json"
       );
 
-      const fileExists = await this.plugin.flowService.doesFileExistFs(
-        existingBackupPath
+      const fileExists = await this.app.vault.adapter.exists(
+        existingBackupPath,
+        true
       );
       if (fileExists) {
-        const rawContents = await fs.readFile(existingBackupPath, "utf-8");
-        await fs.writeFile(newBackupPath, rawContents, "utf-8");
+        const rawContents = await this.app.vault.adapter.read(
+          existingBackupPath
+        );
+        console.log("writing backup file");
+        await this.app.vault.adapter.write(newBackupPath, rawContents);
         // once we copied the contents, we can delete the source file
-        await fs.unlink(existingBackupPath);
+        await this.app.vault.adapter.remove(existingBackupPath);
         new Notice(
           this.plugin.t(
             "restoreSettings.notice .json has been restored to .obsidian"
@@ -1522,9 +1523,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           )
           .onClick(async () => {
             // create the path for the file in .obsidian/plugins/textFlow
-            const basePath = (this.app.vault.adapter as any).basePath;
             const existingBackupPath = path.join(
-              basePath,
               this.app.vault.configDir,
               "plugins",
               this.plugin.manifest.id,
@@ -1532,25 +1531,25 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             );
 
             // and the path for where we'll put the plugin
-            let newBackupPath = path.join(basePath, "textFlowDefBackup.json");
+            let newBackupPath = "";
             if (systemFolder) {
               newBackupPath = path.join(
-                basePath,
                 systemFolder.path,
                 "textFlowDefBackup.json"
               );
             }
 
-            const fileExists = await this.plugin.flowService.doesFileExistFs(
-              existingBackupPath
+            const fileExists = await this.app.vault.adapter.exists(
+              existingBackupPath,
+              true
             );
             if (fileExists) {
               // get the contents and write them into the new file
-              const rawContents = await fs.readFile(
-                existingBackupPath,
-                "utf-8"
+              const rawContents = await this.app.vault.adapter.read(
+                existingBackupPath
               );
-              await fs.writeFile(newBackupPath, rawContents, "utf-8");
+              console.log("writing backup file");
+              await this.app.vault.adapter.write(newBackupPath, rawContents);
               let noticePath = "/";
               if (systemFolder) {
                 noticePath = systemFolder.path;

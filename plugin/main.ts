@@ -239,19 +239,14 @@ export default class TextFlowPlugin extends Plugin {
   // ---------------------------------------------------------------
   // this was written by the Code Copilot version of ChatGPT
   saveSettings = async () => {
-    const stack = new Error().stack;
-    const caller = stack?.split("\n")[2]?.trim() || "unknown";
-    console.log(`saving settings from: ${caller}`);
+    // const stack = new Error().stack;
+    // const caller = stack?.split("\n")[2]?.trim() || "unknown";
 
     this.pending = structuredClone(this.settings);
     this.morePending = true;
 
-    if (this.isUnloading) this.debugLog("Blocked save during unload");
-
     if (this.isSaving || this.isUnloading) {
-      console.log("save got blocked");
       if (this.morePending) {
-        console.log("pending");
       }
       return;
     }
@@ -263,11 +258,9 @@ export default class TextFlowPlugin extends Plugin {
         if (this.isUnloading) return;
         this.morePending = false;
         await this.saveData(this.pending);
-        console.log("one save down");
       }
     } finally {
       this.isSaving = false;
-      console.log("all done");
     }
   };
 
@@ -316,11 +309,6 @@ export default class TextFlowPlugin extends Plugin {
   };
 
   // ---------------- Functions: Utilities: UI/UX -------------------------
-
-  private debugLog(msg: string) {
-    const line = `[${new Date().toISOString()}] ${msg}\n`;
-    this.app.vault.adapter.append(`${this.manifest.id}.debug.log`, line);
-  }
 
   // -------- Localisation (this part was quite obviously written by Claude 4 Sonnet)
   // Prepare translation
@@ -3012,6 +3000,7 @@ ${pseudoElement}
   };
 
   // a robot said I should do it like this, and who am I to question a robot?
+  // it's to account for random delays in file writing and avoid false positives
   MTIME_EPSILON = 2000;
 
   // check stats for an entire flow's source notes
@@ -3300,7 +3289,6 @@ ${pseudoElement}
     // this is to protect from data corruption when Obsidian starts unloading
     // register is for unloading
     this.register(() => {
-      this.debugLog("Plugin unload started");
       this.isUnloading = true;
     });
 

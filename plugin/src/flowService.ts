@@ -49,7 +49,6 @@ import { getAPI } from "obsidian-dataview";
 //    - restoreCursorPos (for saved pos)
 //    - scrollToPos (for computed pos)
 //    - safeCreateFile
-//    - doesFileExistFs
 //    - backupFlowDef
 //-----------------------------------------------------------------------------------------
 // - Required by menuBar.ts and main.ts
@@ -1787,16 +1786,6 @@ export class FlowService {
     }
   };
 
-  // check if the file exists
-  doesFileExistFs = async (filePath: string): Promise<boolean> => {
-    try {
-      await fs.access(filePath);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
   backupFlowDef = async (flowName: string) => {
     // make a clone of the flow, clean it and package it
     const currentDate = this.getTimestamp();
@@ -1821,12 +1810,8 @@ export class FlowService {
     exportObj[backupName].flowMap = {};
     const output = JSON.stringify(exportObj, null, 2);
 
-    // get the absolute path for the vault (we have to use the adapter here, sorry)
-    const basePath = (this.app.vault.adapter as any).basePath;
-
     // Make the path
     const backupPath = path.join(
-      basePath,
       this.app.vault.configDir,
       "plugins",
       this.plugin.manifest.id,
@@ -1835,7 +1820,7 @@ export class FlowService {
 
     console.log("backupPath is ", backupPath);
 
-    const fileExists = await this.doesFileExistFs(backupPath);
+    const fileExists = await this.app.vault.adapter.exists(backupPath);
 
     console.log("checking file existence: ", fileExists);
     // variable to hold the contents if the file exists
@@ -1843,11 +1828,12 @@ export class FlowService {
 
     if (!fileExists) {
       // if the file doesn't exist yet, create it
-      await fs.writeFile(backupPath, output, "utf-8");
+      console.log("writing backup file")
+      await this.app.vault.adapter.write(backupPath, output);
       return;
     } else {
       try {
-        const rawContents = await fs.readFile(backupPath, "utf-8");
+        const rawContents = await this.app.vault.adapter.read(backupPath);
         parsedJson = JSON.parse(rawContents);
       } catch (e) {
         console.error("Invalid JSON in backup file:", e);
@@ -1873,10 +1859,10 @@ export class FlowService {
     }
 
     // write the object back to our file
-    await fs.writeFile(
+    console.log("writing backup file")
+    await this.app.vault.adapter.write(
       backupPath,
-      JSON.stringify(parsedJson, null, 2),
-      "utf-8"
+      JSON.stringify(parsedJson, null, 2)
     );
   };
 
