@@ -596,14 +596,6 @@ export class RestoreFlowDefModal extends Modal {
       const flowExplanation = new Setting(flowDisplay).setDesc(
         createFragment((desc) => {
           desc.createSpan({
-            text: this.plugin.t("backup.explanation replace"),
-          });
-          desc.createEl("br");
-          desc.createSpan({
-            text: this.plugin.t("backup.explanation restore"),
-          });
-          desc.createEl("br");
-          desc.createSpan({
             text: this.plugin.t("backup.explanation select"),
           });
         })

@@ -1220,6 +1220,13 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           this.plugin.settings.flowBuildBasket
         );
 
+        // gather all info so we can rebuild right away
+        this.plugin.flowService.rebuildFlow(
+          this.plugin.settings.flowBuildBasket.flowName,
+          "settingsTab"
+        );
+        this.plugin.refreshMenuBars();
+
         // update conflicts,
         this.plugin.flowService.syncConflictObjects(
           this.plugin.settings.flowBuildBasket
