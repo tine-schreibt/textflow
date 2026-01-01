@@ -106,13 +106,13 @@ export class MenuBar {
   private getDropdownState(dropdown: string) {
     if (dropdown === "nav") {
       return (
-        this.plugin.settings.flows[this.flowName].activeRegions[this.leafID]
+        this.plugin.settings.activeRegions[this.flowName][this.leafID]
           .leafMenuBarSettings.navDropdownState ?? "show"
       );
     }
     if (dropdown === "cursor")
       return (
-        this.plugin.settings.flows[this.flowName].activeRegions[this.leafID]
+        this.plugin.settings.activeRegions[this.flowName][this.leafID]
           .leafMenuBarSettings.cursorDropdownState ?? "show"
       );
   }
@@ -124,17 +124,17 @@ export class MenuBar {
   ) => {
     if (
       dropdown === "nav" &&
-      this.plugin.settings.flows[this.flowName].activeRegions[this.leafID]
+      this.plugin.settings.activeRegions[this.flowName][this.leafID]
     ) {
-      this.plugin.settings.flows[this.flowName].activeRegions[
+      this.plugin.settings.activeRegions[this.flowName][
         this.leafID
       ].leafMenuBarSettings.navDropdownState = state;
     }
     if (
       dropdown === "cursor" &&
-      this.plugin.settings.flows[this.flowName].activeRegions[this.leafID]
+      this.plugin.settings.activeRegions[this.flowName][this.leafID]
     ) {
-      this.plugin.settings.flows[this.flowName].activeRegions[
+      this.plugin.settings.activeRegions[this.flowName][
         this.leafID
       ].leafMenuBarSettings.cursorDropdownState = state;
     }
@@ -158,28 +158,24 @@ export class MenuBar {
   private getOverlap = () => {
     // one array for flow names, the other for paths
     const overlap: string[][] = [[], []];
-    if (this.plugin.settings.activeFlowObject) {
-      if (Object.keys(this.plugin.settings.activeFlowObject).length > 0) {
-        Object.keys(this.plugin.settings.activeFlowObject).forEach(
-          (flowName) => {
-            if (this.plugin.settings.flows[this.flowName].conflictObject) {
-              if (
+    if (this.plugin.settings.activeRegions) {
+      if (Object.keys(this.plugin.settings.activeRegions).length > 0) {
+        Object.keys(this.plugin.settings.activeRegions).forEach((flowName) => {
+          if (this.plugin.settings.flows[this.flowName].conflictObject) {
+            if (
+              this.plugin.settings.flows[this.flowName].conflictObject[flowName]
+            ) {
+              overlap[0].push(flowName);
+              Object.keys(
                 this.plugin.settings.flows[this.flowName].conflictObject[
                   flowName
                 ]
-              ) {
-                overlap[0].push(flowName);
-                Object.keys(
-                  this.plugin.settings.flows[this.flowName].conflictObject[
-                    flowName
-                  ]
-                ).forEach((path) => {
-                  overlap[1].push(path);
-                });
-              }
+              ).forEach((path) => {
+                overlap[1].push(path);
+              });
             }
           }
-        );
+        });
       }
     }
     return overlap;
@@ -208,11 +204,9 @@ export class MenuBar {
         // the flow order part
         flowOrder =
           this.plugin.settings.flows[this.flowName].flowMap[path].flowOrder;
-        if (
-          this.plugin.settings.flows[this.flowName].activeRegions[this.leafID]
-        ) {
+        if (this.plugin.settings.activeRegions[this.flowName][this.leafID]) {
           if (
-            this.plugin.settings.flows[this.flowName].activeRegions[this.leafID]
+            this.plugin.settings.activeRegions[this.flowName][this.leafID]
               .path === path
           ) {
             // the active region part
@@ -318,7 +312,7 @@ export class MenuBar {
       return menuBarEl;
     } else if (
       // if the menuBar is MINIMISED
-      this.plugin.settings.flows[this.flowName].activeRegions[this.leafID]
+      this.plugin.settings.activeRegions[this.flowName][this.leafID]
         .leafMenuBarSettings.menuBarDisplayState === "hide"
     ) {
       const menuBarEl = this.associatedView.contentEl.createDiv({
@@ -331,7 +325,7 @@ export class MenuBar {
         .setClass("clickable-icon")
         .setTooltip(this.plugin.t("Expand menu bar"))
         .onClick(() => {
-          this.plugin.settings.flows[this.flowName].activeRegions[
+          this.plugin.settings.activeRegions[this.flowName][
             this.leafID
           ].leafMenuBarSettings.menuBarDisplayState = "show";
           this.plugin.refreshMenuBars();
@@ -414,9 +408,9 @@ export class MenuBar {
       // Pacify the Red Squiggle Demon's wrath at 'path' being explicitly typed as string | undefined
       let activeRegion: string | undefined = "";
       // some optional chaining because I don't know how to make stairs work here
-      const flow = this.plugin.settings.flows?.[this.flowName];
-      if (flow.activeRegions[this.leafID].path) {
-        activeRegion = flow.activeRegions[this.leafID].path;
+      if (this.plugin.settings.activeRegions[this.flowName][this.leafID].path) {
+        activeRegion =
+          this.plugin.settings.activeRegions[this.flowName][this.leafID].path;
       }
 
       let activeRegionNoteName = "";
@@ -463,11 +457,11 @@ export class MenuBar {
           // see if we got a search term stored; this is so the user doesn't have to
           // retype it if they use it to create a navigation environment
           if (
-            this.plugin.settings.flows[this.flowName].activeRegions[this.leafID]
+            this.plugin.settings.activeRegions[this.flowName][this.leafID]
               .leafMenuBarSettings.navDropdownSearchTerm
           ) {
             const query =
-              this.plugin.settings.flows[this.flowName].activeRegions[
+              this.plugin.settings.activeRegions[this.flowName][
                 this.leafID
               ].leafMenuBarSettings.navDropdownSearchTerm;
             performSearch(event, query);
@@ -505,13 +499,13 @@ export class MenuBar {
           type: "text",
           placeholder: "Filter...",
           value:
-            this.plugin.settings.flows[this.flowName].activeRegions[this.leafID]
+            this.plugin.settings.activeRegions[this.flowName][this.leafID]
               .leafMenuBarSettings.navDropdownSearchTerm,
         });
 
         // if we have a stored search term, select it, so it's easy to replace/remove
         if (
-          this.plugin.settings.flows[this.flowName].activeRegions[this.leafID]
+          this.plugin.settings.activeRegions[this.flowName][this.leafID]
             ?.leafMenuBarSettings.navDropdownSearchTerm
         ) {
           searchInput.select();
@@ -545,7 +539,7 @@ export class MenuBar {
           query = (event.target as HTMLInputElement).value;
         }
 
-        this.plugin.settings.flows[this.flowName].activeRegions[
+        this.plugin.settings.activeRegions[this.flowName][
           this.leafID
         ].leafMenuBarSettings.navDropdownSearchTerm = query;
         // save the query debouncedly
@@ -881,7 +875,7 @@ export class MenuBar {
         .setClass("clickable-icon")
         .setTooltip(this.plugin.t("menubar Collapse menu bar"))
         .onClick(() => {
-          this.plugin.settings.flows[this.flowName].activeRegions[
+          this.plugin.settings.activeRegions[this.flowName][
             this.leafID
           ].leafMenuBarSettings.menuBarDisplayState = "hide";
           this.plugin.refreshMenuBars();

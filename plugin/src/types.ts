@@ -53,7 +53,7 @@ export interface TextFlowSettings {
   switcherPos: string;
   showMenuBar: boolean;
   flowBuildBasket: flowBuildBasket;
-  activeFlowObject: { [key: string]: { [key: string]: boolean } }; // flow Name[leafID] = boolean
+  activeRegions: { [key: string]: { [key: string]: ActiveRegion } }; // flowName[leafID] = ActiveRegion
   flows: { [key: string]: FlowDef };
 }
 
@@ -84,7 +84,6 @@ export interface flowBuildBasket {
   flowCookbook: { [key: string]: string };
   finalRecipe: string[];
   conflictObject: ConflictObject;
-  activeRegions: { [key: number | string]: ActiveRegion };
   lastActiveLeaves: string[];
   persistentCursors: CursorData;
 }
@@ -112,7 +111,6 @@ export interface FlowDef {
   flowBuilt: boolean;
   flaggedForRebuild: boolean;
   conflictObject: ConflictObject;
-  activeRegions: { [key: string]: ActiveRegion }; // leafID: {region}
   persistentCursors: CursorData;
   lastActiveLeaves: string[]; // FLOWBUILDBASKET, RENAME
   unsyncedRegionsArray: string[];
@@ -170,11 +168,10 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
     flowCookbook: {},
     finalRecipe: [],
     conflictObject: {},
-    activeRegions: {},
     lastActiveLeaves: [],
     persistentCursors: {},
   },
-  activeFlowObject: {},
+  activeRegions: {},
   flows: {},
 };
 

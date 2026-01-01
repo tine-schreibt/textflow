@@ -898,7 +898,7 @@ don't find your problem on this list, let me know (see
 
 ```js
 - update: (state, tr) => { let ranges = state.ranges;...}
-- this.settings.flows[flowName].activeRegions[leafID].currentCursorPos =
+- this.settings.activeRegions[flowName][leafID].currentCursorPos =
 	update.state.selection.main.from;
 - this.settings.flows[isItFlow].unsavedRegionsArray.push(activePath);
 - this.settings.flows[otherFlow].flaggedForRebuild = true;

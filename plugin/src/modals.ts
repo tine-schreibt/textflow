@@ -462,8 +462,8 @@ export class DeleteFlowDefModal extends Modal {
       // delete flowObject
       delete this.plugin.settings.flows[this.flowName];
 
-      // delete entry from activeFlowObject
-      delete this.plugin.settings.activeFlowObject[this.flowName];
+      // delete entry from activeRegions
+      delete this.plugin.settings.activeRegions[this.flowName];
 
       // delete conflictObjects for the flow
       Object.keys(this.plugin.settings.flows).forEach((flowName) => {
@@ -857,7 +857,7 @@ export class FlowSwitcherModal extends Modal {
     await leaf.openFile(file);
     leaf.setPinned(true);
     this.app.workspace.setActiveLeaf(leaf, { focus: true });
-    await this.plugin.manageActiveFlowObject(); // this is called anyway, but timing matters, so we do it again
+    await this.plugin.manageactiveRegions(); // this is called anyway, but timing matters, so we do it again
     this.updateActiveLeafID();
     this.display();
     this.plugin.syncAllLeaves();
@@ -892,41 +892,36 @@ export class FlowSwitcherModal extends Modal {
       {};
 
     // iterate over active flow object
-    Object.keys(this.plugin.settings.activeFlowObject).forEach((flowName) => {
+    Object.keys(this.plugin.settings.activeRegions).forEach((flowName) => {
       // initialise
       activeFlowInfoObject[flowName] = {};
       // gather the info on the active flow's leaves:
       if (
-        this.plugin.settings.flows[flowName].activeRegions &&
-        Object.keys(this.plugin.settings.flows[flowName].activeRegions).length >
-          0
+        this.plugin.settings.activeRegions[flowName] &&
+        Object.keys(this.plugin.settings.activeRegions[flowName]).length > 0
       ) {
-        Object.keys(this.plugin.settings.flows[flowName].activeRegions).forEach(
+        Object.keys(this.plugin.settings.activeRegions[flowName]).forEach(
           (leafID) => {
             // get the note name; normalisation of path not necessary
-            if (
-              this.plugin.settings.flows[flowName].activeRegions[leafID].path
-            ) {
+            if (this.plugin.settings.activeRegions[flowName][leafID].path) {
               if (
                 // if it's a file, get the basename
-                !this.plugin.settings.flows[flowName].activeRegions[
+                !this.plugin.settings.activeRegions[flowName][
                   leafID
                 ].path.startsWith("#")
               ) {
                 const activeRegion = basename(
-                  this.plugin.settings.flows[flowName].activeRegions[leafID]
-                    .path
+                  this.plugin.settings.activeRegions[flowName][leafID].path
                 );
                 activeFlowInfoObject[flowName][leafID] = activeRegion;
               } else if (
                 // if it's a folder, just take the name
-                this.plugin.settings.flows[flowName].activeRegions[
+                this.plugin.settings.activeRegions[flowName][
                   leafID
                 ].path.startsWith("#")
               ) {
                 const activeRegion =
-                  this.plugin.settings.flows[flowName].activeRegions[leafID]
-                    .path;
+                  this.plugin.settings.activeRegions[flowName][leafID].path;
                 activeFlowInfoObject[flowName][leafID] = activeRegion;
               }
             }
@@ -1129,7 +1124,7 @@ export class FlowSwitcherModal extends Modal {
               );
               if (targetLeaf) {
                 targetLeaf.detach();
-                this.plugin.manageActiveFlowObject();
+                this.plugin.manageactiveRegions();
                 await this.plugin.saveSettings();
                 this.updateActiveLeafID();
                 await this.display();
@@ -1243,7 +1238,7 @@ export class FlowSwitcherModal extends Modal {
             );
             if (targetLeaf) {
               await targetLeaf.detach();
-              this.plugin.manageActiveFlowObject();
+              this.plugin.manageactiveRegions();
               await this.plugin.saveSettings();
               this.updateActiveLeafID();
               await this.display();
@@ -1443,16 +1438,16 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
         let activePath: string | undefined = "";
         let activeCursorPos: string | number = "";
         if (
-          this.plugin.settings.flows[this.activeFlowName].activeRegions[
+          this.plugin.settings.activeRegions[this.activeFlowName][
             currentActiveleafID
           ]
         ) {
           activePath =
-            this.plugin.settings.flows[this.activeFlowName].activeRegions[
+            this.plugin.settings.activeRegions[this.activeFlowName][
               currentActiveleafID
             ].path;
           activeCursorPos =
-            this.plugin.settings.flows[this.activeFlowName].activeRegions[
+            this.plugin.settings.activeRegions[this.activeFlowName][
               currentActiveleafID
             ].currentCursorPos;
         }
@@ -1635,7 +1630,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
 
       // if we have open leaves for the flow
       if (
-        this.plugin.settings.flows[item.flowName].activeRegions &&
+        this.plugin.settings.activeRegions[item.flowName] &&
         item.type != "flow-name"
       ) {
         // targeting the last active leaf
@@ -1674,7 +1669,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
         } else {
         }
       } else if (
-        !this.plugin.settings.flows[item.flowName].activeRegions ||
+        !this.plugin.settings.activeRegions[item.flowName] ||
         item.type === "flow-name"
       ) {
         // if there are no active leaves we could target or we want to open a new one

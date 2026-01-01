@@ -91,7 +91,7 @@ import de from "./src/lang/de.json";
 //      - setupMenuBar
 //      - refreshMenuBars
 //      - activateFlow
-//      - manageActiveFlowObject
+//      - manageactiveRegions
 //      - closeFlow
 //-----------------------------------------------------------------------------------------
 // - Data safety
@@ -187,6 +187,9 @@ interface ListenerBasketItem {
 // ----------- THE PLUGIN CLASS ITESELF
 export default class TextFlowPlugin extends Plugin {
   settings: TextFlowSettings;
+  flows: {
+    [key: string]: Types.FlowDef;
+  };
   flowService: FlowService;
   settingsTab: TextFlowSettingsTab;
   isRebuilding: boolean = false; // to prevent superfluous feedback
@@ -540,12 +543,12 @@ export default class TextFlowPlugin extends Plugin {
         const leafID = (view.leaf as any).id;
         const flowName = this.isFlowFile(activeLeafPath);
         if (!flowName) return;
-        if (!this.settings.flows[flowName].activeRegions) return;
-        if (!this.settings.flows[flowName].activeRegions[leafID]) return;
-        if (!this.settings.flows[flowName].activeRegions[leafID].path) return;
+        if (!this.settings.activeRegions[flowName]) return;
+        if (!this.settings.activeRegions[flowName][leafID]) return;
+        if (!this.settings.activeRegions[flowName][leafID].path) return;
 
         const activeRegion = normalizePath(
-          this.settings.flows[flowName].activeRegions[leafID].path
+          this.settings.activeRegions[flowName][leafID].path
         );
         if (!activeRegion) return;
 
@@ -656,10 +659,10 @@ export default class TextFlowPlugin extends Plugin {
           if (flowName) {
             const leafID = (activeView.leaf as any).id;
 
-            for (let flowName of Object.keys(this.settings.activeFlowObject)) {
-              if (this.settings.flows[flowName].activeRegions[leafID]) {
+            for (let flowName of Object.keys(this.settings.activeRegions)) {
+              if (this.settings.activeRegions[flowName][leafID]) {
                 activeRegionPath =
-                  this.settings.flows[flowName].activeRegions[leafID].path;
+                  this.settings.activeRegions[flowName][leafID].path;
               }
             }
           }
@@ -915,7 +918,7 @@ ${pseudoElement}
     if (mode === "redo") {
       flowArray = Object.keys(this.settings.flows);
     } else {
-      flowArray = Object.keys(this.settings.activeFlowObject);
+      flowArray = Object.keys(this.settings.activeRegions);
     }
 
     for (let flowName of flowArray) {
@@ -927,11 +930,11 @@ ${pseudoElement}
         // and we only need to do this if we redo the whole shebang
         if (mode === "redo") {
           // if we're handling a flow that is active, track the path
-          if (this.settings.activeFlowObject[flowName]) {
+          if (this.settings.activeRegions[flowName]) {
             handledPaths[path] = true;
           }
           // if we're handling a non-active flow, protect the known active paths
-          if (!this.settings.activeFlowObject[flowName]) {
+          if (!this.settings.activeRegions[flowName]) {
             if (handledPaths[path]) continue;
             decoStyle = "none";
             handlePath(path, decoStyle as Types.DecoStyle);
@@ -940,7 +943,7 @@ ${pseudoElement}
         }
         // handle the path
         if (
-          this.settings.activeFlowObject[flowName] &&
+          this.settings.activeRegions[flowName] &&
           !this.settings.flows[flowName].unsyncedRegionsArray.includes(path)
         ) {
           decoStyle = "neutral";
@@ -1528,7 +1531,7 @@ ${pseudoElement}
     // ---------- Window/Editor events
     // ----------------- Auto-sync and checks on focus  -------------------------------
     this.registerDomEvent(window, "focus", async () => {
-      for (let flowName of Object.keys(this.settings.activeFlowObject)) {
+      for (let flowName of Object.keys(this.settings.activeRegions)) {
         await this.checkStatsForFlow(flowName);
       }
     });
@@ -1567,7 +1570,7 @@ ${pseudoElement}
       this.app.workspace.on("layout-change", () => {
         if (this.app.workspace.getLeavesOfType("markdown").length === 0) {
           // We're definitely in the "empty leaf" state
-          this.manageActiveFlowObject(); // also saves
+          this.manageactiveRegions(); // also saves
         }
       })
     );
@@ -1745,11 +1748,11 @@ ${pseudoElement}
             }
 
             // Ensure that active region for the leaf is of type 'file'
-            if (!plugin.settings.flows[flowName].activeRegions) return;
-            if (!plugin.settings.flows[flowName].activeRegions[leafID]) return;
+            if (!plugin.settings.activeRegions[flowName]) return;
+            if (!plugin.settings.activeRegions[flowName][leafID]) return;
 
             const activeRegionPath =
-              plugin.settings.flows[flowName].activeRegions[leafID].path;
+              plugin.settings.activeRegions[flowName][leafID].path;
             if (!activeRegionPath) return;
 
             if (
@@ -1898,7 +1901,7 @@ ${pseudoElement}
       }
 
       // I don't remember why I did this, but it's not increasing complexity so let's just keep it
-      const activeFlowObjectSnapshot = this.settings.activeFlowObject;
+      const activeRegionsSnapshot = this.settings.activeRegions;
 
       // check if the user likely isn't trying to open a file with their click
       // it doesn't do much, though, with regards to the multi-select bug.
@@ -1947,8 +1950,8 @@ ${pseudoElement}
         let flowSettings: Types.FlowDef | null = null;
         let isOfActiveFlow: boolean = false;
 
-        for (const flowName in activeFlowObjectSnapshot) {
-          if (Object.keys(activeFlowObjectSnapshot[flowName]).length != 0) {
+        for (const flowName in activeRegionsSnapshot) {
+          if (Object.keys(activeRegionsSnapshot[flowName]).length != 0) {
             if (this.settings.flows[flowName].flowMap[clickedFilePath]) {
               parentFlowName = flowName;
               flowSettings = this.settings.flows[flowName];
@@ -2105,7 +2108,7 @@ ${pseudoElement}
     const text = cmEditor.state.doc.toString();
 
     // if this is the initial call for the leaf, give it an active region
-    if (!this.settings.flows[flowName].activeRegions[leafID]) {
+    if (!this.settings.activeRegions[flowName][leafID]) {
       let activeRegionObject = this.findActiveRegion(
         flowName,
         editor,
@@ -2116,8 +2119,7 @@ ${pseudoElement}
 
       // double check because active region could come back undefined
       if (activeRegionObject) {
-        this.settings.flows[flowName].activeRegions[leafID] =
-          activeRegionObject;
+        this.settings.activeRegions[flowName][leafID] = activeRegionObject;
         // then check if the active region overlaps and send a notice
         if (activeRegionObject.path) {
           this.lastActiveRegion = activeRegionObject.path;
@@ -2143,11 +2145,10 @@ ${pseudoElement}
       const UIDLength = matches[0].length - 4;
       const nextUID = matches[0].slice(0, UIDLength);
       if (
-        nextUID !=
-        this.settings.flows[flowName].activeRegions[leafID].invisibleUUID
+        nextUID != this.settings.activeRegions[flowName][leafID].invisibleUUID
       ) {
         // new terrain!
-        this.settings.flows[flowName].activeRegions[leafID].currentCursorPos =
+        this.settings.activeRegions[flowName][leafID].currentCursorPos =
           cursorOffset;
         // Use a map and compass
         let activeRegion = this.findActiveRegion(
@@ -2184,7 +2185,7 @@ ${pseudoElement}
               }
             }
           }
-          this.settings.flows[flowName].activeRegions[leafID] = activeRegion;
+          this.settings.activeRegions[flowName][leafID] = activeRegion;
           await this.saveSettings();
           this.decorateSourceNotes("update");
           if (view.menuBar) {
@@ -2213,8 +2214,10 @@ ${pseudoElement}
         ([_, obj]) => obj.flowOrder === 1
       ) || [];
     if (targetObject) {
+      if (!this.settings.activeRegions[flowName])
+        this.settings.activeRegions[flowName] = {};
       const { type, invisibleUUID, flowOrder } = targetObject;
-      this.settings.flows[flowName].activeRegions[leafID] = {
+      this.settings.activeRegions[flowName][leafID] = {
         currentCursorPos: 0,
         path: path,
         invisibleUUID: targetObject.invisibleUUID,
@@ -2260,8 +2263,7 @@ ${pseudoElement}
           path: path,
           invisibleUUID: regionMap.invisibleUUID,
           leafMenuBarSettings:
-            this.settings.flows[flowName].activeRegions[leafID]
-              .leafMenuBarSettings,
+            this.settings.activeRegions[flowName][leafID].leafMenuBarSettings,
         };
       }
     }
@@ -2288,8 +2290,7 @@ ${pseudoElement}
           path: path,
           invisibleUUID: regionMap.invisibleUUID,
           leafMenuBarSettings:
-            this.settings.flows[flowName].activeRegions[leafID]
-              .leafMenuBarSettings,
+            this.settings.activeRegions[flowName][leafID].leafMenuBarSettings,
         };
       }
     }
@@ -2318,18 +2319,18 @@ ${pseudoElement}
           invisibleUUID: UID,
           leafMenuBarSettings: {
             menuBarDisplayState:
-              this.settings.flows[flowName].activeRegions[leafID]
-                .leafMenuBarSettings.menuBarDisplayState,
+              this.settings.activeRegions[flowName][leafID].leafMenuBarSettings
+                .menuBarDisplayState,
             navDropdownState:
-              this.settings.flows[flowName].activeRegions[leafID]
-                .leafMenuBarSettings.navDropdownState,
+              this.settings.activeRegions[flowName][leafID].leafMenuBarSettings
+                .navDropdownState,
             navDropdownSearchTerm:
-              this.settings.flows[flowName].activeRegions[leafID]
-                .leafMenuBarSettings.navDropdownSearchTerm,
+              this.settings.activeRegions[flowName][leafID].leafMenuBarSettings
+                .navDropdownSearchTerm,
 
             cursorDropdownState:
-              this.settings.flows[flowName].activeRegions[leafID]
-                .leafMenuBarSettings.cursorDropdownState,
+              this.settings.activeRegions[flowName][leafID].leafMenuBarSettings
+                .cursorDropdownState,
           },
         };
         return activeRegionObject;
@@ -2365,6 +2366,7 @@ ${pseudoElement}
   };
 
   // ---------------- Functions: Flow management and UI -------------------------
+
   // ---- Identity check
 
   isFlowFile = (activeLeafPath: string) => {
@@ -2386,7 +2388,7 @@ ${pseudoElement}
 
     // ------------- VISUALS ---------------------
     // this has to happen first so the menuBar can just be set up
-    await this.manageActiveFlowObject();
+    await this.manageactiveRegions();
     // now do the menu bar
     this.setupMenuBar(view, flowName);
     // Update the switcher modal in case it's open
@@ -2569,8 +2571,7 @@ ${pseudoElement}
     }
   };
 
-  // ------------- Used by flowSwitcherModal -----------
-  manageActiveFlowObject = async () => {
+  manageactiveRegions = async () => {
     // track all leaves
     const foundFlowLeaves: Record<string, Set<string>> = {};
 
@@ -2590,11 +2591,131 @@ ${pseudoElement}
           }
           foundFlowLeaves[flowName].add(leafID);
 
-          // Ensure the activeFlowObject exists
-          if (!this.settings.activeFlowObject[flowName]) {
-            this.settings.activeFlowObject[flowName] = {};
+          // Ensure the activeRegions exists
+          if (!this.settings.activeRegions[flowName]) {
+            this.settings.activeRegions[flowName] = {};
           }
-          this.settings.activeFlowObject[flowName][leafID] = true;
+          if (!this.settings.activeRegions[flowName][leafID]) {
+            this.addRegionTracking(flowName, leafID);
+          }
+
+          // Then add region tracking for newly opened leaves
+          if (!this.settings.activeRegions[flowName]) {
+            this.settings.activeRegions[flowName] = {};
+          }
+          if (!this.settings.activeRegions[flowName][leafID]) {
+            this.addRegionTracking(flowName, leafID);
+          }
+        }
+      }
+    });
+
+    // Clean up region tracking for closed leaves
+    Object.keys(this.settings.flows).forEach((flowName) => {
+      if (this.settings.activeRegions[flowName]) {
+        if (Object.keys(this.settings.activeRegions[flowName]).length > 0) {
+          Object.keys(this.settings.activeRegions[flowName]).forEach(
+            async (leafID) => {
+              if (!foundFlowLeaves[flowName]?.has(leafID)) {
+                delete this.settings.activeRegions[flowName][leafID];
+                // filter the id from the array
+                this.settings.flows[flowName].lastActiveLeaves =
+                  this.settings.flows[flowName].lastActiveLeaves.filter(
+                    (id) => id !== leafID
+                  );
+              }
+
+              // then, if a flow is all closed, we sync it, because all other syncs
+              // only care for active leaves
+              if (
+                Object.keys(this.settings.activeRegions[flowName]).length === 0
+              ) {
+                if (
+                  this.settings.flows[flowName].unsyncedRegionsArray.length > 0
+                ) {
+                  const path = this.settings.flows[flowName].flowFilePath;
+                  const note = this.app.vault.getAbstractFileByPath(path);
+                  if (!note) {
+                    new Notice(
+                      this.t(
+                        "manageactiveRegions.notice sync upon closing flow failed",
+                        { path: path }
+                      )
+                    );
+                  }
+                  if (note instanceof TFile) {
+                    // get the text from the file
+                    const text: string = await this.app.vault.read(note);
+                    await this.syncBackToSource(flowName, text, leafID);
+                  }
+                }
+              }
+            }
+          );
+        }
+      }
+      // finally, also clean up the activeRegions
+      if (this.settings.activeRegions) {
+        if (this.settings.activeRegions[flowName]) {
+          if (Object.keys(this.settings.activeRegions[flowName]).length === 0) {
+            delete this.settings.activeRegions[flowName];
+          } else {
+            Object.keys(this.settings.activeRegions[flowName]).forEach(
+              (leafID) => {
+                if (!foundFlowLeaves[flowName]?.has(leafID)) {
+                  delete this.settings.activeRegions[flowName][leafID];
+                }
+              }
+            );
+          }
+        }
+      }
+    });
+
+    // write that shit down
+    await this.saveSettings();
+
+    // And finally redraw the decoration and refresh the menu bars
+    this.decorateSourceNotes("redo");
+    const allLeaves = this.app.workspace.getLeavesOfType("markdown");
+    for (const leaf of allLeaves) {
+      const view = leaf.view as MarkdownView;
+      const filePath = view.file?.path;
+      if (!filePath) continue;
+
+      const flowName = this.isFlowFile(filePath);
+      if (!flowName) continue;
+
+      view.menuBar?.refresh(view.contentEl);
+    }
+  };
+
+  // ------------- Used by flowSwitcherModal -----------
+  /*  manageactiveRegions = async () => {
+    // track all leaves
+    const foundFlowLeaves: Record<string, Set<string>> = {};
+
+    this.app.workspace.iterateAllLeaves((leaf) => {
+      // get info for all leaves' contents, initalised or not
+      const leafViewState = leaf.getViewState();
+      if (leafViewState.type === "markdown" && leafViewState.state?.file) {
+        const leafID = (leaf as any).id;
+        const leafPath = leafViewState.state?.file;
+        if (typeof leafPath != "string") return; // behaves like 'continue' in this callback
+
+        const flowName = this.isFlowFile(leafPath);
+        if (flowName) {
+          // get leaves per flow
+          if (!foundFlowLeaves[flowName]) {
+            foundFlowLeaves[flowName] = new Set();
+          }
+          foundFlowLeaves[flowName].add(leafID);
+
+          // Ensure the activeRegions exists
+          if (!this.settings.activeRegions[flowName]) {
+            this.settings.activeRegions[flowName] = {};
+          }
+          this.settings.activeRegions[flowName][leafID] = true;
 
           // Then add region tracking for newly opened leaves
           if (!this.settings.flows[flowName].activeRegions) {
@@ -2638,7 +2759,7 @@ ${pseudoElement}
                   if (!note) {
                     new Notice(
                       this.t(
-                        "manageActiveFlowObject.notice sync upon closing flow failed",
+                        "manageactiveRegions.notice sync upon closing flow failed",
                         { path: path }
                       )
                     );
@@ -2654,18 +2775,18 @@ ${pseudoElement}
           );
         }
       }
-      // finally, also clean up the activeFlowObject
-      if (this.settings.activeFlowObject) {
-        if (this.settings.activeFlowObject[flowName]) {
+      // finally, also clean up the activeRegions
+      if (this.settings.activeRegions) {
+        if (this.settings.activeRegions[flowName]) {
           if (
-            Object.keys(this.settings.activeFlowObject[flowName]).length === 0
+            Object.keys(this.settings.activeRegions[flowName]).length === 0
           ) {
-            delete this.settings.activeFlowObject[flowName];
+            delete this.settings.activeRegions[flowName];
           } else {
-            Object.keys(this.settings.activeFlowObject[flowName]).forEach(
+            Object.keys(this.settings.activeRegions[flowName]).forEach(
               (leafID) => {
                 if (!foundFlowLeaves[flowName]?.has(leafID)) {
-                  delete this.settings.activeFlowObject[flowName][leafID];
+                  delete this.settings.activeRegions[flowName][leafID];
                 }
               }
             );
@@ -2691,7 +2812,7 @@ ${pseudoElement}
       view.menuBar?.refresh(view.contentEl);
     }
   };
-
+*/
   // if a flow is replaced by a non-flow
   closeFlow = async (view: MarkdownView) => {
     await this.syncAllLeaves();
@@ -2729,7 +2850,7 @@ ${pseudoElement}
       }
     }
     // finally
-    this.manageActiveFlowObject(); // also saves
+    this.manageactiveRegions(); // also saves
   };
 
   // ---- Functions: Data safety ----------------------------
@@ -2959,7 +3080,7 @@ ${pseudoElement}
                 : regionSlice;
 
               // sync modified content
-              await this.app.vault.modify(sourceFile, newContent);
+              await this.flowService.safeCreateFile(path, newContent);
             } catch (error) {
               remainingPaths.push(path);
               new Notice(
@@ -3032,7 +3153,7 @@ ${pseudoElement}
 
     if (changed) {
       // check if the flow is active/in active leaf
-      if (this.settings.activeFlowObject[flowName]) {
+      if (this.settings.activeRegions[flowName]) {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (view?.file?.path.endsWith(`${flowName}.md`)) {
           // rebuild immediately
@@ -3149,103 +3270,97 @@ ${pseudoElement}
     item?: Types.SuggestionItem,
     currentCursor?: number
   ) => {
-    if (this.settings.flows[flowName].activeRegions) {
-      if (!this.settings.flows[flowName].activeRegions[leafID]) {
-        return;
-      }
+    if (!this.settings.activeRegions[flowName]) return;
+    if (!this.settings.activeRegions[flowName][leafID]) return;
 
-      let regionPath = "";
-      if (item) {
-        if (item.path) {
-          regionPath = item.path;
-        }
-      } else if (this.settings.flows[flowName].activeRegions[leafID].path) {
-        regionPath = this.settings.flows[flowName].activeRegions[leafID].path;
+    let regionPath = "";
+    if (item) {
+      if (item.path) {
+        regionPath = item.path;
       }
+    } else if (this.settings.activeRegions[flowName][leafID].path) {
+      regionPath = this.settings.activeRegions[flowName][leafID].path;
+    }
 
-      if (!currentCursor) {
-        currentCursor =
-          this.settings.flows[flowName].activeRegions[leafID].currentCursorPos;
-      }
-      // Initialise if doesn't exist
-      if (!this.settings.flows[flowName].persistentCursors) {
-        this.settings.flows[flowName].persistentCursors = {};
-      }
-      if (!this.settings.flows[flowName].persistentCursors[leafID]) {
-        this.settings.flows[flowName].persistentCursors[leafID] = {
-          leafNickname: `${leafID.slice(0, 5)}`,
-          update: Date.now(),
-          cursors: [[regionPath, currentCursor]],
-        };
-        const leaves = Object.entries(
-          this.settings.flows[flowName].persistentCursors
-        );
-        if (leaves.length > 5) {
-          // cap at five entries
-          // by finding the leaf with the oldest timestamp using forbidden magic that a robot showed me
-          const [oldestLeafId] = leaves.reduce((oldest, current) => {
-            return current[1].update < oldest[1].update ? current : oldest;
-          });
-          delete this.settings.flows[flowName].persistentCursors[oldestLeafId];
-        }
-        return;
-      }
-
-      // Cap at two entries for the region so at most three are present
-      const countAndDelete = (tuples: [string, number][]) => {
-        let counter = 0;
-        const filteredTuples = [];
-        for (let tuple of tuples) {
-          if (tuple[0] !== regionPath) {
-            filteredTuples.push(tuple);
-          } else if (counter < 2 && tuple[1] != currentCursor) {
-            filteredTuples.push(tuple);
-            counter++;
-          }
-        }
-        return filteredTuples;
+    if (!currentCursor) {
+      currentCursor =
+        this.settings.activeRegions[flowName][leafID].currentCursorPos;
+    }
+    // Initialise if doesn't exist
+    if (!this.settings.flows[flowName].persistentCursors) {
+      this.settings.flows[flowName].persistentCursors = {};
+    }
+    if (!this.settings.flows[flowName].persistentCursors[leafID]) {
+      this.settings.flows[flowName].persistentCursors[leafID] = {
+        leafNickname: `${leafID.slice(0, 5)}`,
+        update: Date.now(),
+        cursors: [[regionPath, currentCursor]],
       };
-
-      this.settings.flows[flowName].persistentCursors[leafID].cursors =
-        countAndDelete(
-          this.settings.flows[flowName].persistentCursors[leafID].cursors
-        );
-
-      // Then add the new cursor
-      this.settings.flows[flowName].persistentCursors[leafID].cursors.unshift([
-        regionPath,
-        currentCursor,
-      ]);
-
-      // update the timestamp
-      this.settings.flows[flowName].persistentCursors[leafID].update =
-        Date.now();
-
-      // Cap at nine entries so we get three cursors for three regions
-      if (
-        this.settings.flows[flowName].persistentCursors[leafID].cursors.length >
-        5
-      ) {
-        this.settings.flows[flowName].persistentCursors[leafID].cursors.pop();
+      const leaves = Object.entries(
+        this.settings.flows[flowName].persistentCursors
+      );
+      if (leaves.length > 5) {
+        // cap at five entries
+        // by finding the leaf with the oldest timestamp using forbidden magic that a robot showed me
+        const [oldestLeafId] = leaves.reduce((oldest, current) => {
+          return current[1].update < oldest[1].update ? current : oldest;
+        });
+        delete this.settings.flows[flowName].persistentCursors[oldestLeafId];
       }
+      return;
+    }
 
-      // also remove ancient entries, but leave the last ones intact
-      if (
-        this.settings.flows[flowName].persistentCursors[leafID].cursors.length >
-        2
-      ) {
-        for (let leafID of Object.keys(
-          this.settings.flows[flowName].persistentCursors
-        )) {
-          if (
-            Math.abs(
-              this.settings.flows[flowName].persistentCursors[leafID].update -
-                Date.now()
-            ) >
-            1000 * 60 * 60 * 24 // if other entries are older than 24 hours
-          ) {
-            delete this.settings.flows[flowName].persistentCursors[leafID];
-          }
+    // Cap at two entries for the region so at most three are present
+    const countAndDelete = (tuples: [string, number][]) => {
+      let counter = 0;
+      const filteredTuples = [];
+      for (let tuple of tuples) {
+        if (tuple[0] !== regionPath) {
+          filteredTuples.push(tuple);
+        } else if (counter < 2 && tuple[1] != currentCursor) {
+          filteredTuples.push(tuple);
+          counter++;
+        }
+      }
+      return filteredTuples;
+    };
+
+    this.settings.flows[flowName].persistentCursors[leafID].cursors =
+      countAndDelete(
+        this.settings.flows[flowName].persistentCursors[leafID].cursors
+      );
+
+    // Then add the new cursor
+    this.settings.flows[flowName].persistentCursors[leafID].cursors.unshift([
+      regionPath,
+      currentCursor,
+    ]);
+
+    // update the timestamp
+    this.settings.flows[flowName].persistentCursors[leafID].update = Date.now();
+
+    // Cap at nine entries so we get three cursors for three regions
+    if (
+      this.settings.flows[flowName].persistentCursors[leafID].cursors.length > 5
+    ) {
+      this.settings.flows[flowName].persistentCursors[leafID].cursors.pop();
+    }
+
+    // also remove ancient entries, but leave the last ones intact
+    if (
+      this.settings.flows[flowName].persistentCursors[leafID].cursors.length > 2
+    ) {
+      for (let leafID of Object.keys(
+        this.settings.flows[flowName].persistentCursors
+      )) {
+        if (
+          Math.abs(
+            this.settings.flows[flowName].persistentCursors[leafID].update -
+              Date.now()
+          ) >
+          1000 * 60 * 60 * 24 // if other entries are older than 24 hours
+        ) {
+          delete this.settings.flows[flowName].persistentCursors[leafID];
         }
       }
     }
@@ -3253,7 +3368,7 @@ ${pseudoElement}
 
   notifyOfOverlap = (path: string, activeFlow: string, leafID: string) => {
     let overlappingFlows: string[] = [];
-    for (let flowName of Object.keys(this.settings.activeFlowObject)) {
+    for (let flowName of Object.keys(this.settings.activeRegions)) {
       if (flowName != activeFlow) {
         if (this.settings.flows[flowName].flowMap) {
           if (
@@ -3266,9 +3381,7 @@ ${pseudoElement}
       }
     }
     if (overlappingFlows.length > 0) {
-      const overlapString = Object.keys(this.settings.activeFlowObject).join(
-        ", "
-      );
+      const overlapString = Object.keys(this.settings.activeRegions).join(", ");
       const regionName = basename(path);
       new Notice(
         this.t("checkActiveRegion.notice overlap detected", {
@@ -3284,6 +3397,7 @@ ${pseudoElement}
   // -------------------------------------------------------
   async onload() {
     this.settings = await this.loadSettings();
+    this.flows = {};
     await this.loadLanguage();
 
     // this is to protect from data corruption when Obsidian starts unloading

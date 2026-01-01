@@ -203,7 +203,7 @@ export class FlowService {
         // add a little readme with info on how to not fuck up the folder
         const readmePath = normalizePath(`${newSystemFolderPath}/README.md`);
         const content = this.plugin.t("readme");
-        await this.safeCreateFile(this.app.vault, readmePath, content);
+        await this.safeCreateFile(readmePath, content);
 
         // inform the user of success
         new Notice(
@@ -328,32 +328,30 @@ export class FlowService {
 
       // reset all active leaves of the flow
       const leaves = this.app.workspace.getLeavesOfType("markdown");
-      Object.keys(this.plugin.settings.activeFlowObject).forEach(
-        (activeFlow) => {
-          if (activeFlow === oldFlowName) {
-            Object.keys(
-              this.plugin.settings.activeFlowObject[activeFlow]
-            ).forEach(async (leafID) => {
+      Object.keys(this.plugin.settings.activeRegions).forEach((activeFlow) => {
+        if (activeFlow === oldFlowName) {
+          Object.keys(this.plugin.settings.activeRegions[activeFlow]).forEach(
+            async (leafID) => {
               const targetLeaf = leaves.find(
                 (leaf) => (leaf as any).id === leafID
               );
               if (targetLeaf) {
                 targetLeaf.detach();
               }
-            });
-          }
+            }
+          );
         }
-      );
+      });
 
       // nix the flow's activeRegions
       if (this.plugin.settings.flows[oldFlowName]) {
-        if (this.plugin.settings.flows[oldFlowName].activeRegions) {
-          this.plugin.settings.flows[oldFlowName].activeRegions = {};
+        if (this.plugin.settings.activeRegions[oldFlowName]) {
+          this.plugin.settings.activeRegions[oldFlowName] = {};
         }
       }
 
-      // delete its entry in activeFlowObject
-      delete this.plugin.settings.activeFlowObject[oldFlowName];
+      // delete its entry in activeRegions
+      delete this.plugin.settings.activeRegions[oldFlowName];
 
       // handle conflictObjects for the flow
       Object.keys(this.plugin.settings.flows).forEach((otherFlowName) => {
@@ -1086,7 +1084,6 @@ export class FlowService {
       flowBuilt: false,
       flaggedForRebuild: true,
       conflictObject: flowBuildBasket.conflictObject,
-      activeRegions: flowBuildBasket.activeRegions,
       lastActiveLeaves: flowBuildBasket.lastActiveLeaves,
       persistentCursors: flowBuildBasket.persistentCursors,
       unsyncedRegionsArray: [],
@@ -1165,7 +1162,6 @@ export class FlowService {
     resetFlowBuildBasket.flowCookbook = {};
     resetFlowBuildBasket.finalRecipe = [];
     resetFlowBuildBasket.conflictObject = {};
-    resetFlowBuildBasket.activeRegions = {};
     resetFlowBuildBasket.lastActiveLeaves = [];
     resetFlowBuildBasket.persistentCursors = {};
   };
@@ -1185,7 +1181,6 @@ export class FlowService {
       flowCookbook: this.plugin.settings.flows[flowName].flowCookbook,
       finalRecipe: [],
       conflictObject: this.plugin.settings.flows[flowName].conflictObject,
-      activeRegions: this.plugin.settings.flows[flowName].activeRegions,
       lastActiveLeaves: this.plugin.settings.flows[flowName].lastActiveLeaves,
       persistentCursors: this.plugin.settings.flows[flowName].persistentCursors,
     };
@@ -1299,8 +1294,8 @@ export class FlowService {
     // Get an object started for the rest of cases
     let progressOverlays: { [key: string]: LoadingOverlay } = {};
     const IDAndEditorObject: { [key: string]: WorkspaceLeaf } = {};
-    if (this.plugin.settings.activeFlowObject[flowName]) {
-      Object.keys(this.plugin.settings.flows[flowName].activeRegions).forEach(
+    if (this.plugin.settings.activeRegions[flowName]) {
+      Object.keys(this.plugin.settings.activeRegions[flowName]).forEach(
         async (leafID) => {
           const leaves = this.app.workspace.getLeavesOfType("markdown");
           const leaf = leaves.find((newLeaf) => (newLeaf as any).id === leafID);
@@ -1504,7 +1499,6 @@ export class FlowService {
 
       // this also takes care of flags for write protection and listeners
       await this.plugin.flowService.safeCreateFile(
-        this.app.vault,
         flowFilePath,
         mapValueBasket.concatenatedFileContents
       );
@@ -1515,39 +1509,36 @@ export class FlowService {
       }
       // and finally, scroll and remove progress overlay
       Object.keys(progressOverlays).forEach((leafID) => {
-        Object.keys(this.plugin.settings.activeFlowObject).forEach(
-          (flowName) => {
-            if (this.plugin.settings.activeFlowObject[flowName][leafID]) {
-              if (this.plugin.settings.flows[flowName].activeRegions[leafID]) {
-                // check if we got a cursor position
-                if (
-                  !this.plugin.settings.flows[flowName].persistentCursors ||
-                  !this.plugin.settings.flows[flowName].persistentCursors[
-                    leafID
-                  ] ||
-                  !this.plugin.settings.flows[flowName].persistentCursors[
-                    leafID
-                  ].cursors
-                ) {
-                  // if we don't that's it
-                  return;
-                } else {
-                  // if we do, we first scroll there
-                  const leaf = IDAndEditorObject[leafID];
-                  if (!leaf || !(leaf.view instanceof MarkdownView)) {
-                    progressOverlays[leafID].remove();
-                    return;
-                  }
-                  const view = leaf.view;
-                  if (view instanceof MarkdownView) {
-                    this.restoreCursorPos(flowName, view, leafID);
-                  }
+        Object.keys(this.plugin.settings.activeRegions).forEach((flowName) => {
+          if (this.plugin.settings.activeRegions[flowName][leafID]) {
+            if (this.plugin.settings.activeRegions[flowName][leafID]) {
+              // check if we got a cursor position
+              if (
+                !this.plugin.settings.flows[flowName].persistentCursors ||
+                !this.plugin.settings.flows[flowName].persistentCursors[
+                  leafID
+                ] ||
+                !this.plugin.settings.flows[flowName].persistentCursors[leafID]
+                  .cursors
+              ) {
+                // if we don't that's it
+                return;
+              } else {
+                // if we do, we first scroll there
+                const leaf = IDAndEditorObject[leafID];
+                if (!leaf || !(leaf.view instanceof MarkdownView)) {
                   progressOverlays[leafID].remove();
+                  return;
                 }
+                const view = leaf.view;
+                if (view instanceof MarkdownView) {
+                  this.restoreCursorPos(flowName, view, leafID);
+                }
+                progressOverlays[leafID].remove();
               }
             }
           }
-        );
+        });
       });
 
       await this.plugin.saveSettings();
@@ -1739,16 +1730,14 @@ export class FlowService {
     }
   };
 
-  safeCreateFile = async (vault: Vault, path: string, content: string) => {
+  safeCreateFile = async (path: string, newContent: string) => {
     try {
-      const existingFile = vault.getAbstractFileByPath(path);
+      const existingFile = this.app.vault.getAbstractFileByPath(path);
       this.plugin.isRebuilding = true;
       this.plugin.textFlowOperation = true;
 
       if (existingFile instanceof TFile) {
-        await vault.modify(existingFile, content);
-
-        // Reload the file in any open views
+        // check if the file is open
         const leaves = this.app.workspace.getLeavesOfType("markdown");
         for (const leaf of leaves) {
           await leaf.loadIfDeferred();
@@ -1757,25 +1746,16 @@ export class FlowService {
             leaf.view.file?.path === path
           ) {
             const editor = leaf.view.editor as ObsidianEditor;
-            const cmEditor = editor.cm;
-
-            if (cmEditor) {
-              // Replace all content using CodeMirror's transaction API
-              const currentContent = cmEditor.state.doc.toString();
-              if (currentContent !== content) {
-                cmEditor.dispatch({
-                  changes: {
-                    from: 0,
-                    to: cmEditor.state.doc.length,
-                    insert: content,
-                  },
-                });
-              }
-            }
+            editor.setValue(newContent);
+            return;
           }
         }
+        // if the file exists but is not open, we get to here
+        await this.app.vault.process(existingFile, (content) => {
+          return newContent;
+        });
       } else {
-        await vault.create(path, content);
+        await this.app.vault.create(path, newContent);
       }
 
       this.plugin.isRebuilding = false;
@@ -1803,7 +1783,6 @@ export class FlowService {
     exportObj[backupName].flowBuilt = false;
     exportObj[backupName].flaggedForRebuild = true;
     exportObj[backupName].conflictObject = {};
-    exportObj[backupName].activeRegions = {};
     exportObj[backupName].lastActiveLeaves = [];
     exportObj[backupName].persistentCursors = {};
     exportObj[backupName].unsyncedRegionsArray = [];
@@ -1818,17 +1797,13 @@ export class FlowService {
       "textFlowDefBackup.json"
     );
 
-    console.log("backupPath is ", backupPath);
-
     const fileExists = await this.app.vault.adapter.exists(backupPath);
 
-    console.log("checking file existence: ", fileExists);
     // variable to hold the contents if the file exists
     let parsedJson;
 
     if (!fileExists) {
       // if the file doesn't exist yet, create it
-      console.log("writing backup file")
       await this.app.vault.adapter.write(backupPath, output);
       return;
     } else {
@@ -1859,7 +1834,6 @@ export class FlowService {
     }
 
     // write the object back to our file
-    console.log("writing backup file")
     await this.app.vault.adapter.write(
       backupPath,
       JSON.stringify(parsedJson, null, 2)
@@ -1890,7 +1864,6 @@ export class FlowService {
         `${flowName}_export_${this.plugin.flowService.getTimestamp()}.md`
       );
       await this.plugin.flowService.safeCreateFile(
-        this.app.vault,
         exportedFlowPath,
         contentWithYaml
       );
