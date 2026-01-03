@@ -187,9 +187,6 @@ interface ListenerBasketItem {
 // ----------- THE PLUGIN CLASS ITESELF
 export default class TextFlowPlugin extends Plugin {
   settings: TextFlowSettings;
-  flows: {
-    [key: string]: Types.FlowDef;
-  };
   flowService: FlowService;
   settingsTab: TextFlowSettingsTab;
   isRebuilding: boolean = false; // to prevent superfluous feedback
@@ -200,11 +197,16 @@ export default class TextFlowPlugin extends Plugin {
   lastActiveRegion: string = "";
   inactivityThreshold: number = 5 * 60 * 1000;
 
-  // ----- Stuff to avoid saveSettings race conditions
-  private isSaving: boolean = false;
-  private pending: {} | null = null;
-  private morePending: boolean = false;
+  // ----- Stuff to avoid save race conditions and broken saves
   private isUnloading: boolean = false;
+  // general settings
+  private isSavingSettings: boolean = false;
+  private pendingSettingsSave: {} | null = null;
+  private morePendingSettingsSave: boolean = false;
+  // flowDefs
+  private isSavingFlows: boolean = false;
+  private pendingFlowsSave: {} | null = null;
+  private morePendingFlowsSave: boolean = false;
 
   // ---------------- Global objects and variables -------------------------
 
@@ -245,25 +247,25 @@ export default class TextFlowPlugin extends Plugin {
     // const stack = new Error().stack;
     // const caller = stack?.split("\n")[2]?.trim() || "unknown";
 
-    this.pending = structuredClone(this.settings);
-    this.morePending = true;
+    this.pendingSettingsSave = structuredClone(this.settings);
+    this.morePendingSettingsSave = true;
 
-    if (this.isSaving || this.isUnloading) {
-      if (this.morePending) {
+    if (this.isSavingSettings || this.isUnloading) {
+      if (this.morePendingSettingsSave) {
       }
       return;
     }
 
-    this.isSaving = true;
+    this.isSavingSettings = true;
 
     try {
-      while (this.morePending) {
+      while (this.morePendingSettingsSave) {
         if (this.isUnloading) return;
-        this.morePending = false;
-        await this.saveData(this.pending);
+        this.morePendingSettingsSave = false;
+        await this.saveData(this.pendingSettingsSave);
       }
     } finally {
-      this.isSaving = false;
+      this.isSavingSettings = false;
     }
   };
 
@@ -2144,6 +2146,14 @@ ${pseudoElement}
       // Check if we're still in the same region
       const UIDLength = matches[0].length - 4;
       const nextUID = matches[0].slice(0, UIDLength);
+
+      // if we're still in the same region, only update the cursor position
+      if (
+        nextUID === this.settings.activeRegions[flowName][leafID].invisibleUUID
+      ) {
+        this.settings.activeRegions[flowName][leafID].currentCursorPos =
+          cursorOffset;
+      }
       if (
         nextUID != this.settings.activeRegions[flowName][leafID].invisibleUUID
       ) {
@@ -3282,13 +3292,19 @@ ${pseudoElement}
       regionPath = this.settings.activeRegions[flowName][leafID].path;
     }
 
+    console.log(currentCursor);
+    console.log("handling cursor for region ", regionPath);
+
     if (!currentCursor) {
       currentCursor =
         this.settings.activeRegions[flowName][leafID].currentCursorPos;
+      console.log(currentCursor, "read from active region");
     }
+
     // Initialise if doesn't exist
     if (!this.settings.flows[flowName].persistentCursors) {
       this.settings.flows[flowName].persistentCursors = {};
+      console.log("initalised new cursor set for flow ", flowName);
     }
     if (!this.settings.flows[flowName].persistentCursors[leafID]) {
       this.settings.flows[flowName].persistentCursors[leafID] = {
@@ -3296,12 +3312,19 @@ ${pseudoElement}
         update: Date.now(),
         cursors: [[regionPath, currentCursor]],
       };
+
+      console.log(
+        "saved cursor object ",
+        this.settings.flows[flowName].persistentCursors[leafID]
+      );
+
+      // cap the number of leaves
       const leaves = Object.entries(
         this.settings.flows[flowName].persistentCursors
       );
+
       if (leaves.length > 5) {
-        // cap at five entries
-        // by finding the leaf with the oldest timestamp using forbidden magic that a robot showed me
+        // find the leaf with the oldest timestamp using forbidden magic that a robot showed me
         const [oldestLeafId] = leaves.reduce((oldest, current) => {
           return current[1].update < oldest[1].update ? current : oldest;
         });
@@ -3309,37 +3332,53 @@ ${pseudoElement}
       }
       return;
     }
+    /*
+        // Function to cap the number of cursors per leaf
+        const countAndDelete = (tuples: [string, number][]) => {
+          let counter = 0;
+          const filteredTuples = [];
+          for (let tuple of tuples) {
+            if (tuple[0] !== regionPath) {
+              filteredTuples.push(tuple);
+            } else if (counter < 2 && tuple[1] != currentCursor) {
+              filteredTuples.push(tuple);
+              counter++;
+            }
+          }
+          return filteredTuples;
+        };
+    
+        this.settings.flows[flowName].persistentCursors[leafID].cursors =
+          countAndDelete(
+            this.settings.flows[flowName].persistentCursors[leafID].cursors
+          );
+*/
 
-    // Cap at two entries for the region so at most three are present
-    const countAndDelete = (tuples: [string, number][]) => {
-      let counter = 0;
-      const filteredTuples = [];
-      for (let tuple of tuples) {
-        if (tuple[0] !== regionPath) {
-          filteredTuples.push(tuple);
-        } else if (counter < 2 && tuple[1] != currentCursor) {
-          filteredTuples.push(tuple);
-          counter++;
-        }
-      }
-      return filteredTuples;
-    };
+    console.log(
+      "cursors before handling ",
+      this.settings.flows[flowName].persistentCursors[leafID].cursors
+    );
 
+    // Check if we already have an entry for that cursor and remove it
+    const updatedCursors = this.settings.flows[flowName].persistentCursors[
+      leafID
+    ].cursors.filter(([key]) => key !== regionPath);
+
+    console.log("updatedCursors before insertion ", updatedCursors);
+
+    // then put the new entry at the start
+    updatedCursors.unshift([regionPath, currentCursor]);
+
+    console.log("updatedCursors after ", updatedCursors);
+
+    // and put it back into the object
     this.settings.flows[flowName].persistentCursors[leafID].cursors =
-      countAndDelete(
-        this.settings.flows[flowName].persistentCursors[leafID].cursors
-      );
-
-    // Then add the new cursor
-    this.settings.flows[flowName].persistentCursors[leafID].cursors.unshift([
-      regionPath,
-      currentCursor,
-    ]);
+      updatedCursors;
 
     // update the timestamp
     this.settings.flows[flowName].persistentCursors[leafID].update = Date.now();
 
-    // Cap at nine entries so we get three cursors for three regions
+    // Cap number of entries
     if (
       this.settings.flows[flowName].persistentCursors[leafID].cursors.length > 5
     ) {
@@ -3358,7 +3397,7 @@ ${pseudoElement}
             this.settings.flows[flowName].persistentCursors[leafID].update -
               Date.now()
           ) >
-          1000 * 60 * 60 * 24 // if other entries are older than 24 hours
+          1000 * 60 * 60 * 48 // if other entries are older than 48 hours
         ) {
           delete this.settings.flows[flowName].persistentCursors[leafID];
         }
@@ -3397,7 +3436,7 @@ ${pseudoElement}
   // -------------------------------------------------------
   async onload() {
     this.settings = await this.loadSettings();
-    this.flows = {};
+    //this.flows = await this.loadFlowDefs();
     await this.loadLanguage();
 
     // this is to protect from data corruption when Obsidian starts unloading
