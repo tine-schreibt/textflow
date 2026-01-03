@@ -3292,19 +3292,14 @@ ${pseudoElement}
       regionPath = this.settings.activeRegions[flowName][leafID].path;
     }
 
-    console.log(currentCursor);
-    console.log("handling cursor for region ", regionPath);
-
     if (!currentCursor) {
       currentCursor =
         this.settings.activeRegions[flowName][leafID].currentCursorPos;
-      console.log(currentCursor, "read from active region");
     }
 
     // Initialise if doesn't exist
     if (!this.settings.flows[flowName].persistentCursors) {
       this.settings.flows[flowName].persistentCursors = {};
-      console.log("initalised new cursor set for flow ", flowName);
     }
     if (!this.settings.flows[flowName].persistentCursors[leafID]) {
       this.settings.flows[flowName].persistentCursors[leafID] = {
@@ -3312,11 +3307,6 @@ ${pseudoElement}
         update: Date.now(),
         cursors: [[regionPath, currentCursor]],
       };
-
-      console.log(
-        "saved cursor object ",
-        this.settings.flows[flowName].persistentCursors[leafID]
-      );
 
       // cap the number of leaves
       const leaves = Object.entries(
@@ -3332,32 +3322,6 @@ ${pseudoElement}
       }
       return;
     }
-    /*
-        // Function to cap the number of cursors per leaf
-        const countAndDelete = (tuples: [string, number][]) => {
-          let counter = 0;
-          const filteredTuples = [];
-          for (let tuple of tuples) {
-            if (tuple[0] !== regionPath) {
-              filteredTuples.push(tuple);
-            } else if (counter < 2 && tuple[1] != currentCursor) {
-              filteredTuples.push(tuple);
-              counter++;
-            }
-          }
-          return filteredTuples;
-        };
-    
-        this.settings.flows[flowName].persistentCursors[leafID].cursors =
-          countAndDelete(
-            this.settings.flows[flowName].persistentCursors[leafID].cursors
-          );
-*/
-
-    console.log(
-      "cursors before handling ",
-      this.settings.flows[flowName].persistentCursors[leafID].cursors
-    );
 
     // Check if we already have an entry for that cursor and remove it
     const updatedCursors = this.settings.flows[flowName].persistentCursors[
