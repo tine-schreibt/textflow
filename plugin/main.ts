@@ -3042,6 +3042,7 @@ ${pseudoElement}
       const remainingPaths: string[] = [];
       if (this.settings.flows[flowName].unsyncedRegionsArray.length > 0) {
         for (const path of this.settings.flows[flowName].unsyncedRegionsArray) {
+          if (path.startsWith("#")) continue;
           const sourceFile = this.app.vault.getFileByPath(path);
           if (!sourceFile) {
             new Notice(
@@ -3328,12 +3329,8 @@ ${pseudoElement}
       leafID
     ].cursors.filter(([key]) => key !== regionPath);
 
-    console.log("updatedCursors before insertion ", updatedCursors);
-
     // then put the new entry at the start
     updatedCursors.unshift([regionPath, currentCursor]);
-
-    console.log("updatedCursors after ", updatedCursors);
 
     // and put it back into the object
     this.settings.flows[flowName].persistentCursors[leafID].cursors =
