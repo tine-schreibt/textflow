@@ -1197,13 +1197,15 @@ ${pseudoElement}
               this.t("main.fileMenuListener.context make flow from folderS")
             )
             .onClick(async () => {
-              files.sort();
               const inclusionPathArray = [];
               for (let file of files) {
                 if (file instanceof TFolder) {
                   inclusionPathArray.push(file.path);
                 }
               }
+
+              // sometimes the array comes out not in alphanumeric order, so...
+              inclusionPathArray.sort();
 
               // empty the basket, just in case
               this.flowService.resetFlowBuildBasket(
