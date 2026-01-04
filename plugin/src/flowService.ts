@@ -1826,7 +1826,10 @@ export class FlowService {
     //count entries and delete stale ones
     for (let flowName of Object.keys(this.plugin.settings.flows)) {
       let counter = 0;
-      const sortedBackups = Object.keys(parsedJson).sort();
+      const sortedBackups = Object.keys(parsedJson).sort((a, b) =>
+        a.localeCompare(b)
+      );
+
       for (let backup of sortedBackups) {
         if (backup.startsWith(flowName)) {
           counter++;

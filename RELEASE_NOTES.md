@@ -1,2 +1,1 @@
-- removed some console.logs
--
+- fixed and improved a ton of stuff around reliability and UI

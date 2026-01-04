@@ -596,14 +596,14 @@ export class RestoreFlowDefModal extends Modal {
         })
       );
 
-      const flowSorted: string[] = [];
+      const flowsSorted: string[] = [];
       Object.keys(parsedJson).forEach((flow) => {
-        flowSorted.push(flow);
+        flowsSorted.push(flow);
       });
 
-      flowSorted.sort();
+      flowsSorted.sort((a, b) => a.localeCompare(b));
 
-      for (let flowName of flowSorted) {
+      for (let flowName of flowsSorted) {
         const shownFlow = parsedJson[flowName];
 
         // --- DISPLAY PREPARATIONS ----------------------------------
@@ -983,7 +983,9 @@ export class FlowSwitcherModal extends Modal {
         inactiveFlowArray.push(flowName);
       }
     });
-    const sortedInactiveFlowArray = inactiveFlowArray.sort();
+    const sortedInactiveFlowArray = inactiveFlowArray.sort((a, b) =>
+      a.localeCompare(b)
+    );
 
     // ----------------------------------------------------------
     // --------------------- DISPLAY LOGIC  ---------------------

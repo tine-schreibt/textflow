@@ -1206,7 +1206,7 @@ ${pseudoElement}
               }
 
               // sometimes the array comes out not in alphanumeric order, so...
-              inclusionPathArray.sort();
+              inclusionPathArray.sort((a, b) => a.localeCompare(b));
 
               // empty the basket, just in case
               this.flowService.resetFlowBuildBasket(

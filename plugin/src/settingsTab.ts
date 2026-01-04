@@ -1270,14 +1270,13 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       cls: "headline-text",
     });
 
-    let flowSorted: string[] = [];
+    let flowsSorted: string[] = [];
     Object.keys(this.plugin.settings.flows).forEach((flowName) => {
-      flowSorted.push(flowName);
+      flowsSorted.push(flowName);
     });
+    flowsSorted.sort((a, b) => a.localeCompare(b));
 
-    flowSorted = flowSorted.sort();
-
-    for (let flowName of flowSorted) {
+    for (let flowName of flowsSorted) {
       const shownFlow = this.plugin.settings.flows[flowName];
 
       // --- DISPLAY PREPARATIONS ----------------------------------
