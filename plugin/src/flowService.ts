@@ -1300,7 +1300,9 @@ export class FlowService {
       Object.keys(this.plugin.settings.activeRegions[flowName]).forEach(
         async (leafID) => {
           const leaves = this.app.workspace.getLeavesOfType("markdown");
-          const leaf = leaves.find((newLeaf) => (newLeaf as any).id === leafID);
+          const leaf = leaves.find(
+            (newLeaf) => this.leafId(newLeaf) === leafID
+          );
           if (leaf) {
             // make sure the leaf has ben properly initialised
             await leaf.loadIfDeferred();
@@ -1881,7 +1883,7 @@ export class FlowService {
     flowName: string,
     path: string,
     text: string,
-    editor: Editor
+    viewDotEditor: Editor
   ) => {
     const map = this.plugin.settings.flows[flowName].flowMap;
 
@@ -1893,29 +1895,33 @@ export class FlowService {
     const endPos = text.indexOf(map[path].invisibleUUID) - 1; // subtract 1 for the \r before the UID
 
     if (startPos && endPos) {
-      if ("cm" in editor) {
+      const cmView = this.getEditorView(viewDotEditor);
+      if (cmView) {
         // Type guard for ObsidianEditor
-        const cmEditor = (editor as any).cm;
-        if (cmEditor) {
-          try {
-            cmEditor.dispatch({
-              selection: { anchor: startPos + 1, head: endPos },
-              scrollIntoView: true, // Optional: scroll the selection into view
-            });
-            cmEditor.focus(); // Optional: focus the editor
-          } catch (error) {
-            console.error("Failed to set selection:", error);
-          }
+        try {
+          cmView.dispatch({
+            selection: { anchor: startPos + 1, head: endPos },
+            scrollIntoView: true, // Optional: scroll the selection into view
+          });
+          cmView.focus(); // Optional: focus the editor
+        } catch (error) {
+          console.error("Failed to set selection:", error);
         }
       }
     }
   };
 
-  // robot told me this helps to keep the scope clean with regards to type
+  //---------------------
+  // robot told me these two help to keep the scope clean with regards to type
   leafId = (leaf: WorkspaceLeaf): Types.LeafId => {
     return (leaf as any).id as Types.LeafId;
   };
 
+  getEditorView = (editor: Editor): EditorView | null => {
+    const cm = (editor as Types.EditorWithCM).cm;
+    return cm instanceof EditorView ? cm : null;
+  };
+  //-----------
   updateScrollbarVisibility = async () => {
     // Handle all leaves
     // add hider if all are hidden

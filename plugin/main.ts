@@ -462,7 +462,7 @@ export default class TextFlowPlugin extends Plugin {
         if (!view) {
           new Modals.FlowSwitcherModal(this.app, this).open();
         } else {
-          const leafID = (view.leaf as any).id;
+          const leafID = this.flowService.leafId(view.leaf);
           new Modals.FlowSwitcherModal(this.app, this, leafID).open();
         }
       },
@@ -543,7 +543,7 @@ export default class TextFlowPlugin extends Plugin {
         if (!view.file) return;
 
         const activeLeafPath = view.file.path;
-        const leafID = (view.leaf as any).id;
+        const leafID = this.flowService.leafId(view.leaf);
         const flowName = this.isFlowFile(activeLeafPath);
         if (!flowName) return;
         if (!this.settings.activeRegions[flowName]) return;
@@ -581,7 +581,7 @@ export default class TextFlowPlugin extends Plugin {
         const flowName = this.isFlowFile(activeLeafPath);
         if (!flowName) return;
 
-        const leafID = (activeView.leaf as any).id;
+        const leafID = this.flowService.leafId(activeView.leaf);
         // check if we got data for that leafID
         this.flowService.restoreCursorPos(flowName, activeView, leafID);
       },
@@ -660,7 +660,7 @@ export default class TextFlowPlugin extends Plugin {
         if (activeLeafPath) {
           const flowName = this.isFlowFile(activeLeafPath);
           if (flowName) {
-            const leafID = (activeView.leaf as any).id;
+            const leafID = this.flowService.leafId(activeView.leaf);
 
             for (let flowName of Object.keys(this.settings.activeRegions)) {
               if (this.settings.activeRegions[flowName][leafID]) {
@@ -1590,7 +1590,7 @@ ${pseudoElement}
     if (!view) {
       return;
     }
-    const leafID: string = (view.leaf as any).id;
+    const leafID: string = this.flowService.leafId(view.leaf);
     if (!leafID) return;
 
     if (this.listenerBasket[leafID]) {
@@ -1682,7 +1682,7 @@ ${pseudoElement}
 
   // ---------------------------------------------------------
   removeCursorListener = (view: MarkdownView) => {
-    const leafID = (view.leaf as any).id;
+    const leafID = this.flowService.leafId(view.leaf);
     if (!leafID) return;
     if (!this.listenerBasket[leafID]) return;
 
@@ -1702,7 +1702,7 @@ ${pseudoElement}
   private addTextChangeListener = (view: MarkdownView | null) => {
     if (!view) return;
 
-    const leafID: string = (view.leaf as any).id;
+    const leafID: string = this.flowService.leafId(view.leaf);
     if (!leafID) return;
 
     if (this.listenerBasket[`${leafID}-changes`]) {
@@ -1837,7 +1837,7 @@ ${pseudoElement}
 
   //---------------
   removeTextChangeListener = (view: MarkdownView) => {
-    const leafID = (view.leaf as any).id;
+    const leafID = this.flowService.leafId(view.leaf);
     if (!leafID) return;
     if (!this.listenerBasket[`${leafID}-changes`]) return;
 
@@ -2455,7 +2455,7 @@ ${pseudoElement}
       this.toggleEditable(view, true);
     }
 
-    const leafID = (view.leaf as any).id;
+    const leafID = this.flowService.leafId(view.leaf);
 
     // ------------- SCROLLING ---------------------
     // See if this is the inital activation of the flow/leaf and restore cursor
@@ -2505,7 +2505,7 @@ ${pseudoElement}
   // ---- handle menuBar setup
   setupMenuBar = (view: MarkdownView, flowName: string) => {
     let menuBar: MenuBar;
-    const leafID = (view.leaf as any).id;
+    const leafID = this.flowService.leafId(view.leaf);
     // If we got one, check if it belongs to the flow
     if (view.menuBar) {
       if ((view.menuBar as MenuBar).getFlowName() != flowName) {
@@ -2715,7 +2715,7 @@ ${pseudoElement}
       view.menuBar.detach();
     }
 
-    const leafID = (view.leaf as any).id;
+    const leafID = this.flowService.leafId(view.leaf);
     if (this.editableCompartments?.[leafID]) {
       delete this.editableCompartments[leafID];
     }
@@ -2754,12 +2754,11 @@ ${pseudoElement}
     view: MarkdownView,
     protectionType: Types.ProtectionType
   ) => {
-    const editor = view.editor as any;
-    const leafID = (view.leaf as any).id;
+    const cmView = this.flowService.getEditorView(view.editor);
+    const leafID = this.flowService.leafId(view.leaf);
 
-    if (!editor.cm) {
-      return;
-    }
+    if (!cmView) return;
+
 
     if (protectionType === "sync") {
       // create new compartment
@@ -2768,7 +2767,7 @@ ${pseudoElement}
       this.editableCompartments[leafID] = [protectSyncCompartment, true];
 
       // Initialise
-      editor.cm.dispatch({
+      cmView.dispatch({
         effects: StateEffect.appendConfig.of([
           protectSyncCompartment.of(
             this.preventEdit(this.editableCompartments, leafID)
@@ -2825,7 +2824,7 @@ ${pseudoElement}
       // Create new compartment
       const protectDividerCompartment = new Compartment();
       // Initialise
-      editor.cm.dispatch({
+      cmView.dispatch({
         effects: StateEffect.appendConfig.of([
           protectDividerCompartment.of([preventEdit]),
         ]),
@@ -2853,15 +2852,17 @@ ${pseudoElement}
   // toggle the sync protection by reconfiguring the compartment
 
   toggleEditable = (view: MarkdownView, editable: boolean) => {
-    const editor = view.editor as any;
+    const cmView = this.flowService.getEditorView(view.editor);
 
-    const leafID = (view.leaf as any).id;
+    if (!cmView) return;
+
+    const leafID = this.flowService.leafId(view.leaf);
     if (!this.editableCompartments[leafID]) return;
     this.editableCompartments[leafID][1] = editable;
     const compartment = this.editableCompartments[leafID][0];
 
     if (compartment) {
-      editor.cm.dispatch({
+      cmView.dispatch({
         effects: compartment.reconfigure([
           this.preventEdit(this.editableCompartments, leafID),
         ]),
@@ -2895,7 +2896,7 @@ ${pseudoElement}
     for (let flowName of Object.keys(flowLeaves)) {
       for (let view of flowLeaves[flowName]) {
         const text = view.editor.getValue();
-        const leafID = (view.leaf as any).id;
+        const leafID = this.flowService.leafId(view.leaf);
         this.toggleEditable(view, false); // block all user edits
         await this.syncBackToSource(flowName, text, leafID);
         this.toggleEditable(view, true);
@@ -3321,7 +3322,7 @@ ${pseudoElement}
           if (!view) {
             new Modals.FlowSwitcherModal(this.app, this).open();
           } else {
-            const leafID = (view.leaf as any).id;
+            const leafID = this.flowService.leafId(view.leaf);
             new Modals.FlowSwitcherModal(this.app, this, leafID).open();
           }
         });
@@ -3335,7 +3336,7 @@ ${pseudoElement}
             if (!view) {
               new Modals.FlowSwitcherModal(this.app, this).open();
             } else {
-              const leafID = (view.leaf as any).id;
+              const leafID = this.flowService.leafId(view.leaf);
               new Modals.FlowSwitcherModal(this.app, this, leafID).open();
             }
           }

@@ -238,6 +238,10 @@ export type DVNote = {
 
 // ---- other assorted types and interfaces
 
+export interface EditorWithCM extends Editor {
+  cm?: EditorView;
+}
+
 // for handling leaves
 export type LeafId = string & { readonly __leafId: unique symbol }
 

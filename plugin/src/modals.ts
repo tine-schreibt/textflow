@@ -867,7 +867,7 @@ export class FlowSwitcherModal extends Modal {
     if (!this.currentActiveLeafID) {
       const view = this.app.workspace.getActiveViewOfType(MarkdownView);
       if (view) {
-        this.currentActiveLeafID = (view.leaf as any).id;
+        this.currentActiveLeafID = this.plugin.flowService.leafId(view.leaf);
       }
     }
   };
@@ -884,14 +884,16 @@ export class FlowSwitcherModal extends Modal {
 
   private focusLeaf = (leafID: string) => {
     const leaves = this.app.workspace.getLeavesOfType("markdown");
-    const targetLeaf = leaves.find((leaf) => this.plugin.flowService.leafId(leaf) === leafID);
+    const targetLeaf = leaves.find(
+      (leaf) => this.plugin.flowService.leafId(leaf) === leafID
+    );
     if (targetLeaf) {
       this.app.workspace.setActiveLeaf(targetLeaf, { focus: true });
       /*if (targetLeaf instanceof MarkdownView) {
       await this.plugin.setupFlowView(activeFlow, targetLeaf);
     }*/
+      this.currentActiveLeafID = this.plugin.flowService.leafId(targetLeaf);
     }
-    this.currentActiveLeafID = (targetLeaf as any).id;
     this.display();
   };
 
@@ -1444,7 +1446,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
       if (!view) {
         const currentActiveleafID = "";
       } else {
-        const currentActiveleafID = (view.leaf as any).id;
+        const currentActiveleafID = this.plugin.flowService.leafId(view.leaf);
         let activePath: string | undefined = "";
         let activeCursorPos: string | number = "";
         if (
@@ -1652,7 +1654,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
         this.app.workspace.iterateAllLeaves((iteratorLeaf) => {
           const leafViewState = iteratorLeaf.getViewState();
           if (leafViewState.type === "markdown") {
-            const iteratorLeafID = (iteratorLeaf as any).id;
+            const iteratorLeafID = this.plugin.flowService.leafId(iteratorLeaf);
             if (lastActiveLeafID === iteratorLeafID) {
               leaf = iteratorLeaf;
             }
