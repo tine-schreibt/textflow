@@ -884,7 +884,7 @@ export class FlowSwitcherModal extends Modal {
 
   private focusLeaf = (leafID: string) => {
     const leaves = this.app.workspace.getLeavesOfType("markdown");
-    const targetLeaf = leaves.find((leaf) => (leaf as any).id === leafID);
+    const targetLeaf = leaves.find((leaf) => this.plugin.flowService.leafId(leaf) === leafID);
     if (targetLeaf) {
       this.app.workspace.setActiveLeaf(targetLeaf, { focus: true });
       /*if (targetLeaf instanceof MarkdownView) {
@@ -897,7 +897,9 @@ export class FlowSwitcherModal extends Modal {
 
   private closeLeaf = async (leafID: string) => {
     const leaves = this.app.workspace.getLeavesOfType("markdown");
-    const targetLeaf = leaves.find((leaf) => (leaf as any).id === leafID);
+    const targetLeaf = leaves.find(
+      (leaf) => this.plugin.flowService.leafId(leaf) === leafID
+    );
     if (targetLeaf) {
       targetLeaf.detach();
       this.plugin.manageactiveRegions();
@@ -1250,7 +1252,7 @@ export class FlowSwitcherModal extends Modal {
           .setClass(`flow-switch-modal-header-button-neutral`)
           .setClass("clickable-icon")
           .onClick(async () => {
-            this.closeLeaf(leafID)
+            this.closeLeaf(leafID);
           });
       });
     }
@@ -1694,7 +1696,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
           if (!item.cursorPos && leaf) {
             cursorPos = await findCursorPos(item, leaf);
           }
-          const leafID = (leaf as any).id;
+          const leafID = this.plugin.flowService.leafId(leaf);
           if (cursorPos) {
             this.plugin.manageCursorPos(item.flowName, leafID, item, cursorPos);
             this.app.workspace.setActiveLeaf(leaf, { focus: true });

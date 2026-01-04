@@ -238,6 +238,9 @@ export type DVNote = {
 
 // ---- other assorted types and interfaces
 
+// for handling leaves
+export type LeafId = string & { readonly __leafId: unique symbol }
+
 // for the writelock
 export type ProtectionType = "divider" | "sync";
 

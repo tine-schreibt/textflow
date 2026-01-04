@@ -333,7 +333,7 @@ export class FlowService {
           Object.keys(this.plugin.settings.activeRegions[activeFlow]).forEach(
             async (leafID) => {
               const targetLeaf = leaves.find(
-                (leaf) => (leaf as any).id === leafID
+                (leaf) => this.leafId(leaf) === leafID
               );
               if (targetLeaf) {
                 targetLeaf.detach();
@@ -1909,6 +1909,11 @@ export class FlowService {
         }
       }
     }
+  };
+
+  // robot told me this helps to keep the scope clean with regards to type
+  leafId = (leaf: WorkspaceLeaf): Types.LeafId => {
+    return (leaf as any).id as Types.LeafId;
   };
 
   updateScrollbarVisibility = async () => {

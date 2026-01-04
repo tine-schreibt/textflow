@@ -1270,12 +1270,12 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       cls: "headline-text",
     });
 
-    const flowSorted: string[] = [];
+    let flowSorted: string[] = [];
     Object.keys(this.plugin.settings.flows).forEach((flowName) => {
       flowSorted.push(flowName);
     });
 
-    flowSorted.sort();
+    flowSorted = flowSorted.sort();
 
     for (let flowName of flowSorted) {
       const shownFlow = this.plugin.settings.flows[flowName];
@@ -1486,7 +1486,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         const rawContents = await this.app.vault.adapter.read(
           existingBackupPath
         );
-        console.log("writing backup file");
         await this.app.vault.adapter.write(newBackupPath, rawContents);
         // once we copied the contents, we can delete the source file
         await this.app.vault.adapter.remove(existingBackupPath);
@@ -1554,7 +1553,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               const rawContents = await this.app.vault.adapter.read(
                 existingBackupPath
               );
-              console.log("writing backup file");
               await this.app.vault.adapter.write(newBackupPath, rawContents);
               let noticePath = "/";
               if (systemFolder) {

@@ -2504,7 +2504,6 @@ ${pseudoElement}
 
   // ---- handle menuBar setup
   setupMenuBar = (view: MarkdownView, flowName: string) => {
-
     let menuBar: MenuBar;
     const leafID = (view.leaf as any).id;
     // If we got one, check if it belongs to the flow
@@ -2595,7 +2594,7 @@ ${pseudoElement}
       // get info for all leaves' contents, initalised or not
       const leafViewState = leaf.getViewState();
       if (leafViewState.type === "markdown" && leafViewState.state?.file) {
-        const leafID = (leaf as any).id;
+        const leafID = this.flowService.leafId(leaf);
         const leafPath = leafViewState.state?.file;
         if (typeof leafPath != "string") return; // behaves like 'continue' in this callback
 
@@ -2706,129 +2705,6 @@ ${pseudoElement}
     }
   };
 
-  // ------------- Used by flowSwitcherModal -----------
-  /*  manageactiveRegions = async () => {
-    // track all leaves
-    const foundFlowLeaves: Record<string, Set<string>> = {};
-
-    this.app.workspace.iterateAllLeaves((leaf) => {
-      // get info for all leaves' contents, initalised or not
-      const leafViewState = leaf.getViewState();
-      if (leafViewState.type === "markdown" && leafViewState.state?.file) {
-        const leafID = (leaf as any).id;
-        const leafPath = leafViewState.state?.file;
-        if (typeof leafPath != "string") return; // behaves like 'continue' in this callback
-
-        const flowName = this.isFlowFile(leafPath);
-        if (flowName) {
-          // get leaves per flow
-          if (!foundFlowLeaves[flowName]) {
-            foundFlowLeaves[flowName] = new Set();
-          }
-          foundFlowLeaves[flowName].add(leafID);
-
-          // Ensure the activeRegions exists
-          if (!this.settings.activeRegions[flowName]) {
-            this.settings.activeRegions[flowName] = {};
-          }
-          this.settings.activeRegions[flowName][leafID] = true;
-
-          // Then add region tracking for newly opened leaves
-          if (!this.settings.flows[flowName].activeRegions) {
-            this.settings.flows[flowName].activeRegions = {};
-          }
-          if (!this.settings.flows[flowName].activeRegions[leafID]) {
-            this.addRegionTracking(flowName, leafID);
-          }
-        }
-      }
-    });
-
-    // Clean up region tracking for closed leaves
-    Object.keys(this.settings.flows).forEach((flowName) => {
-      if (this.settings.flows[flowName].activeRegions) {
-        if (
-          Object.keys(this.settings.flows[flowName].activeRegions).length > 0
-        ) {
-          Object.keys(this.settings.flows[flowName].activeRegions).forEach(
-            async (leafID) => {
-              if (!foundFlowLeaves[flowName]?.has(leafID)) {
-                delete this.settings.flows[flowName].activeRegions[leafID];
-                // filter the id from the array
-                this.settings.flows[flowName].lastActiveLeaves =
-                  this.settings.flows[flowName].lastActiveLeaves.filter(
-                    (id) => id !== leafID
-                  );
-              }
-
-              // then, if a flow is all closed, we sync it, because all other syncs
-              // only care for active leaves
-              if (
-                Object.keys(this.settings.flows[flowName].activeRegions)
-                  .length === 0
-              ) {
-                if (
-                  this.settings.flows[flowName].unsyncedRegionsArray.length > 0
-                ) {
-                  const path = this.settings.flows[flowName].flowFilePath;
-                  const note = this.app.vault.getAbstractFileByPath(path);
-                  if (!note) {
-                    new Notice(
-                      this.t(
-                        "manageactiveRegions.notice sync upon closing flow failed",
-                        { path: path }
-                      )
-                    );
-                  }
-                  if (note instanceof TFile) {
-                    // get the text from the file
-                    const text: string = await this.app.vault.read(note);
-                    await this.syncBackToSource(flowName, text, leafID);
-                  }
-                }
-              }
-            }
-          );
-        }
-      }
-      // finally, also clean up the activeRegions
-      if (this.settings.activeRegions) {
-        if (this.settings.activeRegions[flowName]) {
-          if (
-            Object.keys(this.settings.activeRegions[flowName]).length === 0
-          ) {
-            delete this.settings.activeRegions[flowName];
-          } else {
-            Object.keys(this.settings.activeRegions[flowName]).forEach(
-              (leafID) => {
-                if (!foundFlowLeaves[flowName]?.has(leafID)) {
-                  delete this.settings.activeRegions[flowName][leafID];
-                }
-              }
-            );
-          }
-        }
-      }
-    });
-
-    // write that shit down
-    await this.saveSettings();
-
-    // And finally redraw the decoration and refresh the menu bars
-    this.decorateSourceNotes("redo");
-    const allLeaves = this.app.workspace.getLeavesOfType("markdown");
-    for (const leaf of allLeaves) {
-      const view = leaf.view as MarkdownView;
-      const filePath = view.file?.path;
-      if (!filePath) continue;
-
-      const flowName = this.isFlowFile(filePath);
-      if (!flowName) continue;
-
-      view.menuBar?.refresh(view.contentEl);
-    }
-  };
-*/
   // if a flow is replaced by a non-flow
   closeFlow = async (view: MarkdownView) => {
     await this.syncAllLeaves();
@@ -3505,7 +3381,9 @@ ${pseudoElement}
       if (leafID.endsWith("-changes")) continue;
 
       const leaves = this.app.workspace.getLeavesOfType("markdown");
-      const targetLeaf = leaves.find((leaf) => (leaf as any).id === leafID);
+      const targetLeaf = leaves.find(
+        (leaf) => this.flowService.leafId(leaf) === leafID
+      );
 
       for (const leaf of leaves) {
         // Check if the leaf's view is a MarkdownView and if its file path matches
