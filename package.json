@@ -20,9 +20,6 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@babel/core": "^7.0.0-0",
-    "@babel/preset-env": "^7.28.0",
-    "@babel/preset-typescript": "^7.27.1",
     "@codemirror/commands": "6.8.1",
     "@codemirror/language": "6.10.8",
     "@codemirror/state": "6.5.1",

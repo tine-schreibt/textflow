@@ -1,7 +1,6 @@
 import {
   App,
   Editor,
-  FileManager,
   MarkdownView,
   moment,
   normalizePath,
