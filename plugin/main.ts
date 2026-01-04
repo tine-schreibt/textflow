@@ -189,7 +189,8 @@ export default class TextFlowPlugin extends Plugin {
   settings: TextFlowSettings;
   flowService: FlowService;
   settingsTab: TextFlowSettingsTab;
-  isRebuilding: boolean = false; // to prevent superfluous feedback
+  isRebuilding: boolean = false; // to prevent menu bar error message
+  ignoreCreate: boolean = false; // to prevent listener from firing
   isLoading: boolean = true; // suspend create listener while we're setting up
   textFlowOperation: boolean = false; // set mostly when syncing to prevent doom spiral of the modify listener
   lastActivity: { [key: string]: number } = {};
@@ -1406,7 +1407,7 @@ ${pseudoElement}
         // return early if textFlow is doing stuff
         if (this.isLoading) return;
         if (this.textFlowOperation) return;
-        if (this.isRebuilding) return;
+        if (this.ignoreCreate) return;
 
         let parentFolder = normalizePath(dirname(file.path));
         if (file instanceof TFolder) {
@@ -2503,6 +2504,7 @@ ${pseudoElement}
 
   // ---- handle menuBar setup
   setupMenuBar = (view: MarkdownView, flowName: string) => {
+
     let menuBar: MenuBar;
     const leafID = (view.leaf as any).id;
     // If we got one, check if it belongs to the flow
@@ -2523,6 +2525,8 @@ ${pseudoElement}
 
   // mostly here to handle uninitialised leaves
   refreshMenuBars = async () => {
+    if (this.isRebuilding) return;
+
     const leaves = this.app.workspace.getLeavesOfType("markdown");
     for (let leaf of leaves) {
       const view = leaf.view as MarkdownView;
@@ -2903,7 +2907,7 @@ ${pseudoElement}
       const preventEdit = EditorState.transactionFilter.of((tr) => {
         // if the flow is being rebuilt, we need to suspend protection
         // otherwise the editor contents can't be updated
-        if (this.isRebuilding) return tr;
+        if (this.ignoreCreate) return tr;
 
         if (!tr.changes.empty) {
           let shouldReject = false;
@@ -3111,7 +3115,7 @@ ${pseudoElement}
       this.settings.flows[flowName].unsyncedRegionsArray = remainingPaths;
 
       this.manageCursorPos(flowName, leafID);
-      this.refreshMenuBars();
+      await this.refreshMenuBars();
       await this.saveSettings();
       if (this.settings.explorerDecoStyle[0] != "--") {
         this.decorateSourceNotes("update");

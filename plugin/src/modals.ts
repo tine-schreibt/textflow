@@ -19,7 +19,6 @@ import TextFlow from "../main";
 import { TextFlowSettingsTab } from "./settingsTab";
 import { basename } from "path";
 import { EditorView } from "@codemirror/view";
-import fs from "fs/promises";
 import path from "path";
 
 //--------------------------------------------------------------------------------
@@ -235,8 +234,7 @@ export class CreateFlowFromFolder extends Modal {
           this.plugin.settings.flowBuildBasket
         );
 
-        // save so we can pull our backup
-        await this.plugin.saveSettings();
+        // push a backup
         await this.plugin.flowService.backupFlowDef(
           this.plugin.settings.flowBuildBasket.flowName
         );
@@ -541,8 +539,6 @@ export class RestoreFlowDefModal extends Modal {
 
     const fileExists = await this.app.vault.adapter.exists(backupPath);
 
-    console.log("file exists is ", fileExists, "for ", backupPath);
-
     if (!fileExists) return null;
 
     // variable to hold the contents if the file exists
@@ -575,7 +571,6 @@ export class RestoreFlowDefModal extends Modal {
     // check if we have something to display
     const exists = await this.getBackup();
     if (!exists) {
-      console.log("backup file not found");
       // if we don't, tell the user how to get something to display
       const flowExplanation = flowDisplay
         .createDiv()
@@ -815,7 +810,6 @@ export class RestoreFlowDefModal extends Modal {
 
           await this.plugin.saveSettings();
 
-          console.log("writing backup file");
           await this.app.vault.adapter.write(
             backupPath,
             JSON.stringify(parsedJson, null, 2)
@@ -844,6 +838,11 @@ export class FlowSwitcherModal extends Modal {
   private plugin: TextFlowPlugin;
   private currentActiveLeafID: string | undefined;
   private rebuildString: string | undefined;
+  private listeners: Array<{
+    element: HTMLElement | Document;
+    type: string;
+    handler: EventListener;
+  }> = [];
 
   constructor(app: App, plugin: TextFlowPlugin, currentActiveLeafID?: string) {
     super(app);
@@ -870,6 +869,41 @@ export class FlowSwitcherModal extends Modal {
       if (view) {
         this.currentActiveLeafID = (view.leaf as any).id;
       }
+    }
+  };
+
+  // To keep track of our listeners
+  private addManagedListener(
+    element: HTMLElement | Document,
+    type: string,
+    handler: EventListener
+  ) {
+    this.listeners.push({ element, type, handler });
+    element.addEventListener(type, handler);
+  }
+
+  private focusLeaf = (leafID: string) => {
+    const leaves = this.app.workspace.getLeavesOfType("markdown");
+    const targetLeaf = leaves.find((leaf) => (leaf as any).id === leafID);
+    if (targetLeaf) {
+      this.app.workspace.setActiveLeaf(targetLeaf, { focus: true });
+      /*if (targetLeaf instanceof MarkdownView) {
+      await this.plugin.setupFlowView(activeFlow, targetLeaf);
+    }*/
+    }
+    this.currentActiveLeafID = (targetLeaf as any).id;
+    this.display();
+  };
+
+  private closeLeaf = async (leafID: string) => {
+    const leaves = this.app.workspace.getLeavesOfType("markdown");
+    const targetLeaf = leaves.find((leaf) => (leaf as any).id === leafID);
+    if (targetLeaf) {
+      targetLeaf.detach();
+      this.plugin.manageactiveRegions();
+      await this.plugin.saveSettings();
+      this.updateActiveLeafID();
+      await this.display();
     }
   };
 
@@ -1119,16 +1153,7 @@ export class FlowSwitcherModal extends Modal {
           const leaves = this.app.workspace.getLeavesOfType("markdown");
           Object.keys(activeFlowInfoObject[activeFlow]).forEach(
             async (leafID) => {
-              const targetLeaf = leaves.find(
-                (leaf) => (leaf as any).id === leafID
-              );
-              if (targetLeaf) {
-                targetLeaf.detach();
-                this.plugin.manageactiveRegions();
-                await this.plugin.saveSettings();
-                this.updateActiveLeafID();
-                await this.display();
-              }
+              this.closeLeaf(leafID);
             }
           );
         });
@@ -1206,24 +1231,17 @@ export class FlowSwitcherModal extends Modal {
           },
         });
 
+        this.addManagedListener(regionName, "click", (event) => {
+          this.focusLeaf(leafID);
+        });
+
         // ----------- GOTO BUTTON ------------
         const navGotoButton = new ButtonComponent(flowRegion)
           .setIcon("arrow-big-right")
           .setClass(`flow-switch-modal-header-button-neutral`)
           .setClass("clickable-icon")
           .onClick(async () => {
-            const leaves = this.app.workspace.getLeavesOfType("markdown");
-            const targetLeaf = leaves.find(
-              (leaf) => (leaf as any).id === leafID
-            );
-            if (targetLeaf) {
-              this.app.workspace.setActiveLeaf(targetLeaf, { focus: true });
-              /*if (targetLeaf instanceof MarkdownView) {
-                await this.plugin.setupFlowView(activeFlow, targetLeaf);
-              }*/
-            }
-            this.currentActiveLeafID = (targetLeaf as any).id;
-            this.display();
+            this.focusLeaf(leafID);
           });
 
         // ----------- CLOSE BUTTON ------------
@@ -1232,17 +1250,7 @@ export class FlowSwitcherModal extends Modal {
           .setClass(`flow-switch-modal-header-button-neutral`)
           .setClass("clickable-icon")
           .onClick(async () => {
-            const leaves = this.app.workspace.getLeavesOfType("markdown");
-            const targetLeaf = leaves.find(
-              (leaf) => (leaf as any).id === leafID
-            );
-            if (targetLeaf) {
-              await targetLeaf.detach();
-              this.plugin.manageactiveRegions();
-              await this.plugin.saveSettings();
-              this.updateActiveLeafID();
-              await this.display();
-            }
+            this.closeLeaf(leafID)
           });
       });
     }
@@ -1367,7 +1375,7 @@ export class FlowSwitcherModal extends Modal {
         });
 
       // ----------- Sync BUTTON ------------
-      const syncButton = new ButtonComponent(inactiveFlowHeader)
+      /*   const syncButton = new ButtonComponent(inactiveFlowHeader)
         .setIcon("download")
         .setClass(`flow-switch-modal-header-button-${goSync}`)
         .setClass("clickable-icon")
@@ -1384,7 +1392,7 @@ export class FlowSwitcherModal extends Modal {
           } else {
             return;
           }
-        });
+        }); */
 
       // ----------- REBUILD BUTTON ------------
       const rebuildButton = new ButtonComponent(inactiveFlowHeader)
@@ -1674,7 +1682,6 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
       ) {
         // if there are no active leaves we could target or we want to open a new one
         // I have no idea why this works so well for "flow-name" items
-        console.log("no open flow leaf found");
         const file = this.app.vault.getAbstractFileByPath(
           this.plugin.settings.flows[item.flowName].flowFilePath
         );

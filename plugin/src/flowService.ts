@@ -215,7 +215,7 @@ export class FlowService {
         throw new Error(`"${newSystemFolderPath}" exists but is not a folder.`);
       }
     } catch (e) {
-      console.log(
+      console.error(
         `textFlow: Something went wrong when trying to create ${newSystemFolderPath}: ${e}`
       );
     }
@@ -1225,8 +1225,10 @@ export class FlowService {
       ? (key = "bookmarks")
       : (key = "foldersTagsProps");
 
+    this.plugin.isRebuilding = true;
     // this is to make sure we got the latest version of everything
     await this.plugin.syncAllLeaves();
+    this.plugin.isRebuilding = false;
 
     let pathArray: string[] = [];
     Object.keys(this.plugin.settings.flows[flowName].flowMap).forEach(
@@ -1733,7 +1735,7 @@ export class FlowService {
   safeCreateFile = async (path: string, newContent: string) => {
     try {
       const existingFile = this.app.vault.getAbstractFileByPath(path);
-      this.plugin.isRebuilding = true;
+      this.plugin.ignoreCreate = true;
       this.plugin.textFlowOperation = true;
 
       if (existingFile instanceof TFile) {
@@ -1758,7 +1760,7 @@ export class FlowService {
         await this.app.vault.create(path, newContent);
       }
 
-      this.plugin.isRebuilding = false;
+      this.plugin.ignoreCreate = false;
       this.plugin.textFlowOperation = false;
     } catch (error) {
       console.error(`Failed to create/modify file at ${path}:`, error);

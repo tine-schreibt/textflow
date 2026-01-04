@@ -476,7 +476,6 @@ button.setting-tab-button-spacing {
 
 .flow-switch-modal-active-region-name {
   font-weight: 500;
-  max-width: 200px;
   white-space: nowrap; /* prevents text from wrapping */
   overflow: hidden; /* hides overflow */
   text-overflow: ellipsis;
@@ -502,7 +501,7 @@ button.setting-tab-button-spacing {
 .flow-switch-modal-INactive-header {
   display: grid;
   grid-template-columns: minmax(30px, auto) minmax(200px, 1fr) repeat(
-      5,
+      4,
       minmax(30px, auto)
     );
   gap: 8px;
