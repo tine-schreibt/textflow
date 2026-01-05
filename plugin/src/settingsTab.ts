@@ -1234,9 +1234,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
         // save so we can pull our backup
         await this.plugin.saveSettings();
-        await this.plugin.flowService.backupFlowDef(
-          this.plugin.settings.flowBuildBasket.flowName
-        );
 
         // and clean up the basket.
         this.plugin.flowService.resetFlowBuildBasket(
@@ -1457,46 +1454,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         });
     }
 
-    // Check if we got a backup of the backup in our vault
-    if (this.plugin.settings.firstLaunch) {
-      // path for the file in the vault
-
-      let existingBackupPath = "";
-      if (systemFolder) {
-        existingBackupPath = path.join(
-          systemFolder.path,
-          "textFlowDefBackup.json"
-        );
-      }
-
-      // path for the file in .obsidian/plugins/textFlow
-      const newBackupPath = path.join(
-        this.app.vault.configDir,
-        "plugins",
-        this.plugin.manifest.id,
-        "textFlowDefBackup.json"
-      );
-
-      const fileExists = await this.app.vault.adapter.exists(
-        existingBackupPath,
-        true
-      );
-      if (fileExists) {
-        const rawContents = await this.app.vault.adapter.read(
-          existingBackupPath
-        );
-        await this.app.vault.adapter.write(newBackupPath, rawContents);
-        // once we copied the contents, we can delete the source file
-        await this.app.vault.adapter.remove(existingBackupPath);
-        new Notice(
-          this.plugin.t(
-            "restoreSettings.notice .json has been restored to .obsidian"
-          )
-        );
-      }
-      this.plugin.settings.firstLaunch = false;
-    }
-
+    //------------------------------
     const restoreSettings = new Setting(flowDisplay)
       .setName(this.plugin.t("restoreSettings.setName restore definitions"))
       .setDesc(
@@ -1526,43 +1484,10 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             this.plugin.t("restoreSettings.setButtonText copy to vault")
           )
           .onClick(async () => {
-            // create the path for the file in .obsidian/plugins/textFlow
-            const existingBackupPath = path.join(
-              this.app.vault.configDir,
-              "plugins",
-              this.plugin.manifest.id,
-              "textFlowDefBackup.json"
+            this.plugin.flowService.backupFlowDefs();
+            new Notice(
+              this.plugin.t("restoreSettings.notice .json has been copied")
             );
-
-            // and the path for where we'll put the plugin
-            let newBackupPath = "";
-            if (systemFolder) {
-              newBackupPath = path.join(
-                systemFolder.path,
-                "textFlowDefBackup.json"
-              );
-            }
-
-            const fileExists = await this.app.vault.adapter.exists(
-              existingBackupPath,
-              true
-            );
-            if (fileExists) {
-              // get the contents and write them into the new file
-              const rawContents = await this.app.vault.adapter.read(
-                existingBackupPath
-              );
-              await this.app.vault.adapter.write(newBackupPath, rawContents);
-              let noticePath = "/";
-              if (systemFolder) {
-                noticePath = systemFolder.path;
-              }
-              new Notice(
-                this.plugin.t("restoreSettings.notice .json has been copied", {
-                  systemFolder: noticePath,
-                })
-              );
-            }
           });
       });
   };

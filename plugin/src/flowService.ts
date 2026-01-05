@@ -718,7 +718,6 @@ export class FlowService {
     if (flowBuildBasket.flowCookbook.propsExcluded === undefined) {
       flowBuildBasket.flowCookbook.propsExcluded = "";
     }
-    await this.plugin.saveSettings();
   };
 
   // --- Function to get the paths -------
@@ -1770,80 +1769,48 @@ export class FlowService {
     }
   };
 
-  backupFlowDef = async (flowName: string) => {
-    // make a clone of the flow, clean it and package it
-    const currentDate = this.getTimestamp();
-    // the * is the separator so we can remove the timestamp without regEx
-    const backupName = `${flowName}*${currentDate}`;
-    const exportObj: { [key: string]: Types.FlowDef } = {};
-    exportObj[backupName] = structuredClone(
-      this.plugin.settings.flows[flowName]
-    );
+  backupFlowDefs = async () => {
+    let datedFlows: { [key: string]: Types.FlowDef } = {};
 
-    // null or update properties that need to be nulled or updated
-    exportObj[backupName].flowFilePath = normalizePath(
-      `${this.plugin.settings.systemFolderPath}/${backupName}`
-    );
-    exportObj[backupName].flowBuilt = false;
-    exportObj[backupName].flaggedForRebuild = true;
-    exportObj[backupName].conflictObject = {};
-    exportObj[backupName].lastActiveLeaves = [];
-    exportObj[backupName].persistentCursors = {};
-    exportObj[backupName].unsyncedRegionsArray = [];
-    exportObj[backupName].flowMap = {};
-    const output = JSON.stringify(exportObj, null, 2);
-
-    // Make the path
-    const backupPath = path.join(
-      this.app.vault.configDir,
-      "plugins",
-      this.plugin.manifest.id,
-      "textFlowDefBackup.json"
-    );
-
-    const fileExists = await this.app.vault.adapter.exists(backupPath);
-
-    // variable to hold the contents if the file exists
-    let parsedJson;
-
-    if (!fileExists) {
-      // if the file doesn't exist yet, create it
-      await this.app.vault.adapter.write(backupPath, output);
-      return;
-    } else {
-      try {
-        const rawContents = await this.app.vault.adapter.read(backupPath);
-        parsedJson = JSON.parse(rawContents);
-      } catch (e) {
-        console.error("Invalid JSON in backup file:", e);
-        return;
-      }
+    for (let flowName of Object.keys(this.plugin.settings.flows)) {
+      const currentDate = this.getTimestamp();
+      const backupName = `${flowName}*${currentDate}`;
+      datedFlows[backupName] = structuredClone(
+        this.plugin.settings.flows[flowName]
+      );
+      datedFlows[backupName].flowBuilt = false;
+      datedFlows[backupName].flaggedForRebuild = true;
+      datedFlows[backupName].conflictObject = {};
+      datedFlows[backupName].lastActiveLeaves = [];
+      datedFlows[backupName].persistentCursors = {};
+      datedFlows[backupName].unsyncedRegionsArray = [];
+      datedFlows[backupName].flowMap = {};
     }
 
-    // add our backup data to the object
-    parsedJson[backupName] = exportObj[backupName];
+    const output = JSON.stringify(datedFlows, null, 2);
 
-    //count entries and delete stale ones
-    for (let flowName of Object.keys(this.plugin.settings.flows)) {
-      let counter = 0;
-      const sortedBackups = Object.keys(parsedJson).sort((a, b) =>
-        a.localeCompare(b)
+    // Make the path
+    let backupPath = "";
+    if (this.plugin.settings.systemFolderPath) {
+      backupPath = path.join(
+        this.plugin.settings.systemFolderPath,
+        "textFlowDefBackup.json"
       );
+    }
 
-      for (let backup of sortedBackups) {
-        if (backup.startsWith(flowName)) {
-          counter++;
-        }
-        if (counter >= 4) {
-          delete parsedJson[backup];
-        }
-      }
+    if (!this.plugin.settings.systemFolderPath) {
+      new Notice(this.plugin.t("sysFolder please setup"));
+      return;
+    }
+
+    if (await this.app.vault.adapter.exists(backupPath)) {
+      await this.app.vault.adapter.remove(backupPath);
     }
 
     // write the object back to our file
     await this.app.vault.adapter.write(
       backupPath,
-      JSON.stringify(parsedJson, null, 2)
+      JSON.stringify(datedFlows, null, 2)
     );
   };
 
@@ -1923,6 +1890,12 @@ export class FlowService {
   getEditorView = (editor: Editor): EditorView | null => {
     const cm = (editor as Types.EditorWithCM).cm;
     return cm instanceof EditorView ? cm : null;
+  };
+
+  callStack = (recipient: string) => {
+    const stack = new Error().stack;
+    const caller = stack?.split("\n")[3]?.trim() || "unknown";
+    console.log(recipient, "called by: ", caller, Date.now());
   };
   //-----------
   updateScrollbarVisibility = async () => {

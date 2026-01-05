@@ -234,11 +234,6 @@ export class CreateFlowFromFolder extends Modal {
           this.plugin.settings.flowBuildBasket
         );
 
-        // push a backup
-        await this.plugin.flowService.backupFlowDef(
-          this.plugin.settings.flowBuildBasket.flowName
-        );
-
         new Notice(
           this.plugin.t("createFromFolder.notice", {
             flowName: this.plugin.settings.flowBuildBasket.flowName,
@@ -453,7 +448,7 @@ export class DeleteFlowDefModal extends Modal {
       // delete file if present; in two steps to make TypeScript happy
       if (flowFile) {
         if (flowFile instanceof TFile) {
-          await this.app.vault.delete(flowFile);
+          await this.app.fileManager.trashFile(flowFile);
         }
       }
 
@@ -528,14 +523,15 @@ export class RestoreFlowDefModal extends Modal {
 
   private getBackup = async () => {
     // make the path of the backup.json
-    const backupPath = normalizePath(
-      path.join(
-        this.app.vault.configDir,
-        "plugins",
-        this.plugin.manifest.id,
-        "textFlowDefBackup.json"
-      )
-    );
+    let backupPath = "";
+    if (this.plugin.settings.systemFolderPath) {
+      backupPath = normalizePath(
+        path.join(
+          this.plugin.settings.systemFolderPath,
+          "textFlowDefBackup.json"
+        )
+      );
+    }
 
     const fileExists = await this.app.vault.adapter.exists(backupPath);
 
@@ -611,7 +607,7 @@ export class RestoreFlowDefModal extends Modal {
 
         // SOURCE
         let source = "";
-        if (shownFlow.flowCookbook.bookmarks) {
+        if (shownFlow.flowCookbook.definitionMode == "bookmarks") {
           source += this.plugin.t("flowDisplay.source.alt bookmark group", {
             shownFlow_flowCookbook_bookmarks: shownFlow.flowCookbook.bookmarks,
           });
@@ -677,8 +673,10 @@ export class RestoreFlowDefModal extends Modal {
 
         // --- THE DISPLAY ITSELF -------------------------------
         const flowShow = new Setting(flowDisplay);
+        const starIndex = flowName.indexOf("*");
+        const cleanedFlowName = flowName.slice(0, starIndex);
         flowShow
-          .setName(`${flowName.replace("*", " ")}`)
+          .setName(`${cleanedFlowName}`)
           .setDesc(
             createFragment((desc) => {
               desc.createSpan({

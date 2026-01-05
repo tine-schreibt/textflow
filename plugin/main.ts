@@ -190,7 +190,6 @@ export default class TextFlowPlugin extends Plugin {
   settingsTab: TextFlowSettingsTab;
   isRebuilding: boolean = false; // to prevent menu bar error message
   ignoreCreate: boolean = false; // to prevent listener from firing
-  isLoading: boolean = true; // suspend create listener while we're setting up
   textFlowOperation: boolean = false; // set mostly when syncing to prevent doom spiral of the modify listener
   lastActivity: { [key: string]: number } = {};
   alreadyActivated: { [key: string]: { [key: string]: boolean } } = {}; // flowName: {leafID: true}
@@ -242,10 +241,11 @@ export default class TextFlowPlugin extends Plugin {
   }
 
   // ---------------------------------------------------------------
-  // this was written by the Code Copilot version of ChatGPT
+  // this was mostly written by the Code Copilot version of ChatGPT
+  // I'm using temp->rename because for heavy users it would be an absolute pain in the ass to have to redo a ton of flow definitions
+
   saveSettings = async () => {
-    // const stack = new Error().stack;
-    // const caller = stack?.split("\n")[2]?.trim() || "unknown";
+    // this.flowService.callStack("saveSettings");
 
     this.pendingSettingsSave = structuredClone(this.settings);
     this.morePendingSettingsSave = true;
@@ -262,12 +262,41 @@ export default class TextFlowPlugin extends Plugin {
       while (this.morePendingSettingsSave) {
         if (this.isUnloading) return;
         this.morePendingSettingsSave = false;
-        await this.saveData(this.pendingSettingsSave);
+
+        // Make the temp path
+        const tempPath = path.join(
+          this.app.vault.configDir,
+          "plugins",
+          this.manifest.id,
+          "data.json.tmp"
+        );
+
+        // write the file
+        await this.app.vault.adapter.write(
+          tempPath,
+          JSON.stringify(this.pendingSettingsSave, null, 2)
+        );
+
+        // make data.json path
+        const dataJsonPath = path.join(
+          this.app.vault.configDir,
+          "plugins",
+          this.manifest.id,
+          "data.json"
+        );
+
+        // rename
+        if (await this.app.vault.adapter.exists(dataJsonPath)) {
+          await this.app.vault.adapter.remove(dataJsonPath);
+        }
+        await this.app.vault.adapter.rename(tempPath, dataJsonPath);
       }
     } finally {
       this.isSavingSettings = false;
     }
   };
+
+  rename = async (data: Types.TextFlowSettings) => {};
 
   // ---------------------------------------------------------------
   // see also: discernAndSetSystemFolderState for UI
@@ -1404,7 +1433,7 @@ ${pseudoElement}
     this.registerEvent(
       this.app.vault.on("create", async (file: TAbstractFile) => {
         // return early if textFlow is doing stuff
-        if (this.isLoading) return;
+        if (!this.app.workspace.layoutReady) return;
         if (this.textFlowOperation) return;
         if (this.ignoreCreate) return;
 
@@ -2586,6 +2615,8 @@ ${pseudoElement}
   };
 
   manageactiveRegions = async () => {
+    // this.flowService.callStack("manageactiveRegions");
+
     // track all leaves
     const foundFlowLeaves: Record<string, Set<string>> = {};
 
@@ -2758,7 +2789,6 @@ ${pseudoElement}
 
     if (!cmView) return;
 
-
     if (protectionType === "sync") {
       // create new compartment
       const protectSyncCompartment = new Compartment();
@@ -2893,13 +2923,6 @@ ${pseudoElement}
     this.textFlowOperation = true; // suspends modify listener
 
     for (let flowName of Object.keys(flowLeaves)) {
-      for (let view of flowLeaves[flowName]) {
-        const text = view.editor.getValue();
-        const leafID = this.flowService.leafId(view.leaf);
-        this.toggleEditable(view, false); // block all user edits
-        await this.syncBackToSource(flowName, text, leafID);
-        this.toggleEditable(view, true);
-      }
       // before we get to actually modifying, let's flag other flows
       for (let otherFlowName of Object.keys(this.settings.flows)) {
         if (flowName != otherFlowName) {
@@ -2908,10 +2931,17 @@ ${pseudoElement}
               .unsyncedRegionsArray) {
               if (this.settings.flows[otherFlowName].flowMap[path])
                 this.settings.flows[otherFlowName].flaggedForRebuild = true;
-              await this.saveSettings();
+              // saving is done by syncBackToSource
             }
           }
         }
+      }
+      for (let view of flowLeaves[flowName]) {
+        const text = view.editor.getValue();
+        const leafID = this.flowService.leafId(view.leaf);
+        this.toggleEditable(view, false); // block all user edits
+        await this.syncBackToSource(flowName, text, leafID);
+        this.toggleEditable(view, true);
       }
     }
     this.textFlowOperation = false; // unsuspends modify listener
@@ -3282,13 +3312,13 @@ ${pseudoElement}
     //this.flows = await this.loadFlowDefs();
     await this.loadLanguage();
 
-    // this is to protect from data corruption when Obsidian starts unloading
-    // register is for unloading
+    // to make saving even more safe
     this.register(() => {
       this.isUnloading = true;
     });
 
     // set up the class so main.ts can act as an access hub to the functions in flowService.ts
+    // this needs to happen before layoutReady, or else there will be errors
     this.flowService = new FlowService(this, this.app);
 
     // -------------------------------------------------------------------
@@ -3355,13 +3385,6 @@ ${pseudoElement}
 
     this.addListeners();
     this.registerCommands();
-
-    // check if we're done initialising files and wait a moment longer
-    this.app.metadataCache.on("resolved", () => {
-      setTimeout(() => {
-        this.isLoading = false;
-      }, 1000);
-    });
   }
 
   // -------------------------------------------------------
