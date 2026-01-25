@@ -51,7 +51,6 @@ export interface TextFlowSettings {
   explorerListener: boolean;
   hideScrollbar: string;
   switcherPos: string;
-  showMenuBar: boolean;
   flowBuildBasket: flowBuildBasket;
   activeRegions: { [key: string]: { [key: string]: ActiveRegion } }; // flowName[leafID] = ActiveRegion
   flows: { [key: string]: FlowDef };
@@ -156,7 +155,6 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
   explorerListener: true,
   hideScrollbar: "none",
   switcherPos: "statusBar",
-  showMenuBar: true,
   flowBuildBasket: {
     createOrEdit: "create",
     dataviewSearchArray: [],
@@ -243,7 +241,7 @@ export interface EditorWithCM extends Editor {
 }
 
 // for handling leaves
-export type LeafId = string & { readonly __leafId: unique symbol }
+export type LeafId = string & { readonly __leafId: unique symbol };
 
 // for the writelock
 export type ProtectionType = "divider" | "sync";
@@ -287,3 +285,4 @@ export type SuggestionType =
   | "other-flow-cursor"
   | "flow-name"
   | "active-region";
+

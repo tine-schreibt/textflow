@@ -10,7 +10,6 @@ import {
 } from "obsidian";
 import TextFlow from "../main";
 import * as Types from "./types";
-import fs from "fs/promises";
 import path, { dirname, basename } from "path";
 
 // ----------------------------------
@@ -30,19 +29,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    const basicSettings = containerEl.createEl("details", {
-      cls: "advancedSettings-container",
-    });
-
-    basicSettings
-      .createEl("summary", {
-        cls: "advancedSettings-headline",
-      })
-      .createSpan({
-        text: this.plugin.t("basicSettings.headline"),
-      });
-
-    const setUpTextFlow = basicSettings.createDiv({
+    const setUpTextFlow = containerEl.createDiv({
       cls: "headline-container",
     });
 

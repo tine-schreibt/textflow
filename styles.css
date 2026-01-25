@@ -172,7 +172,7 @@ button.setting-tab-button-spacing {
 /* The text span inside the headline */
 .explorer-deco-trigger span:first-child {
   width: 100%;
-  padding: 8px;
+  padding: 4px, 8px, 4px, 8px;
   background: var(--background-modifier-form-field);
   border: 1px solid var(--background-modifier-border);
   border-radius: 4px;
@@ -198,7 +198,7 @@ button.setting-tab-button-spacing {
   top: 100%;
   left: 0;
   width: 70px;
-  max-height: 200px; /* Set maximum height */
+  max-height: 240px; /* Set maximum height */
   overflow-y: auto; /* Enable vertical scrolling */
   align-items: center; /* Add this */
   background: var(--background-primary);
@@ -407,7 +407,7 @@ button.setting-tab-button-spacing {
 }
 
 .flow-switch-modal-header-button-neutral {
-  background-color: rgba(255, 0, 0, 0);
+  background-color: var(--background-primary);
   color: var(--text-normal);
   align-items: center;
   margin-top: -4px;
@@ -423,8 +423,9 @@ button.setting-tab-button-spacing {
 }
 
 .flow-switch-modal-header-button-must {
-  background-color: var(--text-accent);
+  background-color: rgb(from var(--color-accent) r g b / 1.0);
   color: var(--text-on-accent);
+  box-shadow: 0 0 4px 1px var(--text-accent);
   align-items: center;
   margin-top: -4px;
   width: 30px;
@@ -450,8 +451,8 @@ button.setting-tab-button-spacing {
   width: 30px;
 }
 
-.flow-switch-modal-header-rebuild-must {
-  background-color: var(--text-accent);
+.flow-switch-modal-header-button-rebuild-must {
+  background-color: rgb(from var(--color-accent) r g b / 1.0);
   color: var(--text-on-accent);
   box-shadow: 0 0 4px 1px var(--text-accent);
   align-items: center;
@@ -533,16 +534,15 @@ button.setting-tab-button-spacing {
 }
 
 .textflow-menu-bar {
-  position: absolute;
+  position: sticky;
   top: 0;
   left: 0;
   right: 0;
   z-index: 1;
   background: var(--background-primary); /* Ensure it has a background */
   padding: 5px;
-  margin-top: 30px;
   margin-left: 5px;
-  margin-right: 5px;
+  margin-right: 20px;
   justify-content: start;
   display: grid;
   grid-template-columns: repeat(7, auto);
@@ -555,16 +555,18 @@ button.setting-tab-button-spacing {
 }
 
 .textflow-menu-bar-min {
-  position: absolute;
+  position: sticky;
   top: 0;
   left: 0;
   right: 0;
   z-index: 1;
-  padding: 5px;
-  margin-top: 30px;
   margin-left: 0px;
   margin-right: 5px;
   justify-content: start;
+  width: 25px;
+  box-shadow: var(--input-shadow);
+  border-radius: 4px;
+  background-color: rgb(from var(--color-accent) r g b / 0.2);
 }
 
 .spacing {

@@ -6,7 +6,7 @@
 
   "-------- SETTINGS TAB": "Die class für die settings.-------------",
 
-  "basicSettings.headline": "Grundeinstellungen",
+  "basicSettings.headline": "Basic",
 
   "------ SET SYSTEM FOLDER": "Here the user chooses which path the system folder should have ----------------",
   "setSystemFolder.setName choose existing folder": "Wähle einen bestehenden Ordner, in dem ${textFlowSystemFolderName} erzeugt werden soll",
@@ -44,7 +44,7 @@
   "activeRegionDeco.addOption.6 arrow": "Pfeil-Symbol: ⬌",
 
   "-------- QUALITY OF LIVE SETTINGS": "Ein paar Settings, die die UI verbessern",
-  "qol.createSpan.text quality of life settings": "Erweitere Einstellungen",
+  "qol.createSpan.text quality of life settings": "Mehr...",
 
   "qol.hideExplorerDeco.setName hide explorer deco": "Verstecke DateiExplorer-Deco",
 
@@ -194,6 +194,15 @@
   "CreateFlowFromFolderModal.description refine def in settings": "Du kannst die Definition nachher in den Settings verfeinern.",
   "createFromFolder.notice": "textFlow: Dein neuer Flow ${flowName} wurde definiert.",
   "CreateFlowFromFolderModal.close": "Verwerfen",
+
+  "------- CREATE NEW ITEM": "CREATE NEW FILE OR FOLDER IN SELECTED FOLDER ----------------",
+  "CreateNewItemModal.headline": "Erzeuge neues Element in diesem Ordner",
+  "CreateNewItemrModal.description": "Welche Art Element möchtest du erzeugen?",
+  "CreateNewItemrModal.description note": "Notiz",
+  "CreateNewItemrModal.description folder": "Ordner",
+  "CreateNewItemrModal.description title": "Gib einen Titel für das Objekt ein.",
+  "CreateNewItemrModal.createButton": "Erzeugen",
+  "CreateNewItemrModal.dismissButton": "Verwerfen",
 
   "----------- PREVIEW MODAL": "Modal that shows the users the structure of their flow---------",
   "PreviewModal.modalTitle preview for flow": "Vorschau für Flow ${this_flowBuildBasket_flowName}.",

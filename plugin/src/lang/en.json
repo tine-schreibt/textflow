@@ -6,7 +6,7 @@
 
   "-------- SETTINGS TAB": "This is the class in which the user chooses their settings for the plugin.-------------",
 
-  "basicSettings.headline": "Basic settings",
+  "basicSettings.headline": "Basic",
 
   "------ SET SYSTEM FOLDER": "Here the user chooses which path the system folder should have ----------------",
   "setSystemFolder.setName choose existing folder": "Choose an existing folder in which to put ${textFlowSystemFolderName}.",
@@ -53,7 +53,7 @@
   "activeRegionDeco.addOption.6 arrow": "Arrow symbol: ⬌",
 
   "-------- QUALITY OF LIVE SETTINGS": "Some settings to clean up/debug the UI",
-  "qol.createSpan.text quality of life settings": "Advanced settings",
+  "qol.createSpan.text quality of life settings": "More...",
 
   "qol.hideExplorerDeco.setName hide explorer deco": "Hide explorer deco",
 
@@ -84,6 +84,7 @@
   "createFlows.chooseFlowName.setDesc some characters can't be part of a flow name": "The following characters can't be part of a flow name:",
   "validFlowNameCheck.error.1 missing flow name": "Please give your flow a name.",
   "validFlowNameCheck.error.2 flow already exists": "textFlow: A flow by the name ${flowName} already exists. Please choose a different one.",
+  "": "textFlow: Please remove invalid characters from your flow name (? : # * < > [ ] / | \\ \"  ^ `)",
 
   "createFlows.chooseFlowName.setPlaceholder enter a unique name": "Enter a unique name",
 

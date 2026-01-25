@@ -203,7 +203,7 @@ export class FlowService {
         // add a little readme with info on how to not fuck up the folder
         const readmePath = normalizePath(`${newSystemFolderPath}/README.md`);
         const content = this.plugin.t("readme");
-        await this.safeCreateFile(readmePath, content);
+        await this.safeCreateOrModifyFile(readmePath, content);
 
         // inform the user of success
         new Notice(
@@ -294,8 +294,9 @@ export class FlowService {
     if (invalidChars.test(name)) {
       return {
         valid: false,
-        reason:
-          'textFlow: Please remove invalid characters from your flow name (? : # * < > [ ] / | \\ "  ^ `)',
+        reason: this.plugin.t(
+          'textFlow: Please remove invalid characters from your flow name (? : # * < > [ ] / | \\ "  ^ `)'
+        ),
       };
     }
 
@@ -313,7 +314,6 @@ export class FlowService {
   renameFlow = async () => {
     // this only handles the clean-up of the old version;
     // the creation of the new version happens in the save button code
-    this.plugin.textFlowOperation = true;
     if (
       this.plugin.settings.flowBuildBasket.flowName !=
         this.plugin.settings.flowBuildBasket.oldFlowName &&
@@ -1167,6 +1167,7 @@ export class FlowService {
 
   // ------ The function that handles everything necessary to (re)build a flow
   rebuildFlow = async (flowName: string, caller: string) => {
+    this.plugin.isRebuilding = true;
     const flowReBuildBasket: Types.flowBuildBasket = {
       // rebuild specific properties
       createOrEdit: "",
@@ -1224,10 +1225,8 @@ export class FlowService {
       ? (key = "bookmarks")
       : (key = "foldersTagsProps");
 
-    this.plugin.isRebuilding = true;
     // this is to make sure we got the latest version of everything
     await this.plugin.syncAllLeaves();
-    this.plugin.isRebuilding = false;
 
     let pathArray: string[] = [];
     Object.keys(this.plugin.settings.flows[flowName].flowMap).forEach(
@@ -1258,7 +1257,7 @@ export class FlowService {
       idDivider: "",
     };
     this.resetFlowBuildBasket(flowReBuildBasket);
-    await this.plugin.saveSettings();
+    (this.plugin.isRebuilding = false), await this.plugin.saveSettings();
   };
 
   // ------ The flowBuilder --------------------------
@@ -1501,7 +1500,7 @@ export class FlowService {
       );
 
       // this also takes care of flags for write protection and listeners
-      await this.plugin.flowService.safeCreateFile(
+      await this.plugin.flowService.safeCreateOrModifyFile(
         flowFilePath,
         mapValueBasket.concatenatedFileContents
       );
@@ -1733,10 +1732,10 @@ export class FlowService {
     }
   };
 
-  safeCreateFile = async (path: string, newContent: string) => {
+  safeCreateOrModifyFile = async (path: string, newContent: string) => {
     try {
+      this.callStack("safeCreateFile");
       const existingFile = this.app.vault.getAbstractFileByPath(path);
-      this.plugin.ignoreCreate = true;
       this.plugin.textFlowOperation = true;
 
       if (existingFile instanceof TFile) {
@@ -1758,11 +1757,10 @@ export class FlowService {
           return newContent;
         });
       } else {
+        this.plugin.textFlowOperation = true;
         await this.app.vault.create(path, newContent);
+        this.plugin.textFlowOperation = false;
       }
-
-      this.plugin.ignoreCreate = false;
-      this.plugin.textFlowOperation = false;
     } catch (error) {
       console.error(`Failed to create/modify file at ${path}:`, error);
       throw error;
@@ -1837,7 +1835,7 @@ export class FlowService {
       const exportedFlowPath = normalizePath(
         `${flowName}_export_${this.plugin.flowService.getTimestamp()}.md`
       );
-      await this.plugin.flowService.safeCreateFile(
+      await this.plugin.flowService.safeCreateOrModifyFile(
         exportedFlowPath,
         contentWithYaml
       );
@@ -1894,8 +1892,8 @@ export class FlowService {
 
   callStack = (recipient: string) => {
     const stack = new Error().stack;
-    const caller = stack?.split("\n")[3]?.trim() || "unknown";
-    console.log(recipient, "called by: ", caller, Date.now());
+    if (!stack) return;
+    console.log(recipient, stack, Date.now());
   };
   //-----------
   updateScrollbarVisibility = async () => {

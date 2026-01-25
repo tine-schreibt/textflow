@@ -25,7 +25,7 @@ export class MenuBar {
     plugin: TextFlowPlugin,
     flow: string,
     view: MarkdownView,
-    leafID: string
+    leafID: string,
   ) {
     this.app = app;
     this.plugin = plugin;
@@ -59,11 +59,20 @@ export class MenuBar {
     }
   }
 
+  hasTabHeader(): boolean {
+    const leafEl = this.associatedView.containerEl.closest(".workspace-leaf");
+    if (!leafEl) return false;
+    const returnValue =
+      leafEl.querySelector(":scope > .workspace-tab-header") !== null;
+
+    return returnValue;
+  }
+
   // To keep track of all the listeners we need to add for our custom dropdowns
   private addManagedListener(
     element: HTMLElement | Document,
     type: string,
-    handler: EventListener
+    handler: EventListener,
   ) {
     this.listeners.push({ element, type, handler });
     element.addEventListener(type, handler);
@@ -79,6 +88,8 @@ export class MenuBar {
 
   // when we sync or rebuild, we need to refresh to see the updated button states
   public refresh(containerEl: HTMLElement) {
+    //this.plugin.flowService.callStack("refresh")
+
     // Detach all the old stuff
     this.detach();
     this.detachListeners();
@@ -120,7 +131,7 @@ export class MenuBar {
   // self explanatory
   private setDropdownState = async (
     dropdown: string,
-    state: "show" | "hide"
+    state: "show" | "hide",
   ) => {
     if (
       dropdown === "nav" &&
@@ -169,7 +180,7 @@ export class MenuBar {
               Object.keys(
                 this.plugin.settings.flows[this.flowName].conflictObject[
                   flowName
-                ]
+                ],
               ).forEach((path) => {
                 overlap[1].push(path);
               });
@@ -228,7 +239,7 @@ export class MenuBar {
         overlapText =
           overlap[0].join(",").length > 0
             ? `${this.plugin.t("menuBar flow overlap")} ${overlap[0].join(
-                ", "
+                ", ",
               )}`
             : "";
       }
@@ -258,7 +269,7 @@ export class MenuBar {
           const startPosInFlow = this.plugin.findStartOfRegion(
             this.plugin.settings.flows[this.flowName],
             flowOrder,
-            text
+            text,
           );
           if (startPosInFlow) {
             this.plugin.flowService.scrollToPos(editor, startPosInFlow);
@@ -275,7 +286,7 @@ export class MenuBar {
   // because the navDropdown needs to be dynamic
   private refreshNavDropdownEntries(
     dropdownEntries: HTMLElement,
-    emptyResults: boolean
+    emptyResults: boolean,
   ) {
     // clear existing entries
     dropdownEntries.empty();
@@ -297,26 +308,30 @@ export class MenuBar {
         const path =
           this.plugin.settings.flows[this.flowName].flowMap[note].path;
         pathArray.push(path);
-      }
+      },
     );
     return pathArray;
   };
 
   // ----------- THE MENU BAR ITSELF
   createMenuBarElement(): HTMLElement {
-    // If the menuBar is completely HIDDEN
-    if (!this.plugin.settings.showMenuBar) {
-      const menuBarEl = this.associatedView.contentEl.createDiv({
-        cls: `hide`,
-      });
-      return menuBarEl;
-    } else if (
+    //this.plugin.flowService.callStack("createMenuBarElement")
+    // check if we need a margin at the top
+
+    /*let hasTabHeader = this.hasTabHeader();
+    console.log(hasTabHeader)
+
+    let topMargin = "textflow-menu-bar-padding-top-30";
+    if (!hasTabHeader) {
+      topMargin = "textflow-menu-bar-padding-top-0";
+    }*/
+    if (
       // if the menuBar is MINIMISED
       this.plugin.settings.activeRegions[this.flowName][this.leafID]
         .leafMenuBarSettings.menuBarDisplayState === "hide"
     ) {
       const menuBarEl = this.associatedView.contentEl.createDiv({
-        cls: "textflow-menu-bar-min",
+        cls: `textflow-menu-bar-min`,
       });
       const maximiseButton = new ButtonComponent(menuBarEl);
       maximiseButton
@@ -328,6 +343,7 @@ export class MenuBar {
           this.plugin.settings.activeRegions[this.flowName][
             this.leafID
           ].leafMenuBarSettings.menuBarDisplayState = "show";
+          this.plugin.saveSettings();
           this.plugin.refreshMenuBars();
         });
       return menuBarEl;
@@ -376,7 +392,7 @@ export class MenuBar {
             await this.plugin.syncBackToSource(
               this.flowName,
               this.associatedView.editor.getValue(),
-              this.leafID
+              this.leafID,
             );
             this.plugin.textFlowOperation = false;
             await this.plugin.saveSettings();
@@ -461,9 +477,8 @@ export class MenuBar {
               .leafMenuBarSettings.navDropdownSearchTerm
           ) {
             const query =
-              this.plugin.settings.activeRegions[this.flowName][
-                this.leafID
-              ].leafMenuBarSettings.navDropdownSearchTerm;
+              this.plugin.settings.activeRegions[this.flowName][this.leafID]
+                .leafMenuBarSettings.navDropdownSearchTerm;
             performSearch(event, query);
           }
 
@@ -471,7 +486,7 @@ export class MenuBar {
             this.setDropdownState("nav", "show");
             this.refresh(this.associatedView.contentEl);
             const filterCriterion = this.element?.querySelector(
-              ".menu-bar-navigation-dropdown-search-input"
+              ".menu-bar-navigation-dropdown-search-input",
             );
             if (filterCriterion) {
               (filterCriterion as HTMLInputElement).focus();
@@ -571,7 +586,7 @@ export class MenuBar {
       // a matrioshka of layout despair
       const dropdownGeneral = navigationDropdown.createDiv({
         cls: `menu-bar-navigation-dropdown-general ${this.getDropdownState(
-          "nav"
+          "nav",
         )}`,
       });
 
@@ -604,16 +619,16 @@ export class MenuBar {
 
       // initial content
       let cursorDropdownHeadline = this.plugin.t(
-        "menubar.cursor history no stored cursors"
+        "menubar.cursor history no stored cursors",
       );
       if (this.plugin.settings.flows[this.flowName].persistentCursors) {
         if (
           Object.keys(
-            this.plugin.settings.flows[this.flowName].persistentCursors
+            this.plugin.settings.flows[this.flowName].persistentCursors,
           ).length > 0
         ) {
           cursorDropdownHeadline = this.plugin.t(
-            "menubar.cursor history stored cursors"
+            "menubar.cursor history stored cursors",
           );
         }
       }
@@ -634,7 +649,7 @@ export class MenuBar {
           // this is just in here because I can't figure out how to
           // get the styling right otherwise -.-
           const filterCriterion = this.element?.querySelector(
-            ".menu-bar-navigation-dropdown-search-input"
+            ".menu-bar-navigation-dropdown-search-input",
           );
           if (filterCriterion) {
             (filterCriterion as HTMLInputElement).focus();
@@ -657,7 +672,7 @@ export class MenuBar {
       });
       const cursorDropdownGeneral = cursorDropdown.createDiv({
         cls: `menu-bar-navigation-dropdown-general ${this.getDropdownState(
-          "cursor"
+          "cursor",
         )}`,
       });
 
@@ -674,11 +689,11 @@ export class MenuBar {
           .length > 0
       ) {
         Object.keys(
-          this.plugin.settings.flows[this.flowName].persistentCursors
+          this.plugin.settings.flows[this.flowName].persistentCursors,
         ).forEach((leafID) => {
           timestampArray.push(
             this.plugin.settings.flows[this.flowName].persistentCursors[leafID]
-              .update
+              .update,
           );
         });
 
@@ -722,14 +737,14 @@ export class MenuBar {
               "click",
               (event) => {
                 this.plugin.flowService.scrollToPos(editor, cursorPos);
-              }
+              },
             );
           }
         }
 
         if (
           Object.keys(
-            this.plugin.settings.flows[this.flowName].persistentCursors
+            this.plugin.settings.flows[this.flowName].persistentCursors,
           ).length > 1
         ) {
           // get leaves by timestamp again, but exclude the current leaf
@@ -740,7 +755,7 @@ export class MenuBar {
           });
           const collectedCursors: [string, number][] = [];
           Object.keys(
-            this.plugin.settings.flows[this.flowName].persistentCursors
+            this.plugin.settings.flows[this.flowName].persistentCursors,
           ).forEach((leafID) => {
             // exclude the active leaf
             if (leafID != this.leafID) {
@@ -785,7 +800,7 @@ export class MenuBar {
               (event) => {
                 const editor = this.associatedView.editor as ObsidianEditor;
                 this.plugin.flowService.scrollToPos(editor, cursorPos);
-              }
+              },
             );
           }
         }
@@ -796,7 +811,7 @@ export class MenuBar {
         let mostRecentRegion: string = "";
         if (this.plugin.settings.flows[this.flowName].persistentCursors) {
           Object.keys(
-            this.plugin.settings.flows[this.flowName].persistentCursors
+            this.plugin.settings.flows[this.flowName].persistentCursors,
           ).forEach((leafID) => {
             if (
               this.plugin.settings.flows[this.flowName].persistentCursors[
@@ -810,7 +825,7 @@ export class MenuBar {
               mostRecentRegion = this.makeNavPath(
                 this.plugin.settings.flows[this.flowName].persistentCursors[
                   leafID
-                ].cursors[0][0]
+                ].cursors[0][0],
               );
             }
           });
@@ -824,7 +839,7 @@ export class MenuBar {
           .setTooltip(
             mostRecentCursor != 0 && mostRecentRegion != ""
               ? `${mostRecentRegion} - ${mostRecentCursor}`
-              : this.plugin.t("menubar.cursor history no stored cursors")
+              : this.plugin.t("menubar.cursor history no stored cursors"),
           )
           .onClick(() => {
             const editor = this.associatedView.editor as ObsidianEditor;
@@ -841,7 +856,7 @@ export class MenuBar {
         .setClass("spacing")
         .setClass("clickable-icon")
         .setTooltip(
-          this.plugin.t("menuBar.selectButton.setTooltip select active region")
+          this.plugin.t("menuBar.selectButton.setTooltip select active region"),
         )
         .onClick(async () => {
           if (activeRegion) {
@@ -849,7 +864,7 @@ export class MenuBar {
               this.flowName,
               activeRegion,
               this.associatedView.editor.getValue(),
-              this.associatedView.editor
+              this.associatedView.editor,
             );
           }
         });
@@ -861,7 +876,7 @@ export class MenuBar {
         .setClass("spacing")
         .setClass("clickable-icon")
         .setTooltip(
-          this.plugin.t("menuBar.selectButton.setTooltip export flow")
+          this.plugin.t("menuBar.selectButton.setTooltip export flow"),
         )
         .onClick(async () => {
           this.plugin.flowService.exportFlow(this.flowName);
@@ -878,6 +893,7 @@ export class MenuBar {
           this.plugin.settings.activeRegions[this.flowName][
             this.leafID
           ].leafMenuBarSettings.menuBarDisplayState = "hide";
+          this.plugin.saveSettings();
           this.plugin.refreshMenuBars();
         });
 
