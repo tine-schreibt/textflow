@@ -2,7 +2,6 @@ import TextFlowPlugin from "../main";
 import {
   App,
   ButtonComponent,
-  DropdownComponent,
   Editor,
   FuzzyMatch,
   FuzzySuggestModal,
@@ -1321,7 +1320,7 @@ export class FlowSwitcherModal extends Modal {
         const regionName = flowRegion.createSpan({
           text: `${
             activeFlowInfoObject[activeFlow][leafID]
-          } ${overlap} (${leafID.slice(0, 5)})`,
+          } ${overlap}`,
           cls: "flow-switch-modal-active-region-name",
           attr: {
             "aria-label": `${overlapAriaLabel}`,
@@ -1541,7 +1540,6 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
       } else {
         const currentActiveleafID = this.plugin.flowService.leafId(view.leaf);
         let activePath: string | undefined = "";
-        let activeCursorPos: string | number = "";
         if (
           this.plugin.settings.activeRegions[this.activeFlowName][
             currentActiveleafID
@@ -1551,17 +1549,10 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
             this.plugin.settings.activeRegions[this.activeFlowName][
               currentActiveleafID
             ].path;
-          activeCursorPos =
-            this.plugin.settings.activeRegions[this.activeFlowName][
-              currentActiveleafID
-            ].currentCursorPos;
         }
         placeholderText = `? ${
           this.activeFlowName
-        }: ${activePath} - (${currentActiveleafID.slice(
-          0,
-          5,
-        )}) - crs ${activeCursorPos} `;
+        }: ${activePath}`;
       }
     }
     this.setPlaceholder(`${placeholderText}`);
@@ -1605,28 +1596,6 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
             searchableText: `? ${region}`,
           });
         });
-
-        Object.keys(this.settings.flows[flowName].persistentCursors).forEach(
-          (iteratorLeafID) => {
-            let leafNickname =
-              this.settings.flows[flowName].persistentCursors[iteratorLeafID]
-                .leafNickname;
-            const cursors =
-              this.settings.flows[flowName].persistentCursors[iteratorLeafID]
-                .cursors;
-            for (let cursorTuple of cursors) {
-              activeFlowItems.push({
-                type: "active-flow-cursor",
-                flowName: flowName,
-                region: cursorTuple[0],
-                cursorPos: cursorTuple[1],
-                leafID: iteratorLeafID,
-                path: cursorTuple[0],
-                searchableText: `? ${cursorTuple[0]} - (${leafNickname}) - crs ${cursorTuple[1]}`,
-              });
-            }
-          },
-        );
       }
     });
 
@@ -1647,9 +1616,6 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
 
         Object.keys(this.settings.flows[flowName].persistentCursors).forEach(
           (iteratorLeafID) => {
-            const leafNickname =
-              this.settings.flows[flowName].persistentCursors[iteratorLeafID]
-                .leafNickname;
             const cursors =
               this.settings.flows[flowName].persistentCursors[iteratorLeafID]
                 .cursors;
@@ -1661,7 +1627,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
                 cursorPos: cursorTuple[1],
                 leafID: iteratorLeafID,
                 path: cursorTuple[0],
-                searchableText: `* ${cursorTuple[0]} - (${leafNickname}) - crs  ${cursorTuple[1]}`,
+                searchableText: `* ${cursorTuple[0]}`,
               });
             }
           },
@@ -1698,10 +1664,10 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
     if (suggestionItem.type === "flow-name") {
       displayFlowName = "";
     }
-    const searchText = displayFlowName + suggestionItem.searchableText;
 
     // make the container
     const contentEl = el.createDiv({ cls: "suggestion-content" });
+    contentEl.setText(displayFlowName);
 
     // Now do another fuzzy match to find and HIGHLIGHT THE SEARCHED CHARS WITHIN RESULTS
     // Claude 3.5 Sonnet wrote this and I don't really understand it, but it works, so...
@@ -1709,15 +1675,19 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
     let lastIndex = 0;
     for (const [start, end] of matchElements) {
       if (start > lastIndex) {
-        contentEl.createSpan().setText(searchText.slice(lastIndex, start));
+        contentEl
+          .createSpan()
+          .setText(suggestionItem.searchableText.slice(lastIndex, start));
       }
       contentEl
         .createSpan({ cls: "suggestion-highlight" })
-        .setText(searchText.slice(start, end));
+        .setText(suggestionItem.searchableText.slice(start, end));
       lastIndex = end;
     }
-    if (lastIndex < searchText.length) {
-      contentEl.createSpan().setText(searchText.slice(lastIndex));
+    if (lastIndex < suggestionItem.searchableText.length) {
+      contentEl
+        .createSpan()
+        .setText(suggestionItem.searchableText.slice(lastIndex));
     }
   }
 
