@@ -1191,7 +1191,7 @@ ${pseudoElement}
       );
     }
 
-    /*    // the thing to create a new file in the current folder
+    // the thing to create a new file in the current folder
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file) => {
         menu.addItem((item) => {
@@ -1209,20 +1209,20 @@ ${pseudoElement}
               const itemCreationModal = new Modals.CreateNewItem(
                 this.app,
                 this,
-                parentFolder
+                parentFolder,
               );
               itemCreationModal.open();
 
               const newFileName = this.getUniqueFileName(parentFolder);
               const newFilePath = normalizePath(
-                `/${parentFolder}/${newFileName}.md`
+                `/${parentFolder}/${newFileName}.md`,
               );
 
               await this.app.vault.create(newFilePath, "");
             });
         });
-      })
-    );*/
+      }),
+    );
 
     // ---------------   // thing to make flow from selected folder
     this.registerEvent(
@@ -2505,7 +2505,7 @@ ${pseudoElement}
 
   // The big bundle that centralises flow management
   setupFlowView = async (flowName: string, view: MarkdownView) => {
-   // this.flowService.callStack("setupFlowView");
+    // this.flowService.callStack("setupFlowView");
     // ------------- PROTECTION ---------------------
     // set up the editor with its other extensions and listeners
     await this.addWriteProtection(view, "divider");
@@ -2582,8 +2582,6 @@ ${pseudoElement}
     } else if (!this.alreadyActivated[flowName][leafID]) {
       this.alreadyActivated[flowName][leafID] = true;
       this.flowService.restoreCursorPos(flowName, view, leafID);
-      this.lastActiveRegion =
-        this.settings.flows[flowName].persistentCursors[leafID].cursors[0][0];
     }
 
     // ------------- HOUSEKEEPING ---------------------

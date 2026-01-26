@@ -1734,7 +1734,7 @@ export class FlowService {
 
   safeCreateOrModifyFile = async (path: string, newContent: string) => {
     try {
-      this.callStack("safeCreateFile");
+     // this.callStack("safeCreateFile");
       const existingFile = this.app.vault.getAbstractFileByPath(path);
       this.plugin.textFlowOperation = true;
 
