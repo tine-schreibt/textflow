@@ -285,7 +285,7 @@
   "activateFlow.notice flow name not found": "textFlow: No flow with name ${flowName} found.",
   "activateFlow.notice flow file not found": "textFlow: Flow file not found: ${flow.flowFilePath}\nTry clicking the 'Move' button for the system folder location (in settings).",
 
-  "manageactiveRegions.notice sync upon closing flow failed": "textFlow: Sync failed. The note at ${path} couldn't be found.",
+  "manageActiveRegions.notice sync upon closing flow failed": "textFlow: Sync failed. The note at ${path} couldn't be found.",
 
   "syncBackToSource.notice sync failed source note": "textFlow: Source file not found at path: ${path}",
   "syncBackToSource.failedStatCheck": "textFlow: Synchronisation has been aborted since the note at ${path} has been edited externally.\nPlease check if you really want to overwrite it. \nProcedure to overwrite: \n1. Copy the edit you just made.\n2. Rebuild the flow (via the settings panel). \n3. Paste the edit back into its spot. \n 4. Sync the flow.",

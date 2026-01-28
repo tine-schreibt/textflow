@@ -90,7 +90,7 @@ import de from "./src/lang/de.json";
 //      - setupMenuBar
 //      - refreshMenuBars
 //      - activateFlow
-//      - manageactiveRegions
+//      - manageActiveRegions
 //      - closeFlow
 //-----------------------------------------------------------------------------------------
 // - Data safety
@@ -193,10 +193,10 @@ export default class TextFlowPlugin extends Plugin {
 
   //--- some variables to keep track of things
   private mostRecentActiveFlowLeaf: WorkspaceLeaf | null = null;
+  private lastActiveRegion: string = "";
   private lastActivity: { [key: string]: number } = {};
   private inactivityThreshold: number = 5 * 60 * 1000;
   private alreadyActivated: { [key: string]: { [key: string]: boolean } } = {}; // flowName: {leafID: true}
-  private lastActiveRegion: string = "";
 
   //----- flags to prevent listeners/functions from interfering with stuff
   isRebuilding: boolean = false; // menuBar
@@ -1660,35 +1660,13 @@ ${pseudoElement}
         if (this.explorerClickListenerActive) {
           return;
         }
-
-        await this.syncAllLeaves();
-
-        if (leaf?.view instanceof MarkdownView) {
-          const view = leaf.view;
-          const activeLeafPath = leaf.view.file?.path;
-          if (activeLeafPath) {
-            // if active leaf is flow, set it up; hash check happens in setup
-            const isFlow = this.isFlowFile(activeLeafPath);
-            if (isFlow) {
-              await this.setupFlowView(isFlow, leaf.view);
-              this.mostRecentActiveFlowLeaf = leaf;
-              return;
-            }
-            // otherwise strip the flow stuff; hash check happens with syncAllLeaves in closeFlow
-            this.closeFlow(view);
-          }
-        }
+        this.leafSwitching();
       }),
     );
 
-    // catch if only an empty leaf remains
-
     this.registerEvent(
-      this.app.workspace.on("layout-change", () => {
-        if (this.app.workspace.getLeavesOfType("markdown").length === 0) {
-          // We're definitely in the "empty leaf" state
-          this.manageactiveRegions(); // also saves
-        }
+      this.app.workspace.on("layout-change", async () => {
+        this.leafSwitching();
       }),
     );
   }
@@ -2285,9 +2263,7 @@ ${pseudoElement}
         );
 
         if (activeRegion) {
-          if (activeRegion.path) {
-            this.lastActiveRegion = activeRegion.path;
-          }
+          this.lastActiveRegion = activeRegion.path;
           const activeRegionPath = activeRegion.path;
           // if the user wants checks, always check the new region
           if (
@@ -2344,7 +2320,7 @@ ${pseudoElement}
       const { type, invisibleUUID, flowOrder } = targetObject;
       this.settings.activeRegions[flowName][leafID] = {
         currentCursorPos: 0,
-        path: path,
+        path: path ? path : "",
         invisibleUUID: targetObject.invisibleUUID,
         leafMenuBarSettings: {
           menuBarDisplayState: "show",
@@ -2503,6 +2479,45 @@ ${pseudoElement}
     }
   };
 
+  // ------ handle the opening, closing and switching of leaves
+  // is called by layout-change and active-leaf-change
+
+  leafSwitching = async () => {
+    await this.syncAllLeaves();
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!view) return;
+    if (!view.file) return;
+    const leaf = view.leaf;
+
+    const activeLeafPath = view.file.path;
+
+    if (leaf?.view instanceof MarkdownView) {
+      const view = leaf.view;
+      const activeLeafPath = leaf.view.file?.path;
+      if (activeLeafPath) {
+        // if active leaf is flow, set it up; hash check happens in setup
+        const isFlow = this.isFlowFile(activeLeafPath);
+        if (isFlow) {
+          const leafID = this.flowService.leafId(view.leaf);
+
+          if (!this.alreadyActivated[isFlow]) {
+            await this.setupFlowView(isFlow, leaf.view);
+          } else if (this.alreadyActivated[isFlow]) {
+            if (!this.alreadyActivated[isFlow][leafID]) {
+              await this.setupFlowView(isFlow, leaf.view);
+            }
+          } else {
+          }
+
+          this.mostRecentActiveFlowLeaf = leaf;
+          return;
+        }
+        // otherwise strip the flow stuff; hash check happens with syncAllLeaves in closeFlow
+        this.closeFlow(view);
+      }
+    }
+  };
+
   // The big bundle that centralises flow management
   setupFlowView = async (flowName: string, view: MarkdownView) => {
     // this.flowService.callStack("setupFlowView");
@@ -2514,7 +2529,7 @@ ${pseudoElement}
 
     // ------------- VISUALS ---------------------
     // this has to happen first so the menuBar can just be set up
-    await this.manageactiveRegions();
+    await this.manageActiveRegions();
     // now do the menu bar
     this.setupMenuBar(view, flowName);
     // Update the switcher modal in case it's open
@@ -2577,8 +2592,6 @@ ${pseudoElement}
       this.alreadyActivated[flowName] = {};
       this.alreadyActivated[flowName][leafID] = true;
       this.flowService.restoreCursorPos(flowName, view, leafID);
-      this.lastActiveRegion =
-        this.settings.flows[flowName].persistentCursors[leafID].cursors[0][0];
     } else if (!this.alreadyActivated[flowName][leafID]) {
       this.alreadyActivated[flowName][leafID] = true;
       this.flowService.restoreCursorPos(flowName, view, leafID);
@@ -2702,8 +2715,8 @@ ${pseudoElement}
     }
   };
 
-  manageactiveRegions = async () => {
-    // this.flowService.callStack("manageactiveRegions");
+  manageActiveRegions = async () => {
+    //this.flowService.callStack("manageActiveRegions");
 
     // track all leaves
     const foundFlowLeaves: Record<string, Set<string>> = {};
@@ -2771,7 +2784,7 @@ ${pseudoElement}
                   if (!note) {
                     new Notice(
                       this.t(
-                        "manageactiveRegions.notice sync upon closing flow failed",
+                        "manageActiveRegions.notice sync upon closing flow failed",
                         { path: path },
                       ),
                     );
@@ -2825,6 +2838,8 @@ ${pseudoElement}
 
   // if a flow is replaced by a non-flow
   closeFlow = async (view: MarkdownView) => {
+    //this.flowService.callStack("closeFlow");
+
     await this.syncAllLeaves();
     this.removeCursorListener(view);
     this.removeTextChangeListener(view);
@@ -2860,7 +2875,7 @@ ${pseudoElement}
       }
     }
     // finally
-    this.manageactiveRegions(); // also saves
+    this.manageActiveRegions(); // also saves
   };
 
   // ---- Functions: Data safety ----------------------------
@@ -3298,6 +3313,8 @@ ${pseudoElement}
         this.settings.activeRegions[flowName][leafID].currentCursorPos;
     }
 
+    if (currentCursor === 0) return;
+
     // Initialise if doesn't exist
     if (!this.settings.flows[flowName].persistentCursors) {
       this.settings.flows[flowName].persistentCursors = {};
@@ -3306,7 +3323,7 @@ ${pseudoElement}
       this.settings.flows[flowName].persistentCursors[leafID] = {
         leafNickname: `${leafID.slice(0, 5)}`,
         update: Date.now(),
-        cursors: [[regionPath, currentCursor]],
+        cursors: [[regionPath, currentCursor, Date.now()]],
       };
 
       // cap the number of leaves
@@ -3330,7 +3347,7 @@ ${pseudoElement}
     ].cursors.filter(([key]) => key !== regionPath);
 
     // then put the new entry at the start
-    updatedCursors.unshift([regionPath, currentCursor]);
+    updatedCursors.unshift([regionPath, currentCursor, Date.now()]);
 
     // and put it back into the object
     this.settings.flows[flowName].persistentCursors[leafID].cursors =

@@ -59,14 +59,33 @@ export class MenuBar {
     }
   }
 
-  hasTabHeader(): boolean {
-    const leafEl = this.associatedView.containerEl.closest(".workspace-leaf");
-    if (!leafEl) return false;
-    const returnValue =
-      leafEl.querySelector(":scope > .workspace-tab-header") !== null;
-
-    return returnValue;
-  }
+  private getAndSortPersistentCursors = (include: boolean) => {
+    let cursorArray: [string, number, number][] = [];
+    if (include) {
+      cursorArray =
+        this.plugin.settings.flows[this.flowName].persistentCursors[this.leafID]
+          .cursors;
+    } else {
+      Object.keys(
+        this.plugin.settings.flows[this.flowName].persistentCursors,
+      ).forEach((leafID) => {
+        // exclude the active leaf
+        if (leafID != this.leafID) {
+          if (
+            this.plugin.settings.flows[this.flowName].persistentCursors[leafID]
+              .cursors
+          ) {
+            for (let cursor of this.plugin.settings.flows[this.flowName]
+              .persistentCursors[leafID].cursors) {
+              cursorArray.push(cursor);
+            }
+          }
+        }
+      });
+    }
+    cursorArray.sort((a, b) => b[2] - a[2]);
+    return cursorArray;
+  };
 
   // To keep track of all the listeners we need to add for our custom dropdowns
   private addManagedListener(
@@ -318,13 +337,6 @@ export class MenuBar {
     //this.plugin.flowService.callStack("createMenuBarElement")
     // check if we need a margin at the top
 
-    /*let hasTabHeader = this.hasTabHeader();
-    console.log(hasTabHeader)
-
-    let topMargin = "textflow-menu-bar-padding-top-30";
-    if (!hasTabHeader) {
-      topMargin = "textflow-menu-bar-padding-top-0";
-    }*/
     if (
       // if the menuBar is MINIMISED
       this.plugin.settings.activeRegions[this.flowName][this.leafID]
@@ -633,7 +645,7 @@ export class MenuBar {
         }
       }
 
-      // the span that holds above text, plus the fast travel icon
+      // the span that holds the above text, plus the fast travel icon
       cursorHeadline.createSpan({
         cls: "align-off-center",
         text: cursorDropdownHeadline,
@@ -681,27 +693,13 @@ export class MenuBar {
         cls: `menu-bar-navigation-dropdown-scrollable`,
       });
 
-      // Get all the timestamps to use an array as ordering device
-      const timestampArray: number[] = [];
-
+      let inclusiveCursorArray: [string, number, number][] = [];
+      let exclusiveCursorArray: [string, number, number][] = [];
       if (
         Object.keys(this.plugin.settings.flows[this.flowName].persistentCursors)
           .length > 0
       ) {
-        Object.keys(
-          this.plugin.settings.flows[this.flowName].persistentCursors,
-        ).forEach((leafID) => {
-          timestampArray.push(
-            this.plugin.settings.flows[this.flowName].persistentCursors[leafID]
-              .update,
-          );
-        });
-
-        // sort the timestamps in reverse order so newest timestamp comes first
-        timestampArray.sort((a, b) => b - a);
-
         // Find out if we have data for the active leaf so we can show it at the top
-
         if (
           this.plugin.settings.flows[this.flowName].persistentCursors[
             this.leafID
@@ -713,14 +711,11 @@ export class MenuBar {
             text: this.plugin.t("menubar.cursor history this leaf"),
           });
 
-          // now iterate through the cursor positions that belong to the leaf
-          const cursorArray =
-            this.plugin.settings.flows[this.flowName].persistentCursors[
-              this.leafID
-            ].cursors;
+          // get the sorted cursors for out leaf
+          inclusiveCursorArray = this.getAndSortPersistentCursors(true);
 
           // create a div for each
-          for (const [index, data] of cursorArray.entries()) {
+          for (const [index, data] of inclusiveCursorArray.entries()) {
             const textTimestamp =
               this.plugin.settings.flows[this.flowName].persistentCursors[
                 this.leafID
@@ -728,9 +723,9 @@ export class MenuBar {
 
             const cursorDropdownEntryPos = cursorDropdownScrollable.createDiv({
               cls: "blah",
-              text: `${this.makeNavPath(data[0])} (${cursorArray[index][1]})`,
+              text: `${this.makeNavPath(data[0])} (${inclusiveCursorArray[index][1]})`,
             });
-            const cursorPos = cursorArray[index][1];
+            const cursorPos = inclusiveCursorArray[index][1];
             const editor = this.associatedView.editor as ObsidianEditor;
             this.addManagedListener(
               cursorDropdownEntryPos,
@@ -742,6 +737,7 @@ export class MenuBar {
           }
         }
 
+        // check if we have cursors for other leaves
         if (
           Object.keys(
             this.plugin.settings.flows[this.flowName].persistentCursors,
@@ -753,46 +749,17 @@ export class MenuBar {
             cls: `text-emphasis align-off-center`,
             text: this.plugin.t("menubar.cursor history other leaves"),
           });
-          const collectedCursors: [string, number][] = [];
-          Object.keys(
-            this.plugin.settings.flows[this.flowName].persistentCursors,
-          ).forEach((leafID) => {
-            // exclude the active leaf
-            if (leafID != this.leafID) {
-              if (
-                this.plugin.settings.flows[this.flowName].persistentCursors[
-                  leafID
-                ].cursors
-              ) {
-                for (let cursor of this.plugin.settings.flows[this.flowName]
-                  .persistentCursors[leafID].cursors) {
-                  collectedCursors.push(cursor);
-                }
-              }
-            }
-          });
-          // this sorting was written by an anonymous model in the Cursor app
-          collectedCursors.sort((a, b) => {
-            // First compare the strings
-            const stringComparison = a[0].localeCompare(b[0]);
+          exclusiveCursorArray = this.getAndSortPersistentCursors(false);
 
-            // If strings are equal, compare the numbers
-            if (stringComparison === 0) {
-              return a[1] - b[1]; // ascending order for numbers
-            }
-
-            return stringComparison;
-          });
-
-          for (const [index, data] of collectedCursors.entries()) {
+          for (const [index, data] of exclusiveCursorArray.entries()) {
             const cursorDropdownEntryPos = cursorDropdownScrollable.createDiv({
               cls: `blah`,
               text: `${this.makeNavPath(data[0])} (${
-                collectedCursors[index][1]
+                exclusiveCursorArray[index][1]
               })`,
             });
 
-            const cursorPos = collectedCursors[index][1];
+            const cursorPos = exclusiveCursorArray[index][1];
 
             this.addManagedListener(
               cursorDropdownEntryPos,
@@ -805,8 +772,12 @@ export class MenuBar {
           }
         }
 
+        const collectedCursors = [
+          ...inclusiveCursorArray,
+          ...exclusiveCursorArray,
+        ].sort((a, b) => a[2] - b[2]);
         // get the most recent cursor position for the fast travel button
-        const mostRecentTimestamp: number = timestampArray[0];
+        const mostRecentTimestamp: number = collectedCursors[0][2];
         let mostRecentCursor: number = 0;
         let mostRecentRegion: string = "";
         if (this.plugin.settings.flows[this.flowName].persistentCursors) {

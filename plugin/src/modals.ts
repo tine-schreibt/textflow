@@ -945,8 +945,8 @@ export class FlowSwitcherModal extends Modal {
   private flowOpeningStuff = async (leaf: WorkspaceLeaf, file: TFile) => {
     await leaf.openFile(file);
     leaf.setPinned(true);
-    this.app.workspace.setActiveLeaf(leaf, { focus: true });
-    await this.plugin.manageactiveRegions(); // this is called anyway, but timing matters, so we do it again
+    this.app.workspace.setActiveLeaf(leaf, { focus: true }); // this triggers active-leaf-change which triggers the flow setup
+    await this.plugin.manageActiveRegions(); // this is called by the setup, but timing matters, so we call it again
     this.updateActiveLeafID();
     this.display();
     this.plugin.syncAllLeaves();
@@ -994,7 +994,7 @@ export class FlowSwitcherModal extends Modal {
     );
     if (targetLeaf) {
       targetLeaf.detach();
-      this.plugin.manageactiveRegions();
+      this.plugin.manageActiveRegions();
       await this.plugin.saveSettings();
       this.updateActiveLeafID();
       await this.display();
@@ -1318,9 +1318,7 @@ export class FlowSwitcherModal extends Modal {
         }
 
         const regionName = flowRegion.createSpan({
-          text: `${
-            activeFlowInfoObject[activeFlow][leafID]
-          } ${overlap}`,
+          text: `${activeFlowInfoObject[activeFlow][leafID]} ${overlap}`,
           cls: "flow-switch-modal-active-region-name",
           attr: {
             "aria-label": `${overlapAriaLabel}`,
@@ -1550,9 +1548,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
               currentActiveleafID
             ].path;
         }
-        placeholderText = `? ${
-          this.activeFlowName
-        }: ${activePath}`;
+        placeholderText = `? ${this.activeFlowName}: ${activePath}`;
       }
     }
     this.setPlaceholder(`${placeholderText}`);

@@ -407,7 +407,7 @@ button.setting-tab-button-spacing {
 }
 
 .flow-switch-modal-header-button-neutral {
-  background-color: var(--background-primary);
+  background-color: transparent;
   color: var(--text-normal);
   align-items: center;
   margin-top: -4px;
@@ -415,7 +415,7 @@ button.setting-tab-button-spacing {
 }
 
 .flow-switch-modal-header-button-no-go {
-  background-color: var(--background-primary);
+  background-color: transparent;
   color: var(--text-faint);
   align-items: center;
   margin-top: -4px;

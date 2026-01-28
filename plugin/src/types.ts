@@ -63,7 +63,7 @@ export type DecorationEntry = [
   symbol1: string,
   symbol2: string,
   symbol1Class: string,
-  symbol2Class: string
+  symbol2Class: string,
 ];
 
 export type ActiveRegionHighlight =
@@ -95,8 +95,8 @@ export interface ConflictObject {
 export interface CursorData {
   [leafID: string]: {
     leafNickname: string;
-    update: number;
-    cursors: [string, number][]; // path, cursorPos
+    update: number; // timestamp
+    cursors: [string, number, number][]; // path, cursorPos, timestamp
   };
 }
 // ------------------------------
@@ -119,7 +119,7 @@ export interface FlowDef {
 // -------- subtypes of flowDef
 export interface ActiveRegion {
   currentCursorPos: number;
-  path?: string;
+  path: string;
   invisibleUUID: string;
   leafMenuBarSettings: {
     menuBarDisplayState: MenuBarDisplayState;
@@ -285,4 +285,3 @@ export type SuggestionType =
   | "other-flow-cursor"
   | "flow-name"
   | "active-region";
-

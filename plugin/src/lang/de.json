@@ -291,7 +291,7 @@
   "activateFlow.notice flow name not found": "textFlow: Keinen Flow mit Namen ${flowName} gefunden.",
   "activateFlow.notice flow file not found": "textFlow: Flow-Datei nicht gefunden: ${flow.flowFilePath}\nBitte klicke in den Settings auf den 'Verschieben' Button für textFlows Systemordner.",
 
-  "manageactiveRegions.notice sync upon closing flow failed": "textFlow: Sync fehlgeschlagen. Die Notiz ${path} konnte nicht gefunden werden.",
+  "manageActiveRegions.notice sync upon closing flow failed": "textFlow: Sync fehlgeschlagen. Die Notiz ${path} konnte nicht gefunden werden.",
 
   "syncBackToSource.notice sync failed source note": "textFlow: Quellnotiz ${path} nicht gefunden.",
   "syncBackToSource.failedStatCheck": "textFlow: Die Synchronisierung wurde abgebrochen, da die Notiz ${path} extern bearbeitet wurde. \nBitte prüfe, ob du sie überschreiben willst. \nVorgehen zum Überschreiben: \n1. Kopiere die Änderungen, die du gerade gemacht hast. \n2. Baue den Flow neu (benutze den Button in den Plugin-Einstellungen). \n3. Füge die Änderungen an ihrem alten Platz ein. \n4. Synchronisiere den Flow.",
