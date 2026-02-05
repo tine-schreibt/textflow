@@ -173,10 +173,7 @@ class LoadingOverlay {
 }
 
 export class FlowService {
-  constructor(
-    private plugin: TextFlow,
-    private app: App,
-  ) {}
+  constructor(private plugin: TextFlow, private app: App) {}
   //#######################################################################
   //###########################    Functions   ############################
   //#######################################################################
@@ -1228,9 +1225,6 @@ export class FlowService {
       ? (key = "bookmarks")
       : (key = "foldersTagsProps");
 
-    // this is to make sure we got the latest version of everything
-    await this.plugin.syncAllLeaves();
-
     let pathArray: string[] = [];
     Object.keys(this.plugin.settings.flows[flowName].flowMap).forEach(
       (note) => {
@@ -1260,7 +1254,13 @@ export class FlowService {
       idDivider: "",
     };
     this.resetFlowBuildBasket(flowReBuildBasket);
-    ((this.plugin.isRebuilding = false), await this.plugin.saveSettings());
+    // reset the out of sync array
+    const filteredArray = this.plugin.flowOutOfSync.filter((filterFlowname) => {
+      filterFlowname != flowName;
+    });
+    this.plugin.flowOutOfSync = filteredArray;
+    this.plugin.isRebuilding = false;
+    await this.plugin.saveSettings();
   };
 
   // ------ The flowBuilder --------------------------
@@ -1612,24 +1612,24 @@ export class FlowService {
             char === "\u00A0"
               ? "NBSP"
               : char === "\u200B"
-                ? "ZWSP"
-                : char === "\u200C"
-                  ? "ZWNJ"
-                  : char === "\u200D"
-                    ? "ZWJ"
-                    : char === "\u2060"
-                      ? "WJ"
-                      : char === "\u2061"
-                        ? "FA"
-                        : char === "\u2062"
-                          ? "*"
-                          : char === "\u2063"
-                            ? "IS"
-                            : char === "\u2064"
-                              ? "+"
-                              : char === "\uFEFF"
-                                ? "NBZWS"
-                                : "unknown",
+              ? "ZWSP"
+              : char === "\u200C"
+              ? "ZWNJ"
+              : char === "\u200D"
+              ? "ZWJ"
+              : char === "\u2060"
+              ? "WJ"
+              : char === "\u2061"
+              ? "FA"
+              : char === "\u2062"
+              ? "*"
+              : char === "\u2063"
+              ? "IS"
+              : char === "\u2064"
+              ? "+"
+              : char === "\uFEFF"
+              ? "NBZWS"
+              : "unknown",
         }),
       ),
     });
@@ -1833,8 +1833,8 @@ export class FlowService {
       };
 
       const cleanContent = stripUUIDs(fileContent);
-      const yaml = `---\ntextFlowExport: true\n---`;
 
+      const yaml = ""; //`---\ntextFlowExport: true\n---`;
       const contentWithYaml = `${yaml}\n${cleanContent}`;
 
       const exportedFlowPath = normalizePath(
@@ -1858,6 +1858,15 @@ export class FlowService {
     text: string,
     viewDotEditor: Editor,
   ) => {
+    // notify of failure du to tracking error
+    if (this.plugin.flowOutOfSync.includes(flowName)) {
+      new Notice(
+        this.plugin.t("menuBar.selectActiveRegion tracking error", {
+          flowName: flowName,
+        }),
+      );
+      return;
+    }
     const map = this.plugin.settings.flows[flowName].flowMap;
 
     const startPos = this.plugin.findStartOfRegion(

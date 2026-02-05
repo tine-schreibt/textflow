@@ -198,6 +198,9 @@ export default class TextFlowPlugin extends Plugin {
   private inactivityThreshold: number = 5 * 60 * 1000;
   private alreadyActivated: { [key: string]: { [key: string]: boolean } } = {}; // flowName: {leafID: true}
 
+  // --- flow out of sync flag to prevent user from creating syncing errors when tracking fails
+  flowOutOfSync: string[] = [];
+
   //----- flags to prevent listeners/functions from interfering with stuff
   isRebuilding: boolean = false; // menuBar
   textFlowOperation: boolean = false; // create, modify and rename listener
@@ -1447,11 +1450,27 @@ ${pseudoElement}
           for (let flowName of Object.keys(this.settings.flows)) {
             if (this.settings.flows[flowName].flaggedForRebuild) continue;
 
-            // if the flow contained the old path, flag and move on
-            if (this.settings.flows[flowName].flowMap[oldPath]) {
+            // if we got a file and it's part of the flow
+            if (
+              file instanceof TFile &&
+              this.settings.flows[flowName].flowMap[oldPath]
+            ) {
               this.settings.flows[flowName].flaggedForRebuild = true;
-              await this.saveSettings();
+              // await this.saveSettings();
               continue;
+            }
+
+            // if we got a folder and it provides parts of the flow
+            if (file instanceof TFolder) {
+              for (let regionPath of Object.keys(
+                this.settings.flows[flowName],
+              )) {
+                if (dirname(regionPath) === oldPath) {
+                  this.settings.flows[flowName].flaggedForRebuild = true;
+                  // await this.saveSettings();
+                  continue;
+                }
+              }
             }
 
             // if the parent is included
@@ -1460,7 +1479,7 @@ ${pseudoElement}
               this.settings.flows[flowName].flowCookbook.folderIncluded
             ) {
               this.settings.flows[flowName].flaggedForRebuild = true;
-              await this.saveSettings();
+              // await this.saveSettings();
               continue;
             }
             if (
@@ -1484,10 +1503,11 @@ ${pseudoElement}
                 if (isExcluded) continue;
               }
               this.settings.flows[flowName].flaggedForRebuild = true;
-              await this.saveSettings();
+              // await this.saveSettings();
               continue;
             }
           }
+          await this.saveSettings();
         },
       ),
     );
@@ -2214,6 +2234,22 @@ ${pseudoElement}
 
       // double check because active region could come back undefined
       if (activeRegionObject) {
+        // we're in sync
+        // inform the user if necessary
+        if (this.flowOutOfSync.includes(flowName)) {
+          new Notice(
+            this.t("checkActiveRegion.notice region tracking error resolved", {
+              flowName: flowName,
+            }),
+            0,
+          );
+        }
+        // update the array
+        const filteredArray = this.flowOutOfSync.filter((filterFlowname) => {
+          filterFlowname != flowName;
+        });
+        this.flowOutOfSync = filteredArray;
+
         this.settings.activeRegions[flowName][leafID] = activeRegionObject;
         // then check if the active region overlaps and send a notice
         if (activeRegionObject.path) {
@@ -2263,6 +2299,25 @@ ${pseudoElement}
         );
 
         if (activeRegion) {
+          // we're in sync
+          // inform the user if necessary
+          if (this.flowOutOfSync.includes(flowName)) {
+            new Notice(
+              this.t(
+                "checkActiveRegion.notice region tracking error resolved",
+                {
+                  flowName: flowName,
+                },
+              ),
+              0,
+            );
+          }
+          // update the array
+          const filteredArray = this.flowOutOfSync.filter((filterFlowname) => {
+            filterFlowname != flowName;
+          });
+          this.flowOutOfSync = filteredArray;
+
           this.lastActiveRegion = activeRegion.path;
           const activeRegionPath = activeRegion.path;
           // if the user wants checks, always check the new region
@@ -2296,7 +2351,14 @@ ${pseudoElement}
             this.notifyOfOverlap(activeRegion.path, flowName, leafID);
           }
         } else {
-          // if the compass just cirles, check if it's just a tracking error
+          // if the compass just cirles, set flag to prevent saves and notify the user
+          if (!this.flowOutOfSync.includes(flowName)) {
+            this.flowOutOfSync.push(flowName);
+          }
+          if (view.menuBar) {
+            view.menuBar.refresh(view.contentEl);
+          }
+          console.log("out of sync: ", this.flowOutOfSync);
           new Notice(
             this.t("checkActiveRegion.notice region tracking error", {
               flowName: flowName,
@@ -2498,22 +2560,16 @@ ${pseudoElement}
         // if active leaf is flow, set it up; hash check happens in setup
         const isFlow = this.isFlowFile(activeLeafPath);
         if (isFlow) {
-          const leafID = this.flowService.leafId(view.leaf);
+          await this.setupFlowView(isFlow, leaf.view);
 
-          if (!this.alreadyActivated[isFlow]) {
-            await this.setupFlowView(isFlow, leaf.view);
-          } else if (this.alreadyActivated[isFlow]) {
-            if (!this.alreadyActivated[isFlow][leafID]) {
-              await this.setupFlowView(isFlow, leaf.view);
-            }
-          } else {
-          }
+          const leafID = this.flowService.leafId(view.leaf);
 
           this.mostRecentActiveFlowLeaf = leaf;
           return;
+        } else {
+          // this.closeFlow();
+          this.manageActiveRegions();
         }
-        // otherwise strip the flow stuff; hash check happens with syncAllLeaves in closeFlow
-        this.closeFlow(view);
       }
     }
   };
@@ -2521,11 +2577,6 @@ ${pseudoElement}
   // The big bundle that centralises flow management
   setupFlowView = async (flowName: string, view: MarkdownView) => {
     // this.flowService.callStack("setupFlowView");
-    // ------------- PROTECTION ---------------------
-    // set up the editor with its other extensions and listeners
-    await this.addWriteProtection(view, "divider");
-    await this.addCursorListener(view);
-    await this.addTextChangeListener(view);
 
     // ------------- VISUALS ---------------------
     // this has to happen first so the menuBar can just be set up
@@ -2629,6 +2680,12 @@ ${pseudoElement}
 
       view.menuBar?.refresh(view.contentEl);
     }
+
+    // ------------- PROTECTION ---------------------
+    // set up the editor with its other extensions and listeners
+    await this.addWriteProtection(view, "divider");
+    await this.addCursorListener(view);
+    await this.addTextChangeListener(view);
   };
 
   // ---- handle menuBar setup
@@ -3052,6 +3109,16 @@ ${pseudoElement}
 
   //---- The actual sync function -------------
   syncBackToSource = async (flowName: string, text: string, leafID: string) => {
+    // block syncing if there's a tracking error
+    if (this.flowOutOfSync.includes(flowName)) {
+      new Notice(
+        this.t("syncBackToSource tracking error", {
+          flowName: flowName,
+        }),
+        0,
+      );
+      return;
+    }
     if (this.settings.flows[flowName].unsyncedRegionsArray) {
       const map = this.settings.flows[flowName].flowMap;
       const remainingPaths: string[] = [];
@@ -3313,15 +3380,13 @@ ${pseudoElement}
         this.settings.activeRegions[flowName][leafID].currentCursorPos;
     }
 
-    if (currentCursor === 0) return;
-
     // Initialise if doesn't exist
     if (!this.settings.flows[flowName].persistentCursors) {
       this.settings.flows[flowName].persistentCursors = {};
     }
     if (!this.settings.flows[flowName].persistentCursors[leafID]) {
       this.settings.flows[flowName].persistentCursors[leafID] = {
-        leafNickname: `${leafID.slice(0, 5)}`,
+        //leafNickname: `${leafID.slice(0, 5)}`,
         update: Date.now(),
         cursors: [[regionPath, currentCursor, Date.now()]],
       };

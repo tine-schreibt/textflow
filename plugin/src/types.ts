@@ -94,7 +94,7 @@ export interface ConflictObject {
 
 export interface CursorData {
   [leafID: string]: {
-    leafNickname: string;
+    //leafNickname: string;
     update: number; // timestamp
     cursors: [string, number, number][]; // path, cursorPos, timestamp
   };

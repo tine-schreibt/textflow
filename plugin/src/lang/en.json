@@ -194,6 +194,7 @@
   "menubar.cursor history this leaf": "--- This leaf ---",
   "menubar.cursor history other leaves": "--- Other leaves ---",
   "menuBar.selectButton.setTooltip select active region": "Select active region",
+  "menuBar.selectActiveRegion tracking error": "textFlow: Due to a tracking error in ${flowName} the active region can not be selected. Please select the text yourself, then rebuild the flow to fix the tracking error.",
   "menuBar.selectButton.setTooltip export flow": "Export flow",
   "menubar.selectButton.notice successful export": "textFlow: Your flow has been exported to ${exportedFlowPath}.",
   "menubar Collapse menu bar": "Collapse menu bar",
@@ -291,8 +292,10 @@
   "syncBackToSource.failedStatCheck": "textFlow: Synchronisation has been aborted since the note at ${path} has been edited externally.\nPlease check if you really want to overwrite it. \nProcedure to overwrite: \n1. Copy the edit you just made.\n2. Rebuild the flow (via the settings panel). \n3. Paste the edit back into its spot. \n 4. Sync the flow.",
   "syncBackToSource.notice sync failed flow note": "textFlow: Sync failed. The flow at ${path} couldn't be found.",
   "syncBackToSource.notice other random error": "textFlow: An error occurred while trying to sync from ${flowName} to ${path}. \nPlease try again in a second. \nIf the error persists, consult the 'Fixing problems' section of the readme.",
+  "syncBackToSource tracking error": "textFlow: Due to a tracking error in ${flowName}, syncing isn't possible right now. Please copy the edit you wish to preserve, then rebuild the flow to fix the tracking error.",
 
-  "checkActiveRegion.notice region tracking error": "textFlow: Region tracking error for ${flowName}.\nYour are most likely seeing this because you a) renamed the flow's source folder or b) undid (cmd+z) your way into the state before a rebuild.\n Case a: Please update the flow's definition and rebuild it. \nCase b: \nPlease redo (cmd+shift+z) your way back into the current version of things.\nIf that doesn't seem to work, please rebuild ${flowName}.\nThis may lead to further error messages. Please follow their instructions.",
+  "checkActiveRegion.notice region tracking error": "textFlow: Region tracking error for ${flowName}.\nYou most likely undid (ctrl/cmd+z) your way into the state before a rebuild. \nKeep undooing until you reach the change you wish to return to, copy it, then redo (ctrl/cmd+shift+z) your way back into the current version of things, or rebuild ${flowName}. You can then past the copied content back into the flow.",
+  "checkActiveRegion.notice region tracking error resolved": "textFlow: The tracking error for ${flowName} has been resolved.",
   "checkActiveRegion.notice overlap detected": "The current region ${regionName} is overlapping with the following flow(s): ${overlapString}",
 
   "---------- FLOW SERVICE": "A class that holds most of the functionality for the settings tab and related stuff",

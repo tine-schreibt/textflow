@@ -61,6 +61,7 @@ export class MenuBar {
 
   private getAndSortPersistentCursors = (include: boolean) => {
     let cursorArray: [string, number, number][] = [];
+    let zeroCursor = false; // to prevent a ton of 0 cursors
     if (include) {
       cursorArray =
         this.plugin.settings.flows[this.flowName].persistentCursors[this.leafID]
@@ -77,7 +78,9 @@ export class MenuBar {
           ) {
             for (let cursor of this.plugin.settings.flows[this.flowName]
               .persistentCursors[leafID].cursors) {
+              if (cursor[1] === 0 && zeroCursor) continue;
               cursorArray.push(cursor);
+              if (cursor[1] === 0) zeroCursor = true;
             }
           }
         }
@@ -385,6 +388,11 @@ export class MenuBar {
         goSync = "no-go";
       }
 
+      if (this.plugin.flowOutOfSync.includes(this.flowName)) {
+        goRebuild = "must";
+        goSync = "no-go";
+      }
+
       const menuBarEl = this.associatedView.contentEl.createDiv({
         cls: `textflow-menu-bar`,
       });
@@ -617,41 +625,23 @@ export class MenuBar {
 
       // ------ The cursor stuff -----------------------------------
 
-      const cursorContainer = menuBarEl.createDiv({
-        cls: `menu-bar-cursor-container spacing`,
-      });
-
-      const cursorDropdown = cursorContainer.createDiv({
-        cls: "menu-bar-navigation-dropdown",
+      const cursorDropdown = menuBarEl.createDiv({
+        cls: "menu-bar-cursor-dropdown",
       });
 
       const cursorHeadline = cursorDropdown.createDiv({
         cls: "menu-bar-navigation-dropdown-headline",
       });
 
-      // initial content
-      let cursorDropdownHeadline = this.plugin.t(
-        "menubar.cursor history no stored cursors",
-      );
-      if (this.plugin.settings.flows[this.flowName].persistentCursors) {
-        if (
-          Object.keys(
-            this.plugin.settings.flows[this.flowName].persistentCursors,
-          ).length > 0
-        ) {
-          cursorDropdownHeadline = this.plugin.t(
-            "menubar.cursor history stored cursors",
-          );
-        }
-      }
+      // the span that holds the icon
+      // there used to be a text dropdown here, but I replaced it with just the button and so far I haven't felt the necessary patience to rewrite all of this as a button
 
-      // the span that holds the above text, plus the fast travel icon
-      cursorHeadline.createSpan({
-        cls: "align-off-center",
-        text: cursorDropdownHeadline,
-      });
       const cursorIconSpan = cursorHeadline.createSpan();
-      setIcon(cursorIconSpan, "chevrons-down-up");
+      cursorIconSpan.setAttr(
+        "aria-label",
+        this.plugin.t("menubar.cursor history stored cursors"),
+      );
+      setIcon(cursorIconSpan, "map-pin");
 
       // the listener to open the dropdown
       this.addManagedListener(cursorHeadline, "click", (event) => {
@@ -711,7 +701,7 @@ export class MenuBar {
             text: this.plugin.t("menubar.cursor history this leaf"),
           });
 
-          // get the sorted cursors for out leaf
+          // get the sorted cursors for our leaf
           inclusiveCursorArray = this.getAndSortPersistentCursors(true);
 
           // create a div for each
@@ -723,7 +713,9 @@ export class MenuBar {
 
             const cursorDropdownEntryPos = cursorDropdownScrollable.createDiv({
               cls: "blah",
-              text: `${this.makeNavPath(data[0])} (${inclusiveCursorArray[index][1]})`,
+              text: `${this.makeNavPath(data[0])} (${
+                inclusiveCursorArray[index][1]
+              })`,
             });
             const cursorPos = inclusiveCursorArray[index][1];
             const editor = this.associatedView.editor as ObsidianEditor;
@@ -743,12 +735,13 @@ export class MenuBar {
             this.plugin.settings.flows[this.flowName].persistentCursors,
           ).length > 1
         ) {
-          // get leaves by timestamp again, but exclude the current leaf
           // create headline entry that's not clickable
           const cursorDropdownEntryDate = cursorDropdownScrollable.createDiv({
             cls: `text-emphasis align-off-center`,
             text: this.plugin.t("menubar.cursor history other leaves"),
           });
+
+          // get the cursor positions
           exclusiveCursorArray = this.getAndSortPersistentCursors(false);
 
           for (const [index, data] of exclusiveCursorArray.entries()) {
@@ -772,41 +765,25 @@ export class MenuBar {
           }
         }
 
-        const collectedCursors = [
+        // CODE FOR A FAST TRAVEL BUTTON
+        // SEEMS SUPERFLUOUS BUT MAY REINSTATE IF USERS ASK FOR IT
+        /*        const collectedCursors = [
           ...inclusiveCursorArray,
           ...exclusiveCursorArray,
-        ].sort((a, b) => a[2] - b[2]);
-        // get the most recent cursor position for the fast travel button
-        const mostRecentTimestamp: number = collectedCursors[0][2];
-        let mostRecentCursor: number = 0;
-        let mostRecentRegion: string = "";
-        if (this.plugin.settings.flows[this.flowName].persistentCursors) {
-          Object.keys(
-            this.plugin.settings.flows[this.flowName].persistentCursors,
-          ).forEach((leafID) => {
-            if (
-              this.plugin.settings.flows[this.flowName].persistentCursors[
-                leafID
-              ].update === mostRecentTimestamp
-            ) {
-              mostRecentCursor =
-                this.plugin.settings.flows[this.flowName].persistentCursors[
-                  leafID
-                ].cursors[0][1];
-              mostRecentRegion = this.makeNavPath(
-                this.plugin.settings.flows[this.flowName].persistentCursors[
-                  leafID
-                ].cursors[0][0],
-              );
-            }
-          });
-        }
+        ].sort((a, b) => b[2] - a[2]);
 
+         // get the most recent cursor position for the fast travel button, if we got a pos
+        let mostRecentCursor = 0;
+        let mostRecentRegion = "";
+        if (collectedCursors.length != 0) {
+          mostRecentCursor = collectedCursors[0][1];
+          mostRecentRegion = this.makeNavPath(collectedCursors[0][0]);
+        }
         // the button itself
         const cursorIconTarget = new ButtonComponent(cursorContainer);
         cursorIconTarget
           .setIcon("target")
-          .setClass("cursor-target-button") // Add a specific class we can target
+          .setClass("cursor-target-button")
           .setTooltip(
             mostRecentCursor != 0 && mostRecentRegion != ""
               ? `${mostRecentRegion} - ${mostRecentCursor}`
@@ -817,13 +794,14 @@ export class MenuBar {
             mostRecentCursor
               ? this.plugin.flowService.scrollToPos(editor, mostRecentCursor)
               : "";
-          });
+          });*/
       }
 
       // the button with which you can select the active region
       const selectButton = new ButtonComponent(menuBarEl);
       selectButton
         .setIcon("text-select")
+        .setClass("menu-bar-button-select-export")
         .setClass("spacing")
         .setClass("clickable-icon")
         .setTooltip(
@@ -844,6 +822,7 @@ export class MenuBar {
       const exportButton = new ButtonComponent(menuBarEl);
       exportButton
         .setIcon("file-up")
+        .setClass("menu-bar-button-select-export")
         .setClass("spacing")
         .setClass("clickable-icon")
         .setTooltip(

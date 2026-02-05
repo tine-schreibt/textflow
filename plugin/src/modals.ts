@@ -38,10 +38,7 @@ import path from "path";
 //--------------------------------------------------------------------------------
 
 export class CreateFlowFromFolder extends Modal {
-  constructor(
-    app: App,
-    private plugin: TextFlowPlugin,
-  ) {
+  constructor(app: App, private plugin: TextFlowPlugin) {
     super(app);
     this.plugin = plugin;
   }
@@ -1141,6 +1138,11 @@ export class FlowSwitcherModal extends Modal {
         goRebuild = "must";
       }
 
+      if (this.plugin.flowOutOfSync.includes(activeFlow)) {
+        goSync = "no-go";
+        goRebuild = "must";
+      }
+
       // ------------ All the buttons for the active flowses headers
       // Button that opens in a new tab
       const openActiveTabButton = new ButtonComponent(flowHeader)
@@ -1410,6 +1412,11 @@ export class FlowSwitcherModal extends Modal {
         this.plugin.settings.flows[inactiveFlow].flaggedForRebuild
       ) {
         goOpen = "no-go";
+        goRebuild = "must";
+        goSync = "no-go";
+      }
+
+      if (this.plugin.flowOutOfSync.includes(inactiveFlow)) {
         goRebuild = "must";
         goSync = "no-go";
       }

@@ -1,3 +1,5 @@
+/*various tiny modifier classes*/
+
 .text-emphasis {
   font-weight: 700;
 }
@@ -8,6 +10,16 @@
 
 .align-off-center {
   padding-left: 7px;
+}
+
+.spacing {
+  padding-right: 5px;
+}
+
+.box-shadow {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  box-shadow: var(--input-shadow);
 }
 
 .underlined {
@@ -556,14 +568,16 @@ button.setting-tab-button-spacing {
   position: absolute;
   z-index: 1;
 
-  margin-left: 2px;
+  margin-left: 0px;
   right: auto;
   width: 28px;
-  height: 20px;
+  /*height: 28px;*/
   display: inline-flex;
   justify-content: inline-flex;
 
-  background-color: rgb(from var(--color-accent) r g b / 0.2);
+  /*background-color: rgb(from var(--background-secondary) r g b / 1);*/
+  /*background-color: rgb(from var(--color-accent) r g b / 0.05);*/
+  background-color: var(--background-primary);
   border-radius: 4px;
   box-shadow: var(--input-shadow);
   pointer-events: none;
@@ -572,10 +586,6 @@ button.setting-tab-button-spacing {
 /* re-enable interactions for the actual button(s) inside */
 .textflow-menu-bar-min > * {
   pointer-events: auto;
-}
-
-.spacing {
-  padding-right: 5px;
 }
 
 /*subtle highlight for syncs*/
@@ -735,14 +745,30 @@ button.setting-tab-button-spacing {
 
 .menu-bar-cursor-container {
   display: grid; /* Add this line */
-  grid-template-columns:
-    minmax(100px, 1fr) /*cursorDropdown*/
-    minmax(30px, auto) /*cursorButton*/;
+  grid-template-columns: minmax(30px, auto) /*cursorDropdown*/;
   gap: 0px;
+}
+
+.menu-bar-cursor-dropdown {
+  width: 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  margin: 0;
+  padding: 0;
 }
 
 .cursor-target-button {
   padding: 4px;
+  width: 30px;
+}
+
+.menu-bar-button-select-export {
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+  box-shadow: var(--input-shadow);
+  align-items: center;
   width: 30px;
 }
 
