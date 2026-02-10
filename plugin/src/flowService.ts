@@ -338,7 +338,7 @@ export class FlowService {
           Object.keys(this.plugin.settings.activeRegions[activeFlow]).forEach(
             async (leafID) => {
               const targetLeaf = leaves.find(
-                (leaf) => this.leafId(leaf) === leafID
+                (leaf) => this.getLeafId(leaf) === leafID
               );
               if (targetLeaf) {
                 targetLeaf.detach();
@@ -1307,7 +1307,7 @@ export class FlowService {
         async (leafID) => {
           const leaves = this.app.workspace.getLeavesOfType("markdown");
           const leaf = leaves.find(
-            (newLeaf) => this.leafId(newLeaf) === leafID
+            (newLeaf) => this.getLeafId(newLeaf) === leafID
           );
           if (leaf) {
             // make sure the leaf has ben properly initialised
@@ -1911,8 +1911,8 @@ export class FlowService {
   };
 
   //---------------------
-  // robot told me these two help to keep the scope clean with regards to type
-  leafId = (leaf: WorkspaceLeaf): Types.LeafId => {
+  // robot told me these would help to keep the scope clean with regards to type
+  getLeafId = (leaf: WorkspaceLeaf): Types.LeafId => {
     return (leaf as any).id as Types.LeafId;
   };
 
@@ -1926,6 +1926,7 @@ export class FlowService {
     if (!stack) return;
     console.log(recipient, stack, Date.now());
   };
+
   //-----------
   updateScrollbarVisibility = async () => {
     // Handle all leaves

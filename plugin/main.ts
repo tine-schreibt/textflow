@@ -189,6 +189,7 @@ export default class TextFlowPlugin extends Plugin {
   private lastActivity: { [key: string]: number } = {};
   private inactivityThreshold: number = 5 * 60 * 1000;
   private alreadyActivated: { [key: string]: { [key: string]: boolean } } = {}; // flowName: {leafID: true}
+  private listenerBasket: { [key: string]: Types.ListenerBasketItem } = {};
 
   // --- flow out of sync flag to prevent user from creating syncing errors when tracking fails
   flowOutOfSync: string[] = [];
@@ -490,7 +491,7 @@ export default class TextFlowPlugin extends Plugin {
         if (!view) {
           new Modals.FlowSwitcherModal(this.app, this).open();
         } else {
-          const leafID = this.flowService.leafId(view.leaf);
+          const leafID = this.flowService.getLeafId(view.leaf);
           new Modals.FlowSwitcherModal(this.app, this, leafID).open();
         }
       },
@@ -545,7 +546,7 @@ export default class TextFlowPlugin extends Plugin {
           const flowName = this.isFlowFile(path);
           if (!flowName) return;
 
-          const leafID = this.flowService.leafId(activeView.leaf);
+          const leafID = this.flowService.getLeafId(activeView.leaf);
           if (!leafID) return;
 
           for (let leaf of Object.keys(this.settings.activeRegions[flowName])) {
@@ -590,7 +591,7 @@ export default class TextFlowPlugin extends Plugin {
         if (!view.file) return;
 
         const activeLeafPath = view.file.path;
-        const leafID = this.flowService.leafId(view.leaf);
+        const leafID = this.flowService.getLeafId(view.leaf);
         const flowName = this.isFlowFile(activeLeafPath);
         if (!flowName) return;
         if (!this.settings.activeRegions[flowName]) return;
@@ -628,7 +629,7 @@ export default class TextFlowPlugin extends Plugin {
         const flowName = this.isFlowFile(activeLeafPath);
         if (!flowName) return;
 
-        const leafID = this.flowService.leafId(activeView.leaf);
+        const leafID = this.flowService.getLeafId(activeView.leaf);
         // check if we got data for that leafID
         this.flowService.restoreCursorPos(flowName, activeView, leafID);
       },
@@ -707,7 +708,7 @@ export default class TextFlowPlugin extends Plugin {
         if (activeLeafPath) {
           const flowName = this.isFlowFile(activeLeafPath);
           if (flowName) {
-            const leafID = this.flowService.leafId(activeView.leaf);
+            const leafID = this.flowService.getLeafId(activeView.leaf);
 
             for (let flowName of Object.keys(this.settings.activeRegions)) {
               if (this.settings.activeRegions[flowName][leafID]) {
@@ -1683,283 +1684,8 @@ ${pseudoElement}
   }
 
   // ---------------- Functions: Listeners: Tracking in editor ----------
-  // a little object to keep track of stuff
-  listenerBasket: { [key: string]: Types.ListenerBasketItem } = {};
-
-  // This listener is used to track the active region
-  private addCursorListener = async (view: MarkdownView) => {
-    const cmView = this.flowService.getEditorView(view.editor);
-    const leafID = this.flowService.leafId(view.leaf);
-
-    if (!cmView) return;
-    if (!view) return;
-    // check if we have this compartment and it is active
-    if (
-      this.listenerBasket[`${leafID}-cursor`] &&
-      this.listenerBasket[`${leafID}-cursor`].enabled
-    )
-      return;
-
-    const activeLeafPath = view.file?.path;
-    if (!activeLeafPath) return;
-
-    const flowName = this.isFlowFile(activeLeafPath);
-    if (!flowName) {
-      this.removeCursorListener(view);
-      return;
-    }
-
-    // ---------- actual listener stuff
-
-    const plugin = this;
-    let lastCursorPosition: number | null = null;
-    let debounceTimeout: NodeJS.Timeout | null = null;
-
-    const cursorListenerCompartment = new Compartment();
-
-    const cursorListener = ViewPlugin.fromClass(
-      class {
-        constructor(view: EditorView) {}
-
-        update(update: ViewUpdate) {
-          if (!update.selectionSet) return;
-
-          const cursorOffset = update.state.selection.main.from;
-
-          if (cursorOffset !== lastCursorPosition) {
-            lastCursorPosition = cursorOffset;
-
-            if (debounceTimeout) {
-              clearTimeout(debounceTimeout);
-            }
-
-            debounceTimeout = setTimeout(async () => {
-              if (!plugin.settings.flows[flowName]) {
-                throw new Error(`Flow ${flowName} not found in settings`);
-              }
-              // this sets off a chain of functions which updates the active Region
-              await plugin.checkActiveRegion(
-                flowName,
-                leafID,
-                cursorOffset,
-                view
-              );
-            }, 250);
-          }
-        }
-
-        destroy() {
-          if (debounceTimeout) {
-            clearTimeout(debounceTimeout);
-          }
-          delete plugin.listenerBasket[`${leafID}-cursor`];
-        }
-      }
-    );
-
-    // if we don't have a compartment set up yet
-    if (!this.listenerBasket[`${leafID}-cursor`]) {
-      this.listenerBasket[`${leafID}-cursor`] = {
-        compartment: cursorListenerCompartment,
-        extension: cursorListener,
-        enabled: true,
-      };
-      cmView.dispatch({
-        effects: StateEffect.appendConfig.of([
-          cursorListenerCompartment.of([cursorListener]),
-        ]),
-      });
-      // if we have a compartment but it has been wiped
-    } else if (!this.listenerBasket[`${leafID}-cursor`].enabled) {
-      cmView.dispatch({
-        effects: StateEffect.reconfigure.of([
-          cursorListenerCompartment.of([cursorListener]),
-        ]),
-      });
-
-      this.listenerBasket[`${leafID}-cursor`].enabled = true;
-    }
-  };
 
   // ---------------------------------------------------------
-  removeCursorListener = (view: MarkdownView) => {
-    const leafID = this.flowService.leafId(view.leaf);
-    if (!leafID) return;
-    if (!this.listenerBasket[`${leafID}-cursor`]) return;
-
-    const editor = view.editor as Types.ObsidianEditor;
-    const cmEditor = editor.cm;
-    if (!cmEditor) return;
-
-    // Nix the listener
-    const { compartment } = this.listenerBasket[`${leafID}-cursor`];
-    cmEditor.dispatch({
-      effects: StateEffect.reconfigure.of([compartment.of([])]),
-    });
-
-    this.listenerBasket[`${leafID}-cursor`].enabled = false;
-  };
-
-  // -----------------
-  private addTextChangeListener = async (view: MarkdownView | null) => {
-    if (!view) return;
-
-    const leafID: string = this.flowService.leafId(view.leaf);
-    if (!leafID) return;
-    // if everything is set up, return
-    if (this.listenerBasket[`${leafID}-changes`]) {
-      if (this.listenerBasket[`${leafID}-changes`].enabled) return;
-    }
-
-    const activeLeafPath = view.file?.path;
-    if (!activeLeafPath) return;
-
-    const flowName = this.isFlowFile(activeLeafPath);
-    if (!flowName) {
-      this.removeTextChangeListener(view);
-      return;
-    }
-
-    const editor = view?.editor as Types.ObsidianEditor;
-    if (!editor) return;
-
-    const cmEditor = editor.cm;
-    if (!cmEditor) return;
-
-    // ---------- actual listener stuff
-
-    const plugin = this;
-    let debounceTimeout: NodeJS.Timeout | null = null;
-
-    const textChangeListenerCompartment = new Compartment();
-
-    const textChangeListener = ViewPlugin.fromClass(
-      class {
-        constructor(view: EditorView) {}
-
-        update(update: ViewUpdate) {
-          if (!update.docChanged) return;
-
-          const changes = update.changes;
-
-          // return if no actual text change has taken place
-          if (changes.empty) return;
-
-          if (debounceTimeout) {
-            clearTimeout(debounceTimeout);
-          }
-
-          debounceTimeout = setTimeout(async () => {
-            // Prevent rebuild from registering as text change
-            if (plugin.settings.flows[flowName].isFreshBuild) {
-              plugin.settings.flows[flowName].isFreshBuild = false;
-              return;
-            }
-
-            // Ensure that active region for the leaf is of type 'file'
-            if (!plugin.settings.activeRegions[flowName]) return;
-            if (!plugin.settings.activeRegions[flowName][leafID]) return;
-
-            const activeRegionPath =
-              plugin.settings.activeRegions[flowName][leafID].path;
-            if (!activeRegionPath) return;
-
-            if (
-              !plugin.settings.flows[flowName].unsyncedRegionsArray.includes(
-                activeRegionPath
-              )
-            ) {
-              // if the user wants checks and has been inactive, do checks
-              if (plugin.settings.checkExternalEdits != "no") {
-                if (
-                  Math.abs(Date.now() - plugin.lastActivity[flowName]) >
-                  plugin.inactivityThreshold
-                ) {
-                  const fileHasEdits = await plugin.checkStatsForNote(
-                    flowName,
-                    activeRegionPath
-                  );
-                  if (fileHasEdits) {
-                    // notifcations are handled by the check function
-                    return;
-                  }
-                }
-              }
-              plugin.lastActivity[flowName] = Date.now();
-              // Add to unsynced array
-              plugin.settings.flows[flowName].unsyncedRegionsArray.push(
-                activeRegionPath
-              );
-              await plugin.saveSettings();
-            }
-
-            // update the menu bar to show unsynced status
-            if (view.menuBar) {
-              view.menuBar.refresh(view.contentEl);
-            }
-
-            // update source decoration
-            if (plugin.settings.explorerDecoStyle[0] != "--") {
-              plugin.decorateSourceNotes("update");
-            }
-          }, 250);
-        }
-
-        destroy() {
-          try {
-            if (debounceTimeout) {
-              clearTimeout(debounceTimeout);
-            }
-            delete plugin.listenerBasket[`${leafID}-changes`];
-          } catch (error) {
-            console.error("Error cleaning up change listener:", error);
-          }
-        }
-      }
-    );
-
-    // if we don't have a compartment set up
-    if (!this.listenerBasket[`${leafID}-changes`]) {
-      this.listenerBasket[`${leafID}-changes`] = {
-        compartment: textChangeListenerCompartment,
-        extension: textChangeListener,
-        enabled: true,
-      };
-
-      cmEditor.dispatch({
-        effects: StateEffect.appendConfig.of([
-          textChangeListenerCompartment.of(textChangeListener),
-        ]),
-      });
-      // if we got a compartment but it's disabled
-    } else if (!this.listenerBasket[`${leafID}-changes`].enabled) {
-      cmEditor.dispatch({
-        effects: StateEffect.reconfigure.of([
-          textChangeListenerCompartment.of(textChangeListener),
-        ]),
-      });
-      this.listenerBasket[`${leafID}-changes`].enabled = true;
-    }
-  };
-
-  //---------------
-  removeTextChangeListener = (view: MarkdownView) => {
-    const leafID = this.flowService.leafId(view.leaf);
-    if (!leafID) return;
-    if (!this.listenerBasket[`${leafID}-changes`]) return;
-
-    const editor = view.editor as Types.ObsidianEditor;
-    const cmEditor = editor.cm;
-    if (!cmEditor) return;
-
-    // Nix the listener
-    const { compartment } = this.listenerBasket[`${leafID}-changes`];
-    cmEditor.dispatch({
-      effects: StateEffect.reconfigure.of([compartment.of([])]),
-    });
-
-    this.listenerBasket[`${leafID}-changes`].enabled = false;
-  };
 
   // -------- helpers for the fileExplorerClickListener
   // Are we even clicking into the file explorer?
@@ -2199,9 +1925,9 @@ ${pseudoElement}
   };
 
   // -------------- Listeners: Compartments -----------------------------------------
-  private addComparmtments = (view: MarkdownView) => {
+  private makeCompartments = async (view: MarkdownView) => {
     const cmView = this.flowService.getEditorView(view.editor);
-    const leafID = this.flowService.leafId(view.leaf);
+    const leafID = this.flowService.getLeafId(view.leaf);
 
     if (!cmView) return;
     if (!view) return;
@@ -2211,7 +1937,7 @@ ${pseudoElement}
 
     const flowName = this.isFlowFile(activeLeafPath);
     if (!flowName) {
-      this.removeCursorListener(view);
+      this.resetCompartments(view);
       return;
     }
 
@@ -2265,28 +1991,14 @@ ${pseudoElement}
         }
       );
 
-      // if we don't have a compartment set up yet
-      if (!this.listenerBasket[`${leafID}-cursor`]) {
-        this.listenerBasket[`${leafID}-cursor`] = {
-          compartment: cursorListenerCompartment,
-          extension: cursorListener,
-          enabled: true,
-        };
-        cmView.dispatch({
-          effects: StateEffect.appendConfig.of([
-            cursorListenerCompartment.of([cursorListener]),
-          ]),
-        });
-        // if we have a compartment but it has been wiped
-      } else if (!this.listenerBasket[`${leafID}-cursor`].enabled) {
-        cmView.dispatch({
-          effects: StateEffect.reconfigure.of([
-            cursorListenerCompartment.of([cursorListener]),
-          ]),
-        });
-
-        this.listenerBasket[`${leafID}-cursor`].enabled = true;
-      }
+      // and finally...
+      this.setUpCompartments(
+        leafID,
+        "cursor",
+        cursorListenerCompartment,
+        cursorListener,
+        cmView
+      );
     }
 
     // -------- TEXT CHANGE LISTENER -------------------
@@ -2381,28 +2093,116 @@ ${pseudoElement}
         }
       );
 
-      // if we don't have a compartment set up yet
-      if (!this.listenerBasket[`${leafID}-textChange`]) {
-        this.listenerBasket[`${leafID}-textChange`] = {
-          compartment: textChangeListenerCompartment,
-          extension: textChangeListener,
-          enabled: true,
-        };
-        cmView.dispatch({
-          effects: StateEffect.appendConfig.of([
-            textChangeListenerCompartment.of([textChangeListener]),
-          ]),
-        });
-        // if we have a compartment but it has been wiped
-      } else if (!this.listenerBasket[`${leafID}-textChange`].enabled) {
-        cmView.dispatch({
-          effects: StateEffect.reconfigure.of([
-            textChangeListenerCompartment.of([textChangeListener]),
-          ]),
-        });
+      this.setUpCompartments(
+        leafID,
+        "textChange",
+        textChangeListenerCompartment,
+        textChangeListener,
+        cmView
+      );
+    }
 
-        this.listenerBasket[`${leafID}-textChange`].enabled = true;
-      }
+    // -------- DIVIDER PROTECTION -------------------
+
+    if (
+      !this.listenerBasket[`${leafID}-divider`] ||
+      !this.listenerBasket[`${leafID}-divider`].enabled
+    ) {
+      const protectDividerCompartment = new Compartment();
+
+      const protectDivider = EditorState.transactionFilter.of((tr) => {
+        // if the flow is being rebuilt, we need to suspend protection
+        // otherwise the editor contents can't be updated
+        if (this.isRebuilding) return tr;
+
+        if (!tr.changes.empty) {
+          let shouldReject = false;
+
+          tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
+            const windowStart = Math.max(0, fromA - 60);
+            const windowEnd = Math.min(tr.startState.doc.length, toA + 60);
+            const windowText = tr.startState.sliceDoc(windowStart, windowEnd);
+
+            let match;
+            const regex =
+              /\n[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46}<hr>\n\n/g;
+
+            while ((match = regex.exec(windowText)) !== null) {
+              const absoluteDividerStart = windowStart + match.index + 1;
+              const absoluteDividerEnd =
+                absoluteDividerStart + match[0].length - 2;
+
+              if (
+                (fromA < absoluteDividerEnd && toA > absoluteDividerStart) ||
+                (fromA <= absoluteDividerStart && toA >= absoluteDividerEnd) ||
+                // Protect against edits that would affect the newlines
+                (fromA >= absoluteDividerStart &&
+                  fromA <= absoluteDividerEnd) ||
+                (toA >= absoluteDividerStart && toA <= absoluteDividerEnd)
+              ) {
+                shouldReject = true;
+              }
+            }
+          });
+
+          if (shouldReject) {
+            return [];
+          }
+        }
+        return tr;
+      });
+
+      // and finally...
+      this.setUpCompartments(
+        leafID,
+        "divider",
+        protectDividerCompartment,
+        protectDivider,
+        cmView
+      );
+    }
+  };
+
+  setUpCompartments = (
+    leafID: string,
+    type: string,
+    compartment: Compartment,
+    extension: Extension,
+    cmView: EditorView
+  ) => {
+    // if we don't have a compartment set up yet
+    if (!this.listenerBasket[`${leafID}-${type}`]) {
+      this.listenerBasket[`${leafID}-${type}`] = {
+        compartment: compartment,
+        extension: extension,
+        enabled: true,
+      };
+      // if we have a compartment but it has been wiped
+    } else if (!this.listenerBasket[`${leafID}-${type}`].enabled) {
+      this.listenerBasket[`${leafID}-${type}`].enabled = true;
+    }
+
+    cmView.dispatch({
+      effects: StateEffect.appendConfig.of([compartment.of([extension])]),
+    });
+  };
+
+  resetCompartments = (view: MarkdownView) => {
+    const leafID = this.flowService.getLeafId(view.leaf);
+    if (!leafID) return;
+    const editor = view.editor as Types.ObsidianEditor;
+    const cmEditor = editor.cm;
+    if (!cmEditor) return;
+
+    const compartmentArray = ["cursor", "textChange", "divider"];
+    for (let compartmentType of compartmentArray) {
+      const { compartment } =
+        this.listenerBasket[`${leafID}-${compartmentType}`];
+      cmEditor.dispatch({
+        effects: StateEffect.reconfigure.of([compartment.of([])]),
+      });
+
+      this.listenerBasket[`${leafID}-${compartmentType}`].enabled = false;
     }
   };
 
@@ -2766,7 +2566,7 @@ ${pseudoElement}
         if (isFlow) {
           await this.setupFlowView(isFlow, leaf.view);
 
-          const leafID = this.flowService.leafId(view.leaf);
+          const leafID = this.flowService.getLeafId(view.leaf);
 
           this.mostRecentActiveFlowLeaf = leaf;
           return;
@@ -2827,23 +2627,17 @@ ${pseudoElement}
       this.lastActivity[flowName] = Date.now();
     }
 
-    // ------------- PROTECTION ---------------------
-    // set up the editor with its other extensions and listeners
-    await this.addComparmtments(view);
-    await this.addWriteProtection(view, "divider");
-    await this.addWriteProtection(view, "sync");
-    //await this.addCursorListener(view);
-    //await this.addTextChangeListener(view);
+    // ------------- COMPARTMENTS ---------------------
+    // set up the editor with its various extensions
+    await this.makeCompartments(view);
 
     // ------------- REBUILDING ---------------------
     // rebuild if appropriate
     if (this.settings.flows[flowName].flaggedForRebuild) {
-      this.toggleEditable(view, false);
       await this.flowService.rebuildFlow(flowName, "setupFlowView");
-      this.toggleEditable(view, true);
     }
 
-    const leafID = this.flowService.leafId(view.leaf);
+    const leafID = this.flowService.getLeafId(view.leaf);
 
     // ------------- SCROLLING ---------------------
     // See if this is the inital activation of the flow/leaf and restore cursor
@@ -2894,7 +2688,7 @@ ${pseudoElement}
   // ---- handle menuBar setup
   setupMenuBar = (view: MarkdownView, flowName: string) => {
     let menuBar: MenuBar;
-    const leafID = this.flowService.leafId(view.leaf);
+    const leafID = this.flowService.getLeafId(view.leaf);
     // If we got one, check if it belongs to the flow
     if (view.menuBar) {
       if ((view.menuBar as MenuBar).getFlowName() != flowName) {
@@ -2985,7 +2779,7 @@ ${pseudoElement}
       // get info for all leaves' contents, initalised or not
       const leafViewState = leaf.getViewState();
       if (leafViewState.type === "markdown" && leafViewState.state?.file) {
-        const leafID = this.flowService.leafId(leaf);
+        const leafID = this.flowService.getLeafId(leaf);
         const leafPath = leafViewState.state?.file;
         if (typeof leafPath != "string") return; // behaves like 'continue' in this callback
 
@@ -3101,16 +2895,10 @@ ${pseudoElement}
     //this.flowService.callStack("closeFlow");
 
     await this.syncAllLeaves();
-    this.removeCursorListener(view);
-    this.removeTextChangeListener(view);
+    this.resetCompartments(view);
     this.cleanupMenuBar(view.leaf);
     if (view.menuBar) {
       view.menuBar.detach();
-    }
-
-    const leafID = this.flowService.leafId(view.leaf);
-    if (this.editableCompartments?.[leafID]) {
-      delete this.editableCompartments[leafID];
     }
 
     // update the activation tracker
@@ -3139,128 +2927,6 @@ ${pseudoElement}
   };
 
   // ---- Functions: Data safety ----------------------------
-
-  // ---- Functions: Data safety: Read-only for dividers and during sync
-  private editableCompartments: { [key: string]: [Compartment, boolean] } = {};
-
-  addWriteProtection = async (
-    view: MarkdownView,
-    protectionType: Types.ProtectionType
-  ) => {
-    const cmView = this.flowService.getEditorView(view.editor);
-    const leafID = this.flowService.leafId(view.leaf);
-
-    if (!cmView) return;
-
-    if (protectionType === "sync") {
-      // create new compartment
-      const protectSyncCompartment = new Compartment();
-      // store compartment so we can reuse it to toggle on/off
-      this.editableCompartments[leafID] = [protectSyncCompartment, true];
-
-      // Initialise
-      cmView.dispatch({
-        effects: StateEffect.appendConfig.of([
-          protectSyncCompartment.of(
-            this.preventEdit(this.editableCompartments, leafID)
-          ),
-        ]),
-      });
-    }
-
-    if (protectionType === "divider") {
-      // this needs to be full-on transaction filter because a domEventHandler
-      // can be deleted into
-      const preventEdit = EditorState.transactionFilter.of((tr) => {
-        // if the flow is being rebuilt, we need to suspend protection
-        // otherwise the editor contents can't be updated
-        if (this.isRebuilding) return tr;
-
-        if (!tr.changes.empty) {
-          let shouldReject = false;
-
-          tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
-            const windowStart = Math.max(0, fromA - 60);
-            const windowEnd = Math.min(tr.startState.doc.length, toA + 60);
-            const windowText = tr.startState.sliceDoc(windowStart, windowEnd);
-
-            let match;
-            const regex =
-              /\n[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46}<hr>\n\n/g;
-
-            while ((match = regex.exec(windowText)) !== null) {
-              const absoluteDividerStart = windowStart + match.index + 1;
-              const absoluteDividerEnd =
-                absoluteDividerStart + match[0].length - 2;
-
-              if (
-                (fromA < absoluteDividerEnd && toA > absoluteDividerStart) ||
-                (fromA <= absoluteDividerStart && toA >= absoluteDividerEnd) ||
-                // Protect against edits that would affect the newlines
-                (fromA >= absoluteDividerStart &&
-                  fromA <= absoluteDividerEnd) ||
-                (toA >= absoluteDividerStart && toA <= absoluteDividerEnd)
-              ) {
-                shouldReject = true;
-              }
-            }
-          });
-
-          if (shouldReject) {
-            return [];
-          }
-        }
-        return tr;
-      });
-
-      // Create new compartment
-      const protectDividerCompartment = new Compartment();
-      // Initialise
-      cmView.dispatch({
-        effects: StateEffect.appendConfig.of([
-          protectDividerCompartment.of([preventEdit]),
-        ]),
-      });
-    }
-  };
-
-  // the function that builds the preventDefault configuration for the
-  // sync (and mostly rebuild) writelock
-
-  preventEdit = (
-    editableCompartments: { [key: string]: [Compartment, boolean] },
-    leafID: string
-  ): Extension => {
-    return EditorView.domEventHandlers({
-      beforeinput(event) {
-        const isEditable = editableCompartments[leafID]?.[1];
-        if (isEditable === false) {
-          event.preventDefault(); // Blocks all user input
-        }
-      },
-    });
-  };
-
-  // toggle the sync protection by reconfiguring the compartment
-
-  toggleEditable = (view: MarkdownView, editable: boolean) => {
-    const cmView = this.flowService.getEditorView(view.editor);
-
-    if (!cmView) return;
-
-    const leafID = this.flowService.leafId(view.leaf);
-    if (!this.editableCompartments[leafID]) return;
-    this.editableCompartments[leafID][1] = editable;
-    const compartment = this.editableCompartments[leafID][0];
-
-    if (compartment) {
-      cmView.dispatch({
-        effects: compartment.reconfigure([
-          this.preventEdit(this.editableCompartments, leafID),
-        ]),
-      });
-    }
-  };
 
   // Sync all leaves
   syncAllLeaves = async () => {
@@ -3301,10 +2967,8 @@ ${pseudoElement}
       }
       for (let view of flowLeaves[flowName]) {
         const text = view.editor.getValue();
-        const leafID = this.flowService.leafId(view.leaf);
-        this.toggleEditable(view, false); // block all user edits
+        const leafID = this.flowService.getLeafId(view.leaf);
         await this.syncBackToSource(flowName, text, leafID);
-        this.toggleEditable(view, true);
       }
     }
     this.textFlowOperation = false; // unsuspends modify listener
@@ -3724,7 +3388,7 @@ ${pseudoElement}
           if (!view) {
             new Modals.FlowSwitcherModal(this.app, this).open();
           } else {
-            const leafID = this.flowService.leafId(view.leaf);
+            const leafID = this.flowService.getLeafId(view.leaf);
             new Modals.FlowSwitcherModal(this.app, this, leafID).open();
           }
         });
@@ -3738,7 +3402,7 @@ ${pseudoElement}
             if (!view) {
               new Modals.FlowSwitcherModal(this.app, this).open();
             } else {
-              const leafID = this.flowService.leafId(view.leaf);
+              const leafID = this.flowService.getLeafId(view.leaf);
               new Modals.FlowSwitcherModal(this.app, this, leafID).open();
             }
           }
@@ -3776,14 +3440,13 @@ ${pseudoElement}
 
       const leaves = this.app.workspace.getLeavesOfType("markdown");
       const targetLeaf = leaves.find(
-        (leaf) => this.flowService.leafId(leaf) === leafID
+        (leaf) => this.flowService.getLeafId(leaf) === leafID
       );
 
       for (const leaf of leaves) {
         // Check if the leaf's view is a MarkdownView and if its file path matches
         if (targetLeaf?.view instanceof MarkdownView) {
-          this.removeCursorListener(targetLeaf.view);
-          this.removeTextChangeListener(targetLeaf.view);
+          this.resetCompartments(targetLeaf.view);
         }
       }
     }
