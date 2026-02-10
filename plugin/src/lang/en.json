@@ -84,7 +84,9 @@
   "createFlows.chooseFlowName.setDesc some characters can't be part of a flow name": "The following characters can't be part of a flow name:",
   "validFlowNameCheck.error.1 missing flow name": "Please give your flow a name.",
   "validFlowNameCheck.error.2 flow already exists": "textFlow: A flow by the name ${flowName} already exists. Please choose a different one.",
-  "": "textFlow: Please remove invalid characters from your flow name (? : # * < > [ ] / | \\ \"  ^ `)",
+  "This name is reserved by the system": "textFlow: This name is reserved by the system",
+  "textFlow: Please remove invalid characters from your flow name": "textFlow: Please remove invalid characters from your flow name (? : # * < > [ ] / | \\ \"  ^ `)",
+  "textFlow: A flow name cannot start or end with a period": "textFlow: A flow name cannot start or end with a period",
 
   "createFlows.chooseFlowName.setPlaceholder enter a unique name": "Enter a unique name",
 
@@ -312,7 +314,7 @@
 
   "flowBuilder.notice system folder not found": "textFlow: ${textFlowSystemFolderName} not found.",
   "flowBuilder.notice ingredient not found": "textFlow: The note at ${ingredient} couldn't be found.",
-  "flowBUilder.notice UUID found in source note": "textFlow: The note\n ${ingredient}\n of flow\n ${flowName}\n contains at least one UUID.\n This can come about due to sync errors.\nHow to proceed safely: \n1. Export ${flowName} to prevent any loss of edits and backup your vault, just to be safe.\n2. Check the mentioned note for any additional regions that have been accidentally copied into it (search for '<hr>'), and cut them out.\n3. Check the source notes of these regions to make sure they are up to date; if they aren't, copy/paste the latest version from your exported flow.\nTo make all of this easier, turn off navigation via file explorer (in the settings tab or command palette).\nAfterwards try another rebuild.",
+  "flowBUilder.notice UUID found in source note": "textFlow: The note \n${ingredient}\n of flow\n ${flowName}\n contains at least one UUID. \nThis can come about due to sync errors.\nHow to proceed safely: \n1. Export ${flowName} to prevent any loss of edits and backup your vault, just to be safe.\n2. Check the mentioned note for any additional regions that have been accidentally copied into it (search for '<hr>'), and cut them out.\n3. Check the source notes of these regions to make sure they are up to date; if they aren't, copy/paste the latest version from your exported flow.\nTo make all of this easier, turn off navigation via file explorer (in the settings tab or command palette).\nAfterwards try another rebuild.",
 
   "----------- The Blurb": " This is added as README to the system folder ---------------------------",
   "readme": "This folder is textFlow's system folder. \n \n **What it should contain:**\n - this README \n - your flows\n \n **You may:** \n - delete flow files from this folder\n - move this entire folder to a different location\n \n **But please do not:** \n - add files to this folder\n - rename this folder\n - rename files in this folder (to rename flows, use the settings tab)\n \n **For further information, please refer to [the complete readme](https://github.com/tine-schreibt/textFlow/blob/main/README.md)**"

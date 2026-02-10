@@ -56,7 +56,7 @@ import { getAPI } from "obsidian-dataview";
 //    - exportFlow
 //    - selectActiveRegion
 //-----------------------------------------------------------------------------------------
-// - Misc utilities
+// - Random utilities and... is it called assets?
 //-----------------------------------------------------------------------------------------
 //    - updateScrollbarVisibility
 //    - getTimestamp
@@ -75,14 +75,14 @@ class ProgressNotice {
   private t: (key: string, variables?: Record<string, string>) => string;
   constructor(
     flowName: string,
-    translation: (key: string, variables?: Record<string, string>) => string,
+    translation: (key: string, variables?: Record<string, string>) => string
   ) {
     this.flowName = flowName;
     this.t = translation;
     this.notice = new Notice(
       this.t("flowService.progressNotice.notice initial notice", {
         this_flowName: this.flowName,
-      }),
+      })
     );
   }
 
@@ -90,7 +90,7 @@ class ProgressNotice {
     current: number,
     total: number,
     symbolFilled: string,
-    t: (key: string, variables?: Record<string, string>) => string,
+    t: (key: string, variables?: Record<string, string>) => string
   ) {
     const percent = Math.floor((current / total) * 100);
     const percentString = percent.toString();
@@ -102,7 +102,7 @@ class ProgressNotice {
         this_flowName: this.flowName,
         bar: bar,
         percent: percentString,
-      }),
+      })
     );
   }
 
@@ -124,7 +124,7 @@ class LoadingOverlay {
     flowName: string,
     app: App,
     plugin: TextFlow,
-    translate: (key: string, variables?: Record<string, string>) => string,
+    translate: (key: string, variables?: Record<string, string>) => string
   ) {
     this.plugin = plugin;
     this.flowName = flowName;
@@ -152,7 +152,7 @@ class LoadingOverlay {
     current: number,
     total: number,
     symbolEmpty: string,
-    symbolFilled: string,
+    symbolFilled: string
   ) {
     const percent = Math.floor((current / total) * 100);
     const percentString = percent.toString();
@@ -187,7 +187,7 @@ export class FlowService {
       .find(
         (file) =>
           file instanceof TFolder &&
-          file.name === this.plugin.textFlowSystemFolderName,
+          file.name === this.plugin.textFlowSystemFolderName
       );
     return systemFolder instanceof TFolder ? systemFolder : null;
   };
@@ -209,14 +209,14 @@ export class FlowService {
         new Notice(
           this.plugin.t("createSystemFolder.notice folder created", {
             newSystemFolderPath: newSystemFolderPath,
-          }),
+          })
         );
       } else if (!(newSystemFolder instanceof TFolder)) {
         throw new Error(`"${newSystemFolderPath}" exists but is not a folder.`);
       }
     } catch (e) {
       console.error(
-        `textFlow: Something went wrong when trying to create ${newSystemFolderPath}: ${e}`,
+        `textFlow: Something went wrong when trying to create ${newSystemFolderPath}: ${e}`
       );
     }
   };
@@ -253,7 +253,7 @@ export class FlowService {
         valid: false,
         reason: this.plugin.t(
           "validFlowNameCheck.error.2 flow already exists",
-          { flowName: name },
+          { flowName: name }
         ),
       };
     }
@@ -286,7 +286,10 @@ export class FlowService {
       "LPT9",
     ];
     if (reservedNames.includes(name.toUpperCase())) {
-      return { valid: false, reason: "This name is reserved by the system" };
+      return {
+        valid: false,
+        reason: this.plugin.t("This name is reserved by the system"),
+      };
     }
 
     // Check for invalid characters - added backtick
@@ -295,7 +298,7 @@ export class FlowService {
       return {
         valid: false,
         reason: this.plugin.t(
-          'textFlow: Please remove invalid characters from your flow name (? : # * < > [ ] / | \\ "  ^ `)',
+          "textFlow: Please remove invalid characters from your flow name"
         ),
       };
     }
@@ -304,7 +307,9 @@ export class FlowService {
     if (name.startsWith(".") || name.endsWith(".")) {
       return {
         valid: false,
-        reason: "textFlow: A flow name cannot start or end with a period",
+        reason: this.plugin.t(
+          "textFlow: A flow name cannot start or end with a period"
+        ),
       };
     }
 
@@ -333,12 +338,12 @@ export class FlowService {
           Object.keys(this.plugin.settings.activeRegions[activeFlow]).forEach(
             async (leafID) => {
               const targetLeaf = leaves.find(
-                (leaf) => this.leafId(leaf) === leafID,
+                (leaf) => this.leafId(leaf) === leafID
               );
               if (targetLeaf) {
                 targetLeaf.detach();
               }
-            },
+            }
           );
         }
       });
@@ -382,10 +387,10 @@ export class FlowService {
 
       // and finally rename the flow file if it exists
       const oldFlowPath = normalizePath(
-        `${this.plugin.settings.systemFolderPath}/${oldFlowName}.md`,
+        `${this.plugin.settings.systemFolderPath}/${oldFlowName}.md`
       );
       const newFlowPath = normalizePath(
-        `${this.plugin.settings.systemFolderPath}/${newFlowName}.md`,
+        `${this.plugin.settings.systemFolderPath}/${newFlowName}.md`
       );
 
       const flowFile = this.app.vault.getAbstractFileByPath(oldFlowPath);
@@ -403,7 +408,7 @@ export class FlowService {
   // --- RADIO BUTTON MANAGER -----------------
   radioButtonManager(
     selectedButton: ButtonComponent,
-    unselectedButton1: ButtonComponent,
+    unselectedButton1: ButtonComponent
   ) {
     // Update all buttons
     selectedButton.buttonEl.addClass("settings-radio-button-active");
@@ -420,7 +425,7 @@ export class FlowService {
           flowBuildBasket.flowCookbook.bookmarks === ""
         ) {
           new Notice(
-            this.plugin.t("createFlowDefinition.notice enter bookmark group"),
+            this.plugin.t("createFlowDefinition.notice enter bookmark group")
           );
           flowBuildBasket.success = false;
         } else {
@@ -441,8 +446,8 @@ export class FlowService {
       if (flowBuildBasket.finalRecipe.length === 0) {
         new Notice(
           this.plugin.t(
-            "createFlowDefinition.notice definition leads to empty flow",
-          ),
+            "createFlowDefinition.notice definition leads to empty flow"
+          )
         );
         flowBuildBasket.success = false;
       }
@@ -452,8 +457,8 @@ export class FlowService {
     } catch (error) {
       new Notice(
         this.plugin.t(
-          "createFlowDefinition.notice random error, please check console",
-        ),
+          "createFlowDefinition.notice random error, please check console"
+        )
       );
       flowBuildBasket.success = false;
     }
@@ -487,7 +492,7 @@ export class FlowService {
     //-- Function to navigate to the group and dissect out its contents
     const navigateToGroup = (
       items: Types.BookmarkItem[],
-      pathParts: string[],
+      pathParts: string[]
     ): Types.BookmarkItem | null => {
       let current = items;
       let found: Types.BookmarkItem | null = null;
@@ -495,7 +500,7 @@ export class FlowService {
       for (const part of pathParts) {
         found =
           current.find(
-            (item) => item.type === "group" && item.title === part,
+            (item) => item.type === "group" && item.title === part
           ) || null;
 
         if (!found || !found.items) return null;
@@ -514,7 +519,7 @@ export class FlowService {
     const collectPathsNoteOrder = (
       items: Types.BookmarkItem[],
       flowBuildBasket: Types.flowBuildBasket,
-      topLevelTitle: string, // Add parameter for top level title
+      topLevelTitle: string // Add parameter for top level title
     ): string[] => {
       const bookmarkedNotePathsArray: string[] = [];
 
@@ -535,7 +540,7 @@ export class FlowService {
 
           // Add only direct file children (not those in subgroups)
           const directFiles = group.items.filter(
-            (item: any) => item.type === "file",
+            (item: any) => item.type === "file"
           );
           directFiles.forEach((file: any) => {
             bookmarkedNotePathsArray.push(file.path);
@@ -572,7 +577,7 @@ export class FlowService {
     const collectPathsFolderOrder = (
       items: Types.BookmarkItem[],
       flowBuildBasket: Types.flowBuildBasket,
-      topLevelTitle: string,
+      topLevelTitle: string
     ): string[] => {
       const bookmarkedNotePathsArray: string[] = [];
 
@@ -607,7 +612,7 @@ export class FlowService {
               if (subItem.type === "group") {
                 if (flowBuildBasket.folderTitles) {
                   bookmarkedNotePathsArray.push(
-                    `#${subItem.title ?? "Unnamed Group"}`,
+                    `#${subItem.title ?? "Unnamed Group"}`
                   );
                 }
                 subItem.items?.forEach((file) => {
@@ -629,7 +634,7 @@ export class FlowService {
     let iterator = 0;
     const collectPathsPreserveOrder = (
       items: Types.BookmarkItem[],
-      flowBuildBasket: Types.flowBuildBasket,
+      flowBuildBasket: Types.flowBuildBasket
     ): string[] => {
       iterator++;
       const bookmarkedNotePathsArray: string[] = [];
@@ -637,7 +642,7 @@ export class FlowService {
       // Add the toplevel title, if titles are wanted
       if (flowBuildBasket.folderTitles && iterator === 1) {
         bookmarkedNotePathsArray.push(
-          `# ${groupPathArray[groupPathArray.length - 1]}`,
+          `# ${groupPathArray[groupPathArray.length - 1]}`
         );
       }
 
@@ -652,7 +657,7 @@ export class FlowService {
           // Recursively process group contents and add results to our array
           const subGroupPaths = collectPathsPreserveOrder(
             item.items,
-            flowBuildBasket,
+            flowBuildBasket
           );
           bookmarkedNotePathsArray.push(...subGroupPaths);
         }
@@ -670,7 +675,7 @@ export class FlowService {
         bookmarkedNotePathsArray = collectPathsNoteOrder(
           finalGroup.items,
           flowBuildBasket,
-          groupPathArray[groupPathArray.length - 1],
+          groupPathArray[groupPathArray.length - 1]
         );
         return bookmarkedNotePathsArray;
       } else if (
@@ -679,19 +684,19 @@ export class FlowService {
         bookmarkedNotePathsArray = collectPathsFolderOrder(
           finalGroup.items,
           flowBuildBasket,
-          groupPathArray[groupPathArray.length - 1],
+          groupPathArray[groupPathArray.length - 1]
         );
         return bookmarkedNotePathsArray;
       } else {
         bookmarkedNotePathsArray = collectPathsPreserveOrder(
           finalGroup.items,
-          flowBuildBasket,
+          flowBuildBasket
         );
         return bookmarkedNotePathsArray;
       }
     } else {
       new Notice(
-        this.plugin.t("createFlowDefinition.notice bookmark group not found"),
+        this.plugin.t("createFlowDefinition.notice bookmark group not found")
       );
       return [];
     }
@@ -727,8 +732,8 @@ export class FlowService {
     if (!dv) {
       new Notice(
         this.plugin.t(
-          "getPathsByFoldersTagsProps.notice dataview not installed",
-        ),
+          "getPathsByFoldersTagsProps.notice dataview not installed"
+        )
       );
       return [];
     }
@@ -742,7 +747,7 @@ export class FlowService {
     const folderInclusionArray = shCookbook.folderIncluded.split(",");
     if (folderInclusionArray.length >= 1) {
       const nonEmptyFolderInclusionArray = folderInclusionArray.filter(
-        (x) => x.length > 0,
+        (x) => x.length > 0
       );
     }
 
@@ -865,11 +870,11 @@ export class FlowService {
 
     // Use cleanup on properties
     let cleanPropertiesInclusionArray = propertyCleanup(
-      shCookbook.propsIncluded,
+      shCookbook.propsIncluded
     );
 
     let cleanPropertiesExclusionArray = propertyCleanup(
-      shCookbook.propsExcluded,
+      shCookbook.propsExcluded
     );
     // add this to keep exports excluded
     cleanPropertiesExclusionArray.push(["textFlowExport"]);
@@ -909,7 +914,7 @@ export class FlowService {
     // Recursive function to build file tree notes first (changes order)
     const buildFolderOrderFileTree = (folder: TFolder) => {
       const children = folder.children.sort((a, b) =>
-        a.name.localeCompare(b.name),
+        a.name.localeCompare(b.name)
       );
 
       // Get notes first
@@ -946,7 +951,7 @@ export class FlowService {
         const baseFolder = dvInclusionTuple[1].replace(/\/$/, "");
 
         allNotes = allNotes.filter(
-          (page: Types.DVNote) => path.dirname(page.file.path) === baseFolder,
+          (page: Types.DVNote) => path.dirname(page.file.path) === baseFolder
         );
       }
 
@@ -954,7 +959,7 @@ export class FlowService {
         return (
           // exclude folders
           !cleanFolderExclusionArray.some((path) =>
-            note.file.path.startsWith(path),
+            note.file.path.startsWith(path)
           ) &&
           // include tags
           cleanTagInclusionArray.every((includedTag) => {
@@ -993,7 +998,7 @@ export class FlowService {
 
       // pick the paths out of the resulting array
       const filteredPathArray = Array.from(filteredNotes).map(
-        (note) => (note as Types.DVNote).file.path,
+        (note) => (note as Types.DVNote).file.path
       );
       const filteredPathObject: { [key: string]: boolean } = {};
       for (let path of filteredPathArray) {
@@ -1012,7 +1017,7 @@ export class FlowService {
     // Depth first approach
     const findFolderTitlesNoteOrder = (
       finalPathArray: string[],
-      flowBuildBasket: Types.flowBuildBasket,
+      flowBuildBasket: Types.flowBuildBasket
     ) => {
       let arrayWithFolderTitles: string[] = [];
       let lastParentFolder = "";
@@ -1050,7 +1055,7 @@ export class FlowService {
 
     let pathArrayWithFolderTitles = findFolderTitlesNoteOrder(
       finalPathArray,
-      flowBuildBasket,
+      flowBuildBasket
     );
 
     // pack the cookbook back into the basket
@@ -1064,7 +1069,7 @@ export class FlowService {
 
   writeFlowDef = async (
     settings: Types.TextFlowSettings,
-    flowBuildBasket: Types.flowBuildBasket,
+    flowBuildBasket: Types.flowBuildBasket
   ) => {
     // handle double slashes
     if (flowBuildBasket.flowCookbook.folderIncluded === "//") {
@@ -1074,7 +1079,7 @@ export class FlowService {
     // -------- CREATE THE FLOW OBJECT -------------------------------
     settings.flows[flowBuildBasket.flowName] = {
       flowFilePath: normalizePath(
-        `${this.plugin.settings.systemFolderPath}/${flowBuildBasket.flowName}.md`,
+        `${this.plugin.settings.systemFolderPath}/${flowBuildBasket.flowName}.md`
       ),
       definitionMode: flowBuildBasket.definitionMode,
       flowCookbook: flowBuildBasket.flowCookbook,
@@ -1229,7 +1234,7 @@ export class FlowService {
     Object.keys(this.plugin.settings.flows[flowName].flowMap).forEach(
       (note) => {
         pathArray.push(this.plugin.settings.flows[flowName].flowMap[note].path);
-      },
+      }
     );
 
     // Call the build function; didn't think we'd get here...
@@ -1239,7 +1244,7 @@ export class FlowService {
       updatedFlow,
       flowName,
       mapValueBasket,
-      caller,
+      caller
     );
 
     // null the basket, just to be thorough.
@@ -1269,7 +1274,7 @@ export class FlowService {
     flow: Types.FlowDef,
     flowName: string,
     mapValueBasket: Types.mapValueBasket,
-    caller: string,
+    caller: string
   ): Promise<void> => {
     // pre-flight check for SystemFolder
     let systemFolder = this.checkSystemFolder();
@@ -1277,7 +1282,7 @@ export class FlowService {
       new Notice(
         this.plugin.t("flowBuilder.notice system folder not found", {
           textFlowSystemFolderName: this.plugin.textFlowSystemFolderName,
-        }),
+        })
       );
       return;
     }
@@ -1302,7 +1307,7 @@ export class FlowService {
         async (leafID) => {
           const leaves = this.app.workspace.getLeavesOfType("markdown");
           const leaf = leaves.find(
-            (newLeaf) => this.leafId(newLeaf) === leafID,
+            (newLeaf) => this.leafId(newLeaf) === leafID
           );
           if (leaf) {
             // make sure the leaf has ben properly initialised
@@ -1314,10 +1319,10 @@ export class FlowService {
               flowName,
               this.app,
               this.plugin,
-              this.plugin.t,
+              this.plugin.t
             );
           }
-        },
+        }
       );
     }
 
@@ -1333,7 +1338,7 @@ export class FlowService {
         const fileContent = await this.app.vault.read(flowFile);
         const frontmatter = fileContent.slice(
           0,
-          frontmatterPosition.end.offset + 1,
+          frontmatterPosition.end.offset + 1
         );
         // put it in the basket
         mapValueBasket.concatenatedFileContents = frontmatter + "\n";
@@ -1353,7 +1358,7 @@ export class FlowService {
             counter,
             total,
             symbolFilled,
-            this.plugin.t,
+            this.plugin.t
           );
         }
       } else {
@@ -1364,7 +1369,7 @@ export class FlowService {
             counter,
             total,
             symbolEmpty,
-            symbolFilled,
+            symbolFilled
           );
         });
       }
@@ -1425,7 +1430,7 @@ export class FlowService {
           new Notice(
             this.plugin.t("flowBuilder.notice ingredient not found", {
               ingredient: ingredient,
-            }),
+            })
           );
           return;
         }
@@ -1456,8 +1461,20 @@ export class FlowService {
                 ingredient: ingredient,
                 flowName: flowName,
               }),
-              0,
+              0
             );
+
+            // remove the progress stuff
+            if (caller === "settingsTab" || caller === "switcher") {
+              if (progressToast) {
+                progressToast.close();
+              }
+            }
+            if (caller != "settingsTab") {
+              Object.keys(progressOverlays).forEach((leafID) => {
+                progressOverlays[leafID].remove();
+              });
+            }
             return;
           }
 
@@ -1499,13 +1516,13 @@ export class FlowService {
     }
     if (systemFolder && systemFolder instanceof TFolder) {
       const flowFilePath = normalizePath(
-        `${this.plugin.settings.systemFolderPath}/${flowName}.md`,
+        `${this.plugin.settings.systemFolderPath}/${flowName}.md`
       );
 
       // this also takes care of flags for write protection and listeners
       await this.plugin.flowService.safeCreateOrModifyFile(
         flowFilePath,
-        mapValueBasket.concatenatedFileContents,
+        mapValueBasket.concatenatedFileContents
       );
 
       // remove the progress toast if it exists
@@ -1584,7 +1601,7 @@ export class FlowService {
       const finalIdentifier = base9IdentifierArray.join("");
       const paddedTransformedIdentifier = finalIdentifier.padStart(
         46,
-        invisibleChars[0],
+        invisibleChars[0]
       );
 
       return paddedTransformedIdentifier;
@@ -1630,7 +1647,7 @@ export class FlowService {
               : char === "\uFEFF"
               ? "NBZWS"
               : "unknown",
-        }),
+        })
       ),
     });
   };
@@ -1660,11 +1677,11 @@ export class FlowService {
           .length > 0
       ) {
         Object.keys(
-          this.plugin.settings.flows[flowName].persistentCursors,
+          this.plugin.settings.flows[flowName].persistentCursors
         ).forEach((leafID) => {
           timestampArray.push(
             this.plugin.settings.flows[flowName].persistentCursors[leafID]
-              .update,
+              .update
           );
         });
 
@@ -1675,7 +1692,7 @@ export class FlowService {
         let mostRecentCursor: number = 0;
         if (this.plugin.settings.flows[flowName].persistentCursors) {
           Object.keys(
-            this.plugin.settings.flows[flowName].persistentCursors,
+            this.plugin.settings.flows[flowName].persistentCursors
           ).forEach((leafID) => {
             if (
               this.plugin.settings.flows[flowName].persistentCursors[leafID]
@@ -1698,7 +1715,7 @@ export class FlowService {
   scrollToPos = (
     editor: Types.ObsidianEditor,
     cursorPos: number,
-    dontFocus?: boolean,
+    dontFocus?: boolean
   ) => {
     if (!editor.cm) return;
     if (editor.cm.state.doc.length === 0) return; // if the doc hasn't loaded yet; error when opening flow in new tab
@@ -1779,7 +1796,7 @@ export class FlowService {
       const currentDate = this.getTimestamp();
       const backupName = `${flowName}*${currentDate}`;
       datedFlows[backupName] = structuredClone(
-        this.plugin.settings.flows[flowName],
+        this.plugin.settings.flows[flowName]
       );
       datedFlows[backupName].flowBuilt = false;
       datedFlows[backupName].flaggedForRebuild = true;
@@ -1797,7 +1814,7 @@ export class FlowService {
     if (this.plugin.settings.systemFolderPath) {
       backupPath = path.join(
         this.plugin.settings.systemFolderPath,
-        "textFlowDefBackup.json",
+        "textFlowDefBackup.json"
       );
     }
 
@@ -1813,7 +1830,7 @@ export class FlowService {
     // write the object back to our file
     await this.app.vault.adapter.write(
       backupPath,
-      JSON.stringify(datedFlows, null, 2),
+      JSON.stringify(datedFlows, null, 2)
     );
   };
 
@@ -1838,16 +1855,16 @@ export class FlowService {
       const contentWithYaml = `${yaml}\n${cleanContent}`;
 
       const exportedFlowPath = normalizePath(
-        `${flowName}_export_${this.plugin.flowService.getTimestamp()}.md`,
+        `${flowName}_export_${this.plugin.flowService.getTimestamp()}.md`
       );
       await this.plugin.flowService.safeCreateOrModifyFile(
         exportedFlowPath,
-        contentWithYaml,
+        contentWithYaml
       );
       new Notice(
         this.plugin.t("menubar.selectButton.notice successful export", {
           exportedFlowPath: exportedFlowPath,
-        }),
+        })
       );
     }
   };
@@ -1856,14 +1873,14 @@ export class FlowService {
     flowName: string,
     path: string,
     text: string,
-    viewDotEditor: Editor,
+    viewDotEditor: Editor
   ) => {
     // notify of failure du to tracking error
     if (this.plugin.flowOutOfSync.includes(flowName)) {
       new Notice(
         this.plugin.t("menuBar.selectActiveRegion tracking error", {
           flowName: flowName,
-        }),
+        })
       );
       return;
     }
@@ -1872,7 +1889,7 @@ export class FlowService {
     const startPos = this.plugin.findStartOfRegion(
       this.plugin.settings.flows[flowName],
       this.plugin.settings.flows[flowName].flowMap[path].flowOrder,
-      text,
+      text
     );
     const endPos = text.indexOf(map[path].invisibleUUID) - 1; // subtract 1 for the \r before the UID
 

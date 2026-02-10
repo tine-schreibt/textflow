@@ -76,6 +76,9 @@
   "createFlows.chooseFlowName.setPlaceholder enter a unique name": "Einzigartiger Name",
   "validFlowNameCheck.error.1 missing flow name": "Bitte gib deinem Flow einen Namen.",
   "validFlowNameCheck.error.2 flow already exists": "textFlow: Ein Flow namens ${flowName} existiert bereits. Bitte wähle einen anderen.",
+  "This name is reserved by the system": "Dieser Name ist für das System reserviert.",
+  "textFlow: Please remove invalid characters from your flow name": "textFlow: Bitte entferne unzulässige Zeichen aus deinem Flownamen (? : # * < > [ ] / | \\ \"  ^ `)",
+  "textFlow: A flow name cannot start or end with a period": "textFlow: Ein Flowname kann nicht mit einem Punkt beginnen oder enden.",
 
   "toggleFolderTitles.setName include folder / bookmark group titles": "Füge Gruppen-/Ordnertitel in den Flow ein",
   "modal_flowName": "Sammlung",
@@ -318,7 +321,7 @@
 
   "flowBuilder.notice system folder not found": "textFlow: ${textFlowSystemFolderName} konnte nicht gefunden werden.",
   "flowBuilder.notice ingredient not found": "textFlow: Die Notiz ${ingredient} konnte nicht gefunden werden.",
-  "flowBUilder.notice UUID found in source note": "textFlow: Die Notiz\n ${ingredient}\n für Flow\n ${flowName}\n enthält mindestens eine UUID.\nDas kann durch Fehler bei der Synchronisation verursacht werden.\n Die nächsten Schritte: \n . Exportiere ${flowName}, um den Verlust von Änderungen zu verhindern - erstelle ein Backup deines Vaults, nur um sicher zu sein. \n2. Prüfe die erwähnte Quellnotiz, ob zusätzliche Regionen hinein kopiert wurden (suche nach '<hr>'), und schneide sie aus.\n3. Prüfe die Quellnotizen dieser Regionen, um sicher zu sein, dass sie aktuell sind; falls nicht, copy/past die letzte Version aus deinem exportierten Flow.\nMach es dir einfacher, indem du Navigation per Datei-Explorer abschaltest (Settings-Tab oder Befehlspalette).\nVersuche danach noch mal einen Neubau.",
+  "flowBUilder.notice UUID found in source note": "textFlow: Die Notiz \n ${ingredient}\n für Flow\n ${flowName}\n enthält mindestens eine UUID. \nDas kann durch Fehler bei der Synchronisation verursacht werden. \n Die nächsten Schritte: \n . Exportiere ${flowName}, um den Verlust von Änderungen zu verhindern - erstelle ein Backup deines Vaults, nur um sicher zu sein. \n2. Prüfe die erwähnte Quellnotiz, ob zusätzliche Regionen hinein kopiert wurden (suche nach '<hr>'), und schneide sie aus. \n3. Prüfe die Quellnotizen dieser Regionen, um sicher zu sein, dass sie aktuell sind; falls nicht, copy/past die letzte Version aus deinem exportierten Flow. \nMach es dir einfacher, indem du Navigation per Datei-Explorer abschaltest (Settings-Tab oder Befehlspalette).\nVersuche danach noch mal einen Neubau.",
 
   "----------- The Blurb": " Wird als README dem Systemordner hinzugefügt ---------------------------",
   "readme": "Das hier ist textFlows Systemordner. \n \n **Was er enthalten sollte:** \n - dieses README \n - deine Flows\n \n **Du darfst:** \n - Flows aus diesem Ordner löschen\n - den gesamten Ordner an einen anderen Ort verschieben\n \n **Aber bitte unterlasse es:** \n - Dateien zu diesem Ordner hinzuzufügen\n - diesen Ordner umzubenennen\n - Dateien in diesem Ordner umzubenennen (um Flows umzubenennen, benutze die Einstellungen)\n \n **Weiterführende Informationen findest du [im tatsächlichen readme](https://github.com/tine-schreibt/textFlow/blob/main/README_de.md).**"

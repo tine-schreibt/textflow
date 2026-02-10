@@ -1,6 +1,7 @@
 import type { FuseResult } from "fuse.js";
 import { App, Editor } from "obsidian";
 import { EditorView } from "@codemirror/view";
+import { Compartment, Extension } from "@codemirror/state";
 
 // --------------------------------------------------------------------------------
 // TOC
@@ -63,7 +64,7 @@ export type DecorationEntry = [
   symbol1: string,
   symbol2: string,
   symbol1Class: string,
-  symbol2Class: string,
+  symbol2Class: string
 ];
 
 export type ActiveRegionHighlight =
@@ -235,6 +236,18 @@ export type DVNote = {
 };
 
 // ---- other assorted types and interfaces
+
+// needed for scroll into view stuff
+export interface ObsidianEditor extends Editor {
+  cm?: EditorView;
+}
+
+// keeps all the listeners in one place
+export interface ListenerBasketItem {
+  compartment: Compartment;
+  extension: Extension;
+  enabled: boolean;
+}
 
 export interface EditorWithCM extends Editor {
   cm?: EditorView;
