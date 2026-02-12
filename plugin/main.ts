@@ -198,6 +198,7 @@ export default class TextFlowPlugin extends Plugin {
   isRebuilding: boolean = false; // menuBar
   textFlowOperation: boolean = false; // create, modify and rename listener
   private explorerClickListenerActive: boolean = false; // active-leaf-change listener
+  flowSwitcherIsHandlingThis: boolean = false; // prevents "file-open" from doubling setup
 
   //----- flags that help preserve multi-select behaviour
   private modifierState = {
@@ -1663,12 +1664,9 @@ ${pseudoElement}
       if (event.key === "Meta") this.modifierState.meta = false;
     });
 
-    // -- LEAF CHANGE - Call management for flow, source and vanilla notes ------
-    // setup functions take care of the details
-
+    // -- Workspace stuff ------
     this.registerEvent(
       this.app.workspace.on("active-leaf-change", async (leaf) => {
-        // so we skip if the explorerClickListener is already taking care of stuff
         if (this.explorerClickListenerActive) {
           return;
         }
@@ -1679,6 +1677,13 @@ ${pseudoElement}
     this.registerEvent(
       this.app.workspace.on("layout-change", async () => {
         this.leafSwitching();
+      })
+    );
+
+    this.registerEvent(
+      this.app.workspace.on("file-open", async () => {
+        if (this.flowSwitcherIsHandlingThis) return;
+        //  this.leafSwitching();
       })
     );
   }
@@ -1937,15 +1942,17 @@ ${pseudoElement}
 
     const flowName = this.isFlowFile(activeLeafPath);
     if (!flowName) {
-      this.resetCompartments(view);
       return;
     }
+    console.log("making compartments for ", flowName);
 
     // -------- CURSOR LISTENER -------------------
     if (
       !this.listenerBasket[`${leafID}-cursor`] ||
       !this.listenerBasket[`${leafID}-cursor`].enabled
     ) {
+      console.log("making cursor compartment for ", flowName);
+
       const plugin = this;
       let lastCursorPosition: number | null = null;
       let debounceTimeout: NodeJS.Timeout | null = null;
@@ -2006,7 +2013,7 @@ ${pseudoElement}
       !this.listenerBasket[`${leafID}-textChange`] ||
       !this.listenerBasket[`${leafID}-textChange`].enabled
     ) {
-      // ---------- actual listener stuff
+      console.log("making textChange compartment for ", flowName);
 
       const plugin = this;
       let debounceTimeout: NodeJS.Timeout | null = null;
@@ -2108,6 +2115,7 @@ ${pseudoElement}
       !this.listenerBasket[`${leafID}-divider`] ||
       !this.listenerBasket[`${leafID}-divider`].enabled
     ) {
+      console.log("making divider compartment for ", flowName);
       const protectDividerCompartment = new Compartment();
 
       const protectDivider = EditorState.transactionFilter.of((tr) => {
@@ -2180,6 +2188,7 @@ ${pseudoElement}
       // if we have a compartment but it has been wiped
     } else if (!this.listenerBasket[`${leafID}-${type}`].enabled) {
       this.listenerBasket[`${leafID}-${type}`].enabled = true;
+      console.log("set listenerBasket entry to enabled");
     }
 
     cmView.dispatch({
@@ -2196,6 +2205,7 @@ ${pseudoElement}
 
     const compartmentArray = ["cursor", "textChange", "divider"];
     for (let compartmentType of compartmentArray) {
+      if (!this.listenerBasket[`${leafID}-${compartmentType}`]) continue;
       const { compartment } =
         this.listenerBasket[`${leafID}-${compartmentType}`];
       cmEditor.dispatch({
@@ -2557,23 +2567,16 @@ ${pseudoElement}
 
     const activeLeafPath = view.file.path;
 
-    if (leaf?.view instanceof MarkdownView) {
-      const view = leaf.view;
-      const activeLeafPath = leaf.view.file?.path;
-      if (activeLeafPath) {
-        // if active leaf is flow, set it up; hash check happens in setup
-        const isFlow = this.isFlowFile(activeLeafPath);
-        if (isFlow) {
-          await this.setupFlowView(isFlow, leaf.view);
-
-          const leafID = this.flowService.getLeafId(view.leaf);
-
-          this.mostRecentActiveFlowLeaf = leaf;
-          return;
-        } else {
-          // this.closeFlow();
-          this.manageActiveRegions();
-        }
+    if (activeLeafPath) {
+      // if active leaf is flow, set it up; hash check happens in setup
+      const isFlow = this.isFlowFile(activeLeafPath);
+      if (isFlow) {
+        await this.setupFlowView(isFlow, view);
+        this.mostRecentActiveFlowLeaf = leaf;
+        return;
+      } else {
+        this.closeFlow(view);
+        this.manageActiveRegions();
       }
     }
   };
@@ -2892,7 +2895,7 @@ ${pseudoElement}
 
   // if a flow is replaced by a non-flow
   closeFlow = async (view: MarkdownView) => {
-    //this.flowService.callStack("closeFlow");
+    this.flowService.callStack("closeFlow");
 
     await this.syncAllLeaves();
     this.resetCompartments(view);
