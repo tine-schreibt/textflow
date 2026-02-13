@@ -940,9 +940,12 @@ export class FlowSwitcherModal extends Modal {
 
   // the shitload of functions involved when cracking open a flow
   private flowOpeningStuff = async (leaf: WorkspaceLeaf, file: TFile) => {
+    // keep file-open from duplicating the setup
+   this.plugin.flowSwitcherIsHandlingThis = true;
     await leaf.openFile(file);
     leaf.setPinned(true);
-    this.app.workspace.setActiveLeaf(leaf, { focus: true }); // this triggers active-leaf-change which triggers the flow setup
+    this.plugin.flowSwitcherIsHandlingThis = false;
+    this.app.workspace.setActiveLeaf(leaf, { focus: true });
     await this.plugin.manageActiveRegions(); // this is called by the setup, but timing matters, so we call it again
     this.updateActiveLeafID();
     this.display();
