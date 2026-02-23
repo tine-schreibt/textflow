@@ -1683,12 +1683,13 @@ ${pseudoElement}
       }),
     );
 
-    this.registerEvent(
-      this.app.workspace.on("file-open", async () => {
+  /*  this.registerEvent(
+      this.app.workspace.on("file-open", async (file) => {
+        console.log("file opened")
         if (this.flowSwitcherIsHandlingThis) return;
         this.leafSwitching();
       }),
-    );
+    );*/
   }
 
   // ---------------- Functions: Listeners: Tracking in editor ----------
@@ -1943,7 +1944,7 @@ ${pseudoElement}
 
     const flowName = this.isFlowFile(activeLeafPath);
     if (!flowName) {
-      this.resetCompartments(view);
+      //this.resetCompartments(view);
       return;
     }
 
@@ -2152,6 +2153,8 @@ ${pseudoElement}
     extension: Extension,
     cmView: EditorView,
   ) => {
+    console.log(`setting up ${type}`)
+
     const compartment = new Compartment();
 
     // if we don't have that leaf set up
@@ -3414,7 +3417,9 @@ ${pseudoElement}
     }
 
     for (let leafID of Object.keys(this.listenerBasket)) {
+      // skip the text change entries (we're removing both listeners anyway)
       const targetLeaf = this.app.workspace.getLeafById(leafID);
+      // Check if the leaf's view is a MarkdownView and if its file path matches
       if (targetLeaf?.view instanceof MarkdownView) {
         this.resetCompartments(targetLeaf.view);
       }

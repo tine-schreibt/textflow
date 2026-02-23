@@ -942,13 +942,18 @@ export class FlowSwitcherModal extends Modal {
   }
 
   // the shitload of functions involved when cracking open a flow
-  private flowOpeningStuff = async (leaf: WorkspaceLeaf, file: TFile) => {
+  private flowOpeningStuff = async (
+    flowName: string,
+    leaf: WorkspaceLeaf,
+    file: TFile,
+  ) => {
+    console.log("opening flow: ", flowName);
     // keep file-open from duplicating the setup
-    this.plugin.flowSwitcherIsHandlingThis = true;
+    //this.plugin.flowSwitcherIsHandlingThis = true;
     await leaf.openFile(file);
     leaf.setPinned(true);
-    this.plugin.flowSwitcherIsHandlingThis = false;
-   // this.app.workspace.setActiveLeaf(leaf, { focus: true });
+    //this.plugin.flowSwitcherIsHandlingThis = false;
+    // this.app.workspace.setActiveLeaf(leaf, { focus: true });
     // await this.plugin.manageActiveRegions(); // this is called by the setup, but timing matters, so we call it again
     // this.updateActiveLeafID();
     this.display();
@@ -1159,7 +1164,9 @@ export class FlowSwitcherModal extends Modal {
             );
             if (file instanceof TFile) {
               const leaf = this.app.workspace.getLeaf("tab");
-              await this.flowOpeningStuff(leaf, file);
+              const flowName = this.plugin.isFlowFile(file.path);
+              if (!flowName) return;
+              await this.flowOpeningStuff(flowName, leaf, file);
             }
           }
         });
@@ -1177,7 +1184,9 @@ export class FlowSwitcherModal extends Modal {
             );
             if (file instanceof TFile) {
               const leaf = this.app.workspace.getLeaf("split");
-              await this.flowOpeningStuff(leaf, file);
+              const flowName = this.plugin.isFlowFile(file.path);
+              if (!flowName) return;
+              await this.flowOpeningStuff(flowName, leaf, file);
             }
           }
         });
@@ -1196,7 +1205,9 @@ export class FlowSwitcherModal extends Modal {
             );
             if (file instanceof TFile) {
               const leaf = this.app.workspace.getLeaf("split", "horizontal");
-              await this.flowOpeningStuff(leaf, file);
+              const flowName = this.plugin.isFlowFile(file.path);
+              if (!flowName) return;
+              await this.flowOpeningStuff(flowName, leaf, file);
             }
           }
         });
@@ -1435,7 +1446,9 @@ export class FlowSwitcherModal extends Modal {
 
             if (file instanceof TFile) {
               const leaf = this.app.workspace.getLeaf("tab");
-              await this.flowOpeningStuff(leaf, file);
+              const flowName = this.plugin.isFlowFile(file.path);
+              if (!flowName) return;
+              await this.flowOpeningStuff(flowName, leaf, file);
             }
           }
         });
@@ -1452,7 +1465,9 @@ export class FlowSwitcherModal extends Modal {
             );
             if (file instanceof TFile) {
               const leaf = this.app.workspace.getLeaf("split");
-              await this.flowOpeningStuff(leaf, file);
+              const flowName = this.plugin.isFlowFile(file.path);
+              if (!flowName) return;
+              await this.flowOpeningStuff(flowName, leaf, file);
             }
           }
         });
@@ -1470,7 +1485,9 @@ export class FlowSwitcherModal extends Modal {
             );
             if (file instanceof TFile) {
               const leaf = this.app.workspace.getLeaf("split", "horizontal");
-              await this.flowOpeningStuff(leaf, file);
+              const flowName = this.plugin.isFlowFile(file.path);
+              if (!flowName) return;
+              await this.flowOpeningStuff(flowName, leaf, file);
             }
           }
         });
