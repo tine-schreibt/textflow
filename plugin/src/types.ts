@@ -64,7 +64,7 @@ export type DecorationEntry = [
   symbol1: string,
   symbol2: string,
   symbol1Class: string,
-  symbol2Class: string
+  symbol2Class: string,
 ];
 
 export type ActiveRegionHighlight =
@@ -244,9 +244,11 @@ export interface ObsidianEditor extends Editor {
 
 // keeps all the listeners in one place
 export interface ListenerBasketItem {
-  compartment: Compartment;
-  extension: Extension;
-  enabled: boolean;
+  [key: string]: {
+    compartment: Compartment;
+    extension: Extension;
+    enabled: boolean;
+  };
 }
 
 export interface EditorWithCM extends Editor {
