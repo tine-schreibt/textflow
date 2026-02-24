@@ -1695,105 +1695,88 @@ ${pseudoElement}
     if (!cmView) return;
     if (!view) return;
 
-    // check if we have this compartment already and it is active
-    if (this.listenerBasket[leafID]?.cursor?.enabled) {
-      console.log("cursor listener already attached")
-      return;}
+    // check if we have this compartment already set up
+    if (!this.listenerBasket[leafID] || !this.listenerBasket[leafID].cursor) {
+      console.log("attaching cursor listener");
+      const activeLeafPath = view.file?.path;
+      if (!activeLeafPath) return;
 
-      console.log("attaching cursor listener")
-    const activeLeafPath = view.file?.path;
-    if (!activeLeafPath) return;
+      const flowName = this.isFlowFile(activeLeafPath);
+      if (!flowName) {
+        //this.removeCursorListener(view);
+        return;
+      }
 
-    const flowName = this.isFlowFile(activeLeafPath);
-    if (!flowName) {
-      //this.removeCursorListener(view);
-      return;
-    }
+      // ---------- actual listener stuff
 
-    // ---------- actual listener stuff
+      const plugin = this;
+      let lastCursorPosition: number | null = null;
+      let debounceTimeout: NodeJS.Timeout | null = null;
 
-    const plugin = this;
-    let lastCursorPosition: number | null = null;
-    let debounceTimeout: NodeJS.Timeout | null = null;
+      const cursorListener = ViewPlugin.fromClass(
+        class {
+          constructor(view: EditorView) {}
 
-    const cursorListenerCompartment = new Compartment();
+          update(update: ViewUpdate) {
+            if (!update.selectionSet) return;
 
-    const cursorListener = ViewPlugin.fromClass(
-      class {
-        constructor(view: EditorView) {}
+            const cursorOffset = update.state.selection.main.from;
 
-        update(update: ViewUpdate) {
-          if (!update.selectionSet) return;
+            if (cursorOffset !== lastCursorPosition) {
+              lastCursorPosition = cursorOffset;
 
-          const cursorOffset = update.state.selection.main.from;
+              if (debounceTimeout) {
+                clearTimeout(debounceTimeout);
+              }
 
-          if (cursorOffset !== lastCursorPosition) {
-            lastCursorPosition = cursorOffset;
+              debounceTimeout = setTimeout(async () => {
+                if (!plugin.settings.flows[flowName]) {
+                  throw new Error(`Flow ${flowName} not found in settings`);
+                }
+                // this sets off a chain of functions which updates the active Region
+                await plugin.checkActiveRegion(
+                  flowName,
+                  leafID,
+                  cursorOffset,
+                  view,
+                );
+              }, 250);
+            }
+          }
 
+          destroy() {
             if (debounceTimeout) {
               clearTimeout(debounceTimeout);
             }
-
-            debounceTimeout = setTimeout(async () => {
-              if (!plugin.settings.flows[flowName]) {
-                throw new Error(`Flow ${flowName} not found in settings`);
-              }
-              // this sets off a chain of functions which updates the active Region
-              await plugin.checkActiveRegion(
-                flowName,
-                leafID,
-                cursorOffset,
-                view,
-              );
-            }, 250);
           }
-        }
+        },
+      );
 
-        destroy() {
-          if (debounceTimeout) {
-            clearTimeout(debounceTimeout);
-          }
-          delete plugin.listenerBasket[`${leafID}-cursor`];
-        }
-      },
-    );
+      const cursorListenerCompartment = new Compartment();
 
-    // if we don't have a compartment set up yet
+      // put it all in the basket
 
-    if (!this.listenerBasket[leafID]) {
-      this.listenerBasket[leafID] = {};
-    }
-    if (!this.listenerBasket[leafID].cursor) {
+      if (!this.listenerBasket[leafID]) {
+        this.listenerBasket[leafID] = {};
+      }
       this.listenerBasket[leafID].cursor = {
         compartment: cursorListenerCompartment,
         extension: cursorListener,
-        enabled: true,
       };
     }
 
-    cmView.dispatch({
-      effects: StateEffect.appendConfig.of([cursorListenerCompartment.of([cursorListener])]),
-    });
+    if (!this.listenerBasket[leafID].cursor.compartment.get(cmView.state)) {
+      // compartment is present in this editor
+      cmView.dispatch({
+        effects: StateEffect.appendConfig.of([
+          this.listenerBasket[leafID].cursor.compartment.of([
+            this.listenerBasket[leafID].cursor.extension,
+          ]),
+        ]),
+      });
+    }
+
   };
-
-  // ---------------------------------------------------------
-  /*  removeCursorListener = (view: MarkdownView) => {
-    const leafID = this.flowService.getLeafId(view.leaf);
-    if (!leafID) return;
-    if (!this.listenerBasket[`${leafID}-cursor`]) return;
-
-    const editor = view.editor as Types.ObsidianEditor;
-    const cmEditor = editor.cm;
-    if (!cmEditor) return;
-
-    // Nix the listener
-    const { compartment } = this.listenerBasket[`${leafID}-cursor`];
-    cmEditor.dispatch({
-      effects: StateEffect.reconfigure.of([compartment.of([])]),
-    });
-
-    this.listenerBasket[`${leafID}-cursor`].enabled = false;
-  }; */
 
   // -----------------
   private addTextChangeListener = async (view: MarkdownView | null) => {
@@ -1803,7 +1786,7 @@ ${pseudoElement}
     if (!leafID) return;
 
     // if everything is set up, return
-    if (this.listenerBasket[leafID]?.textChange?.enabled) return;
+    if (this.listenerBasket[leafID]) return;
 
     const activeLeafPath = view.file?.path;
     if (!activeLeafPath) return;
@@ -1823,7 +1806,7 @@ ${pseudoElement}
     // ---------- actual listener stuff
 
     const plugin = this;
-    let debounceTimeout: NodeJS.Timeout | null = null;
+    let debounceTimeoutTextChange: NodeJS.Timeout | null = null;
 
     const textChangeListenerCompartment = new Compartment();
 
@@ -1839,11 +1822,11 @@ ${pseudoElement}
           // return if no actual text change has taken place
           if (changes.empty) return;
 
-          if (debounceTimeout) {
-            clearTimeout(debounceTimeout);
+          if (debounceTimeoutTextChange) {
+            clearTimeout(debounceTimeoutTextChange);
           }
 
-          debounceTimeout = setTimeout(async () => {
+          debounceTimeoutTextChange = setTimeout(async () => {
             // Prevent rebuild from registering as text change
             if (plugin.settings.flows[flowName].isFreshBuild) {
               plugin.settings.flows[flowName].isFreshBuild = false;
@@ -1899,16 +1882,11 @@ ${pseudoElement}
           }, 250);
         }
 
-        /*  destroy() {
-          try {
-            if (debounceTimeout) {
-              clearTimeout(debounceTimeout);
-            }
-            delete plugin.listenerBasket[`${leafID}-changes`];
-          } catch (error) {
-            console.error("Error cleaning up change listener:", error);
+        destroy() {
+          if (debounceTimeoutTextChange) {
+            clearTimeout(debounceTimeoutTextChange);
           }
-        }*/
+        }
       },
     );
 
@@ -1920,7 +1898,6 @@ ${pseudoElement}
       this.listenerBasket[leafID].textChange = {
         compartment: textChangeListenerCompartment,
         extension: textChangeListener,
-        enabled: true,
       };
 
       cmEditor.dispatch({
@@ -2205,11 +2182,7 @@ ${pseudoElement}
     }
 
     // -------- CURSOR LISTENER -------------------
-    if (
-      !this.listenerBasket[leafID] ||
-      !this.listenerBasket[leafID].cursor ||
-      !this.listenerBasket[leafID].cursor.enabled
-    ) {
+    if (!this.listenerBasket[leafID] || !this.listenerBasket[leafID].cursor) {
       const plugin = this;
       let lastCursorPosition: number | null = null;
       let debounceTimeout: NodeJS.Timeout | null = null;
@@ -2251,7 +2224,6 @@ ${pseudoElement}
             if (debounceTimeout) {
               clearTimeout(debounceTimeout);
             }
-            delete plugin.listenerBasket[`${leafID}-cursor`];
           }
         },
       );
@@ -2264,7 +2236,6 @@ ${pseudoElement}
         this.listenerBasket[leafID].cursor = {
           compartment: cursorListenerCompartment,
           extension: cursorListener,
-          enabled: true,
         };
         cmView.dispatch({
           effects: StateEffect.appendConfig.of([
@@ -3021,6 +2992,8 @@ ${pseudoElement}
 
     if (!cmView) return;
 
+    console.log("adding write protection");
+
     if (protectionType === "sync") {
       // create new compartment
       const protectSyncCompartment = new Compartment();
@@ -3651,7 +3624,7 @@ ${pseudoElement}
       for (const leaf of leaves) {
         // Check if the leaf's view is a MarkdownView and if its file path matches
         if (targetLeaf?.view instanceof MarkdownView) {
-         // this.removeCursorListener(targetLeaf.view);
+          // this.removeCursorListener(targetLeaf.view);
           // this.removeTextChangeListener(targetLeaf.view);
         }
       }

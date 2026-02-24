@@ -948,14 +948,11 @@ export class FlowSwitcherModal extends Modal {
     file: TFile,
   ) => {
     console.log("opening flow: ", flowName);
-    // keep file-open from duplicating the setup
-    //this.plugin.flowSwitcherIsHandlingThis = true;
+
     await leaf.openFile(file);
     leaf.setPinned(true);
-    //this.plugin.flowSwitcherIsHandlingThis = false;
-    // this.app.workspace.setActiveLeaf(leaf, { focus: true });
-    // await this.plugin.manageActiveRegions(); // this is called by the setup, but timing matters, so we call it again
-    // this.updateActiveLeafID();
+    if (leaf.view instanceof MarkdownView)
+      await this.plugin.setupFlowView(flowName, leaf.view);
     this.display();
     this.plugin.syncAllLeaves();
   };

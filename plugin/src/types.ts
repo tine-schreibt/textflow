@@ -247,7 +247,6 @@ export interface ListenerBasketItem {
   [key: string]: {
     compartment: Compartment;
     extension: Extension;
-    enabled: boolean;
   };
 }
 
