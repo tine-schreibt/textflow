@@ -31,11 +31,11 @@ import en from "./src/lang/en.json";
 import de from "./src/lang/de.json";
 
 //-----------------------------------------------------------------------------------------
-// This file is still quite big, but everything is very interconnected, so that splitting it up further would add more complexity overhead without actually improving readability
+// This file is quite big, but everything is very interconnected, so that splitting it up would add more complexity overhead without actually improving readability
 //-----------------------------------------------------------------------------------------
 // TOC
 //-----------------------------------------------------------------------------------------
-// - Class variables and other global stuff
+// - Class variables, callbacks and other global stuff
 // - StatsOverlay
 //----------------------------------------------------------------------------------------
 // - Utility functions
@@ -43,10 +43,9 @@ import de from "./src/lang/de.json";
 //    - load and save
 //    - ensureSystemFolder
 //-----------------------------------------------------------------------------------------
-// - Utility UI/UX
+// - Utility/general UI/UX
 //-----------------------------------------------------------------------------------------
 //    - loadLanguage (localisation)
-//    - cleanupMenuBar
 //    - COMMANDS
 //    - systemFolderState (hidden/shown)
 //    - decorateSourceNotes
@@ -74,11 +73,13 @@ import de from "./src/lang/de.json";
 //      - isFileExplorerClick
 //      - fileExplorerOpenClickListener
 //    - Compartments for TRACKING and SAFETY
-//      - contains:
+//      - pertains to:
 //          - cursorListener
 //          - textChangeListener
 //          - writelock for UUIDs
-//          - writelock during sync
+//      - makeCompartments
+//      - dispatchCompartments
+//      - resetCompartments
 //    - TRACKING helpers
 //      - checkActiveRegion
 //      - addRegionTracking
@@ -89,17 +90,16 @@ import de from "./src/lang/de.json";
 //-----------------------------------------------------------------------------------------
 //      - isFlowFile
 //      - setUpFlow
-//      - setupMenuBar
-//      - refreshMenuBars
 //      - activateFlow
 //      - manageActiveRegions
 //      - closeFlow
+//      - setupMenuBar
+//      - refreshMenuBars
+//      - cleanupMenuBar
 //-----------------------------------------------------------------------------------------
 // - Data safety
 //-----------------------------------------------------------------------------------------
-//      - (for writelocks see compartments in tracking)
-//      - preventEdit
-//      - toggleEditable
+//      - (for writelocks/tracking see compartments)
 //      - syncAllLeaves
 //      - syncBackToSource
 //      - updateStats
@@ -380,16 +380,6 @@ export default class TextFlowPlugin extends Plugin {
     }
 
     return value;
-  };
-
-  // cleanup for the menu bar
-  // creation happens in setUpFlow, using menuBar.ts
-
-  cleanupMenuBar = (leaf: WorkspaceLeaf) => {
-    if (leaf.view instanceof MarkdownView && leaf.view.menuBar) {
-      leaf.view.menuBar.detach();
-      delete leaf.view.menuBar;
-    }
   };
 
   // ---------------- all our nice commands
@@ -2707,49 +2697,6 @@ ${pseudoElement}
     }
   };
 
-  // ---- handle menuBar setup
-  setupMenuBar = (view: MarkdownView, flowName: string) => {
-    let menuBar: MenuBar;
-    const leafID = this.settingsTabFunctions.getLeafId(view.leaf);
-    // If we got one, check if it belongs to the flow
-    if (view.menuBar) {
-      if ((view.menuBar as MenuBar).getFlowName() != flowName) {
-        view.menuBar.detach();
-        delete view.menuBar;
-      }
-    }
-    // not in an else because it also needs to catch when we delete the menu bar
-    if (!view.menuBar) {
-      menuBar = new MenuBar(this.app, this, flowName, view, leafID);
-      menuBar.attach(view.contentEl);
-      view.menuBar = menuBar;
-    }
-    view.menuBar.refresh(view.contentEl);
-  };
-
-  // mostly here to handle uninitialised leaves
-  refreshMenuBars = async () => {
-    if (this.isRebuilding) return;
-
-    const leaves = this.app.workspace.getLeavesOfType("markdown");
-    for (let leaf of leaves) {
-      const view = leaf.view as MarkdownView;
-      const filePath = view.file?.path;
-      if (!filePath) continue;
-
-      const flowName = this.isFlowFile(filePath);
-      if (!flowName) continue;
-
-      // initialise
-      await leaf.loadIfDeferred();
-
-      // then refresh
-      if (view.menuBar) {
-        view.menuBar.refresh(view.contentEl);
-      }
-    }
-  };
-
   // ---- Make sure flows are set up when they are activated
   activateFlow = async (flowName: string) => {
     if (!this.settings.flows[flowName]) {
@@ -2941,6 +2888,59 @@ ${pseudoElement}
     }
     // finally
     this.manageActiveRegions(); // also saves
+  };
+
+  // ---- handle menuBar setup
+  setupMenuBar = (view: MarkdownView, flowName: string) => {
+    let menuBar: MenuBar;
+    const leafID = this.settingsTabFunctions.getLeafId(view.leaf);
+    // If we got one, check if it belongs to the flow
+    if (view.menuBar) {
+      if ((view.menuBar as MenuBar).getFlowName() != flowName) {
+        view.menuBar.detach();
+        delete view.menuBar;
+      }
+    }
+    // not in an else because it also needs to catch when we delete the menu bar
+    if (!view.menuBar) {
+      menuBar = new MenuBar(this.app, this, flowName, view, leafID);
+      menuBar.attach(view.contentEl);
+      view.menuBar = menuBar;
+    }
+    view.menuBar.refresh(view.contentEl);
+  };
+
+  // mostly here to handle uninitialised leaves
+  refreshMenuBars = async () => {
+    if (this.isRebuilding) return;
+
+    const leaves = this.app.workspace.getLeavesOfType("markdown");
+    for (let leaf of leaves) {
+      const view = leaf.view as MarkdownView;
+      const filePath = view.file?.path;
+      if (!filePath) continue;
+
+      const flowName = this.isFlowFile(filePath);
+      if (!flowName) continue;
+
+      // initialise
+      await leaf.loadIfDeferred();
+
+      // then refresh
+      if (view.menuBar) {
+        view.menuBar.refresh(view.contentEl);
+      }
+    }
+  };
+
+  // cleanup for the menu bar
+  // creation happens in setUpFlow, using menuBar.ts
+
+  cleanupMenuBar = (leaf: WorkspaceLeaf) => {
+    if (leaf.view instanceof MarkdownView && leaf.view.menuBar) {
+      leaf.view.menuBar.detach();
+      delete leaf.view.menuBar;
+    }
   };
 
   // ---- Functions: Data safety ----------------------------
