@@ -189,7 +189,7 @@ export default class TextFlowPlugin extends Plugin {
   private lastActivity: { [key: string]: number } = {};
   private inactivityThreshold: number = 5 * 60 * 1000;
   private alreadyActivated: { [key: string]: { [key: string]: boolean } } = {}; // flowName: {leafID: true}
-  private listenerBasket: { [key: string]: Types.ListenerBasketItem } = {};
+  private listenerBasket: { [key: string]: Types.ListenerBasketItem } = {}; // is cleaned up in the manageActiveRegions function
 
   // --- flow out of sync flag to prevent user from creating syncing errors when tracking fails
   flowOutOfSync: string[] = [];
@@ -2790,10 +2790,11 @@ ${pseudoElement}
     }
   };
 
+  // this function also removes obsolete entries from the listenerBasket
   manageActiveRegions = async () => {
     //this.flowService.callStack("manageActiveRegions");
 
-    // track all leaves
+    // gather the flow leaves
     const foundFlowLeaves: Record<string, Set<string>> = {};
 
     this.app.workspace.iterateAllLeaves((leaf) => {
@@ -2804,6 +2805,7 @@ ${pseudoElement}
         const leafPath = leafViewState.state?.file;
         if (typeof leafPath != "string") return; // behaves like 'continue' in this callback
 
+        // set up entries for newly opened flows
         const flowName = this.isFlowFile(leafPath);
         if (flowName) {
           // get leaves per flow
@@ -2831,7 +2833,7 @@ ${pseudoElement}
       }
     });
 
-    // Clean up region tracking for closed leaves
+    // Clean up entries for closed leaves plus the listenerBasket
     Object.keys(this.settings.flows).forEach((flowName) => {
       if (this.settings.activeRegions[flowName]) {
         if (Object.keys(this.settings.activeRegions[flowName]).length > 0) {
@@ -2844,13 +2846,15 @@ ${pseudoElement}
                   this.settings.flows[flowName].lastActiveLeaves.filter(
                     (id) => id !== leafID,
                   );
+                delete this.listenerBasket[leafID];
               }
 
-              // then, if a flow is all closed, we sync it, because all other syncs
-              // only care for active leaves
+              // then, if a flow is all closed, we delete the main entry and syncthe flow, because all other syncs only care about active leaves
               if (
                 Object.keys(this.settings.activeRegions[flowName]).length === 0
               ) {
+                delete this.settings.activeRegions[flowName];
+
                 if (
                   this.settings.flows[flowName].unsyncedRegionsArray.length > 0
                 ) {
@@ -2873,22 +2877,6 @@ ${pseudoElement}
               }
             },
           );
-        }
-      }
-      // finally, also clean up the activeRegions
-      if (this.settings.activeRegions) {
-        if (this.settings.activeRegions[flowName]) {
-          if (Object.keys(this.settings.activeRegions[flowName]).length === 0) {
-            delete this.settings.activeRegions[flowName];
-          } else {
-            Object.keys(this.settings.activeRegions[flowName]).forEach(
-              (leafID) => {
-                if (!foundFlowLeaves[flowName]?.has(leafID)) {
-                  delete this.settings.activeRegions[flowName][leafID];
-                }
-              },
-            );
-          }
         }
       }
     });
