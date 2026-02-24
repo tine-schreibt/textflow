@@ -244,7 +244,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     flowModeExplorerDecoHeadline.addEventListener("click", toggleDropdown);
 
     // Create entries
-    const decoArray = this.plugin.utilities.explorerDecoArray;
+    const decoArray = this.plugin.settingsTabFunctions.explorerDecoArray;
     decoArray.forEach((entry) => {
       const explorerDecoEntry = flowModeExplorerDecoContainer.createDiv({
         cls: "explorer-deco-dropdown-entry",
@@ -410,7 +410,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .setValue(this.plugin.settings.hideScrollbar)
           .onChange(async (value) => {
             this.plugin.settings.hideScrollbar = value;
-            this.plugin.utilities.updateScrollbarVisibility();
+            this.plugin.settingsTabFunctions.updateScrollbarVisibility();
           });
       });
 

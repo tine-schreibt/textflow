@@ -294,7 +294,10 @@ export class MenuBar {
             text,
           );
           if (startPosInFlow) {
-            this.plugin.utilities.scrollToPos(editor, startPosInFlow);
+            this.plugin.settingsTabFunctions.scrollToPos(
+              editor,
+              startPosInFlow,
+            );
           }
 
           this.filterList = [];
@@ -723,7 +726,7 @@ export class MenuBar {
               cursorDropdownEntryPos,
               "click",
               (event) => {
-                this.plugin.utilities.scrollToPos(editor, cursorPos);
+                this.plugin.settingsTabFunctions.scrollToPos(editor, cursorPos);
               },
             );
           }
@@ -759,7 +762,7 @@ export class MenuBar {
               "click",
               (event) => {
                 const editor = this.associatedView.editor as ObsidianEditor;
-                this.plugin.utilities.scrollToPos(editor, cursorPos);
+                this.plugin.settingsTabFunctions.scrollToPos(editor, cursorPos);
               },
             );
           }
@@ -792,7 +795,7 @@ export class MenuBar {
           .onClick(() => {
             const editor = this.associatedView.editor as ObsidianEditor;
             mostRecentCursor
-              ? this.plugin.utilities.scrollToPos(editor, mostRecentCursor)
+              ? this.plugin.settingsTabFunctions.scrollToPos(editor, mostRecentCursor)
               : "";
           });*/
       }
@@ -809,7 +812,7 @@ export class MenuBar {
         )
         .onClick(async () => {
           if (activeRegion) {
-            this.plugin.utilities.selectActiveRegion(
+            this.plugin.settingsTabFunctions.selectActiveRegion(
               this.flowName,
               activeRegion,
               this.associatedView.editor.getValue(),
@@ -829,7 +832,7 @@ export class MenuBar {
           this.plugin.t("menuBar.selectButton.setTooltip export flow"),
         )
         .onClick(async () => {
-          this.plugin.utilities.exportFlow(this.flowName);
+          this.plugin.settingsTabFunctions.exportFlow(this.flowName);
         });
 
       // a chevron to minimise

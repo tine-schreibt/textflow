@@ -962,7 +962,9 @@ export class FlowSwitcherModal extends Modal {
     if (!this.currentActiveLeafID) {
       const view = this.app.workspace.getActiveViewOfType(MarkdownView);
       if (view) {
-        this.currentActiveLeafID = this.plugin.utilities.getLeafId(view.leaf);
+        this.currentActiveLeafID = this.plugin.settingsTabFunctions.getLeafId(
+          view.leaf,
+        );
       }
     }
   };
@@ -984,7 +986,8 @@ export class FlowSwitcherModal extends Modal {
       /*if (targetLeaf instanceof MarkdownView) {
       await this.plugin.setUpFlow(activeFlow, targetLeaf);
     }*/
-      this.currentActiveLeafID = this.plugin.utilities.getLeafId(targetLeaf);
+      this.currentActiveLeafID =
+        this.plugin.settingsTabFunctions.getLeafId(targetLeaf);
     }
     this.display();
   };
@@ -1563,7 +1566,9 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
       if (!view) {
         const currentActiveleafID = "";
       } else {
-        const currentActiveleafID = this.plugin.utilities.getLeafId(view.leaf);
+        const currentActiveleafID = this.plugin.settingsTabFunctions.getLeafId(
+          view.leaf,
+        );
         let activePath: string | undefined = "";
         if (
           this.plugin.settings.activeRegions[this.activeFlowName][
@@ -1741,7 +1746,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
           const leafViewState = iteratorLeaf.getViewState();
           if (leafViewState.type === "markdown") {
             const iteratorLeafID =
-              this.plugin.utilities.getLeafId(iteratorLeaf);
+              this.plugin.settingsTabFunctions.getLeafId(iteratorLeaf);
             if (lastActiveLeafID === iteratorLeafID) {
               leaf = iteratorLeaf;
             }
@@ -1785,7 +1790,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
           if (!item.cursorPos && leaf) {
             cursorPos = await findCursorPos(item, leaf);
           }
-          const leafID = this.plugin.utilities.getLeafId(leaf);
+          const leafID = this.plugin.settingsTabFunctions.getLeafId(leaf);
           if (cursorPos) {
             this.plugin.manageCursorPos(item.flowName, leafID, item, cursorPos);
             this.app.workspace.setActiveLeaf(leaf, { focus: true });
@@ -1839,9 +1844,9 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
       if (editor) {
         const cmEditor = editor.cm;
         if (cursorPos) {
-          this.plugin.utilities.scrollToPos(editor, cursorPos);
+          this.plugin.settingsTabFunctions.scrollToPos(editor, cursorPos);
         } else if (item.cursorPos) {
-          this.plugin.utilities.scrollToPos(editor, item.cursorPos);
+          this.plugin.settingsTabFunctions.scrollToPos(editor, item.cursorPos);
         }
       }
     };
