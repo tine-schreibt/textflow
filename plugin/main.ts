@@ -1699,7 +1699,7 @@ ${pseudoElement}
 
     const flowName = this.isFlowFile(activeLeafPath);
     if (!flowName) {
-      // this.resetCompartments(view);
+      this.resetCompartments(leafID, cmView);
       return;
     }
 
@@ -1760,9 +1760,6 @@ ${pseudoElement}
         emptyReference: [],
       };
     }
-
-    // and finally...
-    this.dispatchCompartment(leafID, "cursor", cmView);
 
     // -------- TEXT CHANGE LISTENER -------------------
     if (
@@ -1865,8 +1862,6 @@ ${pseudoElement}
       };
     }
 
-    this.dispatchCompartment(leafID, "textChange", cmView);
-
     // -------- DIVIDER PROTECTION -------------------
 
     if (!this.listenerBasket[leafID] || !this.listenerBasket[leafID].divider) {
@@ -1926,35 +1921,40 @@ ${pseudoElement}
         emptyReference: [],
       };
     }
-    // and finally...
-    this.dispatchCompartment(leafID, "divider", cmView);
+
+    // and finally we dispatch the whole kitten kaboodle to the editor
+    this.dispatchCompartments(leafID, cmView);
   };
 
-  dispatchCompartment = (leafID: string, type: string, cmView: EditorView) => {
-    if (!this.listenerBasket[leafID][type].compartment.get(cmView.state)) {
-      // if compartment is not present in this editor
-      cmView.dispatch({
-        effects: StateEffect.appendConfig.of([
-          this.listenerBasket[leafID][type].compartment.of([
-            this.listenerBasket[leafID][type].extension,
-          ]),
-        ]),
-      });
-    }
+  dispatchCompartments = (leafID: string, cmView: EditorView) => {
+    const typesArray = ["cursor", "textChange", "divider"];
 
-    // if the extension has been reset
-    const extension = this.listenerBasket[leafID][type].compartment.get(
-      cmView.state,
-    );
-
-    if (extension === this.listenerBasket[leafID][type].emptyReference) {
-      cmView.dispatch({
-        effects: StateEffect.reconfigure.of([
-          this.listenerBasket[leafID][type].compartment.of([
-            this.listenerBasket[leafID][type].extension,
+    for (let type of typesArray) {
+      if (!this.listenerBasket[leafID][type].compartment.get(cmView.state)) {
+        // if compartment is not present in this editor
+        cmView.dispatch({
+          effects: StateEffect.appendConfig.of([
+            this.listenerBasket[leafID][type].compartment.of([
+              this.listenerBasket[leafID][type].extension,
+            ]),
           ]),
-        ]),
-      });
+        });
+      }
+
+      // if the extension has been reset
+      const extension = this.listenerBasket[leafID][type].compartment.get(
+        cmView.state,
+      );
+
+      if (extension === this.listenerBasket[leafID][type].emptyReference) {
+        cmView.dispatch({
+          effects: StateEffect.reconfigure.of([
+            this.listenerBasket[leafID][type].compartment.of([
+              this.listenerBasket[leafID][type].extension,
+            ]),
+          ]),
+        });
+      }
     }
   };
 
@@ -1964,24 +1964,14 @@ ${pseudoElement}
     for (let type of typesArray) {
       if (!this.listenerBasket[leafID]) return;
       if (!this.listenerBasket[leafID][type]) continue;
-
-      if (!this.listenerBasket[leafID][type].compartment.get(cmView.state)) {
-        // if for some weird reason compartment is not present in this editor
-        cmView.dispatch({
-          effects: StateEffect.appendConfig.of([
-            this.listenerBasket[leafID][type].compartment.of([
-              this.listenerBasket[leafID][type].emptyReference,
-            ]),
-          ]),
-        });
-      }
+      if (!this.listenerBasket[leafID][type].compartment.get(cmView.state))
+        continue;
 
       // if the extension is present
       const extension = this.listenerBasket[leafID][type].compartment.get(
         cmView.state,
       );
-
-      // but it is not reset
+      // but it is not empty
       if (extension != this.listenerBasket[leafID][type].emptyReference) {
         cmView.dispatch({
           effects: StateEffect.reconfigure.of([
@@ -2596,7 +2586,7 @@ ${pseudoElement}
           this.mostRecentActiveFlowLeaf = leaf;
           return;
         } else {
-          // this.closeFlow();
+          this.closeFlow(view);
           this.manageActiveRegions();
         }
       }
@@ -2926,16 +2916,20 @@ ${pseudoElement}
     //this.flowService.callStack("closeFlow");
 
     await this.syncAllLeaves();
-    // this.removeCursorListener(view);
-    // this.removeTextChangeListener(view);
-    this.cleanupMenuBar(view.leaf);
-    if (view.menuBar) {
-      view.menuBar.detach();
-    }
 
+    // reset the compartments
     const leafID = this.flowService.getLeafId(view.leaf);
     if (this.editableCompartments?.[leafID]) {
       delete this.editableCompartments[leafID];
+    }
+    const cmView = this.flowService.getEditorView(view.editor);
+    if (cmView) {
+      this.resetCompartments(leafID, cmView);
+    }
+
+    this.cleanupMenuBar(view.leaf);
+    if (view.menuBar) {
+      view.menuBar.detach();
     }
 
     // update the activation tracker
