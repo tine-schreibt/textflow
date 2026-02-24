@@ -80,7 +80,7 @@ export class CreateFlowFromFolder extends Modal {
 
       setFlowName.onChange(async (value) => {
         this.plugin.settings.flowBuildBasket.flowName = value.trim();
-        this.plugin.flowService.debouncedSaveSettings();
+        this.plugin.settingsTabFunctions.debouncedSaveSettings();
       });
     });
 
@@ -191,7 +191,7 @@ export class CreateFlowFromFolder extends Modal {
         }
 
         // if checks and flow creation haven't been performed by the preview button
-        const validation = this.plugin.flowService.isValidFlowName(
+        const validation = this.plugin.settingsTabFunctions.isValidFlowName(
           this.plugin.settings.flowBuildBasket.flowName,
         );
         if (!validation.valid && validation.reason) {
@@ -219,7 +219,7 @@ export class CreateFlowFromFolder extends Modal {
         // It really helps to save stuff... -.-
         await this.plugin.saveSettings();
 
-        this.plugin.flowService.createFlowDefinition(
+        this.plugin.settingsTabFunctions.createFlowDefinition(
           this.plugin.settings.flowBuildBasket,
         );
 
@@ -228,13 +228,13 @@ export class CreateFlowFromFolder extends Modal {
         }
 
         // write the whole stuff (also flags for rebuild)
-        await this.plugin.flowService.writeFlowDef(
+        await this.plugin.settingsTabFunctions.writeFlowDef(
           this.plugin.settings,
           this.plugin.settings.flowBuildBasket,
         );
 
         // update conflicts,
-        this.plugin.flowService.syncConflictObjects(
+        this.plugin.settingsTabFunctions.syncConflictObjects(
           this.plugin.settings.flowBuildBasket,
         );
 
@@ -245,7 +245,7 @@ export class CreateFlowFromFolder extends Modal {
         );
 
         // and clean up the basket.
-        this.plugin.flowService.resetFlowBuildBasket(
+        this.plugin.settingsTabFunctions.resetFlowBuildBasket(
           this.plugin.settings.flowBuildBasket,
         );
 
@@ -257,7 +257,7 @@ export class CreateFlowFromFolder extends Modal {
     const closeButton = new ButtonComponent(contentEl)
       .setButtonText(this.plugin.t("CreateFlowFromFolderModal.close"))
       .onClick(async () => {
-        this.plugin.flowService.resetFlowBuildBasket(
+        this.plugin.settingsTabFunctions.resetFlowBuildBasket(
           this.plugin.settings.flowBuildBasket,
         );
         this.close();
@@ -266,7 +266,7 @@ export class CreateFlowFromFolder extends Modal {
 
   async onClose() {
     // and clean up the basket.
-    this.plugin.flowService.resetFlowBuildBasket(
+    this.plugin.settingsTabFunctions.resetFlowBuildBasket(
       this.plugin.settings.flowBuildBasket,
     );
     await this.plugin.saveSettings();
@@ -346,7 +346,7 @@ export class CreateNewItem extends Modal {
     const closeButton = new ButtonComponent(contentEl)
       .setButtonText(this.plugin.t("CreateFlowFromFolderModal.close"))
       .onClick(async () => {
-        this.plugin.flowService.resetFlowBuildBasket(
+        this.plugin.settingsTabFunctions.resetFlowBuildBasket(
           this.plugin.settings.flowBuildBasket,
         );
         this.close();
@@ -354,7 +354,7 @@ export class CreateNewItem extends Modal {
   }
   async onClose() {
     // and clean up the basket.
-    this.plugin.flowService.resetFlowBuildBasket(
+    this.plugin.settingsTabFunctions.resetFlowBuildBasket(
       this.plugin.settings.flowBuildBasket,
     );
     await this.plugin.saveSettings();
@@ -952,7 +952,7 @@ export class FlowSwitcherModal extends Modal {
     await leaf.openFile(file);
     leaf.setPinned(true);
     if (leaf.view instanceof MarkdownView)
-      await this.plugin.setupFlowView(flowName, leaf.view);
+      await this.plugin.setUpFlow(flowName, leaf.view);
     this.display();
     this.plugin.syncAllLeaves();
   };
@@ -962,7 +962,7 @@ export class FlowSwitcherModal extends Modal {
     if (!this.currentActiveLeafID) {
       const view = this.app.workspace.getActiveViewOfType(MarkdownView);
       if (view) {
-        this.currentActiveLeafID = this.plugin.flowService.getLeafId(view.leaf);
+        this.currentActiveLeafID = this.plugin.utilities.getLeafId(view.leaf);
       }
     }
   };
@@ -982,9 +982,9 @@ export class FlowSwitcherModal extends Modal {
     if (targetLeaf) {
       this.app.workspace.setActiveLeaf(targetLeaf, { focus: true });
       /*if (targetLeaf instanceof MarkdownView) {
-      await this.plugin.setupFlowView(activeFlow, targetLeaf);
+      await this.plugin.setUpFlow(activeFlow, targetLeaf);
     }*/
-      this.currentActiveLeafID = this.plugin.flowService.getLeafId(targetLeaf);
+      this.currentActiveLeafID = this.plugin.utilities.getLeafId(targetLeaf);
     }
     this.display();
   };
@@ -1240,9 +1240,12 @@ export class FlowSwitcherModal extends Modal {
               if (flowName === activeFlow)
                 // make double sure we got everything set up for the overlay,
                 // so user doesn't type while we rebuild
-                await this.plugin.setupFlowView(activeFlow, view);
+                await this.plugin.setUpFlow(activeFlow, view);
             }
-            await this.plugin.flowService.rebuildFlow(activeFlow, "switcher");
+            await this.plugin.settingsTabFunctions.rebuildFlow(
+              activeFlow,
+              "switcher",
+            );
             await this.plugin.saveSettings();
             await this.display();
           } else if (goRebuild === "no-go") {
@@ -1517,7 +1520,10 @@ export class FlowSwitcherModal extends Modal {
         .setTooltip(this.plugin.t("switcherModal.buttons rebuild"))
         .onClick(async () => {
           if (goRebuild === "neutral" || goRebuild === "must") {
-            await this.plugin.flowService.rebuildFlow(inactiveFlow, "switcher");
+            await this.plugin.settingsTabFunctions.rebuildFlow(
+              inactiveFlow,
+              "switcher",
+            );
             await this.plugin.saveSettings();
             await this.display();
           } else {
@@ -1557,9 +1563,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
       if (!view) {
         const currentActiveleafID = "";
       } else {
-        const currentActiveleafID = this.plugin.flowService.getLeafId(
-          view.leaf,
-        );
+        const currentActiveleafID = this.plugin.utilities.getLeafId(view.leaf);
         let activePath: string | undefined = "";
         if (
           this.plugin.settings.activeRegions[this.activeFlowName][
@@ -1737,7 +1741,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
           const leafViewState = iteratorLeaf.getViewState();
           if (leafViewState.type === "markdown") {
             const iteratorLeafID =
-              this.plugin.flowService.getLeafId(iteratorLeaf);
+              this.plugin.utilities.getLeafId(iteratorLeaf);
             if (lastActiveLeafID === iteratorLeafID) {
               leaf = iteratorLeaf;
             }
@@ -1781,7 +1785,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
           if (!item.cursorPos && leaf) {
             cursorPos = await findCursorPos(item, leaf);
           }
-          const leafID = this.plugin.flowService.getLeafId(leaf);
+          const leafID = this.plugin.utilities.getLeafId(leaf);
           if (cursorPos) {
             this.plugin.manageCursorPos(item.flowName, leafID, item, cursorPos);
             this.app.workspace.setActiveLeaf(leaf, { focus: true });
@@ -1835,9 +1839,9 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
       if (editor) {
         const cmEditor = editor.cm;
         if (cursorPos) {
-          this.plugin.flowService.scrollToPos(editor, cursorPos);
+          this.plugin.utilities.scrollToPos(editor, cursorPos);
         } else if (item.cursorPos) {
-          this.plugin.flowService.scrollToPos(editor, item.cursorPos);
+          this.plugin.utilities.scrollToPos(editor, item.cursorPos);
         }
       }
     };

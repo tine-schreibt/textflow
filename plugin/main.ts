@@ -24,7 +24,8 @@ import {
 import * as Types from "./src/types";
 import * as Modals from "./src/modals";
 import { MenuBar } from "./src/menuBar";
-import { FlowService } from "./src/flowService";
+import { settingsTabFunctions } from "./src/settingsTabFunctions";
+import { utilities } from "./src/utilities";
 import XXH from "xxhashjs";
 import path, { dirname, basename } from "path";
 import en from "./src/lang/en.json";
@@ -88,7 +89,7 @@ import de from "./src/lang/de.json";
 // - Flow Management and UI
 //-----------------------------------------------------------------------------------------
 //      - isFlowFile
-//      - setupFlowView
+//      - setUpFlow
 //      - setupMenuBar
 //      - refreshMenuBars
 //      - activateFlow
@@ -147,7 +148,7 @@ class StatsOverlay {
       cls: "textflow-loading-container",
     });
 
-    const symbol = this.plugin.flowService.explorerDecoArray[0][0];
+    const symbol = this.plugin.utilities.explorerDecoArray[0][0];
     this.progressText = this.container.createDiv({
       cls: "textflow-loading-text",
       text: this.t("main.statsOverlay initial notice", {
@@ -157,7 +158,7 @@ class StatsOverlay {
   }
 
   updateProgress(elapsedTime: number) {
-    const text = this.t("setupFlowView.statsCheck done", {
+    const text = this.t("setUpFlow.statsCheck done", {
       elapsedTime: elapsedTime.toString(),
     });
     this.progressText.setText(text);
@@ -178,8 +179,10 @@ declare module "obsidian" {
 // ----------- THE PLUGIN CLASS ITESELF
 export default class TextFlowPlugin extends Plugin {
   settings: TextFlowSettings;
-  flowService: FlowService;
+  settingsTabFunctions: settingsTabFunctions;
   settingsTab: TextFlowSettingsTab;
+  utilities: utilities;
+
   textFlowSystemFolderName = "textFlowSystemFolder";
   private i18n: Record<string, any> = {}; // localisation
 
@@ -214,7 +217,7 @@ export default class TextFlowPlugin extends Plugin {
 
   // ---------------- Some callbacks -------------------------
 
-  // for timing of flowSwitcherModal display() calls, we need to access them from setupFlowView()
+  // for timing of flowSwitcherModal display() calls, we need to access them from setUpFlow()
   private modalUpdateCallback: (() => void) | null = null;
 
   registerModalUpdateCallback(callback: () => void) {
@@ -239,7 +242,7 @@ export default class TextFlowPlugin extends Plugin {
   // I'm using temp->rename because for heavy users it would be an absolute pain in the ass to have to redo a ton of flow definitions
 
   saveSettings = async () => {
-    // this.flowService.callStack("saveSettings");
+    // this.settingsTabFunctions.callStack("saveSettings");
 
     this.pendingSettingsSave = structuredClone(this.settings);
     this.morePendingSettingsSave = true;
@@ -333,7 +336,7 @@ export default class TextFlowPlugin extends Plugin {
       }
     } else {
       if (this.settings.systemFolderPath) {
-        await this.flowService.createSystemFolder(
+        await this.settingsTabFunctions.createSystemFolder(
           this.settings.systemFolderPath,
         );
         this.discernAndSetSystemFolderState();
@@ -382,7 +385,7 @@ export default class TextFlowPlugin extends Plugin {
   };
 
   // cleanup for the menu bar
-  // creation happens in setupFlowView, using menuBar.ts
+  // creation happens in setUpFlow, using menuBar.ts
 
   cleanupMenuBar = (leaf: WorkspaceLeaf) => {
     if (leaf.view instanceof MarkdownView && leaf.view.menuBar) {
@@ -477,7 +480,7 @@ export default class TextFlowPlugin extends Plugin {
         const flowName = this.isFlowFile(activeLeafPath);
         if (!flowName) return;
         // rebuild
-        await this.flowService.rebuildFlow(flowName, "switcher");
+        await this.settingsTabFunctions.rebuildFlow(flowName, "switcher");
       },
     });
 
@@ -492,7 +495,7 @@ export default class TextFlowPlugin extends Plugin {
         if (!view) {
           new Modals.FlowSwitcherModal(this.app, this).open();
         } else {
-          const leafID = this.flowService.getLeafId(view.leaf);
+          const leafID = this.utilities.getLeafId(view.leaf);
           new Modals.FlowSwitcherModal(this.app, this, leafID).open();
         }
       },
@@ -547,7 +550,7 @@ export default class TextFlowPlugin extends Plugin {
           const flowName = this.isFlowFile(path);
           if (!flowName) return;
 
-          const leafID = this.flowService.getLeafId(activeView.leaf);
+          const leafID = this.utilities.getLeafId(activeView.leaf);
           if (!leafID) return;
 
           for (let leaf of Object.keys(this.settings.activeRegions[flowName])) {
@@ -578,7 +581,7 @@ export default class TextFlowPlugin extends Plugin {
         if (!view.file) return;
         const flowName = this.isFlowFile(view.file.path);
         if (!flowName) return;
-        this.flowService.exportFlow(flowName);
+        this.utilities.exportFlow(flowName);
       },
     });
 
@@ -592,7 +595,7 @@ export default class TextFlowPlugin extends Plugin {
         if (!view.file) return;
 
         const activeLeafPath = view.file.path;
-        const leafID = this.flowService.getLeafId(view.leaf);
+        const leafID = this.utilities.getLeafId(view.leaf);
         const flowName = this.isFlowFile(activeLeafPath);
         if (!flowName) return;
         if (!this.settings.activeRegions[flowName]) return;
@@ -604,7 +607,7 @@ export default class TextFlowPlugin extends Plugin {
         );
         if (!activeRegion) return;
 
-        this.flowService.selectActiveRegion(
+        this.utilities.selectActiveRegion(
           flowName,
           activeRegion,
           view.editor.getValue(),
@@ -630,9 +633,13 @@ export default class TextFlowPlugin extends Plugin {
         const flowName = this.isFlowFile(activeLeafPath);
         if (!flowName) return;
 
-        const leafID = this.flowService.getLeafId(activeView.leaf);
+        const leafID = this.utilities.getLeafId(activeView.leaf);
         // check if we got data for that leafID
-        this.flowService.restoreCursorPos(flowName, activeView, leafID);
+        this.utilities.restoreCursorPos(
+          flowName,
+          activeView,
+          leafID,
+        );
       },
     });
 
@@ -644,11 +651,11 @@ export default class TextFlowPlugin extends Plugin {
         if (this.settings.hideScrollbar === "none") {
           this.settings.hideScrollbar = "all";
           await this.saveSettings();
-          this.flowService.updateScrollbarVisibility();
+          this.utilities.updateScrollbarVisibility();
         } else if (this.settings.hideScrollbar === "all") {
           this.settings.hideScrollbar = "none";
           await this.saveSettings();
-          this.flowService.updateScrollbarVisibility();
+          this.utilities.updateScrollbarVisibility();
         }
       },
     });
@@ -709,7 +716,7 @@ export default class TextFlowPlugin extends Plugin {
         if (activeLeafPath) {
           const flowName = this.isFlowFile(activeLeafPath);
           if (flowName) {
-            const leafID = this.flowService.getLeafId(activeView.leaf);
+            const leafID = this.utilities.getLeafId(activeView.leaf);
 
             for (let flowName of Object.keys(this.settings.activeRegions)) {
               if (this.settings.activeRegions[flowName][leafID]) {
@@ -1236,7 +1243,7 @@ ${pseudoElement}
                 parentFolder = dirname(normalisedPath);
               }
               // empty the basket, just in case
-              this.flowService.resetFlowBuildBasket(
+              this.settingsTabFunctions.resetFlowBuildBasket(
                 this.settings.flowBuildBasket,
               );
               // put defaults in
@@ -1296,7 +1303,7 @@ ${pseudoElement}
             inclusionPathArray.sort((a, b) => a.localeCompare(b));
 
             // empty the basket, just in case
-            this.flowService.resetFlowBuildBasket(
+            this.settingsTabFunctions.resetFlowBuildBasket(
               this.settings.flowBuildBasket,
             );
             // put defaults in
@@ -1688,8 +1695,8 @@ ${pseudoElement}
 
   // -------------- Listeners: Compartments -----------------------------------------
   private makeCompartments = async (view: MarkdownView) => {
-    const cmView = this.flowService.getEditorView(view.editor);
-    const leafID = this.flowService.getLeafId(view.leaf);
+    const cmView = this.utilities.getEditorView(view.editor);
+    const leafID = this.utilities.getLeafId(view.leaf);
 
     if (!cmView) return;
     if (!view) return;
@@ -2350,7 +2357,10 @@ ${pseudoElement}
                 activeRegionPath,
               );
               if (flowHasEdits) {
-                await this.flowService.rebuildFlow(flowName, "menuBar");
+                await this.settingsTabFunctions.rebuildFlow(
+                  flowName,
+                  "menuBar",
+                );
                 new Notice(
                   this.t("main.cursorTracker.notice", {
                     flowName: flowName,
@@ -2437,7 +2447,7 @@ ${pseudoElement}
         const [path, regionMap] = firstRegion;
         // Move cursor to safe position in first region
         const safePos = 1;
-        this.flowService.scrollToPos(editor, safePos);
+        this.utilities.scrollToPos(editor, safePos);
 
         // then return region data
         return {
@@ -2464,7 +2474,7 @@ ${pseudoElement}
         const [path, regionMap] = lastRegion;
         // Move cursor to safe position in last region
         const safePos = text.lastIndexOf(regionMap.invisibleUUID) - 1;
-        this.flowService.scrollToPos(editor, safePos);
+        this.utilities.scrollToPos(editor, safePos);
 
         // and return region data
         return {
@@ -2478,7 +2488,9 @@ ${pseudoElement}
     }
 
     // if we're already in a safe position
-    const searchStart = text.slice(cursorOffset);
+    let additonalOffset = 0;
+    if (cursorOffset >= 46) additonalOffset = 46;
+    const searchStart = text.slice(cursorOffset - additonalOffset);
     const matches = searchStart.match(markerRegex);
 
     if (matches) {
@@ -2579,9 +2591,9 @@ ${pseudoElement}
         // if active leaf is flow, set it up; hash check happens in setup
         const isFlow = this.isFlowFile(activeLeafPath);
         if (isFlow) {
-          await this.setupFlowView(isFlow, leaf.view);
+          await this.setUpFlow(isFlow, leaf.view);
 
-          const leafID = this.flowService.getLeafId(view.leaf);
+          const leafID = this.utilities.getLeafId(view.leaf);
 
           this.mostRecentActiveFlowLeaf = leaf;
           return;
@@ -2594,25 +2606,14 @@ ${pseudoElement}
   };
 
   // The big bundle that centralises flow management
-  setupFlowView = async (flowName: string, view: MarkdownView) => {
-    // this.flowService.callStack("setupFlowView");
-
-    // ------------- VISUALS ---------------------
-    // this has to happen first so the menuBar can just be set up
-    await this.manageActiveRegions();
-    // now do the menu bar
-    this.setupMenuBar(view, flowName);
-    // Update the switcher modal in case it's open
-    if (this.modalUpdateCallback) {
-      this.modalUpdateCallback();
-    }
+  setUpFlow = async (flowName: string, view: MarkdownView) => {
+    // this.settingsTabFunctions.callStack("setUpFlow");
 
     // ------------- DATA INTEGRITY ---------------------
     // check if the flow needs a rebuild due to changes from outside
     if (this.settings.checkExternalEdits != "no") {
       if (!this.lastActivity[flowName]) {
         // if the flow has been newly opened
-        const startTimer = Date.now();
         const statsOverlay = new StatsOverlay(
           view.leaf,
           flowName,
@@ -2627,7 +2628,6 @@ ${pseudoElement}
         this.lastActivity[flowName] - Date.now() >
         this.inactivityThreshold
       ) {
-        const startTimer = Date.now();
         const statsOverlay = new StatsOverlay(
           view.leaf,
           flowName,
@@ -2645,31 +2645,34 @@ ${pseudoElement}
     // ------------- PROTECTION ---------------------
     // set up the editor with its other extensions and listeners
     await this.makeCompartments(view);
-    /* await this.addWriteProtection(view, "divider");
-    await this.addWriteProtection(view, "sync");
-    await this.addCursorListener(view);
-    await this.addTextChangeListener(view);*/
 
     // ------------- REBUILDING ---------------------
     // rebuild if appropriate
     if (this.settings.flows[flowName].flaggedForRebuild) {
-      this.toggleEditable(view, false);
-      await this.flowService.rebuildFlow(flowName, "setupFlowView");
-      this.toggleEditable(view, true);
+      await this.settingsTabFunctions.rebuildFlow(flowName, "setUpFlow");
     }
 
-    const leafID = this.flowService.getLeafId(view.leaf);
+    // ------------- VISUALS ---------------------
+    // this has to happen first so the menuBar can just be set up
+    await this.manageActiveRegions();
+    // now do the menu bar
+    this.setupMenuBar(view, flowName);
+    // Update the switcher modal in case it's open
+    if (this.modalUpdateCallback) {
+      this.modalUpdateCallback();
+    }
 
     // ------------- SCROLLING ---------------------
+    const leafID = this.utilities.getLeafId(view.leaf);
     // See if this is the inital activation of the flow/leaf and restore cursor
     // we need this so outline navigation works (because it acts as a fresh open)
     if (!this.alreadyActivated[flowName]) {
       this.alreadyActivated[flowName] = {};
       this.alreadyActivated[flowName][leafID] = true;
-      this.flowService.restoreCursorPos(flowName, view, leafID);
+      this.utilities.restoreCursorPos(flowName, view, leafID);
     } else if (!this.alreadyActivated[flowName][leafID]) {
       this.alreadyActivated[flowName][leafID] = true;
-      this.flowService.restoreCursorPos(flowName, view, leafID);
+      this.utilities.restoreCursorPos(flowName, view, leafID);
     }
 
     // ------------- HOUSEKEEPING ---------------------
@@ -2709,7 +2712,7 @@ ${pseudoElement}
   // ---- handle menuBar setup
   setupMenuBar = (view: MarkdownView, flowName: string) => {
     let menuBar: MenuBar;
-    const leafID = this.flowService.getLeafId(view.leaf);
+    const leafID = this.utilities.getLeafId(view.leaf);
     // If we got one, check if it belongs to the flow
     if (view.menuBar) {
       if ((view.menuBar as MenuBar).getFlowName() != flowName) {
@@ -2773,7 +2776,7 @@ ${pseudoElement}
       // now open and focus the flow, pin it, and set up tracking and stuff
       if (leaf.view instanceof MarkdownView) {
         this.app.workspace.setActiveLeaf(leaf, { focus: true });
-        this.setupFlowView(flowName, leaf.view);
+        this.setUpFlow(flowName, leaf.view);
         leaf.setPinned(true);
       } else {
         console.error(
@@ -2792,7 +2795,7 @@ ${pseudoElement}
 
   // this function also removes obsolete entries from the listenerBasket
   manageActiveRegions = async () => {
-    //this.flowService.callStack("manageActiveRegions");
+    //this.settingsTabFunctions.callStack("manageActiveRegions");
 
     // gather the flow leaves
     const foundFlowLeaves: Record<string, Set<string>> = {};
@@ -2801,7 +2804,7 @@ ${pseudoElement}
       // get info for all leaves' contents, initalised or not
       const leafViewState = leaf.getViewState();
       if (leafViewState.type === "markdown" && leafViewState.state?.file) {
-        const leafID = this.flowService.getLeafId(leaf);
+        const leafID = this.utilities.getLeafId(leaf);
         const leafPath = leafViewState.state?.file;
         if (typeof leafPath != "string") return; // behaves like 'continue' in this callback
 
@@ -2901,16 +2904,13 @@ ${pseudoElement}
 
   // if a flow is replaced by a non-flow
   closeFlow = async (view: MarkdownView) => {
-    //this.flowService.callStack("closeFlow");
+    //this.settingsTabFunctions.callStack("closeFlow");
 
     await this.syncAllLeaves();
 
     // reset the compartments
-    const leafID = this.flowService.getLeafId(view.leaf);
-    if (this.editableCompartments?.[leafID]) {
-      delete this.editableCompartments[leafID];
-    }
-    const cmView = this.flowService.getEditorView(view.editor);
+    const leafID = this.utilities.getLeafId(view.leaf);
+    const cmView = this.utilities.getEditorView(view.editor);
     if (cmView) {
       this.resetCompartments(leafID, cmView);
     }
@@ -2946,130 +2946,6 @@ ${pseudoElement}
   };
 
   // ---- Functions: Data safety ----------------------------
-
-  // ---- Functions: Data safety: Read-only for dividers and during sync
-  private editableCompartments: { [key: string]: [Compartment, boolean] } = {};
-
-  addWriteProtection = async (
-    view: MarkdownView,
-    protectionType: Types.ProtectionType,
-  ) => {
-    const cmView = this.flowService.getEditorView(view.editor);
-    const leafID = this.flowService.getLeafId(view.leaf);
-
-    if (!cmView) return;
-
-    console.log("adding write protection");
-
-    if (protectionType === "sync") {
-      // create new compartment
-      const protectSyncCompartment = new Compartment();
-      // store compartment so we can reuse it to toggle on/off
-      this.editableCompartments[leafID] = [protectSyncCompartment, true];
-
-      // Initialise
-      cmView.dispatch({
-        effects: StateEffect.appendConfig.of([
-          protectSyncCompartment.of(
-            this.preventEdit(this.editableCompartments, leafID),
-          ),
-        ]),
-      });
-    }
-
-    if (protectionType === "divider") {
-      // this needs to be full-on transaction filter because a domEventHandler
-      // can be deleted into
-      const preventEdit = EditorState.transactionFilter.of((tr) => {
-        // if the flow is being rebuilt, we need to suspend protection
-        // otherwise the editor contents can't be updated
-        if (this.isRebuilding) return tr;
-
-        if (!tr.changes.empty) {
-          let shouldReject = false;
-
-          tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
-            const windowStart = Math.max(0, fromA - 60);
-            const windowEnd = Math.min(tr.startState.doc.length, toA + 60);
-            const windowText = tr.startState.sliceDoc(windowStart, windowEnd);
-
-            let match;
-            const regex =
-              /\n[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46}<hr>\n\n/g;
-
-            while ((match = regex.exec(windowText)) !== null) {
-              const absoluteDividerStart = windowStart + match.index + 1;
-              const absoluteDividerEnd =
-                absoluteDividerStart + match[0].length - 2;
-
-              if (
-                (fromA < absoluteDividerEnd && toA > absoluteDividerStart) ||
-                (fromA <= absoluteDividerStart && toA >= absoluteDividerEnd) ||
-                // Protect against edits that would affect the newlines
-                (fromA >= absoluteDividerStart &&
-                  fromA <= absoluteDividerEnd) ||
-                (toA >= absoluteDividerStart && toA <= absoluteDividerEnd)
-              ) {
-                shouldReject = true;
-              }
-            }
-          });
-
-          if (shouldReject) {
-            return [];
-          }
-        }
-        return tr;
-      });
-
-      // Create new compartment
-      const protectDividerCompartment = new Compartment();
-      // Initialise
-      cmView.dispatch({
-        effects: StateEffect.appendConfig.of([
-          protectDividerCompartment.of([preventEdit]),
-        ]),
-      });
-    }
-  };
-
-  // the function that builds the preventDefault configuration for the
-  // sync (and mostly rebuild) writelock
-
-  preventEdit = (
-    editableCompartments: { [key: string]: [Compartment, boolean] },
-    leafID: string,
-  ): Extension => {
-    return EditorView.domEventHandlers({
-      beforeinput(event) {
-        const isEditable = editableCompartments[leafID]?.[1];
-        if (isEditable === false) {
-          event.preventDefault(); // Blocks all user input
-        }
-      },
-    });
-  };
-
-  // toggle the sync protection by reconfiguring the compartment
-
-  toggleEditable = (view: MarkdownView, editable: boolean) => {
-    const cmView = this.flowService.getEditorView(view.editor);
-
-    if (!cmView) return;
-
-    const leafID = this.flowService.getLeafId(view.leaf);
-    if (!this.editableCompartments[leafID]) return;
-    this.editableCompartments[leafID][1] = editable;
-    const compartment = this.editableCompartments[leafID][0];
-
-    if (compartment) {
-      cmView.dispatch({
-        effects: compartment.reconfigure([
-          this.preventEdit(this.editableCompartments, leafID),
-        ]),
-      });
-    }
-  };
 
   // Sync all leaves
   syncAllLeaves = async () => {
@@ -3110,10 +2986,8 @@ ${pseudoElement}
       }
       for (let view of flowLeaves[flowName]) {
         const text = view.editor.getValue();
-        const leafID = this.flowService.getLeafId(view.leaf);
-        this.toggleEditable(view, false); // block all user edits
+        const leafID = this.utilities.getLeafId(view.leaf);
         await this.syncBackToSource(flowName, text, leafID);
-        this.toggleEditable(view, true);
       }
     }
     this.textFlowOperation = false; // unsuspends modify listener
@@ -3185,7 +3059,10 @@ ${pseudoElement}
                 : regionSlice;
 
               // sync modified content
-              await this.flowService.safeCreateOrModifyFile(path, newContent);
+              await this.utilities.safeCreateOrModifyFile(
+                path,
+                newContent,
+              );
             } catch (error) {
               remainingPaths.push(path);
               new Notice(
@@ -3262,7 +3139,7 @@ ${pseudoElement}
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (view?.file?.path.endsWith(`${flowName}.md`)) {
           // rebuild immediately
-          await this.flowService.rebuildFlow(flowName, "switcher");
+          await this.settingsTabFunctions.rebuildFlow(flowName, "switcher");
         }
       } else {
         // if it's inactive, just flag for rebuild
@@ -3499,9 +3376,9 @@ ${pseudoElement}
       this.isUnloading = true;
     });
 
-    // set up the class so main.ts can act as an access hub to the functions in flowService.ts
+    // set up the class so main.ts can act as an access hub to the functions in settingsTabFunctions.ts
     // this needs to happen before layoutReady, or else there will be errors
-    this.flowService = new FlowService(this, this.app);
+    this.settingsTabFunctions = new settingsTabFunctions(this, this.app);
 
     // -------------------------------------------------------------------
 
@@ -3518,7 +3395,7 @@ ${pseudoElement}
       }
 
       // scroll bar
-      this.flowService.updateScrollbarVisibility();
+      this.utilities.updateScrollbarVisibility();
 
       // button for the flowSwitcher
       if (this.settings.switcherPos === "statusBar") {
@@ -3533,7 +3410,7 @@ ${pseudoElement}
           if (!view) {
             new Modals.FlowSwitcherModal(this.app, this).open();
           } else {
-            const leafID = this.flowService.getLeafId(view.leaf);
+            const leafID = this.utilities.getLeafId(view.leaf);
             new Modals.FlowSwitcherModal(this.app, this, leafID).open();
           }
         });
@@ -3547,7 +3424,7 @@ ${pseudoElement}
             if (!view) {
               new Modals.FlowSwitcherModal(this.app, this).open();
             } else {
-              const leafID = this.flowService.getLeafId(view.leaf);
+              const leafID = this.utilities.getLeafId(view.leaf);
               new Modals.FlowSwitcherModal(this.app, this, leafID).open();
             }
           },
@@ -3585,7 +3462,7 @@ ${pseudoElement}
 
       const leaves = this.app.workspace.getLeavesOfType("markdown");
       const targetLeaf = leaves.find(
-        (leaf) => this.flowService.getLeafId(leaf) === leafID,
+        (leaf) => this.utilities.getLeafId(leaf) === leafID,
       );
 
       for (const leaf of leaves) {

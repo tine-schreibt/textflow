@@ -272,9 +272,9 @@
   "main.cursorListener.notice tracking failed": "textFlow: Cursor tracking failed for ${flowName}!\nPlease close and reopen the flow.\nIf this error persists, reload your vault.",
   "main.cursorTracker.notice": "textFlow: External edit found. Flow ${flowName} was rebuilt.",
 
-  "setupFlowView.statsCheck initial": "textFlow: Initial check for external edits for ${flowName}",
-  "setupFlowView.statsCheck idle": "textFlow: Checking for external edits for ${flowName}",
-  "setupFlowView.statsCheck done": "textFlow: Check complete (${elapsedTime}s)",
+  "setUpFlow.statsCheck initial": "textFlow: Initial check for external edits for ${flowName}",
+  "setUpFlow.statsCheck idle": "textFlow: Checking for external edits for ${flowName}",
+  "setUpFlow.statsCheck done": "textFlow: Check complete (${elapsedTime}s)",
 
   "main.checkStats check stats feedback mtime": "textFlow: mtime differs for ${path}; flows have been flagged for rebuild.",
   "main.checkStats check stats feedback hash": "textFlow: hash differs for ${path}; flows have been flagged for rebuild.",
@@ -301,8 +301,8 @@
   "checkActiveRegion.notice overlap detected": "The current region ${regionName} is overlapping with the following flow(s): ${overlapString}",
 
   "---------- FLOW SERVICE": "A class that holds most of the functionality for the settings tab and related stuff",
-  "flowService.progressNotice.notice initial notice": "textFlow: Building ${this_flowName}: [oooooooooo] 0%",
-  "flowService.progressNotice.notice updated notice": "Building ${this_flowName}: ${bar} ${percent}%",
+  "settingsTabFunctions.progressNotice.notice initial notice": "textFlow: Building ${this_flowName}: [oooooooooo] 0%",
+  "settingsTabFunctions.progressNotice.notice updated notice": "Building ${this_flowName}: ${bar} ${percent}%",
 
   "createSystemFolder.notice folder created": "textFlow: ${textFlowSystemFolderName} created at ${newSystemFolderPath}",
 

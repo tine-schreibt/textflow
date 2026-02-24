@@ -110,7 +110,7 @@ export class MenuBar {
 
   // when we sync or rebuild, we need to refresh to see the updated button states
   public refresh(containerEl: HTMLElement) {
-    //this.plugin.flowService.callStack("refresh")
+    //this.plugin.settingsTabFunctions.callStack("refresh")
 
     // Detach all the old stuff
     this.detach();
@@ -130,7 +130,7 @@ export class MenuBar {
     }
   }
 
-  // used by setupFlowView to coordinate
+  // used by setUpFlow to coordinate
   public getFlowName(): string {
     return this.flowName;
   }
@@ -294,7 +294,7 @@ export class MenuBar {
             text,
           );
           if (startPosInFlow) {
-            this.plugin.flowService.scrollToPos(editor, startPosInFlow);
+            this.plugin.utilities.scrollToPos(editor, startPosInFlow);
           }
 
           this.filterList = [];
@@ -337,7 +337,7 @@ export class MenuBar {
 
   // ----------- THE MENU BAR ITSELF
   createMenuBarElement(): HTMLElement {
-    //this.plugin.flowService.callStack("createMenuBarElement")
+    //this.plugin.settingsTabFunctions.callStack("createMenuBarElement")
 
     if (
       // if the menuBar is MINIMISED
@@ -430,7 +430,10 @@ export class MenuBar {
         .setTooltip(this.plugin.t("switcherModal.buttons rebuild"))
         .onClick(async () => {
           if (goRebuild === "neutral" || goRebuild === "must") {
-            await this.plugin.flowService.rebuildFlow(this.flowName, "menuBar");
+            await this.plugin.settingsTabFunctions.rebuildFlow(
+              this.flowName,
+              "menuBar",
+            );
           }
         });
 
@@ -575,7 +578,7 @@ export class MenuBar {
           this.leafID
         ].leafMenuBarSettings.navDropdownSearchTerm = query;
         // save the query debouncedly
-        this.plugin.flowService.debouncedSaveSettings();
+        this.plugin.settingsTabFunctions.debouncedSaveSettings();
 
         // If no query (yet), return all paths
         if (!query) {
@@ -720,7 +723,7 @@ export class MenuBar {
               cursorDropdownEntryPos,
               "click",
               (event) => {
-                this.plugin.flowService.scrollToPos(editor, cursorPos);
+                this.plugin.utilities.scrollToPos(editor, cursorPos);
               },
             );
           }
@@ -756,7 +759,7 @@ export class MenuBar {
               "click",
               (event) => {
                 const editor = this.associatedView.editor as ObsidianEditor;
-                this.plugin.flowService.scrollToPos(editor, cursorPos);
+                this.plugin.utilities.scrollToPos(editor, cursorPos);
               },
             );
           }
@@ -789,7 +792,7 @@ export class MenuBar {
           .onClick(() => {
             const editor = this.associatedView.editor as ObsidianEditor;
             mostRecentCursor
-              ? this.plugin.flowService.scrollToPos(editor, mostRecentCursor)
+              ? this.plugin.utilities.scrollToPos(editor, mostRecentCursor)
               : "";
           });*/
       }
@@ -806,7 +809,7 @@ export class MenuBar {
         )
         .onClick(async () => {
           if (activeRegion) {
-            this.plugin.flowService.selectActiveRegion(
+            this.plugin.utilities.selectActiveRegion(
               this.flowName,
               activeRegion,
               this.associatedView.editor.getValue(),
@@ -826,7 +829,7 @@ export class MenuBar {
           this.plugin.t("menuBar.selectButton.setTooltip export flow"),
         )
         .onClick(async () => {
-          this.plugin.flowService.exportFlow(this.flowName);
+          this.plugin.utilities.exportFlow(this.flowName);
         });
 
       // a chevron to minimise

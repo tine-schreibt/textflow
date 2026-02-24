@@ -283,7 +283,7 @@
   "main.checkStats changes detected": "textFlow: Externe Bearbeitung festgestellt für:\n${changeString}",
 
   "main.statsOverlay initial notice": "textFlow: Check auf externe Edits für ${flowName}",
-  "setupFlowView.statsCheck done": "textFlow: Check abgeschlossen (${elapsedTime}s)",
+  "setUpFlow.statsCheck done": "textFlow: Check abgeschlossen (${elapsedTime}s)",
 
   "main.checkStatsForNote source note not found": "textFlow: Die Quellnotiz der aktiven Region konnte unter ${path} nicht gefunden werden. Bitte kopiere die Region, um Datenverlust zu vermeiden, und stelle sicher, dass die Quellnotiz nicht versehentlich gelöscht wurde, ehe du den Flow manuell neu baust.",
 
@@ -308,8 +308,8 @@
   "checkActiveRegion.notice overlap detected": "Die aktuelle Region \"${regionName}\" überschneidet sich mit den folgenden Flows: \n${overlapString}",
 
   "---------- FLOW SERVICE": "Eine Klasse die die meiste Funktionalität rund um den Settingtab usw. enthält",
-  "flowService.progressNotice.notice initial notice": "textFlow: Baue ${this_flowName}: [oooooooooo] 0%",
-  "flowService.progressNotice.notice updated notice": "Baue ${this_flowName}: ${bar} ${percent}%",
+  "settingsTabFunctions.progressNotice.notice initial notice": "textFlow: Baue ${this_flowName}: [oooooooooo] 0%",
+  "settingsTabFunctions.progressNotice.notice updated notice": "Baue ${this_flowName}: ${bar} ${percent}%",
 
   "createSystemFolder.notice folder created": "textFlow: Systemordner wurde an folgendem Ort erzeugt: ${newSystemFolderPath}",
 
