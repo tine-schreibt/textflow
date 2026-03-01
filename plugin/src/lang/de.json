@@ -9,8 +9,8 @@
   "basicSettings.headline": "Basic",
 
   "------ SET SYSTEM FOLDER": "Here the user chooses which path the system folder should have ----------------",
-  "setSystemFolder.setName choose existing folder": "Wähle einen bestehenden Ordner, in dem ${textFlowSystemFolderName} erzeugt werden soll",
-  "setSystemFolder.setDesc.1 what is system folder used for": "TextFlow braucht einen (versteckten) Ordner, um deine Flows darin zu speichern.",
+  "setSystemFolder.setName choose existing folder": "Speicherort für ${textFlowSystemFolderName}",
+  "setSystemFolder.setDesc.1 what is system folder used for": "Bitte gib den Pfad zu einem existierenden Ordner ein, in dem textFlow einen (unsichtbaren) Ordner für deine Flows anlegen kann.",
   "setSystemFolder.setDesc.2 how to enter root": "Gib / oder . ein, um den Root-Ordner auszuwählen.",
   "setSystemFolder.addButton.setButtonText.alt create": "Erzeugen",
   "setSystemFolder.addButton.setButtonText.alt move": "Verschieben",
@@ -19,7 +19,14 @@
 
   "sysFolder please setup": "textFlow: Bitte richte in den Einstellungen einen Systemordner ein.",
 
-  "------ SWITCHER MODAL POSITION": "How do they want to access the flow switcher modal? ----------------",
+  "------ MENU BAR DEFAULT": "Wie soll die Menüleiste standardmäßig angezeigt werden? ----------------",
+  "menuBarDefault.setName default menu bar setting": "Standard der Menüleiste",
+  "menuBarDefault.setName desc": "Wie soll die Menüleiste standardmäßig angezeigt werden?",
+  "menuBarDefault.addDropdown.addOption.alt min": "Minimiert",
+  "menuBarDefault.addDropdown.addOption.alt max": "Maximiert",
+
+  "------ SWITCHER MODAL POSITION": "Wo soll das SwitcherModal zugänglich sein? ----------------",
+
   "switcherModalPosition.setName access flow switcher via": "Öffne den Flow-Switcher per...",
   "switcherModalPosition.setDesc changes need reload to take effect": "Änderungen treten erst nach einem Neustart in Kraft.",
   "switcherModalPosition.addDropdown.addOption.alt Status bar": "Statusleiste",
@@ -27,13 +34,13 @@
   "switcherModalPosition.addDropdown.addOption.alt command palette only": "nur Befehlspalette",
 
   "------ EXPLORER DECORATION": "Choose unicode characters to decorate source notes in file explorer ----------------",
-  "explorerDeco.setName.1 choose deco": "Wähle eine Dekoration für den Datei-Explorer",
+  "explorerDeco.setName.1 choose deco": "Dekoration für den Datei-Explorer",
   "explorerDeco.setDesc.2 what does deco do": "Kennzeichnet die Quellnotizen aller aktiven (geöffneten) Flows.",
   "explorerDeco.setDesc.3 what do symbols mean": "Erstes Symbol: Aktuell; zweites Symbol: Wartet auf Synchronisation.",
   "explorerDeco.setDesc.4 how to set colour": "Die Farbe ist der Akzent, den du in Obsidians Einstellungen unter 'Darstellung' ausgewählt hast.",
 
   "-------- ACTIVE REGION HIGHLIGHT": "Choose a decoration style for the active region's source note",
-  "activeRegionDeco.setName choose highlight type for active region": "Wähle ein Highlight für die aktive Region",
+  "activeRegionDeco.setName choose highlight type for active region": "Highlight für die aktive Region im Dateiexplorer",
   "activeRegionDeco.setDesc what does this do?": "Wie soll die aktive Region hervorgehoben werden?",
   "activeRegionDeco.addOption.0 off": "Keine Hervorhebung",
   "activeRegionDeco.addOption.1 background accent colour": "Hintergrund: Akzentfarbe",
@@ -47,9 +54,12 @@
   "qol.createSpan.text quality of life settings": "Mehr...",
 
   "qol.hideExplorerDeco.setName hide explorer deco": "Verstecke DateiExplorer-Deco",
+  "qol.navListener.setName enable explorer nav": "Navigation per Datei-Explorer einschalten",
+  "qol.navListener.setDesc what is enable explorer nav for": "Schalte diese Einstellung aus, falls du Multiselect brauchst. Es gibt auch einen Befehl dafür.",
 
-  "qol.navListener.setName disable explorer nav": "Navigation per Datei-Explorer ausschalten",
-  "qol.navListener.setDesc what is disable explorer nav for": "Falls du die Multi-Auswahl brauchst. Es gibt auch einen Befehl dafür.",
+  "menuBarTopMargin.setName top margin": "Oberer Abstand der Menüleiste",
+  "menuBarTopMargin.setName desc": "Falls du noch andere Menüleisten benutzt, die textFlows Leiste verdecken.",
+  "menuBarTopMargin.setName placeholder": "Gib eine Zahl ein.",
 
   "qol.scrollbar.setName hide scroll bar": "Scrollbar verstecken",
   "qol.scrollbar.setName.1 what is hide scroll bar for": "Wenn lange Notizen/Abschnitte dargestellt werden, fängt die Scrollbar an zu zucken. Falls dich das nervt, kannst du sie verstecken",
@@ -65,8 +75,8 @@
   "qol.hash.setDesc.4 always hash": "Vergleicht immer Hashes - falls du deinem Sync-Tool nicht vertraust.",
   "qol.hash.addDropdown.addOption.1 don't check": "Nicht prüfen.",
 
-  "qol.hidesystemFolder.setName hide system folder": "${textFlowSystemFolderName} verstecken",
-  "qol.hidesystemFolder.setDesc.1 hiding is recommended": "Es wird empfohlen, diesen Ordner versteckt zu halten, um seine Inhalte zu schützen, aber letztendlich ist es eine ästhetische/praktische Entscheidung.",
+  "qol.showsystemFolder.setName show system folder": "${textFlowSystemFolderName} anzeigen",
+  "qol.showsystemFolder.setDesc.1 hiding is recommended": "Es wird empfohlen, den Ordner versteckt zu halten, um seine Inhalte zu schützen, aber letztendlich ist es eine ästhetische/praktische Entscheidung.",
   "qol.hidesystemFolder.setDesc.2 edits are still tracked": "Wenn du einen Flow direkt aus diesem Ordner heraus öffnest, wird er ebenfalls getrackt und hat Schreibschutz usw.",
 
   "-------- CREATE FLOWS": "Here the user can define flows-------------------------------------",
@@ -125,7 +135,7 @@
 
   "folderIncludeInput.setDesc.1 sources": "Schließe Ordner per PFAD EIN",
   "folderIncludeInput.setDesc.2 default is root": "Lasse das Feld leer, um alles einzuschließen.",
-  "folderIncludeInput.setDesc.3 how to exclude subfolders": "Gib einen Pfad mit / am Ende ein um seine Unterordner auszuschließen.",
+  "folderIncludeInput.setDesc.3 how to exclude subfolders": "Beende einen Pfad mit / um Unterordner auszuschließen.",
   "folderIncludeInput.setPlaceholder": "root",
 
   "folderExcludeInput.setDesc.1 choose paths to exclude": "Schließe Ordner per PFAD AUS.",
@@ -168,7 +178,7 @@
   "flowDisplay.flowShow.setDesc.2 inclusion criteria": "Einschlusskriterien: ${inclusionString}",
   "flowDisplay.flowShow.setDesc.3 exclusion criteria": "Ausschlusskriterien: ${exclusionString}",
 
-  "flowDisplay.rebuildButton.setButtonText (re)build": "(Neu)bauen",
+  "flowDisplay.rebuildButton.setButtonText (re)build": "Neubauen",
   "flowDisplay.editButton.setButtonText edit": "Bearbeiten",
   "flowDisplay.deleteButton.setButtonText delete definition": "Definition löschen",
 
@@ -225,7 +235,7 @@
 
   "-------------- FLOW SWITCHER MODAL": "Modal for opening and closing flows--------",
   "switcherModal.info no active flows found": "Keine aktiven Flows gefunden",
-  "switcherModal.info overlapping regions": "Diese Region ist auch in anderen Flows enthalten: ${overlapString}",
+  "switcherModal.info overlapping regions": "Überschneidet sich mit: ${overlapString}",
   "switcherModal.info no inactive flows found": "Keine inaktiven Flows gefunden",
   "switcherModal.buttons new tab": "Neuer Tab",
   "switcherModal.buttons split right": "Rechts teilen",
@@ -237,8 +247,8 @@
   "backup.headline": "Deine Backups",
   "backup.explanation empty": "Du hast keine Backups. Erstelle oder editiere einen Flow, um ein Backup zu erzeugen.",
   "backup.explanation select": "Klicke einmal, um auszuwählen, ein zweites mal um wieder abzuwählen.",
-  "backup.restoreButton.setButtonText replace": "Ersetze existierende Definition",
-  "backup.restoreButton.setButtonText restore": "Speichere als neue Definition",
+  "backup.restoreButton.setButtonText replace": "Existierende Definition ersetzen",
+  "backup.restoreButton.setButtonText restore": "Als neue Definition speichern",
   "backup.deleteButton.setButtonText delete": "Löschen",
   "backup.okayButton.setButtonText okay": "Okay",
   "backup.dismissButton.setButtonText dismiss": "Abbrechen",
@@ -289,6 +299,7 @@
 
   "main.cursorListener.notice tracking failed": "textFlow:\n Cursor-Tracking für ${flowName} fehlgeschlagen!\nBitte schließe und öffne den Flow erneut.\nWenn dieser Fehler weiterhin auftritt, lade deinen Vault neu.",
   "main.cursorTracker.notice": "textFlow: Externe Bearbeitung festgestellt. Flow ${flowName} wurde neugebaut.",
+  "Compartment error": "textFlow: Compartments konnten nicht gefunden werden.\nBitte schließe den Flow und öffne ihn erneut.\nFalls das nicht hilft, starte Obsidian neu.",
 
   "textChangeListener.notice error setting up listener": "textFlow Plugin: Fehler beim Einrichten des Trackings von Änderungen.\nBitte melde dieses Problem auf Github.",
 
@@ -311,7 +322,7 @@
   "settingsTabFunctions.progressNotice.notice initial notice": "textFlow: Baue ${this_flowName}: [oooooooooo] 0%",
   "settingsTabFunctions.progressNotice.notice updated notice": "Baue ${this_flowName}: ${bar} ${percent}%",
 
-  "createSystemFolder.notice folder created": "textFlow: Systemordner wurde an folgendem Ort erzeugt: ${newSystemFolderPath}",
+  "createSystemFolder.notice folder created": "textFlow: Sytemordner erfolgreich erzeugt - /${newSystemFolderPath}",
 
   "createFlowDefinition.notice enter bookmark group": "textFlow: Bitte gib eine Lesezeichengruppe ein.",
   "createFlowDefinition.notice definition leads to empty flow": "textFlow: Deine Kriterien erzeugt einen leeren Flow. Bitte prüfe sie auf Tippfehler und/oder gestalte sie weniger restriktiv.",

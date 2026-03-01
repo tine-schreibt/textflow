@@ -50,8 +50,10 @@ export interface TextFlowSettings {
   activeRegionHighlight: string;
   explorerDecoDropdownOpen: boolean;
   explorerListener: boolean;
-  hideScrollbar: string;
+  menuBarDefault: MenuBarDisplayState;
+  menuBarTopMargin: string;
   switcherPos: string;
+  hideScrollbar: string;
   flowBuildBasket: flowBuildBasket;
   activeRegions: { [key: string]: { [key: string]: ActiveRegion } }; // flowName[leafID] = ActiveRegion
   flows: { [key: string]: FlowDef };
@@ -154,7 +156,8 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
   activeRegionHighlight: "bgAccent",
   explorerDecoDropdownOpen: false,
   explorerListener: true,
-  hideScrollbar: "none",
+  menuBarDefault: "max",
+  menuBarTopMargin: "0",
   switcherPos: "statusBar",
   flowBuildBasket: {
     createOrEdit: "create",
@@ -170,6 +173,7 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
     lastActiveLeaves: [],
     persistentCursors: {},
   },
+  hideScrollbar: "none",
   activeRegions: {},
   flows: {},
 };
@@ -237,6 +241,8 @@ export type DVNote = {
 
 // ---- other assorted types and interfaces
 
+export type ActivationTuple = [boolean, boolean];
+
 // needed for scroll into view stuff
 export interface ObsidianEditor extends Editor {
   cm?: EditorView;
@@ -274,7 +280,7 @@ export type DecoStyle = "neutral" | "unsynced" | "none" | "active";
 // stuff that's used by the menuBar
 export type DropdownState = "hide" | "show";
 
-export type MenuBarDisplayState = "show" | "hide";
+export type MenuBarDisplayState = "max" | "min";
 
 // the nav dropdown
 export type SearchItem = { path: string; displayName: string };

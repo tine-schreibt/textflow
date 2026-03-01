@@ -556,7 +556,7 @@ button.setting-tab-button-spacing {
   display: grid;
   grid-template-columns: repeat(7, auto);
   gap: 8px;
-  background: var(--background-primary); /* Ensure it has a background */
+  background: var(--background-primary);
   border-radius: 4px;
   box-shadow: var(--input-shadow);
   font-size: var(--font-ui-small);
@@ -567,25 +567,38 @@ button.setting-tab-button-spacing {
 .textflow-menu-bar-min {
   position: absolute;
   z-index: 1;
-
   margin-left: 0px;
   right: auto;
   width: 28px;
-  /*height: 28px;*/
   display: inline-flex;
   justify-content: inline-flex;
-
-  /*background-color: rgb(from var(--background-secondary) r g b / 1);*/
-  /*background-color: rgb(from var(--color-accent) r g b / 0.05);*/
-  background-color: var(--background-primary);
   border-radius: 4px;
-  box-shadow: var(--input-shadow);
   pointer-events: none;
 }
 
 /* re-enable interactions for the actual button(s) inside */
 .textflow-menu-bar-min > * {
   pointer-events: auto;
+}
+
+.textflow-menu-bar-min-sync-neutral {
+  background: var(--background-primary);
+  color: var(--text-faint);
+}
+
+.textflow-menu-bar-min-sync-must {
+  background: var(--background-primary);
+  color: var(--text-accent);
+}
+
+/*.textflow-menu-bar-min-sync-must svg {
+  color: var(--text-accent);
+  filter: drop-shadow(0px 0px 1px var(--text-accent));
+}*/
+
+.textflow-menu-bar-min-rebuild-must {
+  background: var(--background-primary);
+  color: var(--text-accent);
 }
 
 /*subtle highlight for syncs*/

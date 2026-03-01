@@ -1,7 +1,15 @@
-import { App, ButtonComponent, Editor, MarkdownView, setIcon } from "obsidian";
+import {
+  App,
+  ButtonComponent,
+  Editor,
+  MarkdownView,
+  Notice,
+  setIcon,
+} from "obsidian";
 import { EditorView } from "@codemirror/view";
 import Fuse, { FuseResult } from "fuse.js";
 import type TextFlowPlugin from "../main";
+import path, { dirname, basename } from "path";
 
 interface ObsidianEditor extends Editor {
   cm?: EditorView;
@@ -36,8 +44,9 @@ export class MenuBar {
 
   // ------ uitilities ---------
   // --- attachment of the menu bar
+  // <slop>
   public attach(containerEl: HTMLElement) {
-    // check that element isn't attached already
+    // check that we're talking about the same thing
     if (containerEl === this.associatedView.contentEl) {
       this.detach();
 
@@ -91,6 +100,7 @@ export class MenuBar {
   };
 
   // To keep track of all the listeners we need to add for our custom dropdowns
+  // the whole listener business is AI slop
   private addManagedListener(
     element: HTMLElement | Document,
     type: string,
@@ -108,9 +118,10 @@ export class MenuBar {
     this.listeners = [];
   }
 
+  private lastSingleMenuBarRefresh = 0;
   // when we sync or rebuild, we need to refresh to see the updated button states
   public refresh(containerEl: HTMLElement) {
-    //this.plugin.settingsTabFunctions.callStack("refresh")
+    //this.plugin.settingsTabFunctions.callStack("refresh");
 
     // Detach all the old stuff
     this.detach();
@@ -177,17 +188,17 @@ export class MenuBar {
 
   // construct text for the dropdown option
   private makeNavPath = (path: string) => {
-    let noteName = "";
-    if (!path.startsWith("#")) {
-      const pathArray = path.split("/");
-      noteName = `${pathArray[pathArray.length - 1].replace(".md", "")}`;
+    if (path.startsWith("#")) {
+      path = path.replace("#", "");
     } else {
-      noteName = `${path.replace("#", "")}`;
+      path = basename(path).replace(".md", "");
     }
-    return noteName;
+    return path;
   };
 
   // gather overlap so we can mark these regions
+  private overlapText = "";
+
   private getOverlap = () => {
     // one array for flow names, the other for paths
     const overlap: string[][] = [[], []];
@@ -229,7 +240,6 @@ export class MenuBar {
       // set up a bunch of variables we'll need later
       let flowOrder = 0;
       let titleClass = "";
-      let overlapText = "";
       let isActiveRegion = false;
 
       // find the flow order and check active state while we're at it
@@ -258,7 +268,7 @@ export class MenuBar {
       if (overlap[1].includes(path)) {
         navPath = `${navPath} ⚭`;
         titleClass = `underlined`;
-        overlapText =
+        this.overlapText =
           overlap[0].join(",").length > 0
             ? `${this.plugin.t("menuBar flow overlap")} ${overlap[0].join(
                 ", ",
@@ -275,7 +285,7 @@ export class MenuBar {
           cls: titleClass,
           text: `- ${navPath}`,
           attr: {
-            "aria-label": overlapText,
+            "aria-label": this.overlapText,
           },
         });
 
@@ -339,27 +349,70 @@ export class MenuBar {
   };
 
   // ----------- THE MENU BAR ITSELF
-  createMenuBarElement(): HTMLElement {
-    //this.plugin.settingsTabFunctions.callStack("createMenuBarElement")
+  createMenuBarElement = (): HTMLElement => {
+    //this.plugin.settingsTabFunctions.callStack("createMenuBarElement");
 
+    // being paranoid about the TRACKING COMPARTMENTS
+    const cmView = this.plugin.settingsTabFunctions.getEditorView(
+      this.associatedView.editor,
+    );
+
+    let compartmentsGood = false;
+
+    if (cmView) {
+      compartmentsGood = this.plugin.checkCompartments(this.leafID, cmView);
+    }
+
+    if (!compartmentsGood) {
+      //  new Notice(this.plugin.t("Compartment error"), 10000);
+    }
+
+    // if the menuBar is MINIMISED
     if (
-      // if the menuBar is MINIMISED
       this.plugin.settings.activeRegions[this.flowName][this.leafID]
-        .leafMenuBarSettings.menuBarDisplayState === "hide"
+        .leafMenuBarSettings.menuBarDisplayState === "min"
     ) {
+      let goSync = "neutral";
+      let goRebuild = "neutral";
+
+      // check if there is unsynced stuff for the flow
+      if (
+        this.plugin.settings.flows[this.flowName].unsyncedRegionsArray.length >
+        0
+      ) {
+        goSync = "must"; // must sync
+      }
+      // check if flow is flagged for rebuild
+      if (
+        this.plugin.settings.flows[this.flowName].flaggedForRebuild ||
+        this.plugin.flowOutOfSync.includes(this.flowName)
+      ) {
+        goRebuild = "must";
+      }
+
+      if (!compartmentsGood) {
+        goRebuild = "must";
+      }
+
+      let style = "textflow-menu-bar-min-sync-neutral";
+      if (goSync === "must") style = "textflow-menu-bar-min-sync-must";
+      if (goRebuild === "must") style = "textflow-menu-bar-min-rebuild-must";
+
+      // now build the bar
       const menuBarEl = this.associatedView.contentEl.createDiv({
         cls: `textflow-menu-bar-min`,
       });
       const maximiseButton = new ButtonComponent(menuBarEl);
       maximiseButton
-        .setIcon("chevron-right")
+        .setIcon(compartmentsGood ? "chevron-right" : "alert-triangle")
         .setClass("spacing")
         .setClass("clickable-icon")
+        .setClass(style)
         .setTooltip(this.plugin.t("Expand menu bar"))
         .onClick(() => {
           this.plugin.settings.activeRegions[this.flowName][
             this.leafID
-          ].leafMenuBarSettings.menuBarDisplayState = "show";
+          ].leafMenuBarSettings.menuBarDisplayState = "max";
           this.plugin.saveSettings();
           this.plugin.refreshMenuBars();
         });
@@ -458,7 +511,7 @@ export class MenuBar {
         activeRegionNoteName = this.makeNavPath(activeRegion);
         const overlap = this.getOverlap();
         if (overlap[1].includes(activeRegion)) {
-          activeRegionNoteName = `${activeRegion} ⚭`;
+          activeRegionNoteName = `${activeRegionNoteName} ⚭`;
           titleClass = `underlined`;
         }
       }
@@ -476,6 +529,9 @@ export class MenuBar {
 
       const navHeadline = navigationDropdown.createDiv({
         cls: "menu-bar-navigation-dropdown-headline",
+        attr: {
+          "aria-label": this.overlapText,
+        },
       });
 
       // headline text and icon
@@ -562,7 +618,7 @@ export class MenuBar {
         }));
 
         const iconSpan = navHeadline.createSpan();
-        setIcon(iconSpan, "chevrons-down-up");
+        //setIcon(iconSpan, "chevrons-down-up");
 
         const fuse = new Fuse(searchItems, {
           keys: ["displayName"],
@@ -838,14 +894,14 @@ export class MenuBar {
       // a chevron to minimise
       const minimiseButton = new ButtonComponent(menuBarEl);
       minimiseButton
-        .setIcon("chevron-left")
+        .setIcon(compartmentsGood ? "chevron-left" : "alert-triangle")
         .setClass("spacing")
         .setClass("clickable-icon")
         .setTooltip(this.plugin.t("menubar Collapse menu bar"))
         .onClick(() => {
           this.plugin.settings.activeRegions[this.flowName][
             this.leafID
-          ].leafMenuBarSettings.menuBarDisplayState = "hide";
+          ].leafMenuBarSettings.menuBarDisplayState = "min";
           this.plugin.saveSettings();
           this.plugin.refreshMenuBars();
         });
@@ -853,5 +909,5 @@ export class MenuBar {
       // there we go.
       return menuBarEl;
     }
-  }
+  };
 }

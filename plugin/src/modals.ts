@@ -233,6 +233,12 @@ export class CreateFlowFromFolder extends Modal {
           this.plugin.settings.flowBuildBasket,
         );
 
+        // build
+        this.plugin.settingsTabFunctions.rebuildFlow(
+          this.plugin.settings.flowBuildBasket.flowName,
+          "settingsTab",
+        );
+
         // update conflicts,
         this.plugin.settingsTabFunctions.syncConflictObjects(
           this.plugin.settings.flowBuildBasket,

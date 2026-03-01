@@ -185,11 +185,14 @@ export default class TextFlowPlugin extends Plugin {
   private i18n: Record<string, any> = {}; // localisation
 
   //--- some variables to keep track of things
+  private lastGlobalMenuBarRefresh = 0;
   private mostRecentActiveFlowLeaf: WorkspaceLeaf | null = null;
-  private lastActiveRegion: string = "";
+  private lastActiveRegion: string = "/";
   private lastActivity: { [key: string]: number } = {};
   private inactivityThreshold: number = 5 * 60 * 1000;
-  private alreadyActivated: { [key: string]: { [key: string]: boolean } } = {}; // flowName: {leafID: true}
+  private alreadyActivated: {
+    [key: string]: { [key: string]: Types.ActivationTuple };
+  } = {}; // flowName: {leafID: [activated, cursorFired]}
   private listenerBasket: { [key: string]: Types.ListenerBasketItem } = {}; // is cleaned up in the manageActiveRegions function
 
   // --- flow out of sync flag to prevent user from creating syncing errors when tracking fails
@@ -545,13 +548,13 @@ export default class TextFlowPlugin extends Plugin {
           }
           // toggle the setting
           this.settings.activeRegions[flowName][leafID].leafMenuBarSettings
-            .menuBarDisplayState === "show"
+            .menuBarDisplayState === "max"
             ? (this.settings.activeRegions[flowName][
                 leafID
-              ].leafMenuBarSettings.menuBarDisplayState = "hide")
+              ].leafMenuBarSettings.menuBarDisplayState = "min")
             : (this.settings.activeRegions[flowName][
                 leafID
-              ].leafMenuBarSettings.menuBarDisplayState = "show");
+              ].leafMenuBarSettings.menuBarDisplayState = "max");
           await this.saveSettings();
           this.refreshMenuBars();
         }
@@ -1668,12 +1671,14 @@ ${pseudoElement}
         if (this.explorerClickListenerActive) {
           return;
         }
+        console.log("active-leaf-change");
         this.leafSwitching();
       }),
     );
 
     this.registerEvent(
       this.app.workspace.on("layout-change", async () => {
+        console.log("layout-change");
         this.leafSwitching();
       }),
     );
@@ -1726,6 +1731,16 @@ ${pseudoElement}
                 if (!plugin.settings.flows[flowName]) {
                   throw new Error(`Flow ${flowName} not found in settings`);
                 }
+
+                // register activity so textChange listener can start firing
+                if (plugin.alreadyActivated[flowName]) {
+                  if (plugin.alreadyActivated[flowName][leafID]) {
+                    if (!plugin.alreadyActivated[flowName][leafID][1]) {
+                      plugin.alreadyActivated[flowName][leafID][1] = true;
+                    }
+                  }
+                }
+
                 // this sets off a chain of functions which updates the active Region
                 await plugin.checkActiveRegion(
                   flowName,
@@ -1785,10 +1800,17 @@ ${pseudoElement}
             }
 
             textChangeDebounceTimeout = setTimeout(async () => {
-              // Prevent rebuild from registering as text change
+              // Prevent rebuilds and app reload from registering as text change
               if (plugin.settings.flows[flowName].isFreshBuild) {
                 plugin.settings.flows[flowName].isFreshBuild = false;
                 return;
+              }
+              if (plugin.alreadyActivated[flowName]) {
+                if (plugin.alreadyActivated[flowName][leafID]) {
+                  if (!plugin.alreadyActivated[flowName][leafID][1]) {
+                    return;
+                  }
+                }
               }
 
               // Ensure that active region for the leaf is of type 'file'
@@ -1798,6 +1820,12 @@ ${pseudoElement}
               const activeRegionPath =
                 plugin.settings.activeRegions[flowName][leafID].path;
               if (!activeRegionPath) return;
+
+              let callRefresh =
+                plugin.settings.flows[flowName].unsyncedRegionsArray.length ===
+                0
+                  ? true
+                  : false;
 
               if (
                 !plugin.settings.flows[flowName].unsyncedRegionsArray.includes(
@@ -1820,7 +1848,9 @@ ${pseudoElement}
                     }
                   }
                 }
+
                 plugin.lastActivity[flowName] = Date.now();
+
                 // Add to unsynced array
                 plugin.settings.flows[flowName].unsyncedRegionsArray.push(
                   activeRegionPath,
@@ -1828,9 +1858,13 @@ ${pseudoElement}
                 await plugin.saveSettings();
               }
 
-              // update the menu bar to show unsynced status
-              if (view.menuBar) {
-                view.menuBar.refresh(view.contentEl);
+              if (callRefresh) {
+                console.log("text change calling refresh");
+                // update the menu bar to show unsynced status
+                if (view.menuBar) {
+                  view.menuBar.refresh(view.contentEl);
+                }
+                callRefresh = false;
               }
 
               // update source decoration
@@ -1977,6 +2011,25 @@ ${pseudoElement}
         });
       }
     }
+  };
+
+  checkCompartments = (leafID: string, cmView: EditorView) => {
+    const typesArray = ["cursor", "textChange", "divider"];
+    for (let type of typesArray) {
+      if (!this.listenerBasket[leafID]) return false;
+      if (!this.listenerBasket[leafID][type]) return false;
+      if (!this.listenerBasket[leafID][type].compartment.get(cmView.state))
+        return false;
+
+      // if the extension is present
+      const extension = this.listenerBasket[leafID][type].compartment.get(
+        cmView.state,
+      );
+      if (!extension) return false;
+      if (extension === this.listenerBasket[leafID][type].emptyReference)
+        return false;
+    }
+    return true;
   };
 
   // -------- helpers for the fileExplorerClickListener
@@ -2402,7 +2455,7 @@ ${pseudoElement}
         path: path ? path : "",
         invisibleUUID: targetObject.invisibleUUID,
         leafMenuBarSettings: {
-          menuBarDisplayState: "show",
+          menuBarDisplayState: this.settings.menuBarDefault,
           navDropdownState: "hide",
           navDropdownSearchTerm: undefined,
           cursorDropdownState: "hide",
@@ -2630,21 +2683,29 @@ ${pseudoElement}
       this.lastActivity[flowName] = Date.now();
     }
 
-    // ------------- PROTECTION ---------------------
-    // set up the editor with its other extensions and listeners
-    await this.makeCompartments(view);
-
     // ------------- REBUILDING ---------------------
     // rebuild if appropriate
     if (this.settings.flows[flowName].flaggedForRebuild) {
       await this.settingsTabFunctions.rebuildFlow(flowName, "setUpFlow");
+      // Do a blanket refresh of all the menu bars involved with the flow
+      const allLeaves = this.app.workspace.getLeavesOfType("markdown");
+      for (const leaf of allLeaves) {
+        const view = leaf.view as MarkdownView;
+
+        const filePath = view.file?.path;
+        if (!filePath) continue;
+
+        const otherFlowName = this.isFlowFile(filePath);
+        if (!otherFlowName || otherFlowName != flowName) continue;
+
+        view.menuBar?.refresh(view.contentEl);
+      }
     }
 
     // ------------- VISUALS ---------------------
     // this has to happen first so the menuBar can just be set up
     await this.manageActiveRegions();
-    // now do the menu bar
-    this.setupMenuBar(view, flowName);
+
     // Update the switcher modal in case it's open
     if (this.modalUpdateCallback) {
       this.modalUpdateCallback();
@@ -2656,12 +2717,20 @@ ${pseudoElement}
     // we need this so outline navigation works (because it acts as a fresh open)
     if (!this.alreadyActivated[flowName]) {
       this.alreadyActivated[flowName] = {};
-      this.alreadyActivated[flowName][leafID] = true;
+      this.alreadyActivated[flowName][leafID] = [true, false];
       this.settingsTabFunctions.restoreCursorPos(flowName, view, leafID);
+      // now do the menu bar
+      this.setupMenuBar(view, flowName);
     } else if (!this.alreadyActivated[flowName][leafID]) {
-      this.alreadyActivated[flowName][leafID] = true;
+      this.alreadyActivated[flowName][leafID] = [true, false];
       this.settingsTabFunctions.restoreCursorPos(flowName, view, leafID);
+      // now do the menu bar
+      this.setupMenuBar(view, flowName);
     }
+
+    // ------------- PROTECTION ---------------------
+    // set up the editor with its other extensions and listeners
+    await this.makeCompartments(view);
 
     // ------------- HOUSEKEEPING ---------------------
     // scrollbar hiding if necessary
@@ -2681,20 +2750,6 @@ ${pseudoElement}
       ].lastActiveLeaves.filter((id) => id !== leafID);
     }
     this.settings.flows[flowName].lastActiveLeaves.unshift(leafID);
-
-    // Do a blanket refresh of all the menu bars involved with the flow
-    const allLeaves = this.app.workspace.getLeavesOfType("markdown");
-    for (const leaf of allLeaves) {
-      const view = leaf.view as MarkdownView;
-
-      const filePath = view.file?.path;
-      if (!filePath) continue;
-
-      const otherFlowName = this.isFlowFile(filePath);
-      if (!otherFlowName || otherFlowName != flowName) continue;
-
-      view.menuBar?.refresh(view.contentEl);
-    }
   };
 
   // ---- Make sure flows are set up when they are activated
@@ -2842,8 +2897,6 @@ ${pseudoElement}
 
       const flowName = this.isFlowFile(filePath);
       if (!flowName) continue;
-
-      view.menuBar?.refresh(view.contentEl);
     }
   };
 
@@ -2910,7 +2963,6 @@ ${pseudoElement}
     view.menuBar.refresh(view.contentEl);
   };
 
-  // mostly here to handle uninitialised leaves
   refreshMenuBars = async () => {
     if (this.isRebuilding) return;
 
@@ -3078,7 +3130,7 @@ ${pseudoElement}
       this.settings.flows[flowName].unsyncedRegionsArray = remainingPaths;
 
       this.manageCursorPos(flowName, leafID);
-      await this.refreshMenuBars();
+      this.refreshMenuBars();
       await this.saveSettings();
       if (this.settings.explorerDecoStyle[0] != "--") {
         this.decorateSourceNotes("update");

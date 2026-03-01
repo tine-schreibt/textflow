@@ -9,8 +9,8 @@
   "basicSettings.headline": "Basic",
 
   "------ SET SYSTEM FOLDER": "Here the user chooses which path the system folder should have ----------------",
-  "setSystemFolder.setName choose existing folder": "Choose an existing folder in which to put ${textFlowSystemFolderName}.",
-  "setSystemFolder.setDesc.1 what is system folder used for": "TextFlow needs a (hidden) system folder to store its flows in.",
+  "setSystemFolder.setName choose existing folder": "${textFlowSystemFolderName} location",
+  "setSystemFolder.setDesc.1 what is system folder used for": "Please provide the path to an existing folder in which textFlow can put the (invisible) folder with your flows.",
   "setSystemFolder.setDesc.2 how to enter root": "Enter / or . to choose the root folder.",
   "setSystemFolder.addButton.setButtonText.alt create": "Create",
   "setSystemFolder.addButton.setButtonText.alt move": "Move",
@@ -18,8 +18,14 @@
   "setSystemFolder.addButton.notice failed to move folder": "textFlow: Failed to move folder: ${error_message}",
   "sysFolder please setup": "textFlow: Please set up a system folder in the settings tab.",
 
+  "------ MENU BAR DEFAULT": "Default state of menu bar ----------------",
+  "menuBarDefault.setName default menu bar setting": "Menu bar default",
+  "menuBarDefault.setName desc": "What default state do you want for the menu bar?",
+  "menuBarDefault.addDropdown.addOption.alt min": "Collapsed",
+  "menuBarDefault.addDropdown.addOption.alt max": "Expanded",
+
   "------ SWITCHER MODAL POSITION": "How do they want to access the flow switcher modal? ----------------",
-  "switcherModalPosition.setName access flow switcher via": "Access to the flow switcher modal via...",
+  "switcherModalPosition.setName access flow switcher via": "Access the flow switcher modal via...",
   "switcherModalPosition.setDesc changes need reload to take effect": "Changes need a vault reload to take effect.",
   "switcherModalPosition.addDropdown.addOption.alt Status bar": "Status bar",
   "switcherModalPosition.addDropdown.addOption.alt ribbon": "Ribbon",
@@ -36,13 +42,13 @@
   "backup.dismissButton.setButtonText dismiss": "Dismiss",
 
   "------ EXPLORER DECORATION": "Choose unicode characters to decorate source notes in file explorer ----------------",
-  "explorerDeco.setName.1 choose deco": "Choose a file explorer decoration",
+  "explorerDeco.setName.1 choose deco": "File explorer decoration",
   "explorerDeco.setDesc.2 what does deco do": "Marks the source notes of all currently active (opened) flows.",
   "explorerDeco.setDesc.3 what do symbols mean": "First symbol: up to date; second symbol: waiting for sync.",
   "explorerDeco.setDesc.4 how to set colour": "The colour is the accent you chose in Obsidian's 'Appearance' settings.",
 
   "-------- ACTIVE REGION HIGHLIGHT": "Choose a decoration style for the active region's source note",
-  "activeRegionDeco.setName choose highlight type for active region": "Choose active region highlight style",
+  "activeRegionDeco.setName choose highlight type for active region": "Active region highlight style in file explorer",
   "activeRegionDeco.setDesc what does this do?": "How do you want the active region's source note to be highlighted?",
   "activeRegionDeco.addOption.0 off": "Don't highlight",
   "activeRegionDeco.addOption.1 background accent colour": "Background: Accent colour",
@@ -57,8 +63,12 @@
 
   "qol.hideExplorerDeco.setName hide explorer deco": "Hide explorer deco",
 
-  "qol.navListener.setName disable explorer nav": "Disable navigation via file explorer",
-  "qol.navListener.setDesc what is disable explorer nav for": "Toggle this on if you need multi-select to work correctly. There's a command, too.",
+  "qol.navListener.setName enable explorer nav": "Enable navigation via file explorer",
+  "qol.navListener.setDesc what is enable explorer nav for": "Toggle this off if you need multi select to work correctly. There's a command, too.",
+
+  "menuBarTopMargin.setName top margin": "Menu bar top margin",
+  "menuBarTopMargin.setName desc": "In case you're using other menu bars which cover up textFlow's bar.",
+  "menuBarTopMargin.setName placeholder": "Enter a number",
 
   "qol.scrollbar.setName hide scroll bar": "Hide scrollbar",
   "qol.scrollbar.setName.1 what is hide scroll bar for": "When long notes/sections are on the screen, the scroll bar starts twitching. If that annoys you, you can hide it.",
@@ -74,8 +84,8 @@
   "qol.hash.setDesc.4 always hash": "Always compares hashes - best if you don't trust your sync tool.",
   "qol.hash.addDropdown.addOption.1 don't check": "No checks",
 
-  "qol.hidesystemFolder.setName hide system folder": "Hide ${textFlowSystemFolderName}",
-  "qol.hidesystemFolder.setDesc.1 hiding is recommended": "Hiding this folder is recommended to protect its contents, but ultimately, it's an aesthetic and practical choice.",
+  "qol.showsystemFolder.setName show system folder": "Show ${textFlowSystemFolderName}",
+  "qol.showsystemFolder.setDesc.1 hiding is recommended": "It is recommended to keep this folder hidden to protect its contents, but ultimately, it's an aesthetic and practical choice.",
   "qol.hidesystemFolder.setDesc.2 edits are still tracked": "If you open flows directly from the folder, they will still be protected and tracked.",
 
   "-------- CREATE FLOWS": "Here the user can define flows-------------------------------------",
@@ -176,7 +186,7 @@
   "flowDisplay.flowShow.setDesc.2 inclusion criteria": "Inclusion criteria: ${inclusionString}",
   "flowDisplay.flowShow.setDesc.3 exclusion criteria": "Exclusion criteria: ${exclusionString}",
 
-  "flowDisplay.rebuildButton.setButtonText (re)build": "(Re)build",
+  "flowDisplay.rebuildButton.setButtonText (re)build": "Rebuild",
   "flowDisplay.editButton.setButtonText edit": "Edit",
   "flowDisplay.deleteButton.setButtonText delete definition": "Delete definition",
 
@@ -224,7 +234,7 @@
 
   "-------------- FLOW SWITCHER MODAL": "Modal for opening and closing flows--------",
   "switcherModal.info no active flows found": "No active flows found",
-  "switcherModal.info overlapping regions": "This region also occurs in other flows: ${overlapString}",
+  "switcherModal.info overlapping regions": "Overlaps with: ${overlapString}",
   "switcherModal.info no inactive flows found": "No inactive flows found",
   "switcherModal.buttons new tab": "New tab",
   "switcherModal.buttons split right": "Split right",
@@ -271,6 +281,7 @@
 
   "main.cursorListener.notice tracking failed": "textFlow: Cursor tracking failed for ${flowName}!\nPlease close and reopen the flow.\nIf this error persists, reload your vault.",
   "main.cursorTracker.notice": "textFlow: External edit found. Flow ${flowName} was rebuilt.",
+  "Compartment error": "textFlow: Compartments not found.\nPlease close the flow an reopen it.\nIf that doesn't help, restart Obsidian.",
 
   "setUpFlow.statsCheck initial": "textFlow: Initial check for external edits for ${flowName}",
   "setUpFlow.statsCheck idle": "textFlow: Checking for external edits for ${flowName}",
@@ -304,7 +315,7 @@
   "settingsTabFunctions.progressNotice.notice initial notice": "textFlow: Building ${this_flowName}: [oooooooooo] 0%",
   "settingsTabFunctions.progressNotice.notice updated notice": "Building ${this_flowName}: ${bar} ${percent}%",
 
-  "createSystemFolder.notice folder created": "textFlow: ${textFlowSystemFolderName} created at ${newSystemFolderPath}",
+  "createSystemFolder.notice folder created": "textFlow: System folder created successfully - /${newSystemFolderPath}",
 
   "createFlowDefinition.notice enter bookmark group": "textFlow: Please enter a bookmark group.",
   "createFlowDefinition.notice definition leads to empty flow": "textFlow: Your definition leads to an empty flow. Please check for typos or make your criteria less restrictive.",

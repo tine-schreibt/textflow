@@ -147,6 +147,35 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       });
 
     // --------------------- UI settings
+
+    // -----------   flowSwitcherModal  ---------------
+
+    const menuBarDefault = new Setting(setUpTextFlow)
+      .setName(this.plugin.t("menuBarDefault.setName default menu bar setting"))
+      .setDesc(
+        createFragment((desc) => {
+          desc.createSpan({
+            text: this.plugin.t("menuBarDefault.setName desc"),
+          });
+        }),
+      )
+      .addDropdown((dropdown) => {
+        dropdown
+          .addOption(
+            "min",
+            this.plugin.t("menuBarDefault.addDropdown.addOption.alt min"),
+          )
+          .addOption(
+            "max",
+            this.plugin.t("menuBarDefault.addDropdown.addOption.alt max"),
+          );
+        dropdown.setValue(this.plugin.settings.menuBarDefault);
+        dropdown.onChange(async (value) => {
+          this.plugin.settings.menuBarDefault =
+            value as Types.MenuBarDisplayState;
+        });
+      });
+
     // -----------   flowSwitcherModal  ---------------
 
     const switcherModalPosition = new Setting(setUpTextFlow)
@@ -353,23 +382,47 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
     // -------------- Multi-select -----------------
     const navListener = new Setting(qol)
-      .setName(this.plugin.t("qol.navListener.setName disable explorer nav"))
+      .setName(this.plugin.t("qol.navListener.setName enable explorer nav"))
       .setDesc(
         createFragment((desc) => {
           desc.createSpan({
             text: this.plugin.t(
-              "qol.navListener.setDesc what is disable explorer nav for",
+              "qol.navListener.setDesc what is enable explorer nav for",
             ),
           });
         }),
       )
       .addToggle((navListenerToggle) => {
         navListenerToggle
-          .setValue(!this.plugin.settings.explorerListener)
+          .setValue(this.plugin.settings.explorerListener)
           .onChange(async (value) => {
-            this.plugin.settings.explorerListener = !value;
+            this.plugin.settings.explorerListener = value;
           });
       });
+
+    // can't get this to work, so I'm shelving it; user can still do the z-index thing
+    /*  // ------------ menu bar top margin
+    const menuBarTopMargin = new Setting(qol)
+      .setName(this.plugin.t("menuBarTopMargin.setName top margin"))
+      .setDesc(
+        createFragment((desc) => {
+          desc.createSpan({
+            text: this.plugin.t("menuBarTopMargin.setName desc"),
+          });
+        }),
+      )
+      .addText((setFlowName) => {
+        setFlowName.setPlaceholder(
+          this.plugin.t("menuBarTopMargin.setName placeholder"),
+        );
+        setFlowName.setValue(this.plugin.settings.menuBarTopMargin);
+
+        setFlowName.onChange(async (value) => {
+          // remove anything that's not a digit
+          this.plugin.settings.menuBarTopMargin = value.replace(/\D/g, "");
+          await this.plugin.settingsTabFunctions.debouncedSaveSettings();
+        });
+      });*/
 
     // ------------- scrollbar ------------
     const scrollbar = new Setting(qol)
@@ -486,7 +539,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     // -----------   hide system folder  ---------------
     const hidesystemFolder = new Setting(qol)
       .setName(
-        this.plugin.t("qol.hidesystemFolder.setName hide system folder", {
+        this.plugin.t("qol.showsystemFolder.setName show system folder", {
           textFlowSystemFolderName: this.plugin.textFlowSystemFolderName,
         }),
       )
@@ -494,22 +547,22 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         createFragment((desc) => {
           desc.createSpan({
             text: this.plugin.t(
-              "qol.hidesystemFolder.setDesc.1 hiding is recommended",
+              "qol.showsystemFolder.setDesc.1 hiding is recommended",
             ),
           });
           desc.createEl("br");
           desc.createSpan({
             text: this.plugin.t(
-              "qol.hidesystemFolder.setDesc.2 edits are still tracked",
+              "qol.showsystemFolder.setDesc.2 edits are still tracked",
             ),
           });
         }),
       )
       .addToggle((hideSystemFolderToggle) => {
         hideSystemFolderToggle
-          .setValue(this.plugin.settings.systemFolderHidden)
+          .setValue(!this.plugin.settings.systemFolderHidden)
           .onChange(async (value) => {
-            this.plugin.settings.systemFolderHidden = value;
+            this.plugin.settings.systemFolderHidden = !value;
 
             if (this.plugin.settings.systemFolderPath) {
               this.plugin.discernAndSetSystemFolderState();
@@ -1205,13 +1258,13 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           return;
         }
 
-        // write the whole stuff (also flags for rebuild)
+        // write the whole stuff (also flags for rebuild, just to be sure)
         await this.plugin.settingsTabFunctions.writeFlowDef(
           this.plugin.settings,
           this.plugin.settings.flowBuildBasket,
         );
 
-        // gather all info so we can rebuild right away
+        // (re)build
         this.plugin.settingsTabFunctions.rebuildFlow(
           this.plugin.settings.flowBuildBasket.flowName,
           "settingsTab",
