@@ -210,6 +210,7 @@
   "menuBar.selectButton.setTooltip export flow": "Export flow",
   "menubar.selectButton.notice successful export": "textFlow: Your flow has been exported to ${exportedFlowPath}.",
   "menubar Collapse menu bar": "Collapse menu bar",
+  "menubar warn": "Compartments not found. To fix this: \n- Wait for a moment \n- Min/max the menu bar\n- Click into a different leaf and back \n- Reload Obsidian",
 
   "------- CREATE FLOW FROM FOLDER MODAL": "LIKE IT SAYS ----------------",
   "CreateFlowFromFolderModal.headline": "Create a new flow from the selected folder.",
@@ -306,6 +307,10 @@
   "syncBackToSource.notice sync failed flow note": "textFlow: Sync failed. The flow at ${path} couldn't be found.",
   "syncBackToSource.notice other random error": "textFlow: An error occurred while trying to sync from ${flowName} to ${path}. \nPlease try again in a second. \nIf the error persists, consult the 'Fixing problems' section of the readme.",
   "syncBackToSource tracking error": "textFlow: Due to a tracking error in ${flowName}, syncing isn't possible right now. Please copy the edit you wish to preserve, then rebuild the flow to fix the tracking error.",
+
+  "brokenRegions NONE notification": "textFlow: There were no UUIDs found in ${flowName}. This means tracking and syncing are impossible right now. \nDo NOT EDIT this flow, REBUILD IT.",
+
+  "brokenRegions SOME notification": "textFlow: For some of the regions of flow ${flowName} no valid UUID could be found. This means tracking and syncing are unreliable right now. \nDo NOT EDIT this flow, REBUILD IT.\nAffected regions:\n- ${regions}",
 
   "checkActiveRegion.notice region tracking error": "textFlow: Region tracking error for ${flowName}.\nYou most likely undid (ctrl/cmd+z) your way into the state before a rebuild. \nKeep undooing until you reach the change you wish to return to, copy it, then redo (ctrl/cmd+shift+z) your way back into the current version of things, or rebuild ${flowName}. You can then past the copied content back into the flow.",
   "checkActiveRegion.notice region tracking error resolved": "textFlow: The tracking error for ${flowName} has been resolved.",

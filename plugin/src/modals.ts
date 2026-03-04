@@ -953,8 +953,6 @@ export class FlowSwitcherModal extends Modal {
     leaf: WorkspaceLeaf,
     file: TFile,
   ) => {
-    console.log("opening flow: ", flowName);
-
     await leaf.openFile(file);
     leaf.setPinned(true);
     if (leaf.view instanceof MarkdownView)

@@ -1,19 +1,8 @@
-import {
-  App,
-  ButtonComponent,
-  Editor,
-  MarkdownView,
-  Notice,
-  setIcon,
-} from "obsidian";
-import { EditorView } from "@codemirror/view";
+import { App, ButtonComponent, MarkdownView, setIcon } from "obsidian";
 import Fuse, { FuseResult } from "fuse.js";
 import type TextFlowPlugin from "../main";
-import path, { dirname, basename } from "path";
-
-interface ObsidianEditor extends Editor {
-  cm?: EditorView;
-}
+import { basename } from "path";
+import * as Types from "./types";
 
 export class MenuBar {
   private app: App;
@@ -291,7 +280,7 @@ export class MenuBar {
 
         this.addManagedListener(dropdownEntry, "click", (event) => {
           // scroll into view
-          const editor = this.associatedView.editor as ObsidianEditor;
+          const editor = this.associatedView.editor as Types.ObsidianEditor;
           const cmEditor = editor.cm;
           let text = "";
           if (cmEditor) {
@@ -372,31 +361,19 @@ export class MenuBar {
       this.plugin.settings.activeRegions[this.flowName][this.leafID]
         .leafMenuBarSettings.menuBarDisplayState === "min"
     ) {
-      let goSync = "neutral";
-      let goRebuild = "neutral";
+      let style = "textflow-menu-bar-min-sync-neutral";
 
-      // check if there is unsynced stuff for the flow
+      // check if the bar needs to communicate anything
       if (
         this.plugin.settings.flows[this.flowName].unsyncedRegionsArray.length >
-        0
-      ) {
-        goSync = "must"; // must sync
-      }
-      // check if flow is flagged for rebuild
-      if (
+          0 ||
         this.plugin.settings.flows[this.flowName].flaggedForRebuild ||
         this.plugin.flowOutOfSync.includes(this.flowName)
       ) {
-        goRebuild = "must";
+        style = "textflow-menu-bar-min-sync-must"; // must sync
       }
 
-      if (!compartmentsGood) {
-        goRebuild = "must";
-      }
-
-      let style = "textflow-menu-bar-min-sync-neutral";
-      if (goSync === "must") style = "textflow-menu-bar-min-sync-must";
-      if (goRebuild === "must") style = "textflow-menu-bar-min-rebuild-must";
+      if (!compartmentsGood) style = "textflow-menu-bar-min-warn";
 
       // now build the bar
       const menuBarEl = this.associatedView.contentEl.createDiv({
@@ -408,7 +385,11 @@ export class MenuBar {
         .setClass("spacing")
         .setClass("clickable-icon")
         .setClass(style)
-        .setTooltip(this.plugin.t("Expand menu bar"))
+        .setTooltip(
+          compartmentsGood
+            ? this.plugin.t("menubar Collapse menu bar")
+            : this.plugin.t("menubar warn"),
+        )
         .onClick(() => {
           this.plugin.settings.activeRegions[this.flowName][
             this.leafID
@@ -777,7 +758,7 @@ export class MenuBar {
               })`,
             });
             const cursorPos = inclusiveCursorArray[index][1];
-            const editor = this.associatedView.editor as ObsidianEditor;
+            const editor = this.associatedView.editor as Types.ObsidianEditor;
             this.addManagedListener(
               cursorDropdownEntryPos,
               "click",
@@ -817,7 +798,8 @@ export class MenuBar {
               cursorDropdownEntryPos,
               "click",
               (event) => {
-                const editor = this.associatedView.editor as ObsidianEditor;
+                const editor = this.associatedView
+                  .editor as Types.ObsidianEditor;
                 this.plugin.settingsTabFunctions.scrollToPos(editor, cursorPos);
               },
             );
@@ -897,7 +879,12 @@ export class MenuBar {
         .setIcon(compartmentsGood ? "chevron-left" : "alert-triangle")
         .setClass("spacing")
         .setClass("clickable-icon")
-        .setTooltip(this.plugin.t("menubar Collapse menu bar"))
+        .setClass(compartmentsGood ? "blah" : "textflow-menu-bar-min-warn")
+        .setTooltip(
+          compartmentsGood
+            ? this.plugin.t("menubar Collapse menu bar")
+            : this.plugin.t("menubar warn"),
+        )
         .onClick(() => {
           this.plugin.settings.activeRegions[this.flowName][
             this.leafID

@@ -396,7 +396,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         navListenerToggle
           .setValue(this.plugin.settings.explorerListener)
           .onChange(async (value) => {
+            console.log("explorerListener", value);
             this.plugin.settings.explorerListener = value;
+            //this.plugin.saveSettings();
           });
       });
 

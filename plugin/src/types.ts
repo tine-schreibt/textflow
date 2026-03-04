@@ -306,3 +306,7 @@ export type SuggestionType =
   | "other-flow-cursor"
   | "flow-name"
   | "active-region";
+
+export interface ObsidianEditor extends Editor {
+  cm?: EditorView;
+}

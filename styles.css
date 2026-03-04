@@ -9,16 +9,16 @@
 }
 
 .align-off-center {
-  padding-left: 7px;
+  padding-left: var(--size-2-3);
 }
 
 .spacing {
-  padding-right: 5px;
+  padding-right: var(--size-2-3);
 }
 
 .box-shadow {
   border: 1px solid var(--background-modifier-border);
-  border-radius: 4px;
+  border-radius: var(--size-2-2);
   box-shadow: var(--input-shadow);
 }
 
@@ -55,7 +55,7 @@
 }
 
 .headline-container {
-  padding-top: 15px;
+  padding-top: var(--size-4-4);
 }
 
 /* --------- RADIO BUTTONS -----------*/
@@ -63,22 +63,22 @@
   display: flex;
   text-align: left;
   justify-content: flex-start;
-  gap: 8px;
+  gap: var(--size-4-2);
   cursor: pointer;
-  padding: 4px;
+  padding: var(--size-2-2);
 }
 
 .settings-radio-button::before {
   content: "";
-  width: 10px;
-  height: 10px;
-  border: 2px solid var(--interactive-accent);
+  width: var(--size-4-2);
+  height: var(--size-4-2);
+  border: var(--size-2-1) solid var(--interactive-accent);
   border-radius: 50%;
   display: inline-block;
 }
 
 .settings-radio-button.settings-radio-button-active {
-  box-shadow: 0 0 0 2px var(--interactive-accent);
+  box-shadow: 0 0 0 var(--size-2-1) var(--interactive-accent);
 }
 
 .settings-radio-button.settings-radio-button-active::before {
@@ -92,8 +92,8 @@
 .radio-button-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  width: 210px;
+  gap: var(--size-4-2);
+  width: 20var (--size-4-2);
 }
 
 /* settings tab button spacing*/
@@ -109,11 +109,11 @@ button.setting-tab-button-spacing {
 
 /* Make input fields wider */
 .input-width-400 .setting-item-control input {
-  width: 300px; /* or whatever width you prefer */
+  width: 300px;
 }
 
 .input-width-200 .setting-item-control input {
-  width: 200px; /* or whatever width you prefer */
+  width: 200px;
 }
 
 .advancedSettings-container {
@@ -125,7 +125,7 @@ button.setting-tab-button-spacing {
 .advancedSettings-headline {
   cursor: pointer;
   padding: 0;
-  margin-bottom: 12px;
+  margin-bottom: var(--size-4-3);
   font-size: var(--font-ui-medium);
   font-weight: var(--font-medium);
   color: var(--text-normal);
@@ -136,8 +136,8 @@ button.setting-tab-button-spacing {
 /* Add the chevron */
 .advancedSettings-headline::before {
   content: "";
-  width: 24px;
-  height: 24px;
+  width: var(--size-4-6);
+  height: var(--size-4-6);
   background-color: var(--text-muted);
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24'%3E%3Cpath fill='none' d='M0 0h24v24H0z'/%3E%3Cpath d='M12 13.172l4.95-4.95 1.414 1.414L12 16 5.636 9.636 7.05 8.222z'/%3E%3C/svg%3E");
   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='24' height='24'%3E%3Cpath fill='none' d='M0 0h24v24H0z'/%3E%3Cpath d='M12 13.172l4.95-4.95 1.414 1.414L12 16 5.636 9.636 7.05 8.222z'/%3E%3C/svg%3E");
@@ -160,34 +160,34 @@ button.setting-tab-button-spacing {
   display: flex;
   flex-direction: row; /* Change to row for horizontal layout */
   align-items: center;
-  gap: 8px;
+  gap: var(--size-4-2);
   cursor: pointer;
 }
 
 .explorer-deco-system {
   position: relative;
-  width: 70px;
+  width: var(--size-4-18);
 }
 
 .explorer-deco-dropdown-trigger {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--size-4-2);
   cursor: pointer;
-  padding: 4px;
+  padding: var(--size-2-2);
   background: var(--background-modifier-form-field);
   border: 1px solid var(--background-modifier-border);
-  border-radius: 4px;
+  border-radius: var(--size-2-2);
 }
 
 /* The text span inside the headline */
 .explorer-deco-trigger span:first-child {
   width: 100%;
-  padding: 4px, 8px, 4px, 8px;
+  padding: var(--size-2-2), var(--size-4-2), var(--size-2-2), var(--size-4-2);
   background: var(--background-modifier-form-field);
   border: 1px solid var(--background-modifier-border);
-  border-radius: 4px;
+  border-radius: var(--size-2-2);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -196,7 +196,7 @@ button.setting-tab-button-spacing {
 
 /* The icon span */
 .explorer-deco-trigger span:last-child {
-  margin-left: 4px;
+  margin-left: var(--size-2-2);
   flex-shrink: 0;
   height: var(--input-height);
   line-height: var(--input-height);
@@ -209,15 +209,15 @@ button.setting-tab-button-spacing {
   position: absolute;
   top: 100%;
   left: 0;
-  width: 70px;
-  max-height: 240px; /* Set maximum height */
+  width: var(--size-4-18);
+  max-height: 2var (--size-4-10); /* Set maximum height */
   overflow-y: auto; /* Enable vertical scrolling */
   align-items: center; /* Add this */
   background: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
-  border-radius: 4px;
-  margin-top: 4px;
-  z-index: 100;
+  border-radius: var(--size-2-2);
+  margin-top: var(--size-2-2);
+
   box-shadow: var(--shadow-s);
 }
 
@@ -226,10 +226,10 @@ button.setting-tab-button-spacing {
 }
 
 .explorer-deco-dropdown-entry {
-  padding: 8px;
+  padding: var(--size-4-2);
   cursor: pointer;
   display: flex;
-  gap: 8px;
+  gap: var(--size-4-2);
   align-items: center;
 }
 
@@ -239,7 +239,7 @@ button.setting-tab-button-spacing {
 
 /* Style the scrollbar to match Obsidian's theme */
 .explorer-deco-dropdown-container::-webkit-scrollbar {
-  width: 8px;
+  width: var(--size-4-2);
 }
 
 .explorer-deco-dropdown-container::-webkit-scrollbar-track {
@@ -248,7 +248,7 @@ button.setting-tab-button-spacing {
 
 .explorer-deco-dropdown-container::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb-bg);
-  border-radius: 4px;
+  border-radius: var(--size-2-2);
 }
 
 /*The styles for the dropdown entries*/
@@ -299,23 +299,23 @@ button.setting-tab-button-spacing {
 .preview-container {
   max-height: 400px; /* or any height that works for your use case */
   overflow-y: auto;
-  padding: 12px;
+  padding: 1var (--size-2-1);
   border: 1px solid var(--background-modifier-border);
-  border-radius: 4px;
+  border-radius: var(--size-2-2);
   background-color: var(--background-primary);
 }
 .preview-container p {
-  margin: 4px 0;
+  margin: var(--size-2-2) 0;
   line-height: 1;
 }
 
 .preview-group-header {
   font-weight: bold;
-  padding-top: 4px;
+  padding-top: var(--size-2-2);
 }
 
 .preview-note-name {
-  padding-left: 16px;
+  padding-left: var(--size-4-4);
   color: var(--text-normal);
 }
 
@@ -328,7 +328,7 @@ button.setting-tab-button-spacing {
   bottom: 0;
   background-color: var(--background-primary);
   opacity: 0.9;
-  z-index: 100;
+
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -360,14 +360,14 @@ button.setting-tab-button-spacing {
 .textflow-switcher-main-container {
   display: flex;
   flex-direction: column;
-  gap: 10px; /* space between sections */
+  gap: var(--size-4-2); /* space between sections */
 }
 
 .flow-switcher-modal-reload-button {
   background-color: var(--background-primary);
   color: var(--text-normal);
   align-items: left;
-  width: 30px;
+  width: var(--size-4-8);
   border: none;
 }
 
@@ -381,31 +381,30 @@ button.setting-tab-button-spacing {
 
 .textflow-switcher-border-rounded-accent {
   border: 1px solid var(--text-accent);
-  border-radius: 8px;
-  padding: 20px;
+  border-radius: var(--size-4-2);
+  padding: var(--size-4-5);
 }
 
 .textflow-switcher-border-rounded-faint {
   border: 1px solid var(--text-faint);
-  border-radius: 8px;
-  padding: 20px;
+  border-radius: var(--size-4-2);
+  padding: var(--size-4-5);
 }
 
 /* ACTIVE FLOWS */
 .textflow-switcher-active-container {
-  margin-top: 10px;
+  margin-top: var(--size-4-3);
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: var(--size-2-3);
 }
 
 .flow-switch-modal-active-header {
   display: grid;
-  grid-template-columns: minmax(30px, auto) minmax(200px, 1fr) repeat(
-      6,
-      minmax(30px, auto)
-    );
-  gap: 8px;
+  grid-template-columns:
+    minmax(var(--size-4-8), auto) minmax(200px, 1fr)
+    repeat(6, minmax(var(--size-4-8), auto));
+  gap: var(--size-4-2);
   border-bottom: 1px dashed var(--text-faint);
 }
 
@@ -422,25 +421,25 @@ button.setting-tab-button-spacing {
   background-color: transparent;
   color: var(--text-normal);
   align-items: center;
-  margin-top: -4px;
-  width: 30px;
+  margin-top: -var(--size-2-2);
+  width: var(--size-4-8);
 }
 
 .flow-switch-modal-header-button-no-go {
   background-color: transparent;
   color: var(--text-faint);
   align-items: center;
-  margin-top: -4px;
-  width: 30px;
+  margin-top: -var(--size-2-2);
+  width: var(--size-4-8);
 }
 
 .flow-switch-modal-header-button-must {
   background-color: rgb(from var(--color-accent) r g b / 1);
   color: var(--text-on-accent);
-  box-shadow: 0 0 4px 1px var(--text-accent);
+  box-shadow: 0 0 var(--size-2-2) 1px var(--text-accent);
   align-items: center;
-  margin-top: -4px;
-  width: 30px;
+  margin-top: -var(--size-2-2);
+  width: var(--size-4-8);
 }
 
 .flow-switch-modal-header-button-down {
@@ -451,39 +450,39 @@ button.setting-tab-button-spacing {
   background-color: var(--background-primary);
   color: var(--text-normal);
   align-items: center;
-  margin-top: -4px;
-  width: 30px;
+  margin-top: -var(--size-2-2);
+  width: var(--size-4-8);
 }
 
 .flow-switch-modal-header-button-rebuild-no-go {
   background-color: var(--background-primary);
   color: var(--text-faint);
   align-items: center;
-  margin-top: -4px;
-  width: 30px;
+  margin-top: -var(--size-2-2);
+  width: var(--size-4-8);
 }
 
 .flow-switch-modal-header-button-rebuild-must {
   background-color: rgb(from var(--color-accent) r g b / 1);
   color: var(--text-on-accent);
-  box-shadow: 0 0 4px 1px var(--text-accent);
+  box-shadow: 0 0 var(--size-2-2) 1px var(--text-accent);
   align-items: center;
-  margin-top: -4px;
-  width: 30px;
+  margin-top: -var(--size-2-2);
+  width: var(--size-4-8);
 }
 
 /* ACTIVE REGION */
 .flow-switch-modal-active-region {
-  padding-top: 5px;
+  padding-top: var(--size-2-3);
   display: grid;
   grid-template-columns:
-    minmax(40px, auto) minmax(200px, 1fr)
-    repeat(2, minmax(30px, auto));
-  gap: 8px;
+    minmax(var(--size-4-10), auto) minmax(200px, 1fr)
+    repeat(2, minmax(var(--size-4-8), auto));
+  gap: var(--size-4-2);
 }
 
 .flow-switch-modal-active-region-down-arrow {
-  margin-left: 10px;
+  margin-left: var(--size-4-3);
   align-items: right;
 }
 
@@ -493,31 +492,30 @@ button.setting-tab-button-spacing {
   overflow: hidden; /* hides overflow */
   text-overflow: ellipsis;
   text-align: left;
-  padding-left: 10px;
+  padding-left: var(--size-4-3);
 }
 
 /* INACTIVE FLOWS */
 
 .textflow-switcher-INactive-container {
-  margin-top: 10px;
+  margin-top: var(--size-4-3);
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: var(--size-2-3);
 }
 
 .textflow-switcher-INactive-entry {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: var(--size-2-3);
 }
 
 .flow-switch-modal-INactive-header {
   display: grid;
-  grid-template-columns: minmax(30px, auto) minmax(200px, 1fr) repeat(
-      4,
-      minmax(30px, auto)
-    );
-  gap: 8px;
+  grid-template-columns:
+    minmax(var(--size-4-8), auto) minmax(200px, 1fr)
+    repeat(4, minmax(var(--size-4-8), auto));
+  gap: var(--size-4-2);
 }
 
 .flow-switch-modal-inactive-header-flow-name {
@@ -535,6 +533,7 @@ button.setting-tab-button-spacing {
 }
 
 /* ---------- MENUBAR STUFF ------------- */
+
 /* height and alignment unification*/
 .textflow-menu-bar .clickable-icon,
 .textflow-menu-bar .button-component,
@@ -548,16 +547,15 @@ button.setting-tab-button-spacing {
 .textflow-menu-bar {
   position: sticky;
   top: 0;
-  z-index: 1;
-  padding: 5px;
-  margin-left: 5px;
-  margin-right: 20px;
+  z-index: var(--layer-modal);
+  padding: var(--size-2-3);
+  margin-right: var(--size-4-4);
   justify-content: start;
   display: grid;
   grid-template-columns: repeat(7, auto);
-  gap: 8px;
+  gap: var(--size-4-2);
   background: var(--background-primary);
-  border-radius: 4px;
+  border-radius: var(--size-2-2);
   box-shadow: var(--input-shadow);
   font-size: var(--font-ui-small);
   font-weight: var(--input-font-weight);
@@ -566,13 +564,13 @@ button.setting-tab-button-spacing {
 
 .textflow-menu-bar-min {
   position: absolute;
-  z-index: 1;
+  z-index: var(--layer-modal);
   margin-left: 0px;
   right: auto;
-  width: 28px;
+  width: 2var (--size-4-2);
   display: inline-flex;
   justify-content: inline-flex;
-  border-radius: 4px;
+  border-radius: var(--size-2-2);
   pointer-events: none;
 }
 
@@ -594,11 +592,13 @@ button.setting-tab-button-spacing {
 /*.textflow-menu-bar-min-sync-must svg {
   color: var(--text-accent);
   filter: drop-shadow(0px 0px 1px var(--text-accent));
-}*/
+  }*/
 
-.textflow-menu-bar-min-rebuild-must {
+.textflow-menu-bar-min-warn {
   background: var(--background-primary);
   color: var(--text-accent);
+  border: 1px solid var(--text-error);
+  border-radius: var(--size-2-2);
 }
 
 /*subtle highlight for syncs*/
@@ -608,7 +608,7 @@ button.setting-tab-button-spacing {
   color: var(--text-normal);
   box-shadow: var(--input-shadow);
   align-items: center;
-  width: 30px;
+  width: var(--size-4-8);
 }
 
 .menu-bar-button-sync-no-go {
@@ -616,16 +616,16 @@ button.setting-tab-button-spacing {
   color: var(--text-faint);
   box-shadow: var(--input-shadow);
   align-items: center;
-  width: 30px;
+  width: var(--size-4-8);
 }
 
 .menu-bar-button-sync-must {
   background-color: var(--background-primary);
   color: var(--text-normal);
-  box-shadow: 0 0 4px 1px var(--text-accent);
-  padding: 4px;
+  box-shadow: 0 0 var(--size-2-2) 1px var(--text-accent);
+  padding: var(--size-2-2);
   align-items: center;
-  width: 30px;
+  width: var(--size-4-8);
 }
 
 /*insistant highlight for rebuild*/
@@ -635,7 +635,7 @@ button.setting-tab-button-spacing {
   color: var(--text-normal);
   box-shadow: var(--input-shadow);
   align-items: center;
-  width: 30px;
+  width: var(--size-4-8);
 }
 
 .menu-bar-button-rebuild-no-go {
@@ -643,15 +643,15 @@ button.setting-tab-button-spacing {
   color: var(--text-faint);
   box-shadow: var(--input-shadow);
   align-items: center;
-  width: 30px;
+  width: var(--size-4-8);
 }
 
 .menu-bar-button-rebuild-must {
   background-color: var(--text-accent);
   color: var(--text-on-accent);
-  box-shadow: 0 0 4px 1px var(--text-accent);
+  box-shadow: 0 0 var(--size-2-2) 1px var(--text-accent);
   align-items: center;
-  width: 30px;
+  width: var(--size-4-8);
 }
 
 .menu-bar-navigation-dropdown {
@@ -672,9 +672,9 @@ button.setting-tab-button-spacing {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  padding: 3px;
+  padding: var(--size-2-2);
   box-shadow: var(--input-shadow);
-  border-radius: 4px;
+  border-radius: var(--size-2-2);
 }
 
 /* The text span inside the headline */
@@ -695,7 +695,7 @@ button.setting-tab-button-spacing {
 
 /* The icon span */
 .menu-bar-navigation-dropdown-headline span:last-child {
-  margin-left: 4px;
+  margin-left: var(--size-2-2);
   flex-shrink: 0;
   height: var(--input-height);
   line-height: var(--input-height);
@@ -704,8 +704,8 @@ button.setting-tab-button-spacing {
 }
 
 .menu-bar-navigation-dropdown-contents {
-  padding-left: 5px;
-  padding-right: 5px;
+  padding-left: var(--size-2-3);
+  padding-right: var(--size-2-3);
   position: absolute;
   top: 100%;
   left: 0;
@@ -715,13 +715,12 @@ button.setting-tab-button-spacing {
   text-overflow: ellipsis;
   background: var(--background-primary);
   box-shadow: var(--input-shadow);
-  border-radius: 4px;
-  z-index: 1000;
+  border-radius: var(--size-2-2);
 }
 
 .menu-bar-navigation-dropdown-scrollable {
-  padding-left: 5px;
-  padding-right: 5px;
+  padding-left: var(--size-2-3);
+  padding-right: var(--size-2-3);
   position: absolute;
   top: 100%;
   left: 0;
@@ -734,8 +733,7 @@ button.setting-tab-button-spacing {
   text-overflow: ellipsis;
   background: var(--background-primary);
   box-shadow: var(--input-shadow);
-  border-radius: 4px;
-  z-index: 1000;
+  border-radius: var(--size-2-2);
 
   /* Make sure scrollbar is visible */
   scrollbar-width: thin; /* For Firefox */
@@ -744,7 +742,7 @@ button.setting-tab-button-spacing {
 
 /* For Webkit browsers (Chrome, Safari) */
 .menu-bar-navigation-dropdown-contents::-webkit-scrollbar {
-  width: 8px;
+  width: var(--size-4-2);
 }
 
 .menu-bar-navigation-dropdown-contents::-webkit-scrollbar-track {
@@ -753,28 +751,29 @@ button.setting-tab-button-spacing {
 
 .menu-bar-navigation-dropdown-contents::-webkit-scrollbar-thumb {
   background-color: var(--scrollbar-thumb-bg);
-  border-radius: 4px;
+  border-radius: var(--size-2-2);
 }
 
 .menu-bar-cursor-container {
   display: grid; /* Add this line */
-  grid-template-columns: minmax(30px, auto) /*cursorDropdown*/;
+  grid-template-columns: minmax(var(--size-4-8), auto) /*cursorDropdown*/;
   gap: 0px;
 }
 
 .menu-bar-cursor-dropdown {
-  width: 30px;
+  width: var(--size-4-8);
   display: flex;
   justify-content: space-between;
   align-items: center;
   position: relative;
+
   margin: 0;
   padding: 0;
 }
 
 .cursor-target-button {
-  padding: 4px;
-  width: 30px;
+  padding: var(--size-2-2);
+  width: var(--size-4-8);
 }
 
 .menu-bar-button-select-export {
@@ -782,7 +781,7 @@ button.setting-tab-button-spacing {
   color: var(--text-normal);
   box-shadow: var(--input-shadow);
   align-items: center;
-  width: 30px;
+  width: var(--size-4-8);
 }
 
 /* Fuzzy suggest Modal - flows and paths */
@@ -808,7 +807,7 @@ button.setting-tab-button-spacing {
 .flow-creation-modal {
   background-color: var(--background-primary);
   border-radius: var(--radius-m);
-  padding: 20px;
+  padding: var(--size-4-5);
   width: 100%;
   max-width: 600px; /* adjust as needed */
 }
@@ -816,21 +815,21 @@ button.setting-tab-button-spacing {
 .flow-creation-modal .modal-content {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--size-4-4);
 }
 
 .flow-creation-modal .headline-container {
-  margin-bottom: 16px;
+  margin-bottom: var(--size-4-4);
 }
 
 .flow-creation-modal .setting-item {
   border-top: none;
-  padding-top: 12px;
+  padding-top: 1var (--size-2-1);
 }
 
 .flow-creation-modal .button-container {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  margin-top: 16px;
+  gap: var(--size-4-2);
+  margin-top: var(--size-4-4);
 }

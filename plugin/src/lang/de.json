@@ -202,6 +202,7 @@
   "menuBar.selectButton.setTooltip export flow": "Flow exportieren",
   "menubar.selectButton.notice successful export": "textFlow: Dein Flow wurde nach ${exportedFlowPath} exportiert.",
   "menubar Collapse menu bar": "Menüleiste minimieren",
+  "menubar warn": "Compartments nicht gefunden. Um dies zu beheben:\n- Warte einen Moment \n- Min/max die Menüleiste \n- Klicke in ein anderes Leaf und wieder zurück \n- Lade Obsidian neu",
 
   "------- CREATE FLOW FROM FOLDER MODAL": "LIKE IT SAYS ----------------",
   "CreateFlowFromFolderModal.headline": "Erzeuge neuen Flow aus dem gewählten Ordner.",
@@ -312,7 +313,11 @@
   "syncBackToSource.failedStatCheck": "textFlow: Die Synchronisierung wurde abgebrochen, da die Notiz ${path} extern bearbeitet wurde. \nBitte prüfe, ob du sie überschreiben willst. \nVorgehen zum Überschreiben: \n1. Kopiere die Änderungen, die du gerade gemacht hast. \n2. Baue den Flow neu (benutze den Button in den Plugin-Einstellungen). \n3. Füge die Änderungen an ihrem alten Platz ein. \n4. Synchronisiere den Flow.",
   "syncBackToSource.notice sync failed flow note": "textFlow: Sync fehlgeschlagen. Der Flow ${path} konnte nicht gefunden werden.",
   "syncBackToSource.notice other random error": "textFlow: Ein Fehler ist aufgetreten, während versucht wurde, ${flowName} zu ${path} zu synchronisieren. \nBitte versuche es in einer Sekunde erneut. \nWenn der Fehler weiterhin auftritt, lies die 'Fehlerbehebung' Sektion des Readme.",
-  "syncBackToSource tracking error": "textFlow: Aufgrund eines Tracking-Fehlers ist das Syncen für ${flowName} gerade nicht möglich. Bitte kopiere die Textänderung, die du erhalten willst, dann baue den Flow neu, um den Tracking-Fehler zu beheben.",
+  "syncBackToSource tracking error": "textFlow: Aufgrund einer oder mehrerer fehlender oder beschädigter UUIDs ist das Tracken und Syncen für ${flowName} gerade nicht möglich. Bitte kopiere alle Textänderungen, die du erhalten willst, dann baue den Flow neu, um den Tracking-Fehler zu beheben.",
+
+  "brokenRegions NONE found notification": "textFlow: Der Flow ${flowName} enthält keine UUIDs. Das bedeutet, dass Tracken und Syncen gerade nicht möglich ist. \nNimm KEINE ÄNDERUNGEN an diesem Flow vor, sondern BAUE IHN NEU.",
+
+  "brokenRegions SOME notification": "textFlow: Für einige der Regionen von Flow ${flowName} konnte keine valide UUID gefunden werden. Das bedeutet, dass das Tracken und Syncen gerade unzuverlässig ist.\nNimm KEINE ÄNDERUNGEN an diesem Flow vor, sondern BAUE IHN NEU.\nBetroffene Regionen:\n- ${regions}",
 
   "checkActiveRegion.notice region tracking error": "textFlow: Fehler beim Tracken der aktiven Region von ${flowName}. \nDu bist wahrscheinlich durch 'Rückgängig machen' (strg/cmd+z) in den Zustand vor einem Neubau zurückgesprungen. \nSetze das Rückgängigmachen fort, bis du den Zustand erreichst, den du haben willst, kopiere ihn, dann drücke 'Wiederholen' (strg/cmd+Umschalt+z), bis du wieder im Zustand nach dem Neubau angekommen bist, oder nimm einen Neubau an ${flowName} vor. Danach kannst du den kopierten Inhalt in deinen Flow einfügen",
   "checkActiveRegion.notice region tracking error resolved": "textFlow: Der Trackingfehler für ${flowName} wurde behoben.",

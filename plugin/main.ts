@@ -1671,14 +1671,12 @@ ${pseudoElement}
         if (this.explorerClickListenerActive) {
           return;
         }
-        console.log("active-leaf-change");
         this.leafSwitching();
       }),
     );
 
     this.registerEvent(
       this.app.workspace.on("layout-change", async () => {
-        console.log("layout-change");
         this.leafSwitching();
       }),
     );
@@ -1859,7 +1857,6 @@ ${pseudoElement}
               }
 
               if (callRefresh) {
-                console.log("text change calling refresh");
                 // update the menu bar to show unsynced status
                 if (view.menuBar) {
                   view.menuBar.refresh(view.contentEl);
@@ -2428,7 +2425,6 @@ ${pseudoElement}
           if (view.menuBar) {
             view.menuBar.refresh(view.contentEl);
           }
-          console.log("out of sync: ", this.flowOutOfSync);
           new Notice(
             this.t("checkActiveRegion.notice region tracking error", {
               flowName: flowName,
@@ -2650,6 +2646,8 @@ ${pseudoElement}
   setUpFlow = async (flowName: string, view: MarkdownView) => {
     // this.settingsTabFunctions.callStack("setUpFlow");
 
+    let isFreshlyBuilt = false;
+
     // ------------- DATA INTEGRITY ---------------------
     // check if the flow needs a rebuild due to changes from outside
     if (this.settings.checkExternalEdits != "no") {
@@ -2687,28 +2685,7 @@ ${pseudoElement}
     // rebuild if appropriate
     if (this.settings.flows[flowName].flaggedForRebuild) {
       await this.settingsTabFunctions.rebuildFlow(flowName, "setUpFlow");
-      // Do a blanket refresh of all the menu bars involved with the flow
-      const allLeaves = this.app.workspace.getLeavesOfType("markdown");
-      for (const leaf of allLeaves) {
-        const view = leaf.view as MarkdownView;
-
-        const filePath = view.file?.path;
-        if (!filePath) continue;
-
-        const otherFlowName = this.isFlowFile(filePath);
-        if (!otherFlowName || otherFlowName != flowName) continue;
-
-        view.menuBar?.refresh(view.contentEl);
-      }
-    }
-
-    // ------------- VISUALS ---------------------
-    // this has to happen first so the menuBar can just be set up
-    await this.manageActiveRegions();
-
-    // Update the switcher modal in case it's open
-    if (this.modalUpdateCallback) {
-      this.modalUpdateCallback();
+      isFreshlyBuilt = true;
     }
 
     // ------------- SCROLLING ---------------------
@@ -2716,16 +2693,13 @@ ${pseudoElement}
     // See if this is the inital activation of the flow/leaf and restore cursor
     // we need this so outline navigation works (because it acts as a fresh open)
     if (!this.alreadyActivated[flowName]) {
+      if (!isFreshlyBuilt) this.UUIDIntegrityCheck(flowName);
       this.alreadyActivated[flowName] = {};
       this.alreadyActivated[flowName][leafID] = [true, false];
       this.settingsTabFunctions.restoreCursorPos(flowName, view, leafID);
-      // now do the menu bar
-      this.setupMenuBar(view, flowName);
     } else if (!this.alreadyActivated[flowName][leafID]) {
       this.alreadyActivated[flowName][leafID] = [true, false];
       this.settingsTabFunctions.restoreCursorPos(flowName, view, leafID);
-      // now do the menu bar
-      this.setupMenuBar(view, flowName);
     }
 
     // ------------- PROTECTION ---------------------
@@ -2741,6 +2715,7 @@ ${pseudoElement}
           leaf.view.containerEl.addClass("hide-scrollbar");
         }
       }
+      
     }
 
     // Keep track of the last active leaf for the fuzzNav
@@ -2750,6 +2725,17 @@ ${pseudoElement}
       ].lastActiveLeaves.filter((id) => id !== leafID);
     }
     this.settings.flows[flowName].lastActiveLeaves.unshift(leafID);
+
+    // ------------- VISUALS ---------------------
+    // this has to happen first so the menuBar can just be set up
+    await this.manageActiveRegions();
+
+    // Update the switcher modal in case it's open
+    if (this.modalUpdateCallback) {
+      this.modalUpdateCallback();
+    }
+
+    this.setupMenuBar(view, flowName)
   };
 
   // ---- Make sure flows are set up when they are activated
@@ -3138,17 +3124,52 @@ ${pseudoElement}
     }
   };
 
-  // Functionality to keep mtimes and hashes up to date
-  updateStats = async (flowName: string, path: string, file: TFile) => {
-    if (this.settings.flows[flowName].flowMap[path]) {
-      this.settings.flows[flowName].flowMap[path].mtime = file.stat.mtime;
-      // caller saves
+  // UUID integrity check
+  UUIDIntegrityCheck = async (flowName: string) => {
+    let flowFilePath = this.settings.flows[flowName].flowFilePath;
+    const flowFile = this.app.vault.getAbstractFileByPath(flowFilePath);
+    let text = "";
+    if (flowFile instanceof TFile) {
+      text = await this.app.vault.read(flowFile);
     }
-    if (this.settings.checkExternalEdits === "mtime+hash") {
-      let fileContent: string = await this.app.vault.read(file);
-      const newHash = this.makeHash(fileContent);
-      this.settings.hashes[path] = newHash;
-      // caller saves
+
+    const markerRegex =
+      /[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46}/g;
+
+    const matches = text.match(markerRegex);
+
+    if (!matches) {
+      new Notice(
+        this.t("brokenRegions NONE found notification", {
+          flowName: flowName,
+        }),
+      );
+      return;
+    }
+    if (
+      matches.length !=
+      Object.keys(this.settings.flows[flowName].flowMap).length
+    ) {
+      const brokenRegionsArray = [];
+      for (let regionName of Object.keys(
+        this.settings.flows[flowName].flowMap,
+      )) {
+        if (
+          !matches.includes(
+            this.settings.flows[flowName].flowMap[regionName].invisibleUUID,
+          )
+        ) {
+          brokenRegionsArray.push(regionName);
+        }
+      }
+      const brokenRegionsList = brokenRegionsArray.join("\n- ");
+      new Notice(
+        this.t("brokenRegions SOME notification", {
+          flowName: flowName,
+          regions: brokenRegionsList,
+        }),
+        15000,
+      );
     }
   };
 
@@ -3251,6 +3272,20 @@ ${pseudoElement}
       await this.saveSettings();
     }
     return changed;
+  };
+
+  // Functionality to keep mtimes and hashes up to date
+  updateStats = async (flowName: string, path: string, file: TFile) => {
+    if (this.settings.flows[flowName].flowMap[path]) {
+      this.settings.flows[flowName].flowMap[path].mtime = file.stat.mtime;
+      // caller saves
+    }
+    if (this.settings.checkExternalEdits === "mtime+hash") {
+      let fileContent: string = await this.app.vault.read(file);
+      const newHash = this.makeHash(fileContent);
+      this.settings.hashes[path] = newHash;
+      // caller saves
+    }
   };
 
   // so we got hashes to compare against
