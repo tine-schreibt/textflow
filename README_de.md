@@ -1,19 +1,35 @@
-### TL;DR 
-textFlow erlaubt dir **Flows** zu erzeugen - dynamische Dokumente, die aus dem Inhalt mehrerer Notizen bestehen (vergleichbar mit 'Scrivenings'). Flows können aus Lesezeichen, Ordner, Tags und Eigenschaften definiert und Flows wie jede andere Notiz editiert werden. Alle Änderungen an Flows und ihren Quellnotizen werden dabei automatisch registriert und bidirektional gesynct. 
-textFlow ist vor allem für Autor:innen längerer Texte gedacht, kann aber von allen genutzt werden, die ihre Texte im größeren Zusammenhang sehen und/oder editieren wollen. 
-Die UI hat Optionen sowohl für Tastatur-, als auch für Maus-Navigation. 
+### TL;DR
 
-Bitte beachte, dass textFlow nach bestem Wissen durchgetestet, aber trotzdem noch in der Beta-Phase ist. Deshalb sind sicher noch nicht alle Eigenheiten und Reibungspunkte bekannt/gefixt/mit Workaround versehen. Falls du etwas aufstöberst, das dieses Readme nicht erwähnt, [lass es mich wissen](#12-melde-einen-bug--zeig-deine-liebe). 
-Bitte ziehe außerdem in Erwägung, Obsidians eigenes Datenwiederherstellung-Plugin, ['Edit history' von Antonio Tejada](https://github.com/antoniotejada/obsidian-edit-history)oder einen anderen Echtzeit-Backup-Service mitlaufen zu lassen - zumindest bis sich textFlow dein Vertrauen verdient hat. 
+textFlow erlaubt dir **Flows** zu erzeugen - dynamische Dokumente, die aus dem
+Inhalt mehrerer Notizen bestehen (vergleichbar mit 'Scrivenings'). Flows können
+aus Lesezeichen, Ordner, Tags und Eigenschaften definiert und Flows wie jede
+andere Notiz editiert werden. Alle Änderungen an Flows und ihren Quellnotizen
+werden dabei automatisch registriert und bidirektional gesynct. textFlow ist vor
+allem für Autor:innen längerer Texte gedacht, kann aber von allen genutzt
+werden, die ihre Texte im größeren Zusammenhang sehen und/oder editieren wollen.
+Die UI hat Optionen sowohl für Tastatur-, als auch für Maus-Navigation.
+
+Bitte beachte, dass textFlow nach bestem Wissen durchgetestet, aber trotzdem
+noch in der Beta-Phase ist. Deshalb sind sicher noch nicht alle Eigenheiten und
+Reibungspunkte bekannt/gefixt/mit Workaround versehen. Falls du etwas
+aufstöberst, das dieses Readme nicht erwähnt,
+[lass es mich wissen](#12-melde-einen-bug--zeig-deine-liebe). Bitte ziehe
+außerdem in Erwägung, Obsidians eigenes Datenwiederherstellung-Plugin,
+['Edit history' von Antonio Tejada](https://github.com/antoniotejada/obsidian-edit-history)oder
+einen anderen Echtzeit-Backup-Service mitlaufen zu lassen - zumindest bis sich
+textFlow dein Vertrauen verdient hat.
 
 ---
 
 **Du willst gleich loslegen?**
-- [Voraussetzungen und Einrichtung](#5-voraussetzungen-und-einrichtung)  
+
+- [Voraussetzungen und Einrichtung](#5-voraussetzungen-und-einrichtung)
 - [Los gehts](#8-los-gehts)
 - [Probleme beheben](#9-probleme-beheben)
 
-**Du willst erstmal wissen, was du eigentlich bekommst und wie du textFlow stressfrei benutzen kannst?**
+**Du willst erstmal wissen, was du eigentlich bekommst und wie du textFlow
+stressfrei benutzen kannst?**
+
 1. [Funktionalität](#1-funktionalität)
 2. [Sicherheitsfeatures](#2-sicherheitsfeatures)
 3. [Einschränkungen und bekannte Unannehmlichkeiten](#3-einschränkungen-und-bekannte-unannehmlichkeiten)
@@ -32,218 +48,477 @@ Bitte ziehe außerdem in Erwägung, Obsidians eigenes Datenwiederherstellung-Plu
 ### 1. Funktionalität
 
 ##### Bereits implementiert:
-1. **'Intelligente' Flows:** Definiere Flows, indem du Lesezeichen-Gruppen oder Ordner, Tags und [Eigenschaften](#wie-gehen-eigenschaften) als Ein/Ausschluss-Kriterien benutzt. textFlow kopiert diese Notizen für dich in eine neuen Notiz zusammen (einen Flow) und markiert sie mit unsichtbaren UUIDs, um Änderungen zu verfolgen. 
-	- **Praktisch:** 
-		- Wenn du in deinem Vault eine Notiz (oder einen Ordner) verschiebst, hinzufügst oder löschst, registriert textFlow diese Änderungen und markiert/baut betroffene Flows automatisch neu, um die Änderung widerzuspiegeln. 
-		- Rechts-Klick auf einen Ordner gibt die Option:  `textFlow: Erzeuge neuen Flow aus diesem Ordner`. Das Ganze funktioniert auch für eine Mehrfachauswahl von Ordnern. Du kannst die Definition danach in den Einstellungen mit Tags und Eigenschaften verfeinern. 
-2. **Strukturiere deine Flows:** 
-	- Flows, die über Ordner, Tags oder Eigenschaften definiert sind, habe zwei Sortieroptionen: 
-		1. Spiegle die Reihenfolge der *Notizen*, wie sie im Explorer auftauchen[\*](#keine-manuelle-sortierung). 
-		2. Spiegle die Reihenfolge der *Ordner*, wie sie im Explorer auftauchen[\*](#keine-manuelle-sortierung).
-	- Flows, die aus Lesezeichen-Gruppen definiert sind, sind nicht an die alphanumerische Sache gebunden und können außerdem die manuelle Reihenfolge der Objekte im Ordner spiegeln, unabhängig davon, ob sie Notizen oder Ordner sind. 
-	Benutze die Reihenfolge, die sich für dich intuitiver/ weniger verwirrend anfühlt, oder besser zum jeweiligen Flow passt. Manche Reihenfolgen funktionieren außerdem besser ohne Ordner-/Gruppen-Titel. 
-3. **Bearbeite Flows wie jede andere Notiz:** textFlow beobachtet, in welcher Region eines Flows eine Änderung stattfindet, und synchronisiert sie automatisch in die richtige Quellnotiz zurück, sobald du in eine andere Notiz klickst. Du kannst auch jederzeit manuell syncen (es gibt einen Befehl dafür, den du mit einem Tastenkürzel verbinden kannst). 
-4. **Füge deinen Flows Eigenschaften hinzu:** Benutze dazu einfach wie gewohnt das Eigenschaften-Plugin. Eigenschaften bleiben erhalten, wenn du deinen Flow neu baust, und sie sind nützlich, wenn du über die Ansicht in den Settings/dem FlowSwitcher-Modal hinaus den Überblick behalten willst. 
-5. **Flows sind wirklich nur eine weitere, gewöhnliche Notiz mit ein bisschen API-Bling dran:** Also *so gut wie alles funktioniert in deinen Flows:* Deine Themes funktionieren. Inline-styles funktionieren. Dataview-Tabellen werden wie gewohnt angezeigt. Die Gliederungsansicht funktioniert (okay, [zu 99%](#3-einschränkungen-und-bekannte-unannehmlichkeiten)). Suche in Notizen funktioniert. Callouts, Listen, Code-Blöcke, Tabellen, alles funktioniert. Weil - wie gesagt - ein Flow ist nur eine ganz normale Notiz mit ein bisschen API-Bling dran. 
-6. **Navigiere innerhalb deiner Flows mit dem Datei-Explorer:** Yup. Ich weiß! textFlow kann sogar die Quellnotiz der aktiven Region in einem von vier Styles hervorheben. [Es ist allerdings nicht perfekt...](#3-einschränkungen-und-bekannte-unannehmlichkeiten)
-7. **Ein Fuzzy-Navigation Modal:** Wenn du es gewohnt bist, Obsidians Schnellauswahl zu benutzen, wirst du dich hier wie zuhause fühlen - mit ein paar netten Tricks obendrauf:
-	- Setze `?` vor deine Suche, um sie auf den Flow im aktiven Leaf zu beschränken
-	- `*` um in den Flows zu suchen, die *nicht* der aktive sind
-	- `:` um in Flow-Namen zu suchen
-	- oder nichts, um alles gleichzeitig zu durchsuchen
-	Details zur Nutzung des Modals findest du hier: [Wie funktioniert das Fuzzy-Navigation Modal](#-wie-geht-fuzzy-navigation)
-8. **Mach Zeug mit der Menüleiste:** 
-	1. Sie hat Buttons zum **syncen** und **neubauen**. 
-	2. **Ein Navigationsmenü:** Dieses Dropdown macht es leicht, unzusammenhängende Flows zu navigieren - oder falls dir die Explorer-Navigation zu fickelig ist. Das Menü hat auch eine Fuzzy Search, damit du schneller findest, wo du hin willst. Der Suchbegriff persistiert innerhalb einer Session, damit du ihn nicht ständig neu eintippen muss.
-	3. **Deinen Cursor-Verlauf:** Wenn du syncst, speichert textFlow die aktuelle Cursor-Position (für die letzten paar Regionen und Leaves eines Flows), so dass du schnell hin und her springen kannst. textFlow merkt sich außerdem die Cursor-Position über Reloads hinweg, und es gibt einen Befehl, um automatisch zur letzten bekannten Position des aktiven Leafs zu springen.
-	4. **Einen Auswahl-Button für die aktive Region:** Falls du eine Copy/Paste-Operation brauchst. Auch hierfür gibt es einen Befehl. 
-	5. **Einen Export-Button:** Dieser Button erzeugt eine Kopie deines Flows, ohne UUIDs. Sie wird in deinem Root-Ordner abgelegt und mit Flow-Namen und Zeitstempel benamst
-	6. **Ein Min/Max-Button:** Damit du die Menüleiste bei Bedarf minimieren kannst. Es gibt auch einen Befehl, um sie zu togglen.
-		Minimiert ist die Menüleiste nut ein kleines graues Chevron oben links im Editor
+
+1. **'Intelligente' Flows:** Definiere Flows, indem du Lesezeichen-Gruppen oder
+   Ordner, Tags und [Eigenschaften](#wie-gehen-eigenschaften) als
+   Ein/Ausschluss-Kriterien benutzt. textFlow kopiert diese Notizen für dich in
+   eine neuen Notiz zusammen (einen Flow) und markiert sie mit unsichtbaren
+   UUIDs, um Änderungen zu verfolgen.
+   - **Praktisch:**
+     - Wenn du in deinem Vault eine Notiz (oder einen Ordner) verschiebst,
+       hinzufügst oder löschst, registriert textFlow diese Änderungen und
+       markiert/baut betroffene Flows automatisch neu, um die Änderung
+       widerzuspiegeln.
+     - Rechts-Klick auf einen Ordner gibt die Option:
+       `textFlow: Erzeuge neuen Flow aus diesem Ordner`. Das Ganze funktioniert
+       auch für eine Mehrfachauswahl von Ordnern. Du kannst die Definition
+       danach in den Einstellungen mit Tags und Eigenschaften verfeinern.
+2. **Strukturiere deine Flows:**
+   - Flows, die über Ordner, Tags oder Eigenschaften definiert sind, habe zwei
+     Sortieroptionen:
+     1. Spiegle die Reihenfolge der _Notizen_, wie sie im Explorer
+        auftauchen[\*](#keine-manuelle-sortierung).
+     2. Spiegle die Reihenfolge der _Ordner_, wie sie im Explorer
+        auftauchen[\*](#keine-manuelle-sortierung).
+   - Flows, die aus Lesezeichen-Gruppen definiert sind, sind nicht an die
+     alphanumerische Sache gebunden und können außerdem die manuelle Reihenfolge
+     der Objekte im Ordner spiegeln, unabhängig davon, ob sie Notizen oder
+     Ordner sind. Benutze die Reihenfolge, die sich für dich intuitiver/ weniger
+     verwirrend anfühlt, oder besser zum jeweiligen Flow passt. Manche
+     Reihenfolgen funktionieren außerdem besser ohne Ordner-/Gruppen-Titel.
+3. **Bearbeite Flows wie jede andere Notiz:** textFlow beobachtet, in welcher
+   Region eines Flows eine Änderung stattfindet, und synchronisiert sie
+   automatisch in die richtige Quellnotiz zurück, sobald du in eine andere Notiz
+   klickst. Du kannst auch jederzeit manuell syncen (es gibt einen Befehl dafür,
+   den du mit einem Tastenkürzel verbinden kannst).
+4. **Füge deinen Flows Eigenschaften hinzu:** Benutze dazu einfach wie gewohnt
+   das Eigenschaften-Plugin. Eigenschaften bleiben erhalten, wenn du deinen Flow
+   neu baust, und sie sind nützlich, wenn du über die Ansicht in den
+   Settings/dem FlowSwitcher-Modal hinaus den Überblick behalten willst.
+5. **Flows sind wirklich nur eine weitere, gewöhnliche Notiz mit ein bisschen
+   API-Bling dran:** Also _so gut wie alles funktioniert in deinen Flows:_ Deine
+   Themes funktionieren. Inline-styles funktionieren. Dataview-Tabellen werden
+   wie gewohnt angezeigt. Die Gliederungsansicht funktioniert (okay,
+   [zu 99%](#3-einschränkungen-und-bekannte-unannehmlichkeiten)). Suche in
+   Notizen funktioniert. Callouts, Listen, Code-Blöcke, Tabellen, alles
+   funktioniert. Weil - wie gesagt - ein Flow ist nur eine ganz normale Notiz
+   mit ein bisschen API-Bling dran.
+6. **Navigiere innerhalb deiner Flows mit dem Datei-Explorer:** Yup. Ich weiß!
+   textFlow kann sogar die Quellnotiz der aktiven Region in einem von vier
+   Styles hervorheben.
+   [Es ist allerdings nicht perfekt...](#3-einschränkungen-und-bekannte-unannehmlichkeiten)
+7. **Ein Fuzzy-Navigation Modal:** Wenn du es gewohnt bist, Obsidians
+   Schnellauswahl zu benutzen, wirst du dich hier wie zuhause fühlen - mit ein
+   paar netten Tricks obendrauf:
+   - Setze `?` vor deine Suche, um sie auf den Flow im aktiven Leaf zu
+     beschränken
+   - `*` um in den Flows zu suchen, die _nicht_ der aktive sind
+   - `:` um in Flow-Namen zu suchen
+   - oder nichts, um alles gleichzeitig zu durchsuchen Details zur Nutzung des
+     Modals findest du hier:
+     [Wie funktioniert das Fuzzy-Navigation Modal](#-wie-geht-fuzzy-navigation)
+8. **Mach Zeug mit der Menüleiste:**
+   1. Sie hat Buttons zum **syncen** und **neubauen**.
+   2. **Ein Navigationsmenü:** Dieses Dropdown macht es leicht,
+      unzusammenhängende Flows zu navigieren - oder falls dir die
+      Explorer-Navigation zu fickelig ist. Das Menü hat auch eine Fuzzy Search,
+      damit du schneller findest, wo du hin willst. Der Suchbegriff persistiert
+      innerhalb einer Session, damit du ihn nicht ständig neu eintippen muss.
+   3. **Deinen Cursor-Verlauf:** Wenn du syncst, speichert textFlow die aktuelle
+      Cursor-Position (für die letzten paar Regionen und Leaves eines Flows), so
+      dass du schnell hin und her springen kannst. textFlow merkt sich außerdem
+      die Cursor-Position über Reloads hinweg, und es gibt einen Befehl, um
+      automatisch zur letzten bekannten Position des aktiven Leafs zu springen.
+   4. **Einen Auswahl-Button für die aktive Region:** Falls du eine
+      Copy/Paste-Operation brauchst. Auch hierfür gibt es einen Befehl.
+   5. **Einen Export-Button:** Dieser Button erzeugt eine Kopie deines Flows,
+      ohne UUIDs. Sie wird in deinem Root-Ordner abgelegt und mit Flow-Namen und
+      Zeitstempel benamst
+   6. **Ein Min/Max-Button:** Damit du die Menüleiste bei Bedarf minimieren
+      kannst. Es gibt auch einen Befehl, um sie zu togglen. Minimiert ist die
+      Menüleiste nut ein kleines graues Chevron oben links im Editor
 9. **Mach Zeug mit dem Switcher-Modal:** Im FlowSwitcher gibt es Buttons um:
-	- Flows in einem neuen Tab oder Split zu öffnen
-	- zwischen offenen Tabs mit Flows zu springen
-	- schnell mehrere Tabs mit Flows zu schließen
-	- inaktive Flows neu zu bauen
-10. **Kleinigkeiten:** 
-	- Du kannst die Scrolleisten verstecken.
-	- Rechtsklick in den Datei-Explorer gibt die Option eine neue Datei im aktuellen Ordner zu erzeugen (das ist im Grunde nur für mich -.-)
-##### Kommt vielleicht in der Zukunft, wenn genug Leute danach fragen, sortiert danach, wie groß die Nachfrage sein muss, um meinen Mangel an intrinsischer Motivation zu überwinden: 
-- **Export mit Eigenschaften:** Eigenschaften eines Flows beim Export mitnehmen. 
-- **Handgemachte Flows:** Die Möglichkeit, eine beliebige Dateiliste als Quelle für Flows einzugeben. 
-- **Favoriten für das Switcher-Modal:** Falls du eine metrische Tonne Flows hast, Hilfe brauchst, um nicht den Überblick zu verlieren, und Eigenschaften/Dataview dir unheimlich sind.
-- **Tags und Properties für Lesezeichen-Flows:** Damit du sie einschränken kannst, falls du sie nur angelegt hast, um dein Zeug im Datei-Explorer manuell zu sortieren. 
-- **Öffne Wiki-Links in Flows:** Das wäre dann eine Rechtsklick-Angelegenheit, schätze ich.
-Sofern ich von allein Motivation entwickle, könnten sie auch eines Tages von allein auftauchen. 
+   - Flows in einem neuen Tab oder Split zu öffnen
+   - zwischen offenen Tabs mit Flows zu springen
+   - schnell mehrere Tabs mit Flows zu schließen
+   - inaktive Flows neu zu bauen
+10. **Kleinigkeiten:**
+    - Du kannst die Scrolleisten verstecken.
+    - Rechtsklick in den Datei-Explorer gibt die Option eine neue Datei im
+      aktuellen Ordner zu erzeugen (das ist im Grunde nur für mich -.-)
+
+##### Kommt vielleicht in der Zukunft, wenn genug Leute danach fragen, sortiert danach, wie groß die Nachfrage sein muss, um meinen Mangel an intrinsischer Motivation zu überwinden:
+
+- **Export mit Eigenschaften:** Eigenschaften eines Flows beim Export mitnehmen.
+- **Handgemachte Flows:** Die Möglichkeit, eine beliebige Dateiliste als Quelle
+  für Flows einzugeben.
+- **Favoriten für das Switcher-Modal:** Falls du eine metrische Tonne Flows
+  hast, Hilfe brauchst, um nicht den Überblick zu verlieren, und
+  Eigenschaften/Dataview dir unheimlich sind.
+- **Tags und Properties für Lesezeichen-Flows:** Damit du sie einschränken
+  kannst, falls du sie nur angelegt hast, um dein Zeug im Datei-Explorer manuell
+  zu sortieren.
+- **Öffne Wiki-Links in Flows:** Das wäre dann eine Rechtsklick-Angelegenheit,
+  schätze ich. Sofern ich von allein Motivation entwickle, könnten sie auch
+  eines Tages von allein auftauchen.
 
 **Außerdem:**
-- **Mehr Sprachen:** Bisher gibt es das Plugin nur auf Deutsch und auf Englisch. Falls du eine weitere Sprache beisteuern willst: [https://github.com/tine-schreibt/textFlow/tree/main/plugin/src/lang](https://github.com/tine-schreibt/textFlow/tree/main/plugin/src/lang)
+
+- **Mehr Sprachen:** Bisher gibt es das Plugin nur auf Deutsch und auf Englisch.
+  Falls du eine weitere Sprache beisteuern willst:
+  [https://github.com/tine-schreibt/textFlow/tree/main/plugin/src/lang](https://github.com/tine-schreibt/textFlow/tree/main/plugin/src/lang)
 
 <hr>
 
 ### 2. Sicherheitsfeatures
 
-1. **Die Menüleiste:** Die Existenz der Menüleiste zeigt an, dass das Plugin aktiv ist. Darüber hinaus checkt die Leiste, ob der CodeMirror-Bling korrekt angebracht wurde. Ist das mal (noch) nicht der Fall, wird statt des Min/Max-Chevrons ein Warndreieck angezeigt. Falls du dieses Dreieck mal siehst: 
-	- warte einen Moment,
-	- min/max die Menüleiste,
-	- klick in ein anderes Leaf und wieder zurück.
-	Eines davon sollte die Warnung verschwinden lassen. Falls nicht, lade Obsidian neu. 
+1. **Die Menüleiste:** Die Existenz der Menüleiste zeigt an, dass das Plugin
+   aktiv ist. Darüber hinaus checkt die Leiste, ob der CodeMirror-Bling korrekt
+   angebracht wurde. Ist das mal (noch) nicht der Fall, wird statt des
+   Min/Max-Chevrons ein Warndreieck angezeigt. Falls du dieses Dreieck mal
+   siehst:
+   - warte einen Moment,
+   - min/max die Menüleiste,
+   - klick in ein anderes Leaf und wieder zurück. Eines davon sollte die Warnung
+     verschwinden lassen. Falls nicht, lade Obsidian neu.
 2. **Unsichtbaren UUIDs sind schreibgeschützt:**  
-	 UUIDs sind zufällige Strings aus 46 nicht-druckbaren Zeichen, die textFlow am Ende des Inhalts einer jeden Quelldatei platziert, um die Cursor-Position relativ dazu zu tracken. Sie sind schreibgeschützt, um ihre Integrität (und damit die Integrität deines Flows und deiner Quelldateien) zu garantieren. 
-	 Dieser Schutz ist natürlich nicht gegeben, wenn du einen Flow außerhalb von textFlows Kontext bearbeitest. Manche Texteditoren löschen nicht-druckbare Zeichen auch einfach, so dass schon das Öffnen eines Flows seine Integrität zerstört. 
-3. **Integritätstest für Flows:** Wann immer du einen Flow öffnest, und dieser nicht im Öffnen neu gebaut wird, prüft textFlow die in der Datei enthaltenen UUIDS. Fehlen welche/sind beschädigt, sagt es bescheid, so dass du den Flow neu bauen kannst. 
-4. **Flows werden von Obsidian gespeichert:** Da Flows - was Obsidian angeht - nur ganz gewöhnliche Notizen sind, werden sie auch wie alle anderen Notizen gespeichert. Das bedeutet, dass deine Arbeit in einem Flow genau so sicher ist wie in jeder anderen Notiz. 
-5. **Automatisierung:** 
-	1. **Auto-Sync:** Wann immer du das Leaf wechselst, werden all deine neuen Textänderungen automatisch in die entsprechende Quelldatei zurück gesynct. Du kannst auch jederzeit von Hand syncen; es gibt dazu auch einen Befehl. 
-	2. **Auto-Neubau:** Wann immer du ein Leaf fokussierst, das einen für den Neubau vorgemerkten Flow enthält, wird automatisch ein Neubau getriggert. 
-		- **Ein Flow wird für den Neubau markiert...**
-			1. ... wenn du Notizen oder Ordner, umbenennst, verschiebst, erzeugst oder löschst, die Teil eines Flows sind oder es wahrscheinlich sein werden. 
-			2. ... wenn du zwei überlappende Flows geöffnet hast und eine der Regionen bearbeitest, an denen sie sich überlappen (diese Regionen sind im Navigationsdropdown markiert, bzw. du bekommst eine Benachrichtigung, wenn du in eine Überlappung klickst). 
-				**WICHTIG:** *Das ist wirklich **nur eine Sicherheitsvorkehrung** für versehentliche edits, und nicht dazu gedacht, ausgenutzt zu werden, um routinemäßig in Überlappungen zu arbeiten; **der Mechanismus wird sogar instabil**, wenn ein Flow neu gebaut wird, während er in mehr als einem Leaf geöffnet ist.*
-			3. ... wenn du eine Quellnotiz direkt editierst (auch wenn du nur irrelevante Eigenschaften bearbeitest, sorry)
-		- **Alle Neubauten sind vollständige Neubauten:** Die gesamte Datenstruktur im Hintergrund des Flows wird neu berechnet, UUIDs werden neu generiert, und der Flow wird komplett neu geschrieben, so dass die alte und neue Version auch für textFlow unterscheidbar sind. Du wirst also informiert, solltest du mal per strg/cmd+z in eine alte Version zurückgesprungen sein. 
-		- **Um exzessive Neubauten zu vermeiden:** 
-			- Halte nur Flows offen, an denen du aktiv arbeitest. Einen Flow mit all seinen Leaves zu schließen, braucht nur einen Klick ins Switcher-Modal, und das Öffnen geht ebenso schnell. Denke auch darüber nach, evtl. Flows in verschiedenen Arbeitsbereichen zu behalten. 
-			- Vermeide es, an überlappenden Regionen zu arbeiten. 
-			- Schließe die betroffenen Flows bevor du
-				- an mehreren Quellnotizen arbeitest, 
-				- deine Quellordner umsortierst, 
-				- die Eigenschaften vieler Notizen editierst.
-6. **Neubau prüft Quellnotizen auf UUIDs:** Wenn bei einer Synchronisation etwas schief geht, resultiert es gewöhnlich darin, dass mehrere Regionen mitsamt ihren UUIDs in eine einzelne Quellnotiz kopiert werden. Deshalb sucht die Neubau-Funktion in allen Notizen nach UUIDs. Wird eine gefunden, stoppt der Neubau und informiert dich, so dass du das Problem beheben kannst. 
-7. **Keine veralteten Edits in inaktiven Flows:** Wenn du einen Flow komplett schließt (also all seine Leaves), findet eine automatische Synchronisation statt. 
-8. **textFlows Ordner ist geschützt:** Der Ordner, in dem textFlow deine Flows aufhebt, ist standardmäßig versteckt. Du kannst ihn anzeigen lassen, wenn du Flows direkt daraus öffnen willst. textFlow hat genaue Vorstellungen davon, was du in diesem Ordner anstellen darfst, und es wird Änderungen, die es nicht mag, lautstark rückgängig machen. 
-9. **Automatische Prüfung auf externe Bearbeitung von Quellnotizen:** Falls du öfter mal Quellnotizen auf Geräten bearbeitest, auf denen textFlow nicht läuft (z.B. deinem Handy oder Tablet), kann textFlow für dich Folgendes prüfen: 
-	- **Zeitstempel der letzten Bearbeitung** - das reicht für die meisten Use Cases aus und ist die Standardeinstellung
-	- **Zeitstempel und Hash** - das kannst du aktivieren, wenn zu viele unnötige Neubauten getriggert werden
-	- **Immer den Hash** - nützlich, wenn du deinem Sync-Service nicht traust, oder in einem riskanten Setting arbeitest (mit git oder einem 'intelligenten' / speichersparenden / streaming Sync-Service) dfd 
-	**Diese automatischen Checks laufen**
-	- wenn ein Flow geöffnet wird,
-	- wenn du nach mindestens 5 Minuten der Inaktivität in Bezug auf einen Flow wieder mit diesem interagierst (Leaf aktivieren oder Textänderung),
-	- und wenn du in eine neue Region klickst (dann allerdings nur für die Region).
-	Falls es dir wichtig ist, kannst auch alle deine Flows  manuell per Befehl prüfen. 
-	**HINWEIS:** Die Checks funktionieren nur, wenn du deinem Sync-Service auch die nötige Zeit lässt, seine Arbeit zu tun. Also achte darauf, dass die Sync deines Vaults abgeschlossen ist, ehe du weiter arbeitest. 
-10. **Manuelle Markierung für Neubau:** Wenn du automatische Checks deaktivierst, kannst du immer noch per Rechtsklick auf eine Notiz im Datei-Explorer auswählen, dass alle Flows, die sie enthalten, für den Neubau markiert werden sollen.
-11. **Definitions-Backup:** Falls du das Plugin mal komplett deinstallieren und neu installieren musst, kannst du ein Backup deiner Flow-Definitionen erzeugen. Dieses wird in Form einer .json-Datei in textFlows Ordner in deinem Vault abgelegt.
+    UUIDs sind zufällige Strings aus 46 nicht-druckbaren Zeichen, die textFlow
+   am Ende des Inhalts einer jeden Quelldatei platziert, um die Cursor-Position
+   relativ dazu zu tracken. Sie sind schreibgeschützt, um ihre Integrität (und
+   damit die Integrität deines Flows und deiner Quelldateien) zu garantieren.
+   Dieser Schutz ist natürlich nicht gegeben, wenn du einen Flow außerhalb von
+   textFlows Kontext bearbeitest. Manche Texteditoren löschen nicht-druckbare
+   Zeichen auch einfach, so dass schon das Öffnen eines Flows seine Integrität
+   zerstört.
+3. **Integritätstest für Flows:** Wann immer du einen Flow öffnest, und dieser
+   nicht im Öffnen neu gebaut wird, prüft textFlow die in der Datei enthaltenen
+   UUIDS. Fehlen welche/sind beschädigt, sagt es bescheid, so dass du den Flow
+   neu bauen kannst.
+4. **Flows werden von Obsidian gespeichert:** Da Flows - was Obsidian angeht -
+   nur ganz gewöhnliche Notizen sind, werden sie auch wie alle anderen Notizen
+   gespeichert. Das bedeutet, dass deine Arbeit in einem Flow genau so sicher
+   ist wie in jeder anderen Notiz.
+5. **Automatisierung:**
+   1. **Auto-Sync:** Wann immer du das Leaf wechselst, werden all deine neuen
+      Textänderungen automatisch in die entsprechende Quelldatei zurück gesynct.
+      Du kannst auch jederzeit von Hand syncen; es gibt dazu auch einen Befehl.
+   2. **Auto-Neubau:** Wann immer du ein Leaf fokussierst, das einen für den
+      Neubau vorgemerkten Flow enthält, wird automatisch ein Neubau getriggert.
+      - **Ein Flow wird für den Neubau markiert...**
+        1. ... wenn du Notizen oder Ordner, umbenennst, verschiebst, erzeugst
+           oder löschst, die Teil eines Flows sind oder es wahrscheinlich sein
+           werden.
+        2. ... wenn du zwei überlappende Flows geöffnet hast und eine der
+           Regionen bearbeitest, an denen sie sich überlappen (diese Regionen
+           sind im Navigationsdropdown markiert, bzw. du bekommst eine
+           Benachrichtigung, wenn du in eine Überlappung klickst). **WICHTIG:**
+           _Das ist wirklich **nur eine Sicherheitsvorkehrung** für
+           versehentliche edits, und nicht dazu gedacht, ausgenutzt zu werden,
+           um routinemäßig in Überlappungen zu arbeiten; **der Mechanismus wird
+           sogar instabil**, wenn ein Flow neu gebaut wird, während er in mehr
+           als einem Leaf geöffnet ist._
+        3. ... wenn du eine Quellnotiz direkt editierst (auch wenn du nur
+           irrelevante Eigenschaften bearbeitest, sorry)
+      - **Alle Neubauten sind vollständige Neubauten:** Die gesamte
+        Datenstruktur im Hintergrund des Flows wird neu berechnet, UUIDs werden
+        neu generiert, und der Flow wird komplett neu geschrieben, so dass die
+        alte und neue Version auch für textFlow unterscheidbar sind. Du wirst
+        also informiert, solltest du mal per strg/cmd+z in eine alte Version
+        zurückgesprungen sein.
+      - **Um exzessive Neubauten zu vermeiden:**
+        - Halte nur Flows offen, an denen du aktiv arbeitest. Einen Flow mit all
+          seinen Leaves zu schließen, braucht nur einen Klick ins
+          Switcher-Modal, und das Öffnen geht ebenso schnell. Denke auch darüber
+          nach, evtl. Flows in verschiedenen Arbeitsbereichen zu behalten.
+        - Vermeide es, an überlappenden Regionen zu arbeiten.
+        - Schließe die betroffenen Flows bevor du
+          - an mehreren Quellnotizen arbeitest,
+          - deine Quellordner umsortierst,
+          - die Eigenschaften vieler Notizen editierst.
+6. **Neubau prüft Quellnotizen auf UUIDs:** Wenn bei einer Synchronisation etwas
+   schief geht, resultiert es gewöhnlich darin, dass mehrere Regionen mitsamt
+   ihren UUIDs in eine einzelne Quellnotiz kopiert werden. Deshalb sucht die
+   Neubau-Funktion in allen Notizen nach UUIDs. Wird eine gefunden, stoppt der
+   Neubau und informiert dich, so dass du das Problem beheben kannst.
+7. **Keine veralteten Edits in inaktiven Flows:** Wenn du einen Flow komplett
+   schließt (also all seine Leaves), findet eine automatische Synchronisation
+   statt.
+8. **textFlows Ordner ist geschützt:** Der Ordner, in dem textFlow deine Flows
+   aufhebt, ist standardmäßig versteckt. Du kannst ihn anzeigen lassen, wenn du
+   Flows direkt daraus öffnen willst. textFlow hat genaue Vorstellungen davon,
+   was du in diesem Ordner anstellen darfst, und es wird Änderungen, die es
+   nicht mag, lautstark rückgängig machen.
+9. **Automatische Prüfung auf externe Bearbeitung von Quellnotizen:** Falls du
+   öfter mal Quellnotizen auf Geräten bearbeitest, auf denen textFlow nicht
+   läuft (z.B. deinem Handy oder Tablet), kann textFlow für dich Folgendes
+   prüfen:
+   - **Zeitstempel der letzten Bearbeitung** - das reicht für die meisten Use
+     Cases aus und ist die Standardeinstellung
+   - **Zeitstempel und Hash** - das kannst du aktivieren, wenn zu viele unnötige
+     Neubauten getriggert werden
+   - **Immer den Hash** - nützlich, wenn du deinem Sync-Service nicht traust,
+     oder in einem riskanten Setting arbeitest (mit git oder einem
+     'intelligenten' / speichersparenden / streaming Sync-Service) dfd **Diese
+     automatischen Checks laufen**
+   - wenn ein Flow geöffnet wird,
+   - wenn du nach mindestens 5 Minuten der Inaktivität in Bezug auf einen Flow
+     wieder mit diesem interagierst (Leaf aktivieren oder Textänderung),
+   - und wenn du in eine neue Region klickst (dann allerdings nur für die
+     Region). Falls es dir wichtig ist, kannst auch alle deine Flows manuell per
+     Befehl prüfen. **HINWEIS:** Die Checks funktionieren nur, wenn du deinem
+     Sync-Service auch die nötige Zeit lässt, seine Arbeit zu tun. Also achte
+     darauf, dass die Sync deines Vaults abgeschlossen ist, ehe du weiter
+     arbeitest.
+10. **Manuelle Markierung für Neubau:** Wenn du automatische Checks
+    deaktivierst, kannst du immer noch per Rechtsklick auf eine Notiz im
+    Datei-Explorer auswählen, dass alle Flows, die sie enthalten, für den Neubau
+    markiert werden sollen.
+11. **Definitions-Backup:** Falls du das Plugin mal komplett deinstallieren und
+    neu installieren musst, kannst du ein Backup deiner Flow-Definitionen
+    erzeugen. Dieses wird in Form einer .json-Datei in textFlows Ordner in
+    deinem Vault abgelegt.
 
 <hr>
 
 ### 3. Einschränkungen und bekannte Unannehmlichkeiten
 
-#### Erwähnte Sachen zuerst 
+#### Erwähnte Sachen zuerst
 
-#### Keine manuelle Sortierung: 
-Falls du ein Plugin benutzt, um deine Notizen in Obsidians Datei-Explorer manuell zu sortieren, tut mir leid, textFlow orientiert sich am tatsächlichen, alphanumerischn Dateibaum, nicht an Sortierungen, die auf UI-Ebene passieren. Falls du deine Ordner und Notizen absolut nicht durchnumerieren willst (dabei ist das so viel robuster...), spiegle deine manuelle Sortierung in einer Lesezeichengruppe und baue deine Flows von dort (einige Plugins für manuelle Sortierung basieren eh auf Lesezeichen, also...). Du kannst allerdings (derzeit noch?) keine Eigenschaften benutzen, um eine auf Lesezeichen basierende Definition zu verfeinern.
+#### Keine manuelle Sortierung:
 
-**Zeug in der Gliederungsansicht umsortieren:** 
-Da der letzte Abschnitt in einer Region immer auch die schreibgeschützte UUID umfasst, kann dieser Abschnitt nicht per drag-and-drop verschoben werden. Alles dazwischen kannst du aber wie gewohnt rumschieben. 
+Falls du ein Plugin benutzt, um deine Notizen in Obsidians Datei-Explorer
+manuell zu sortieren, tut mir leid, textFlow orientiert sich am tatsächlichen,
+alphanumerischn Dateibaum, nicht an Sortierungen, die auf UI-Ebene passieren.
+Falls du deine Ordner und Notizen absolut nicht durchnumerieren willst (dabei
+ist das so viel robuster...), spiegle deine manuelle Sortierung in einer
+Lesezeichengruppe und baue deine Flows von dort (einige Plugins für manuelle
+Sortierung basieren eh auf Lesezeichen, also...). Du kannst allerdings (derzeit
+noch?) keine Eigenschaften benutzen, um eine auf Lesezeichen basierende
+Definition zu verfeinern.
 
-**Die Grenzen der Navigation per Datei-Explorer:** 
-	1. **Fokus:** Navigation ist vom Fokus auf ein Leaf abhängig, und der ist ein unbeständiges Biest. Also musst du in das Leaf klicken und einmal tief durchatmet, um der UI Zeit zu geben, sich zu sortieren, ehe du in den Datei-Explorer klickst. Die nächsten Klicks funktionieren meist, aber manchmal musst du neu fokussieren, indem du wieder ins Leaf klickst. 
-		Manchmal streikt der Listener auch komplett? Dann hilft nur ein Neustart von Obsidian. 
-	2. **Interferenzen**:
-		1. **Mehrfachauswahl:** Die Mehrfachauswahl per alt-Taste funktioniert wie gewohnt, aber die Mehrfachauswahl per Hochstelltaste ist gern mal verwirrt darüber, welches Element denn nun den Start der Auswahl darstellt. Also falls du mit Hochstelltaste auswählen willst, schalte die Navigation per Explorer in den Settings aus (es gibt auch einen Befehl dafür).
-		2. **Andere Plugins:** Falls du noch weitere Plugins benutzt, die verändern, wie Klicks in den Datei-Explorer gehandhabt werden, ist es möglich, dass einiges davon nicht mehr richtig funktioniert. Also falls du da Probleme hast, versuch mal, textFlows Klick-Listener abzuschalten (es gibt auch einen Befehl dafür).
+**Zeug in der Gliederungsansicht umsortieren:** Da der letzte Abschnitt in einer
+Region immer auch die schreibgeschützte UUID umfasst, kann dieser Abschnitt
+nicht per drag-and-drop verschoben werden. Alles dazwischen kannst du aber wie
+gewohnt rumschieben.
+
+**Die Grenzen der Navigation per Datei-Explorer:** 1. **Fokus:** Navigation ist
+vom Fokus auf ein Leaf abhängig, und der ist ein unbeständiges Biest. Also musst
+du in das Leaf klicken und einmal tief durchatmet, um der UI Zeit zu geben, sich
+zu sortieren, ehe du in den Datei-Explorer klickst. Die nächsten Klicks
+funktionieren meist, aber manchmal musst du neu fokussieren, indem du wieder ins
+Leaf klickst. Manchmal streikt der Listener auch komplett? Dann hilft nur ein
+Neustart von Obsidian. 2. **Interferenzen**: 1. **Mehrfachauswahl:** Die
+Mehrfachauswahl per alt-Taste funktioniert wie gewohnt, aber die Mehrfachauswahl
+per Hochstelltaste ist gern mal verwirrt darüber, welches Element denn nun den
+Start der Auswahl darstellt. Also falls du mit Hochstelltaste auswählen willst,
+schalte die Navigation per Explorer in den Settings aus (es gibt auch einen
+Befehl dafür). 2. **Andere Plugins:** Falls du noch weitere Plugins benutzt, die
+verändern, wie Klicks in den Datei-Explorer gehandhabt werden, ist es möglich,
+dass einiges davon nicht mehr richtig funktioniert. Also falls du da Probleme
+hast, versuch mal, textFlows Klick-Listener abzuschalten (es gibt auch einen
+Befehl dafür).
 
 #### Der andere Kram:
 
-1. **Notwendige Duplikation von Daten:** Flows sind zusätzliche Notizen, die den Inhalt ihrer Quellnotizen replizieren; nur so funktioniert das alles. Also wenn Datenduplikation dein Blut zum Kochen bringt, ist dieses Plugin nicht das richtige für dich, und du wirst u.U. mit [Continuous Mode](https://github.com/gasparschott/obsidian-continuous-mode) oder [sync-embeds](https://github.com/uthvah/sync-embeds/) glücklicher. 
-2. **textFlows Menüleiste überlappt Editing Toolbar:** Aufgrund gewisser Eigenheiten von CSS und Obsidian ist es leider nicht so einfach möglich, zwei Menüleisten friedlich coexistieren zu lassen. Der gegenwärtige Zustand stellt ein Optimum dar. 
-	- Die minimierte textFlow Menüleiste verdeckt einen Teil des äußersten Buttons der Editing Toolbar. Der Button ist trotzdem erreichbar und funktioniert. 
-	- Wenn du mit `strg/ctrl+Pfeil-unten` ans Ende eines Flows springst, rutscht die Editing Toolbar unter textFlows Menüleiste. Du kannst sie aber durch min/max der Menüleiste wieder hervorholen.
+1. **Notwendige Duplikation von Daten:** Flows sind zusätzliche Notizen, die den
+   Inhalt ihrer Quellnotizen replizieren; nur so funktioniert das alles. Also
+   wenn Datenduplikation dein Blut zum Kochen bringt, ist dieses Plugin nicht
+   das richtige für dich, und du wirst u.U. mit
+   [Continuous Mode](https://github.com/gasparschott/obsidian-continuous-mode)
+   oder [sync-embeds](https://github.com/uthvah/sync-embeds/) glücklicher.
+2. **textFlows Menüleiste überlappt Editing Toolbar:** Aufgrund gewisser
+   Eigenheiten von CSS und Obsidian ist es leider nicht so einfach möglich, zwei
+   Menüleisten friedlich coexistieren zu lassen. Der gegenwärtige Zustand stellt
+   ein Optimum dar.
+   - Die minimierte textFlow Menüleiste verdeckt einen Teil des äußersten
+     Buttons der Editing Toolbar. Der Button ist trotzdem erreichbar und
+     funktioniert.
+   - Wenn du mit `strg/ctrl+Pfeil-unten` ans Ende eines Flows springst, rutscht
+     die Editing Toolbar unter textFlows Menüleiste. Du kannst sie aber durch
+     min/max der Menüleiste wieder hervorholen.
 
 ##### Da kann mein Plugin nichts für (glaub ich), aber trotzdem... (für einige hab ich Workarounds)
 
 In keiner besonderen Reihenfolge:
-1. **Implizite Größenbeschränkung für Flows:** Obsidian handhabt offene Notizen im RAM. Wenn du also dein Viertelmillion Worte langes Epos offen hast - sei es in einem einzigen Flow oder auf mehrere verteilt - können die UI und textFlow ziemlich langsam werden. Da hilft nur, deine Flows eher klein zu halten und nurz zu öffnen, was du tatsächlich grad brauchst. Zum Vergleich: Dein unfertiger 50.000-Wort Roman hat unter 400kB, während dein 250.000-Wort Epos die 2MB knackt.
-2. **Vollständiges Neuschreiben von Flows:** Obsidian macht keine partiellen Updates von Dateien. Wenn du also einen langen Flow editierst, schreibt Obsidian das komplette Ding, von oben bis unten, wieder und wieder auf die Platte. *Für moderne SSD-Karten ist das kein Problem*, aber wenn du mit einer sehr kleinen, sehr alten SSD arbeitest, solltest du, wieder mal, deine Flows eher klein halten. 
-3. **Selbst alphanumerisch ist relativ:** Falls du deine Notizen so benamst: 'basisname', 'basisname 1', 'basiname 2' usw. erscheinen sie zwar im Datei-Explorer, wie man es erwarten würde, aber JavaScript ist der Ansicht, dass 'basisname' *nach* 'basisname 1' kommt. In deinem Flow werden also alle numerierten Notizen vor der unnumerierten kommen. Lösung: 'basisiname 0'. 
-4. **Kein Auto-Sync wenn du Obsidian schließt:** Onunload gibt Obsidian Plugins kaum Zeit, ihren Kram aufzuräumen und Einstellungen zu speichern, d.h. hier irgendwas zu automatisieren, führt nur zu Datenverlust.
+
+1. **Implizite Größenbeschränkung für Flows:** Obsidian handhabt offene Notizen
+   im RAM. Wenn du also dein Viertelmillion Worte langes Epos offen hast - sei
+   es in einem einzigen Flow oder auf mehrere verteilt - können die UI und
+   textFlow ziemlich langsam werden. Da hilft nur, deine Flows eher klein zu
+   halten und nurz zu öffnen, was du tatsächlich grad brauchst. Zum Vergleich:
+   Dein unfertiger 50.000-Wort Roman hat unter 400kB, während dein 250.000-Wort
+   Epos die 2MB knackt.
+2. **Vollständiges Neuschreiben von Flows:** Obsidian macht keine partiellen
+   Updates von Dateien. Wenn du also einen langen Flow editierst, schreibt
+   Obsidian das komplette Ding, von oben bis unten, wieder und wieder auf die
+   Platte. _Für moderne SSD-Karten ist das kein Problem_, aber wenn du mit einer
+   sehr kleinen, sehr alten SSD arbeitest, solltest du, wieder mal, deine Flows
+   eher klein halten.
+3. **Selbst alphanumerisch ist relativ:** Falls du deine Notizen so benamst:
+   'basisname', 'basisname 1', 'basiname 2' usw. erscheinen sie zwar im
+   Datei-Explorer, wie man es erwarten würde, aber JavaScript ist der Ansicht,
+   dass 'basisname' _nach_ 'basisname 1' kommt. In deinem Flow werden also alle
+   numerierten Notizen vor der unnumerierten kommen. Lösung: 'basisiname 0'.
+4. **Kein Auto-Sync wenn du Obsidian schließt:** Onunload gibt Obsidian Plugins
+   kaum Zeit, ihren Kram aufzuräumen und Einstellungen zu speichern, d.h. hier
+   irgendwas zu automatisieren, führt nur zu Datenverlust.
 
 <hr>
 
 ### 4. Use Cases
+
 #### 1. Maximale Nutzung
-- Du hast jedes Kapitel oder jeden Akt deines Buches in einem Flow. 
-- Du benutzt Quellnotizen nur ihrer Eigenschaften wegen, und um Änderungen aus deinen Haupt-Arbeitsflows in Neben-Flows zu kopieren, die du benutzt, wenn du auf einen bestimmten Aspekt deiner Geschichte fokussieren willst. 
-- Vielleicht benutzt du textFlow in Kombination mit der [Gliederung](#11-textflow-und-gliederung-im-vergleich), und die diversen Sicherheitsfunktionen helfen dir, darauf zu vertrauen, dass deine Arbeit mit textFlow sicher ist. 
+
+- Du hast jedes Kapitel oder jeden Akt deines Buches in einem Flow.
+- Du benutzt Quellnotizen nur ihrer Eigenschaften wegen, und um Änderungen aus
+  deinen Haupt-Arbeitsflows in Neben-Flows zu kopieren, die du benutzt, wenn du
+  auf einen bestimmten Aspekt deiner Geschichte fokussieren willst.
+- Vielleicht benutzt du textFlow in Kombination mit der
+  [Gliederung](#11-textflow-und-gliederung-im-vergleich), und die diversen
+  Sicherheitsfunktionen helfen dir, darauf zu vertrauen, dass deine Arbeit mit
+  textFlow sicher ist.
+
 #### 2. Minimale Nutzung
-- Du machst all deine Arbeit ausschließlich an einzelnen Notizen und benutzt textFlow nur gelegentlich, um sie im Kontext zu sehen, oder sie für jemand anderes im Kontext zu exportieren. 
-- Manche der visuellen UI-Features sind unnötig für dich, also schaltest du sie ab. 
+
+- Du machst all deine Arbeit ausschließlich an einzelnen Notizen und benutzt
+  textFlow nur gelegentlich, um sie im Kontext zu sehen, oder sie für jemand
+  anderes im Kontext zu exportieren.
+- Manche der visuellen UI-Features sind unnötig für dich, also schaltest du sie
+  ab.
 - textFlow bleibt im Hintergrund und kommt dir nicht in die Quere.
+
 #### 3. Mittlere Nutzung
-- Du machst irgendwas dazwischen und wechselst Methoden, je nach dem, wie es dir, deinem Projekt oder deiner Arbeitsphase passt. 
-- Du machst dein Ding. 
+
+- Du machst irgendwas dazwischen und wechselst Methoden, je nach dem, wie es
+  dir, deinem Projekt oder deiner Arbeitsphase passt.
+- Du machst dein Ding.
 - Leb dein bestes Leben.
 
 <hr>
 
 ### 5. Voraussetzungen und Einrichtung
 
-- **Voraussetzungen:** Das Plugin 'Dataview' muss installiert sein, damit textFlow funktioniert. Öffne Obsidians `Einstellungen > Externe Plugins > Durchsuchen`, dann suche nach `dataview`, klicke `Installieren`, dann `Aktivieren` (beides der selbe Button
-- **Minimale Obsidian-Version:** 1.4.0 (die erste mit [Eigenschaften](#wie-gehen-eigenschaften))
-	- Es gibt möglicherweise einen Bug in mindestens einer Version, die älter als 1.8.10 ist, un dazu führt, dass der Notiztitel dem Inhalt der Notizen vorangestellt wird. Falls du dieses Problem in deinen Flows feststellst, sag mir bescheid, welche Version du benutzt, damit ich diese Info hier einfügen kann. 
-- **Installation:** Während das Plugin noch nicht auf dem Marktplatz verfügbar ist, kannst du es manuell oder mit BRAT installieren. 
-	- **BRAT-Anleitung**: https://tfthacker.com/brat-quick-guide
-	- **Manuelle Installation:** Lade `main.js`, `manifest.json`and `styles.css` aus dem Release herunter. Erzeuge einen Ordner `textFlow` im `.obsidian/plugins` Ordner deines Vaults. Füge die Dateien dort ein. Lade deinen Vault neu. Gehe zu Obsidians `Einstellungen > Externe Plugins`. Suche nach textFlow. Aktiviere es und klicke das Zahnrad, um zu den Einstellungen zu gelangen.
-- **Installation per Marktplatz:** Sobald textFlow auf dem Marktplatz verfügbar ist: Gehe zu Obsidians `Einstellungen > Externe Plugins > Durchsuchen`, suche nach textFlow, klicke `Installieren`, dann `Aktivieren` (beides der selbe Button
+- **Voraussetzungen:** Das Plugin 'Dataview' muss installiert sein, damit
+  textFlow funktioniert. Öffne Obsidians
+  `Einstellungen > Externe Plugins > Durchsuchen`, dann suche nach `dataview`,
+  klicke `Installieren`, dann `Aktivieren` (beides der selbe Button
+- **Minimale Obsidian-Version:** 1.4.0 (die erste mit
+  [Eigenschaften](#wie-gehen-eigenschaften))
+  - Es gibt möglicherweise einen Bug in mindestens einer Version, die älter als
+    1.8.10 ist, un dazu führt, dass der Notiztitel dem Inhalt der Notizen
+    vorangestellt wird. Falls du dieses Problem in deinen Flows feststellst, sag
+    mir bescheid, welche Version du benutzt, damit ich diese Info hier einfügen
+    kann.
+- **Installation:** Während das Plugin noch nicht auf dem Marktplatz verfügbar
+  ist, kannst du es manuell oder mit BRAT installieren.
+  - **BRAT-Anleitung**: https://tfthacker.com/brat-quick-guide
+  - **Manuelle Installation:** Lade `main.js`, `manifest.json`and `styles.css`
+    aus dem Release herunter. Erzeuge einen Ordner `textFlow` im
+    `.obsidian/plugins` Ordner deines Vaults. Füge die Dateien dort ein. Lade
+    deinen Vault neu. Gehe zu Obsidians `Einstellungen > Externe Plugins`. Suche
+    nach textFlow. Aktiviere es und klicke das Zahnrad, um zu den Einstellungen
+    zu gelangen.
+- **Installation per Marktplatz:** Sobald textFlow auf dem Marktplatz verfügbar
+  ist: Gehe zu Obsidians `Einstellungen > Externe Plugins > Durchsuchen`, suche
+  nach textFlow, klicke `Installieren`, dann `Aktivieren` (beides der selbe
+  Button
 
 <hr>
 
 ### 6. Einstellungen
+
 - **Grundeinstellungen**
-	- **Wähle einen bestehenden Ordner, in dem textFlows Systemordner - textFlowSystemFolder - erzeugt werden soll.** Dieser Ordner wird deine Flows enthalten. Er ist standardmäßig versteckt, kann aber angezeigt werden. 
-- **Öffne den Flow-Switcher per...** Hier kannst du auswählen, wie du auf das Switcher-Modal zugreifen willst. Es gibt auch die Option, es nur per Befehlspalette zu erreichen. 
-- **Wähle eine Dekoration für den Datei-Explorer.** Die Quellnotizen deiner aktiven Flows können im Datei-Explorer markiert werden. Die Markierung kann auch versteckt werden. 
-- **Wähle ein Highlight für die aktive Region.** Die Quellnotiz der aktiven Region wird im Datei-Explorer hervorgehoben. Im Stil deiner Wahl. 
+  - **Wähle einen bestehenden Ordner, in dem textFlows Systemordner -
+    textFlowSystemFolder - erzeugt werden soll.** Dieser Ordner wird deine Flows
+    enthalten. Er ist standardmäßig versteckt, kann aber angezeigt werden.
+- **Öffne den Flow-Switcher per...** Hier kannst du auswählen, wie du auf das
+  Switcher-Modal zugreifen willst. Es gibt auch die Option, es nur per
+  Befehlspalette zu erreichen.
+- **Wähle eine Dekoration für den Datei-Explorer.** Die Quellnotizen deiner
+  aktiven Flows können im Datei-Explorer markiert werden. Die Markierung kann
+  auch versteckt werden.
+- **Wähle ein Highlight für die aktive Region.** Die Quellnotiz der aktiven
+  Region wird im Datei-Explorer hervorgehoben. Im Stil deiner Wahl.
 
 - **Erweiterte Einstellungen**
-	- **Verstecke Explorer-Deko:** Falls du grad keinen Bock drauf hast. 
-	- **Navigation per Datei-Explorer ausschalten:** Falls du die Funktionalität nicht magst. Es gibt auch einen Befehl hierfür. 
-	- **Verstecke die Scrolleiste:** Blende die zuckende Scrolleiste aus - entweder in Flows oder überall (also auch für den Datei-Explorer, Gliederung, Tag-Ansicht usw.). Es gibt einen Befehl, um zwischen überall/nirgendwo zu wechseln. 
-	- **Prüfe auf externe Bearbeitung:** Falls du öfter mal auf Geräten arbeitest, auf denn textFlow nicht läuft, kann das Plugin für dich nach externen Bearbeitungen suchen und Flows entsprechend neu bauen. 
-	- **Verstecke den textFlowSystemFolder:** Es wird empfohlen, den versteckt zu halten, damit du nicht versehentlich was dran kaputt machst. 
+  - **Verstecke Explorer-Deko:** Falls du grad keinen Bock drauf hast.
+  - **Navigation per Datei-Explorer ausschalten:** Falls du die Funktionalität
+    nicht magst. Es gibt auch einen Befehl hierfür.
+  - **Verstecke die Scrolleiste:** Blende die zuckende Scrolleiste aus -
+    entweder in Flows oder überall (also auch für den Datei-Explorer,
+    Gliederung, Tag-Ansicht usw.). Es gibt einen Befehl, um zwischen
+    überall/nirgendwo zu wechseln.
+  - **Prüfe auf externe Bearbeitung:** Falls du öfter mal auf Geräten arbeitest,
+    auf denn textFlow nicht läuft, kann das Plugin für dich nach externen
+    Bearbeitungen suchen und Flows entsprechend neu bauen.
+  - **Verstecke den textFlowSystemFolder:** Es wird empfohlen, den versteckt zu
+    halten, damit du nicht versehentlich was dran kaputt machst.
 
-**Erzeuge einen neuen Flow** 
-- **Gib deinem Flow einen Namen:** Namen müssen einzigartig sein. Sie dürfen außerdem bestimmte Zeichen nicht enthalten, da die Namen auch als Datei-Titel taugen müssen. 
-- **Schließe Ordner/Gruppen-Titel ein:** Manche Sortier-Optionen funktionieren besser oder schlechter mit Titeln. 
+**Erzeuge einen neuen Flow**
+
+- **Gib deinem Flow einen Namen:** Namen müssen einzigartig sein. Sie dürfen
+  außerdem bestimmte Zeichen nicht enthalten, da die Namen auch als Datei-Titel
+  taugen müssen.
+- **Schließe Ordner/Gruppen-Titel ein:** Manche Sortier-Optionen funktionieren
+  besser oder schlechter mit Titeln.
 - **Definiere deinen Flow per...**
-	- **Lesezeichen:** Hier kannst du den Namen bzw. Pfad einer Lesezeichengruppe eingeben. Um Untergruppen auszuschließen, beende den Pfad mit einem /.
-	- **Pfaden, Tags, [Eigenschaften](#wie-gehen-eigenschaften):** Du kannst einschließen oder ausschließen. Du kannst den die Eigenschaften auch mit Werten spezifizieren. Die Logik ist allerdings sehr simpel, also wenn du kompliziertere Kriterien brauchst, musst du eine Dataview-Such formulieren und die Ergebnisse taggen, um sie mit diesem Tag in einen Flow einzuschließen. 
-- **Sortierreihenfolge:** Es steht dir frei, ob du die Notizen in der selben Reihenfolge haben willst, wie sie im Datei-Explorer erscheinen, oder ob sie lieber der Ordner-Reihenfolge entsprechen sollen. Für Lesezeichen kannst du außerdem eine manuelle Ordnung auswählen, bei der die Objekte so verarbeitet werden, wie sie in der Übersicht erscheinen, unabhängig davon, ob sie Gruppe oder Notiz sind. 
-- **Vorschau:** Dieser Button öffnet ein Modal, das dir die Ordner/Gruppen-Titel und Notiznamen in der Reihenfolge zeigt, in der sie im Flow erscheinen werden. Auf diese Weise kannst du prüfen, ob dir das Ergebnis gefällt. Dir wird außerdem angezeigt, ob sich dein neuer Flow mit anderen überlappen wird. 
-- **Speichern:** Das speichert nur die Definition. Das tatsächliche Bauen des Flows passiert in einem anderen Schritt. 
+  - **Lesezeichen:** Hier kannst du den Namen bzw. Pfad einer Lesezeichengruppe
+    eingeben. Um Untergruppen auszuschließen, beende den Pfad mit einem /.
+  - **Pfaden, Tags, [Eigenschaften](#wie-gehen-eigenschaften):** Du kannst
+    einschließen oder ausschließen. Du kannst den die Eigenschaften auch mit
+    Werten spezifizieren. Die Logik ist allerdings sehr simpel, also wenn du
+    kompliziertere Kriterien brauchst, musst du eine Dataview-Such formulieren
+    und die Ergebnisse taggen, um sie mit diesem Tag in einen Flow
+    einzuschließen.
+- **Sortierreihenfolge:** Es steht dir frei, ob du die Notizen in der selben
+  Reihenfolge haben willst, wie sie im Datei-Explorer erscheinen, oder ob sie
+  lieber der Ordner-Reihenfolge entsprechen sollen. Für Lesezeichen kannst du
+  außerdem eine manuelle Ordnung auswählen, bei der die Objekte so verarbeitet
+  werden, wie sie in der Übersicht erscheinen, unabhängig davon, ob sie Gruppe
+  oder Notiz sind.
+- **Vorschau:** Dieser Button öffnet ein Modal, das dir die Ordner/Gruppen-Titel
+  und Notiznamen in der Reihenfolge zeigt, in der sie im Flow erscheinen werden.
+  Auf diese Weise kannst du prüfen, ob dir das Ergebnis gefällt. Dir wird
+  außerdem angezeigt, ob sich dein neuer Flow mit anderen überlappen wird.
+- **Speichern:** Das speichert nur die Definition. Das tatsächliche Bauen des
+  Flows passiert in einem anderen Schritt.
 - **Verwerfe Eingaben:** Setzt die Eingabemaske zurück.
 
-**Deine Flows:** 
-- Hier siehst du die drei wichtigsten Informationen über deine existierenden Flows: 
-	- Name
-	- Quelle
-	- Definitionskriterien
-- **(Neu)bauen:** Dieser Button baut deine Flow-Notiz nach deinen Vorgaben zusammen. Der Button ist außerdem nützlich, um einige Fehlermeldungen loszuwerden, da er auch die Datenstruktur im Hintergrund neu erzeugt. 
-- **Bearbeiten:** Falls du etwas an deiner Definition ändern willst** 
-- **Löschen:** Löscht deine Definition, die Flow-Notiz (falls sie existiert), und alle ihre Spuren in der Datenstruktur.
+**Deine Flows:**
+
+- Hier siehst du die drei wichtigsten Informationen über deine existierenden
+  Flows:
+  - Name
+  - Quelle
+  - Definitionskriterien
+- **(Neu)bauen:** Dieser Button baut deine Flow-Notiz nach deinen Vorgaben
+  zusammen. Der Button ist außerdem nützlich, um einige Fehlermeldungen
+  loszuwerden, da er auch die Datenstruktur im Hintergrund neu erzeugt.
+- **Bearbeiten:** Falls du etwas an deiner Definition ändern willst\*\*
+- **Löschen:** Löscht deine Definition, die Flow-Notiz (falls sie existiert),
+  und alle ihre Spuren in der Datenstruktur.
 
 <hr>
 
 ### 7 Befehle
 
-Alle Befehle können in Obsidians Einstellungen mit Tastenkürzeln verknüpft werden. 
+Alle Befehle können in Obsidians Einstellungen mit Tastenkürzeln verknüpft
+werden.
 
 - **Alle Leaves synchronisieren:** Speichert auch die aktuelle Cursor-Position
-- **Flow im aktive Leaf neubauen:** Manchmal ist ein Neubau außer der Reihe nötig. 
-- **Letzte Cursor-Position wiederherstellen:** Wie die Beschreibung schon sagt. 
-- **Aktive Region auswählen:** Wählt den Text der aktiven Region des aktiven Flows aus. 
-- **Flow im aktiven Leaf exportieren:** Falls du die Menüleiste nicht aktiviert hast. 
+- **Flow im aktive Leaf neubauen:** Manchmal ist ein Neubau außer der Reihe
+  nötig.
+- **Letzte Cursor-Position wiederherstellen:** Wie die Beschreibung schon sagt.
+- **Aktive Region auswählen:** Wählt den Text der aktiven Region des aktiven
+  Flows aus.
+- **Flow im aktiven Leaf exportieren:** Falls du die Menüleiste nicht aktiviert
+  hast.
 
 - **Fuzzy-Navigation öffnen:** Für die Navigation per Tastatur
-- **Flow-Switcher öffnen:** Falls du das Modal nicht mit Buttons öffnen willst, kannst du stattdessen diesen Befehl nutzen. 
-- **Menüleiste umschalten:** Wie die Beschreibung schon sagt. 
+- **Flow-Switcher öffnen:** Falls du das Modal nicht mit Buttons öffnen willst,
+  kannst du stattdessen diesen Befehl nutzen.
+- **Menüleiste umschalten:** Wie die Beschreibung schon sagt.
 
-- Je nach Einstellung (Check für externe Edits aus oder an (Änderungen an diesem Setting brauchen einen Reload deines Vaults, um sich hier widerzuspiegeln):
-	- **Flagge alle Flows für den Neubau:** Falls du keine automatischen Checks für externe Edits hast und unsicher bist, welche Notizen du extern bearbeitet hast. 
-	- **Prüfe Vault auf externe Edits:** Falls du auch für deine gerade inaktiven Flows einen Check möchtest (die automatischen Checks prüfen nur aktive Flows)
+- Je nach Einstellung (Check für externe Edits aus oder an (Änderungen an diesem
+  Setting brauchen einen Reload deines Vaults, um sich hier widerzuspiegeln):
+  - **Flagge alle Flows für den Neubau:** Falls du keine automatischen Checks
+    für externe Edits hast und unsicher bist, welche Notizen du extern
+    bearbeitet hast.
+  - **Prüfe Vault auf externe Edits:** Falls du auch für deine gerade inaktiven
+    Flows einen Check möchtest (die automatischen Checks prüfen nur aktive
+    Flows)
 
-- **Scrollbar umschalten:** Für den schnellen Wechsel. 
+- **Scrollbar umschalten:** Für den schnellen Wechsel.
 - **Navigation per Explorer umschalten:** Falls du die Mehrfachauswahl brauchst.
 
 <hr>
@@ -252,66 +527,93 @@ Alle Befehle können in Obsidians Einstellungen mit Tastenkürzeln verknüpft we
 
 #### Gute Angewohnheiten
 
-Wenn du wissen willst, warum: [Sicherheitsfeatures](#2-safetyfeatures) / [Einschränkungen](#3-einschränkungen-und-bekannte-unannehmlichkeiten)
-1. Warte, bis die Menüleiste dargestellt wird, ehe du anfängst, einen Flow zu bearbeiten.
+Wenn du wissen willst, warum: [Sicherheitsfeatures](#2-safetyfeatures) /
+[Einschränkungen](#3-einschränkungen-und-bekannte-unannehmlichkeiten)
+
+1. Warte, bis die Menüleiste dargestellt wird, ehe du anfängst, einen Flow zu
+   bearbeiten.
 2. Öffne so wenige Flows in so wenigen Tabs wie möglich.
-3. Sei vorsichtig mit `strg/cmd + z` nach einem Neubau. Es kann dich in den Zustand vor dem Neubau zurückbringen. 
-4. Öffne und bearbeite Flows immer nur in Obsidian und während textFlow aktiv ist. 
+3. Sei vorsichtig mit `strg/cmd + z` nach einem Neubau. Es kann dich in den
+   Zustand vor dem Neubau zurückbringen.
+4. Öffne und bearbeite Flows immer nur in Obsidian und während textFlow aktiv
+   ist.
 
 #### Schnelles Tutorial
 
-1. Installiere textFlow Plugin (siehe [Voraussetzungen und Einrichtung](#5-voraussetzungen-und-einrichtung))
+1. Installiere textFlow Plugin (siehe
+   [Voraussetzungen und Einrichtung](#5-voraussetzungen-und-einrichtung))
 2. Richte den Systemordner ein.
-3. Lies dir die anderen Einstellungen durch, wenn du magst, aber die Voreinstellungen sind das empfohlene Setup für neue Nutzer:innen. 
+3. Lies dir die anderen Einstellungen durch, wenn du magst, aber die
+   Voreinstellungen sind das empfohlene Setup für neue Nutzer:innen.
 4. Scroll runter zu `Erzeuge einen neuen Flow`.
-5. Triff eine Auswahl und definiere deinen Flow entweder aus Lesezeichen oder aus dem Ordner, den Tags oder anderen Metadaten deiner Notizen. 
-6. Sieh dir eine Vorschau deiner Schöpfung an. 
+5. Triff eine Auswahl und definiere deinen Flow entweder aus Lesezeichen oder
+   aus dem Ordner, den Tags oder anderen Metadaten deiner Notizen.
+6. Sieh dir eine Vorschau deiner Schöpfung an.
 7. Bau den Flow.
 8. Schließe das Einstellungsfenster und öffne das Switcher-Modal.
-9. Click auf einen der Pfeil-Buttons, um deinen Flow zu öffnen. 
-10. Bewundere die Aussicht. 
-11. Klick herum und beobachte, wie das Navigations-Dropdown deine Bewegungen verfolgt. Tippe etwas. Klicke den Sync-Button. 
-12. Öffne die Quellnotiz und prüfe, ob deine Änderung wirklich gespeichert wurde. 
+9. Click auf einen der Pfeil-Buttons, um deinen Flow zu öffnen.
+10. Bewundere die Aussicht.
+11. Klick herum und beobachte, wie das Navigations-Dropdown deine Bewegungen
+    verfolgt. Tippe etwas. Klicke den Sync-Button.
+12. Öffne die Quellnotiz und prüfe, ob deine Änderung wirklich gespeichert
+    wurde.
 13. Starre voll Bewunderung (optional).
 
 #### Wie gehen Eigenschaften
 
-- Öffne eine Notiz deiner Wahl. 
+- Öffne eine Notiz deiner Wahl.
 - Tippe `cmd + p` für die Befehlspalette und dann das Worte `Eigenschaften`.
 - Du siehst den Befehl `Zeige Dateieiegenschaften`
-- Den wählst du aus, um die Eigenschaften der Notiz im aktiven Leafs in der rechten Seitenleiste anzeigen zu lassen. 
-- Klick auf `Eigenschaft hinzufügen`. 
-- Es gibt einige Standardeigenschaften - `tags`, `cssclasses`, and `aliases` - die du auswählen kannst. Du kannst aber auch einfach in das Eingabefeld über dem kleinen Modal klicken und einen frei gewählten Namen für deine Eigenschaft angeben.
-- Klick dann auf das Icon mit den drei Strichen. Jetzt kannst du einen Typ für deine Eigenschaften aussuchen. Was genau die bedeuten, kannst du selber recherchieren, aber die Namen sind recht selbsterklärend. 
-- Du kannst auch in den Einstellungen unter `Einstellungen > Editor > Eigenschaften im Dokument` auswählen, ob du Eigenschaften immer oben in deinen Notizen angezeigt bekommen möchtest. 
-- Ich empfehle außerdem wärmstens das Plugin 'Multi Properties' von technohiker. Damit kannst du die Eigenschaften von mehreren Notizen gleichzeitig bearbeiten. 
+- Den wählst du aus, um die Eigenschaften der Notiz im aktiven Leafs in der
+  rechten Seitenleiste anzeigen zu lassen.
+- Klick auf `Eigenschaft hinzufügen`.
+- Es gibt einige Standardeigenschaften - `tags`, `cssclasses`, and `aliases` -
+  die du auswählen kannst. Du kannst aber auch einfach in das Eingabefeld über
+  dem kleinen Modal klicken und einen frei gewählten Namen für deine Eigenschaft
+  angeben.
+- Klick dann auf das Icon mit den drei Strichen. Jetzt kannst du einen Typ für
+  deine Eigenschaften aussuchen. Was genau die bedeuten, kannst du selber
+  recherchieren, aber die Namen sind recht selbsterklärend.
+- Du kannst auch in den Einstellungen unter
+  `Einstellungen > Editor > Eigenschaften im Dokument` auswählen, ob du
+  Eigenschaften immer oben in deinen Notizen angezeigt bekommen möchtest.
+- Ich empfehle außerdem wärmstens das Plugin 'Multi Properties' von technohiker.
+  Damit kannst du die Eigenschaften von mehreren Notizen gleichzeitig
+  bearbeiten.
 
 #### Wie geht Fuzzy-Navigation?
 
-**So sehen die Einträge aus:**
-	- **Region** des Flows im aktiven Leaf: 
-		- `AktiverFlowName: ? Pfad/der/Region`
-	- **Region** eines anderen Flows:  
-		- `AndererFlowName: * Pfad/der/Region
-	- **Flowname**: 
-		- `: FlowName`
+**So sehen die Einträge aus:** - **Region** des Flows im aktiven Leaf: -
+`AktiverFlowName: ? Pfad/der/Region` - **Region** eines anderen Flows:  
+ - `AndererFlowName: * Pfad/der/Region 	- **Flowname**:  		- `: FlowName`
 
-**Mit dem Modal navigieren** 
-- Beginne deinen Suchbegriff mit einem der Präfixe, um die Suche einzugrenzen - `?`für Regionen im aktiven Flow, `*` für Regionen in anderen Flows, `:` für Flownamen.  
-- Ergebnisse für den Flow im aktiven Leaf führen immer ins aktive Leaf. 
-- Ergebnisse für andere Flows führen in das zuletzt aktive Leaf des Flows zurück. Gibt es das nicht, öffnen sie sich in einem neuen Leaf. 
+**Mit dem Modal navigieren**
+
+- Beginne deinen Suchbegriff mit einem der Präfixe, um die Suche einzugrenzen -
+  `?`für Regionen im aktiven Flow, `*` für Regionen in anderen Flows, `:` für
+  Flownamen.
+- Ergebnisse für den Flow im aktiven Leaf führen immer ins aktive Leaf.
+- Ergebnisse für andere Flows führen in das zuletzt aktive Leaf des Flows
+  zurück. Gibt es das nicht, öffnen sie sich in einem neuen Leaf.
 - Ergebnisse für Flow-Namen öffnen sich immer in einem neuen Leaf.
 
 <hr>
 
 ### 9. Probleme beheben
 
-Falls du keine von den Sachen gemacht hast, die zu [unterlassen](#2-sicherheitsfeatures) ich [empfohlen](#5-einschränkungen-und-bekannte-unannehmlichkeiten) hatte, kann dein Problem wahrscheinlich durch Aus- und wieder Anschalten gelöst werden: 
+Falls du keine von den Sachen gemacht hast, die zu
+[unterlassen](#2-sicherheitsfeatures) ich
+[empfohlen](#5-einschränkungen-und-bekannte-unannehmlichkeiten) hatte, kann dein
+Problem wahrscheinlich durch Aus- und wieder Anschalten gelöst werden:
+
 - **Baue den problematischen Flow neu und/oder**
 - **lade deinen Vault neu**
 
-Falls dus einfach selber rausfinden musstest (oder textFlow mit anderen Einstellungen/Plugins kollidiert oder tatsächlich etwas schiefgegangen ist), ist hier eine Liste von Problemen, die ich selber verursachen konnte, plus Erklärung und Lösungen.
-Falls du dein Problem hier nicht findest, sag bescheid (siehe auch [Melde einen Bug / Zeig deine Liebe](#12-melde-einen-bug--zeig-deine-liebe))
+Falls dus einfach selber rausfinden musstest (oder textFlow mit anderen
+Einstellungen/Plugins kollidiert oder tatsächlich etwas schiefgegangen ist), ist
+hier eine Liste von Problemen, die ich selber verursachen konnte, plus Erklärung
+und Lösungen. Falls du dein Problem hier nicht findest, sag bescheid (siehe auch
+[Melde einen Bug / Zeig deine Liebe](#12-melde-einen-bug--zeig-deine-liebe))
 
 **Inhaltsverzeichnis**
 
@@ -324,153 +626,286 @@ Falls du dein Problem hier nicht findest, sag bescheid (siehe auch [Melde einen 
 
 #### Flow-Erzeugung
 
-- **Problem:** Ich habe einen Flow definiert, aber manche Ordner oder Dateien werden einfach ignoriert.
-	- **Erklärung:** Die Namen der Ordner oder Dateien enthalten wahrscheinlich unzulässige Zeichen, die Dataview nicht akzeptiert. 
-	- **Lösung:** 
-		- Ersetze die unzulässigen Zeichen durch zulässige.
-		- Vergiss nicht, den Ordnernamen auch in der Definition zu ändern. 
+- **Problem:** Ich habe einen Flow definiert, aber manche Ordner oder Dateien
+  werden einfach ignoriert.
+  - **Erklärung:** Die Namen der Ordner oder Dateien enthalten wahrscheinlich
+    unzulässige Zeichen, die Dataview nicht akzeptiert.
+  - **Lösung:**
+    - Ersetze die unzulässigen Zeichen durch zulässige.
+    - Vergiss nicht, den Ordnernamen auch in der Definition zu ändern.
 
-- **Problem:** Die Notizen in deiner Preview sind in einer ganz anderen Reihenfolge als die Notizen in deinem Datei-Explorer, obwohl du 'Notizen' als Sortierreihenfolge ausgewählt hast. 
-	- **Erklärung:** textFlow folgt der Reihenfolge des Dateibaums auf Systemebene (mit JavaScript Geschmack), nicht der auf UI-Ebene, und die können von einader abweichen.
-	- **Lösung:** 
-		- Benutzt du ein Plugin, um deine Notizen im Datei-Explorer manuell zu sortieren?
-			- Du musst deine Notizen entweder numerieren, um die Reihenfolge zu erzeugen, die du willst, oder du musst die Reihenfolge in einer **Lesezeichen-Gruppe** spiegeln und deinen Flow von dort definieren (dann kannst du allerdings die Auswahl nicht per Eigenschaften verfeinern).
-		- Hast du deine Notizen 'basisname', 'basisname1', 'basisname2'... benannt? 
-			- JavaScript folgt seinem eigenen Alphabet, bei dem 'basisname' *nach* 'basisname${zahl}' kommt. Außerdem kommt basisname10 gleich nach basisname1
-			- Die Lösung ist, 'basisname' in 'basisname00' umzubenennen, basisname1 in basisname01 usw.
+- **Problem:** Die Notizen in deiner Preview sind in einer ganz anderen
+  Reihenfolge als die Notizen in deinem Datei-Explorer, obwohl du 'Notizen' als
+  Sortierreihenfolge ausgewählt hast.
+  - **Erklärung:** textFlow folgt der Reihenfolge des Dateibaums auf Systemebene
+    (mit JavaScript Geschmack), nicht der auf UI-Ebene, und die können von
+    einader abweichen.
+  - **Lösung:**
+    - Benutzt du ein Plugin, um deine Notizen im Datei-Explorer manuell zu
+      sortieren?
+      - Du musst deine Notizen entweder numerieren, um die Reihenfolge zu
+        erzeugen, die du willst, oder du musst die Reihenfolge in einer
+        **Lesezeichen-Gruppe** spiegeln und deinen Flow von dort definieren
+        (dann kannst du allerdings die Auswahl nicht per Eigenschaften
+        verfeinern).
+    - Hast du deine Notizen 'basisname', 'basisname1', 'basisname2'... benannt?
+      - JavaScript folgt seinem eigenen Alphabet, bei dem 'basisname' _nach_
+        'basisname${zahl}' kommt. Außerdem kommt basisname10 gleich nach
+        basisname1
+      - Die Lösung ist, 'basisname' in 'basisname00' umzubenennen, basisname1 in
+        basisname01 usw.
 
-#### Flow-Switcher 
+#### Flow-Switcher
 
-- **Problem:** Ein Flow will sich nicht öffnen, obwohl er im Switcher angezeigt wird.
-	- **Lösung:** 
-		- Versuche, den Flow neu zu bauen und deinen Vault neu zu laden. Wenn der Button für den Neubau ausgegraut ist, löse ihn über den Einstellungstab aus.
-		- Wenn das nicht funktioniert, lösche die Definition des Flows und stelle sie aus dem Backup wieder her. 
-		- Wenn auch das nicht funktioniert, erstelle ein Backup deiner Flow-Definitionen, beende Obsidian, gehe in den Ordner `.obsidian/plugins/textFlow` in deinem Vault und lösche die Datei `data.json`. Das wird alle Einstellungen löschen, also sei dir sicher.
-		- `.obsidian` ist ein versteckter Ordner, aber das Internet wird dir sagen, wie du die auf deinem Betriebssystem sichtbar machen kannst. 
-		- Danach starte Obsidian neu und stelle deine Flow-Definitionen aus dem Backup wieder her. 
+- **Problem:** Ein Flow will sich nicht öffnen, obwohl er im Switcher angezeigt
+  wird.
+  - **Lösung:**
+    - Versuche, den Flow neu zu bauen und deinen Vault neu zu laden. Wenn der
+      Button für den Neubau ausgegraut ist, löse ihn über den Einstellungstab
+      aus.
+    - Wenn das nicht funktioniert, lösche die Definition des Flows und stelle
+      sie aus dem Backup wieder her.
+    - Wenn auch das nicht funktioniert, erstelle ein Backup deiner
+      Flow-Definitionen, beende Obsidian, gehe in den Ordner
+      `.obsidian/plugins/textFlow` in deinem Vault und lösche die Datei
+      `data.json`. Das wird alle Einstellungen löschen, also sei dir sicher.
+    - `.obsidian` ist ein versteckter Ordner, aber das Internet wird dir sagen,
+      wie du die auf deinem Betriebssystem sichtbar machen kannst.
+    - Danach starte Obsidian neu und stelle deine Flow-Definitionen aus dem
+      Backup wieder her.
 
 - **Problem:** Das Modal ist leer, obwohl du mehrere Flows definiert hast.
-	- **Lösung:**
-		- Manchmal frisst Obsidian `data.json`. 
-		- Du musst das Plugin neu einrichten. 
+  - **Lösung:**
+    - Manchmal frisst Obsidian `data.json`.
+    - Du musst das Plugin neu einrichten.
 
 #### Menüleiste
 
-- **Problem:** Die Menüleiste wird für einen deiner Flows nur halb gerendert (optional: und der Sync-Button bleibt aktiviert)
-	- **Lösung:**
-		- Versuchs mit nem Neubau. Wenn der Button ausgegraut ist, mach den Neubau über die Einstellungen. 
+- **Problem:** Die Menüleiste wird für einen deiner Flows nur halb gerendert
+  (optional: und der Sync-Button bleibt aktiviert)
+  - **Lösung:**
+    - Versuchs mit nem Neubau. Wenn der Button ausgegraut ist, mach den Neubau
+      über die Einstellungen.
 
 - **Problem:** textFlows Menüleiste verdeckt die Editing Toolbar von Cuman
-	- **Lösung:** 
-		- textFlows Menüleiste befindet sich auf z-Index `var(--layer-modal)`. Damit liegt sie über Editing Toolbars `var(--layer-status-bar)`. Das ist notwendig, damit textFlows Dropdowns über der Toolbar angezeigt werden können. Es führt aber auch dazu, dass Editing Toolbar unter textFlows Menüleiste schlüpft, wenn man per `strg/cmd+Pfeil-unten` ans Ende des Dokuments springt. Ich habe bisher keine Lösung dafür finden können, habe aber Cuman angeschrieben, in der Hoffnung auf Hilfe und/oder Abstimmung. 
+  - **Lösung:**
+    - textFlows Menüleiste befindet sich auf z-Index `var(--layer-modal)`. Damit
+      liegt sie über Editing Toolbars `var(--layer-status-bar)`. Das ist
+      notwendig, damit textFlows Dropdowns über der Toolbar angezeigt werden
+      können. Es führt aber auch dazu, dass Editing Toolbar unter textFlows
+      Menüleiste schlüpft, wenn man per `strg/cmd+Pfeil-unten` ans Ende des
+      Dokuments springt. Ich habe bisher keine Lösung dafür finden können, habe
+      aber Cuman angeschrieben, in der Hoffnung auf Hilfe und/oder Abstimmung.
 
-- **Problem:** Die textFlow Menüleiste wird von einer anderen Menüleiste verdeckt
-	- **Lösung:**
-		- Lass dir die anderen Menüleisten an einer anderen Position anzeigen oder blende sie aus. 
+- **Problem:** Die textFlow Menüleiste wird von einer anderen Menüleiste
+  verdeckt
+  - **Lösung:**
+    - Lass dir die anderen Menüleisten an einer anderen Position anzeigen oder
+      blende sie aus.
 
-- **Problem**: Ich habe aus Obsidian raus geklickt während das Navigations-Dropdown ausgeklappt war, und jetzt schließt es sich nicht mehr, wenn ich außerhalb davon klicke.
-	- **Solution:** Ja... keine Ahnung, warum es das tut. Klick einen Menüeintrag, das bringt es wieder zur Besinnung. 
+- **Problem**: Ich habe aus Obsidian raus geklickt während das
+  Navigations-Dropdown ausgeklappt war, und jetzt schließt es sich nicht mehr,
+  wenn ich außerhalb davon klicke.
+  - **Solution:** Ja... keine Ahnung, warum es das tut. Klick einen Menüeintrag,
+    das bringt es wieder zur Besinnung.
 
-#### Flow / Leaf 
+#### Flow / Leaf
 
-- **Problem:** Der Cursor ist am Ende einer Region, gleich über einer grauen Linie, und bewegt sich nicht mehr??
-	- **Lösung:** 
-		- Du hast eine unsichtbare UUID gefunden! Einige der Zeichen, aus denen die bestehen, haben Nullbreite, das heißt, der Cursor bleibt, wo er ist, während er durch sie hindurch rattert. 
-		- Um den Cursor zu befreien, klick einfach woanders hin, oder benutze die Hoch-/Runter-Pfeiltaste. 
+- **Problem:** Der Cursor ist am Ende einer Region, gleich über einer grauen
+  Linie, und bewegt sich nicht mehr??
+  - **Lösung:**
+    - Du hast eine unsichtbare UUID gefunden! Einige der Zeichen, aus denen die
+      bestehen, haben Nullbreite, das heißt, der Cursor bleibt, wo er ist,
+      während er durch sie hindurch rattert.
+    - Um den Cursor zu befreien, klick einfach woanders hin, oder benutze die
+      Hoch-/Runter-Pfeiltaste.
 
-- **Problem:** Die grauen Trennlinien sind jetzt aus irgend einem Grund `<hr>`, und Checkboxen und anderes Markdown werden nicht mehr gerendert (und da sind so viele Leerzeilen und wtf?)?
-	- **Lösung:** 
-		- Wenn da keine gruseligen Leerzeilen sind, hast du einen ungeschlossenen Code-Block irgendwo.
-			- Vielleicht ist es unabsichtlicher Code, wie `<blah`, dann musst du nur ein Leerzeichen zwischen die Spitze und die Buchstaben setzen: < blah. 
-			- Aber wenn es ein ganzer html-artiger Tag ist - `<>` - musst du ihn in Backticks (accent gràve) einschließen. Entweder einzelne, wenn du nur ein einzelnes Wort/Zeile isolieren willst - so: `<boolean>`, `<b>` - oder drei  - ` ``` `- in der Zeile über und der Zeile unter dem Textblock, damit Obsidian versteht, dass es nichts interpretieren soll, was in diesem Block steht. 
-		- Wenn da Leerzeilen sind, hast du wahrscheinlich textFlow deaktiviert, während ein Flow offen war.
-			- Das zerstört alle Erweiterungen - obwohl ich `reconfigure.of(extension)` benutze, wat soll dat? - und nun kann der Editor kein Markdown mehr rendern. 
-			- Um das zu lösen, öffne das betroffene Leaf neu oder lade deinen Vault neu.
+- **Problem:** Die grauen Trennlinien sind jetzt aus irgend einem Grund `<hr>`,
+  und Checkboxen und anderes Markdown werden nicht mehr gerendert (und da sind
+  so viele Leerzeilen und wtf?)?
+  - **Lösung:**
+    - Wenn da keine gruseligen Leerzeilen sind, hast du einen ungeschlossenen
+      Code-Block irgendwo.
+      - Vielleicht ist es unabsichtlicher Code, wie `<blah`, dann musst du nur
+        ein Leerzeichen zwischen die Spitze und die Buchstaben setzen: < blah.
+      - Aber wenn es ein ganzer html-artiger Tag ist - `<>` - musst du ihn in
+        Backticks (accent gràve) einschließen. Entweder einzelne, wenn du nur
+        ein einzelnes Wort/Zeile isolieren willst - so: `<boolean>`, `<b>` -
+        oder drei - ` ``` `- in der Zeile über und der Zeile unter dem
+        Textblock, damit Obsidian versteht, dass es nichts interpretieren soll,
+        was in diesem Block steht.
+    - Wenn da Leerzeilen sind, hast du wahrscheinlich textFlow deaktiviert,
+      während ein Flow offen war.
+      - Das zerstört alle Erweiterungen - obwohl ich `reconfigure.of(extension)`
+        benutze, wat soll dat? - und nun kann der Editor kein Markdown mehr
+        rendern.
+      - Um das zu lösen, öffne das betroffene Leaf neu oder lade deinen Vault
+        neu.
 
-
-- **Problem:** Du versuchst, den gesamten Flow mit `ctrl+a` zu markieren, aber das funktioniert nicht.
-	- **Lösung:**
-		- Probiers noch mal. Beim zweiten Mal klappt es. 
-		- Aber da du wahrscheinlich keine unsichtbaren UUIDs in deinem kopierten Flow haben willst, exportiere ihn stattdessen (es gibt einen Knopf in der Menüleiste und auch einen Befehl). Das entfernt die UUIDs für dich und du kannst die neue Notiz ohne Einschränkungen handhaben. 
+- **Problem:** Du versuchst, den gesamten Flow mit `ctrl+a` zu markieren, aber
+  das funktioniert nicht.
+  - **Lösung:**
+    - Probiers noch mal. Beim zweiten Mal klappt es.
+    - Aber da du wahrscheinlich keine unsichtbaren UUIDs in deinem kopierten
+      Flow haben willst, exportiere ihn stattdessen (es gibt einen Knopf in der
+      Menüleiste und auch einen Befehl). Das entfernt die UUIDs für dich und du
+      kannst die neue Notiz ohne Einschränkungen handhaben.
 
 #### Komische Sachen
 
-- **Problem:** textFlow will, dass ich einen Flow synce, aber wenn ich den Button klicke, passiert nichts, und ich kann den Flow nicht neubauen, weil es ungesyncte Änderungen gibt. 
-	- **Lösung:** 
-		- Hast du gerade einen Sync-Fehler repariert? 
-		- Öffne textFlows Einstellungen. Hier kannst du Flows immer neu bauen, unabhängig vom Sync-Status. Das sollte das Problem beheben. 
+- **Problem:** textFlow will, dass ich einen Flow synce, aber wenn ich den
+  Button klicke, passiert nichts, und ich kann den Flow nicht neubauen, weil es
+  ungesyncte Änderungen gibt.
+  - **Lösung:**
+    - Hast du gerade einen Sync-Fehler repariert?
+    - Öffne textFlows Einstellungen. Hier kannst du Flows immer neu bauen,
+      unabhängig vom Sync-Status. Das sollte das Problem beheben.
 
-- **Problem:** Mit jedem Neubau werden die Titel deiner Notizen zu ihrem Inhalt hinzugefügt.
-	- **Lösung:** 
-		- Das ist entweder ein Problem mit deinem Setup oder ein Bug in einer (oder mehreren) von Obsidians Versionen. Mach ein Update deiner App auf Version 1.8.10, um zu garantieren, dass das Problem nicht von Obsidian selbst ausgelöst wird.
-		- Falls der Fehler weiterhin auftritt, schalte all deine Plugins aus und dann nach einander wieder ein, während du Neubauten machst, um rauszufinden, wer das Problem verursacht ([und lass es mich wissen](#12-melde-einen-bug--zeig-deine-liebe))
+- **Problem:** Mit jedem Neubau werden die Titel deiner Notizen zu ihrem Inhalt
+  hinzugefügt.
+  - **Lösung:**
+    - Das ist entweder ein Problem mit deinem Setup oder ein Bug in einer (oder
+      mehreren) von Obsidians Versionen. Mach ein Update deiner App auf Version
+      1.8.10, um zu garantieren, dass das Problem nicht von Obsidian selbst
+      ausgelöst wird.
+    - Falls der Fehler weiterhin auftritt, schalte all deine Plugins aus und
+      dann nach einander wieder ein, während du Neubauten machst, um
+      rauszufinden, wer das Problem verursacht
+      ([und lass es mich wissen](#12-melde-einen-bug--zeig-deine-liebe))
 
-- **Problem:** Navigation per Datei-Explorer funktioniert nicht, obwohl es definitiv angeschaltet ist. 
-	- **Lösung:**
-		- Manchmal frisst Obsidian textFlows data.json und ich hab keine Ahnung, warum. Sieh mal nach, ob der Flow-Switcher Flows anzeigt. Wahrscheinlich tut es das nicht. 
-		- Geh in die Einstellungen und stell deine Flow-Definitionen aus den Backups wieder her. 
+- **Problem:** Navigation per Datei-Explorer funktioniert nicht, obwohl es
+  definitiv angeschaltet ist.
+  - **Lösung:**
+    - Manchmal frisst Obsidian textFlows data.json und ich hab keine Ahnung,
+      warum. Sieh mal nach, ob der Flow-Switcher Flows anzeigt. Wahrscheinlich
+      tut es das nicht.
+    - Geh in die Einstellungen und stell deine Flow-Definitionen aus den Backups
+      wieder her.
 
 #### Mehr Probleme
 
-- **Problem:** Irgend etwas anderes funktioniert nicht und Neubau/neu laden hilft nicht.
-	- **Lösung:** [Schick mir einen Bug-Report](#12-melde-einen-bug--zeig-deine-liebe)
+- **Problem:** Irgend etwas anderes funktioniert nicht und Neubau/neu laden
+  hilft nicht.
+  - **Lösung:**
+    [Schick mir einen Bug-Report](#12-melde-einen-bug--zeig-deine-liebe)
 
 <hr>
 
-### 10.  Spickzettel
+### 10. Spickzettel
+
 **Lingo und Konzepte, die textFlow benutzt**
-- **Die Grundidee:** textFlow kopiert den Inhalt bestimmter Notizen in eine neue Notiz und synchronisiert Änderungen dieser neuen Notiz mit den Originalnotizen (Quellnotizen). Und das wars auch schon. Das ist das Plugin. Braucht anscheinend trotzdem ein 8.000 Worte Readme...
-- **Überlappung:** Eine Überlappung entsteht, wenn zwei oder mehr Flows die gleichen Quellnotizen beinhalten. Wenn du die überlappende Region editierst und zurück in die Quelle syncst, weicht der zweite Flow vom ersten, sowie den Quellen ab. Er wird daher für einen Neubau markiert und neu gebaut, sobald du das nächste Mal mit ihm interagierst. 
-- **Flow:** Eine Notiz, die aus einer Auswahl von Notizen erzeugt (kompiliert) wurde, und mit UUIDs ausgestattet wurde, um Funktionalität wie das Tracking von Cursor-Position und Textänderungen zu ermöglichen, und diese Änderungen in die Quelle zurück zu syncen. 
-- **Eigenschaften:** Oder YAML oder Properties. Metadaten, die du Notizen in Obsidian zufügen kannst. Du kannst Eigenschaften benutzen, um sehr spezifische Flows zu erstellen. Die Eigenschaften deiner Quellnotizen werden *nicht* in den Flow eingebaut, aber du kannst einem Flow als Ganzes Eigenschaften geben, wenn du möchtest. 
-- **Unsichtbare UUID:** Ein langer String aus verschiedenen, nicht-druckbaren und hauptsächlich null-breiten Zeichen, der benutzt wird, um die base16 UUID zu repräsentieren, die für jede Quellnotiz erzeugt wird, wenn sie einem Flow hinzugefügt wird. Siehe außerdem: Region.
-- **Leaf und leafID:** Ein Leaf ist nur ein Tab, plus ein Haufen Hintergrund-Information darüber, was in dem Leaf dargestellt wird. Jedes Leaf hat eine einzigartige ID, die - so weit es die Durchschnittsuser:in betrifft, über Neustarts von Obsidian persistiert. textFlow benutzt LeafIDs, um den Überblick darüber zu behalten, welcher Flow wo geöffnet ist, welche Region aktiv ist, und welche Cursor-Positionen gespeichert wurden.
- - **(Neu)bau:** Der Prozess, bei dem der Inhalt von Quellnotizen in einen Flow kopiert wird. Dieser Prozess konstruiert und schreibt den gesamten Flow neu; daher kann er für lange Flows mehrere Sekunden dauern. 
-- **Region:** Der Inhalt einer einzelnen Quellnotiz in einem Flow. Regionen sind durch unsichtbare UUIDs markiert, damit textFlow deine Bearbeitungen tracken und in die Quelle zurück syncen kann. 
-- **Quellnotiz:** Eine Notiz, deren Inhalt Teil eines Flows ist. 
-- **Sychronisation zur Quelle:** Der Prozess, Änderungen aus einem Flow in die entsprechende Quellnotiz zurück zu kopieren. Syncing kann automatisch oder manuell getriggert werden. 
-- **Tracken:** textFlow trackt deine Cursor-Position, Maus-Ereignisse und Tastatur-Ereignisse, um festzustellen, wo in einem Flow du dich befindest, und ob du eine Änderung vorgenommen hat, die Flagging fürs Syncen oder einen Neubau notwendig macht. 
-	**Dieses Tracking sendet *keine* Informationen an irgendwelche Server!**  Es speichert nur lokal Zeug - in textFlows `data.json`-Datei in deinem `.obsidian/plugins/textFlow`-Ordner.
+
+- **Die Grundidee:** textFlow kopiert den Inhalt bestimmter Notizen in eine neue
+  Notiz und synchronisiert Änderungen dieser neuen Notiz mit den Originalnotizen
+  (Quellnotizen). Und das wars auch schon. Das ist das Plugin. Braucht
+  anscheinend trotzdem ein 8.000 Worte Readme...
+- **Überlappung:** Eine Überlappung entsteht, wenn zwei oder mehr Flows die
+  gleichen Quellnotizen beinhalten. Wenn du die überlappende Region editierst
+  und zurück in die Quelle syncst, weicht der zweite Flow vom ersten, sowie den
+  Quellen ab. Er wird daher für einen Neubau markiert und neu gebaut, sobald du
+  das nächste Mal mit ihm interagierst.
+- **Flow:** Eine Notiz, die aus einer Auswahl von Notizen erzeugt (kompiliert)
+  wurde, und mit UUIDs ausgestattet wurde, um Funktionalität wie das Tracking
+  von Cursor-Position und Textänderungen zu ermöglichen, und diese Änderungen in
+  die Quelle zurück zu syncen.
+- **Eigenschaften:** Oder YAML oder Properties. Metadaten, die du Notizen in
+  Obsidian zufügen kannst. Du kannst Eigenschaften benutzen, um sehr spezifische
+  Flows zu erstellen. Die Eigenschaften deiner Quellnotizen werden _nicht_ in
+  den Flow eingebaut, aber du kannst einem Flow als Ganzes Eigenschaften geben,
+  wenn du möchtest.
+- **Unsichtbare UUID:** Ein langer String aus verschiedenen, nicht-druckbaren
+  und hauptsächlich null-breiten Zeichen, der benutzt wird, um die base16 UUID
+  zu repräsentieren, die für jede Quellnotiz erzeugt wird, wenn sie einem Flow
+  hinzugefügt wird. Siehe außerdem: Region.
+- **Leaf und leafID:** Ein Leaf ist nur ein Tab, plus ein Haufen
+  Hintergrund-Information darüber, was in dem Leaf dargestellt wird. Jedes Leaf
+  hat eine einzigartige ID, die - so weit es die Durchschnittsuser:in betrifft,
+  über Neustarts von Obsidian persistiert. textFlow benutzt LeafIDs, um den
+  Überblick darüber zu behalten, welcher Flow wo geöffnet ist, welche Region
+  aktiv ist, und welche Cursor-Positionen gespeichert wurden.
+- **(Neu)bau:** Der Prozess, bei dem der Inhalt von Quellnotizen in einen Flow
+  kopiert wird. Dieser Prozess konstruiert und schreibt den gesamten Flow neu;
+  daher kann er für lange Flows mehrere Sekunden dauern.
+- **Region:** Der Inhalt einer einzelnen Quellnotiz in einem Flow. Regionen sind
+  durch unsichtbare UUIDs markiert, damit textFlow deine Bearbeitungen tracken
+  und in die Quelle zurück syncen kann.
+- **Quellnotiz:** Eine Notiz, deren Inhalt Teil eines Flows ist.
+- **Sychronisation zur Quelle:** Der Prozess, Änderungen aus einem Flow in die
+  entsprechende Quellnotiz zurück zu kopieren. Syncing kann automatisch oder
+  manuell getriggert werden.
+- **Tracken:** textFlow trackt deine Cursor-Position, Maus-Ereignisse und
+  Tastatur-Ereignisse, um festzustellen, wo in einem Flow du dich befindest, und
+  ob du eine Änderung vorgenommen hat, die Flagging fürs Syncen oder einen
+  Neubau notwendig macht. **Dieses Tracking sendet _keine_ Informationen an
+  irgendwelche Server!** Es speichert nur lokal Zeug - in textFlows
+  `data.json`-Datei in deinem `.obsidian/plugins/textFlow`-Ordner.
 
 <hr>
 
 ### 11. textFlow und Gliederung im Vergleich
 
-Obsidian hat schon einen Weg, um einzelne, große Dokumente zu browsen, in Form des Kern-Plugins 'Gliederung' - also wann ist textFlow einen Blick wert? 
-Und wann solltest du beide zusammen benutzen? 
+Obsidian hat schon einen Weg, um einzelne, große Dokumente zu browsen, in Form
+des Kern-Plugins 'Gliederung' - also wann ist textFlow einen Blick wert? Und
+wann solltest du beide zusammen benutzen?
 
-**Die Vorteile von textFlow:** 
+**Die Vorteile von textFlow:**
+
 - **Automation und Flexibilität:**
-	- Mit textFlow kannst du an einem Dutzend verschieden zusammengesetzter Auszüge deines Vaults arbeiten, ohne jemals etwas von Hand hin und her kopieren zu müssen, Teile zu vergessen, Updates zu vergessen, und verwirrt darüber zu sein, welche Zusammenstellung welche Version enthält, weil textFlow das alles für dich regelt. 
+  - Mit textFlow kannst du an einem Dutzend verschieden zusammengesetzter
+    Auszüge deines Vaults arbeiten, ohne jemals etwas von Hand hin und her
+    kopieren zu müssen, Teile zu vergessen, Updates zu vergessen, und verwirrt
+    darüber zu sein, welche Zusammenstellung welche Version enthält, weil
+    textFlow das alles für dich regelt.
 - **Datei-Explorer:**
-	- Das Plugin 'Quiet outline' von guopenghui erlaubt es dir, Überschriften in Outline zu dekorieren und auto-expand klappt die Überschriften aus, unter denen du gerade arbeitest. Aber um die Deko zu ändern, musst du dein Dokument durchsuchen, anstatt nur im Datei-Explorer zu klicken. Und wenn du ein bestimmtes Set an Überschriften ausgeklappt haben willst, musst du deinen Arbeitsbereich nach jedem Neustart neu zurecht klicken.  
-	- Der Datei-Explorer hingegen merkt sich über Neustarts hinweg, welche Ordner ausgeklappt waren und welche nicht. 
-- **Schnappschüsse:** 
-	- Wenn du einen Schnappschuss eines bestimmten Abschnittes machen willst, musst du in Outline per copy/past vorgehen, eine neue Notiz erstellen und sie von Hand betiteln. 
-	- Mit textFlow existieren all deine Quellnotizen noch und du kannst Schnappschüsse von jeder machen (versuch mal 'Backitup' von hammadXP - funktioniert am besten zusammen mit 'Diff view' von Till Friebe, um Versionen zu vergleichen und selektiv wiederherzustellen.)
-	- 
-**Die Vorteile von Outline**
+  - Das Plugin 'Quiet outline' von guopenghui erlaubt es dir, Überschriften in
+    Outline zu dekorieren und auto-expand klappt die Überschriften aus, unter
+    denen du gerade arbeitest. Aber um die Deko zu ändern, musst du dein
+    Dokument durchsuchen, anstatt nur im Datei-Explorer zu klicken. Und wenn du
+    ein bestimmtes Set an Überschriften ausgeklappt haben willst, musst du
+    deinen Arbeitsbereich nach jedem Neustart neu zurecht klicken.
+  - Der Datei-Explorer hingegen merkt sich über Neustarts hinweg, welche Ordner
+    ausgeklappt waren und welche nicht.
+- **Schnappschüsse:** - Wenn du einen Schnappschuss eines bestimmten Abschnittes
+  machen willst, musst du in Outline per copy/past vorgehen, eine neue Notiz
+  erstellen und sie von Hand betiteln. - Mit textFlow existieren all deine
+  Quellnotizen noch und du kannst Schnappschüsse von jeder machen (versuch mal
+  'Backitup' von hammadXP - funktioniert am besten zusammen mit 'Diff view' von
+  Till Friebe, um Versionen zu vergleichen und selektiv wiederherzustellen.) -
+  **Die Vorteile von Outline**
 - Keine Daten-Duplikation wie sie für textFlow nötig ist.
-- Du kannst deine Dokumente in jedem beliebigen Editor öffnen und bearbeiten, wie es dir gefällt. 
-- Du kannst die Reihenfolge von Abschnitten per Drag-and-Drop ändern, während du in textFlow Quellnotizen umbenennen musst, um ihre Reihenfolge zu ändern. 
-- Wiki-Links funktionieren bereits. 
-- Durch Überschriften zu navigieren, ist viel robuster als textFlows Navigation mit dem Datei-Explorer. 
-- Du musst niemals darauf warten, dass ein Neubau fertig wird. 
+- Du kannst deine Dokumente in jedem beliebigen Editor öffnen und bearbeiten,
+  wie es dir gefällt.
+- Du kannst die Reihenfolge von Abschnitten per Drag-and-Drop ändern, während du
+  in textFlow Quellnotizen umbenennen musst, um ihre Reihenfolge zu ändern.
+- Wiki-Links funktionieren bereits.
+- Durch Überschriften zu navigieren, ist viel robuster als textFlows Navigation
+  mit dem Datei-Explorer.
+- Du musst niemals darauf warten, dass ein Neubau fertig wird.
 
 **Zusammen sind sie großartig:**
-- Warum auswählen, wenn du einfach beide zusammen nutzen kannst? textFlow, um flexible Dokumente zu erzeugen und Schnappschüsse zu machen, und die Gliederungsansicht, um granular durch deine Flows zu navigieren?
+
+- Warum auswählen, wenn du einfach beide zusammen nutzen kannst? textFlow, um
+  flexible Dokumente zu erzeugen und Schnappschüsse zu machen, und die
+  Gliederungsansicht, um granular durch deine Flows zu navigieren?
 
 <hr>
 
 ### 12. Melde einen Bug / Zeig deine Liebe
 
-Falls dir irgendwelche Bugs oder komisches Verhalten begegnen, die im Kapitel über das [Beheben von Problemen](#9-probleme-beheben) nicht erwähnt werden, melde dich auf github: https://github.com/tine-schreibt/aDHL/issues 
-Am besten kann ich dir helfen, wenn du dir die Fehlermeldungen in der Konsole ansiehst: 
-- Benutze die Tastenkombination `cmd+alt+i` um sie zu öffnen.
-- Dann poste deinen Bug-Report und beschreibe genau, was du tun wolltest und was stattdessen passiert ist, inclusive der Fehlermeldungen. 
-- Du kannst mir auch per email bescheid sagen: tine@tine-schreibt.de - or contact me on mastodon: https://literatur.social/@tine_schreibt
+Falls dir irgendwelche Bugs oder komisches Verhalten begegnen, die im Kapitel
+über das [Beheben von Problemen](#9-probleme-beheben) nicht erwähnt werden,
+melde dich auf github: https://github.com/tine-schreibt/aDHL/issues Am besten
+kann ich dir helfen, wenn du dir die Fehlermeldungen in der Konsole ansiehst:
 
-Falls du dieses Plugin einfach nur liebst und mir das sagen willst, sind eine email oder DM ein guter Weg, um das zu tun. Und falls du ein bisschen Knete übrig hast, kannst du mir auf kofi ein Trinkgeld geben: https://ko-fi.com/tine_schreibt
+- Benutze die Tastenkombination `cmd+alt+i` um sie zu öffnen.
+- Dann poste deinen Bug-Report und beschreibe genau, was du tun wolltest und was
+  stattdessen passiert ist, inclusive der Fehlermeldungen.
+- Du kannst mir auch per email bescheid sagen: tine@tine-schreibt.de - or
+  contact me on mastodon: https://literatur.social/@tine_schreibt
+
+Falls du dieses Plugin einfach nur liebst und mir das sagen willst, sind eine
+email oder DM ein guter Weg, um das zu tun. Und falls du ein bisschen Knete
+übrig hast, kannst du mir auf kofi ein Trinkgeld geben:
+https://ko-fi.com/tine_schreibt
 
 <hr>
-
