@@ -131,7 +131,7 @@ Sofern ich von allein Motivation entwickle, könnten sie auch eines Tages von al
 
 #### Erwähnte Sachen zuerst 
 
-###### Keine manuelle Sortierung: 
+##### Keine manuelle Sortierung: 
 Falls du ein Plugin benutzt, um deine Notizen in Obsidians Datei-Explorer manuell zu sortieren, tut mir leid, textFlow orientiert sich am tatsächlichen, alphanumerischn Dateibaum, nicht an Sortierungen, die auf UI-Ebene passieren. Falls du deine Ordner und Notizen absolut nicht durchnumerieren willst (dabei ist das so viel robuster...), spiegle deine manuelle Sortierung in einer Lesezeichengruppe und baue deine Flows von dort (einige Plugins für manuelle Sortierung basieren eh auf Lesezeichen, also...). Du kannst allerdings (derzeit noch?) keine Eigenschaften benutzen, um eine auf Lesezeichen basierende Definition zu verfeinern.
 
 **Zeug in der Gliederungsansicht umsortieren:** 
