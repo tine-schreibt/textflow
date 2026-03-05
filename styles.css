@@ -567,7 +567,8 @@ button.setting-tab-button-spacing {
   z-index: var(--layer-modal);
   margin-left: 0px;
   right: auto;
-  width: 2var (--size-4-2);
+  width: var(--size-4-4);
+  height: var(--size-4-4);
   display: inline-flex;
   justify-content: inline-flex;
   border-radius: var(--size-2-2);
@@ -580,12 +581,12 @@ button.setting-tab-button-spacing {
 }
 
 .textflow-menu-bar-min-sync-neutral {
-  background: var(--background-primary);
+  background: color-mix(in srgb, var(--background-primary) 90%, transparent);
   color: var(--text-faint);
 }
 
 .textflow-menu-bar-min-sync-must {
-  background: var(--background-primary);
+  background: color-mix(in srgb, var(--background-primary) 90%, transparent);
   color: var(--text-accent);
 }
 
