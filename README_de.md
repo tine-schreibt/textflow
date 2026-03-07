@@ -11,7 +11,7 @@ editieren wollen. Die UI hat Optionen sowohl für Tastatur-, als auch für
 Maus-Navigation.
 
 Bitte beachte, dass textFlow nach bestem Wissen durchgetestet, aber trotzdem
-noch in der Beta-Phase ist. Deshalb sind sicher noch nicht alle Eigenheiten und
+**noch in der Beta-Phase ist**. Deshalb sind sicher noch nicht alle Eigenheiten und
 Reibungspunkte bekannt/gefixt/mit Workaround versehen. Falls du etwas
 aufstöberst, das dieses Readme nicht erwähnt,
 [lass es mich wissen](#12-melde-einen-bug--zeig-deine-liebe). Bitte ziehe

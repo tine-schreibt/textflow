@@ -8,8 +8,8 @@ textFlow is intended mainly for long form writers, but can be used by anyone who
 wants to see and/or work on multiple notes in context. The UI has options for
 keyboard as well as mouse navigation.
 
-Please keep in mind that textFlow has been tested conscientiously but is still
-in its beta phase, so I'm sure not all quirks are known/fixed/worked around yet.
+Please keep in mind that textFlow has been tested conscientiously but is **still
+in its beta phase**, so I'm sure not all quirks are known/fixed/worked around yet.
 If you find anything not mentioned in this Readme
 [please let me know](#12-report-a-bug--report-your-love). Please also consider
 running Obsidian's own data recovery plugin,
