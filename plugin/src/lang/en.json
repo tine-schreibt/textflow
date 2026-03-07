@@ -199,7 +199,11 @@
   "restoreSettings.notice .json has been copied": "textFlowDefBackup.json has been created in textFlowSystemFolder.",
 
   "-------- MENU BAR": "The menu bar.-------------",
-  "menubar Expand menu bar": "Expand menu bar",
+  "menubar Expand": "Expand",
+  "menubar Expand warn": "Expand\nCompartments not found. To fix this: \n- Wait for a moment \n- Min/max the menu bar\n- Click into a different leaf and back \n- Reload Obsidian",
+  "menubar Collapse": "Collapse",
+  "menubar Collapse warn": "Expand\nCompartments not found. To fix this: \n- Wait for a moment \n- Min/max the menu bar\n- Click into a different leaf and back \n- Reload Obsidian",
+
   "menuBar flow overlap": "Overlaps with",
   "menubar.cursor history no stored cursors": "No stored cursors found",
   "menubar.cursor history stored cursors": "Stored cursor positions",
@@ -209,8 +213,6 @@
   "menuBar.selectActiveRegion tracking error": "textFlow: Due to a tracking error in ${flowName} the active region can not be selected. Please select the text yourself, then rebuild the flow to fix the tracking error.",
   "menuBar.selectButton.setTooltip export flow": "Export flow",
   "menubar.selectButton.notice successful export": "textFlow: Your flow has been exported to ${exportedFlowPath}.",
-  "menubar Collapse menu bar": "Collapse menu bar",
-  "menubar warn": "Compartments not found. To fix this: \n- Wait for a moment \n- Min/max the menu bar\n- Click into a different leaf and back \n- Reload Obsidian",
 
   "------- CREATE FLOW FROM FOLDER MODAL": "LIKE IT SAYS ----------------",
   "CreateFlowFromFolderModal.headline": "Create a new flow from the selected folder.",
@@ -315,6 +317,8 @@
   "checkActiveRegion.notice region tracking error": "textFlow: Region tracking error for ${flowName}.\nYou most likely undid (ctrl/cmd+z) your way into the state before a rebuild. \nKeep undooing until you reach the change you wish to return to, copy it, then redo (ctrl/cmd+shift+z) your way back into the current version of things, or rebuild ${flowName}. You can then past the copied content back into the flow.",
   "checkActiveRegion.notice region tracking error resolved": "textFlow: The tracking error for ${flowName} has been resolved.",
   "checkActiveRegion.notice overlap detected": "The current region ${regionName} is overlapping with the following flow(s): ${overlapString}",
+
+  "endOfFlow.notice don't type here": "textFlow: You have sailed over the edge of the world.\nEverything you type here will be devoured by dragons when you rebuild your flow.\nPlease create a new note that will be added to your flow in order to expand it.",
 
   "---------- FLOW SERVICE": "A class that holds most of the functionality for the settings tab and related stuff",
   "settingsTabFunctions.progressNotice.notice initial notice": "textFlow: Building ${this_flowName}: [oooooooooo] 0%",

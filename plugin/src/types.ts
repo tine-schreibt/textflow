@@ -301,11 +301,10 @@ export interface SuggestionItem {
 export type SuggestionType =
   | "header"
   | "active-flow-path"
-  | "active-flow-cursor"
   | "other-flow-path"
-  | "other-flow-cursor"
   | "flow-name"
-  | "active-region";
+  | "active-region"
+  | "alphabetic-item";
 
 export interface ObsidianEditor extends Editor {
   cm?: EditorView;

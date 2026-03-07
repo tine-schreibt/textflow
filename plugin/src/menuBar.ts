@@ -387,8 +387,8 @@ export class MenuBar {
         .setClass(style)
         .setTooltip(
           compartmentsGood
-            ? this.plugin.t("menubar Collapse menu bar")
-            : this.plugin.t("menubar warn"),
+            ? this.plugin.t("menubar Expand")
+            : this.plugin.t("menubar Expand warn"),
         )
         .onClick(() => {
           this.plugin.settings.activeRegions[this.flowName][
@@ -882,8 +882,8 @@ export class MenuBar {
         .setClass(compartmentsGood ? "blah" : "textflow-menu-bar-min-warn")
         .setTooltip(
           compartmentsGood
-            ? this.plugin.t("menubar Collapse menu bar")
-            : this.plugin.t("menubar warn"),
+            ? this.plugin.t("menubar Collapse")
+            : this.plugin.t("menubar Collapse warn"),
         )
         .onClick(() => {
           this.plugin.settings.activeRegions[this.flowName][

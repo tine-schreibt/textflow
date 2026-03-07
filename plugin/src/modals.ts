@@ -1612,8 +1612,6 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
     const otherFlowItems: Types.SuggestionItem[] = [];
     const flowNames: Types.SuggestionItem[] = [];
 
-    // the rest is my code
-
     // Contents of the flow in the ACTIVE LEAF if it exists
     Object.keys(this.settings.flows).forEach((flowName) => {
       if (flowName === this.activeFlowName) {
@@ -1645,25 +1643,6 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
             searchableText: `* ${region}`,
           });
         });
-
-        Object.keys(this.settings.flows[flowName].persistentCursors).forEach(
-          (iteratorLeafID) => {
-            const cursors =
-              this.settings.flows[flowName].persistentCursors[iteratorLeafID]
-                .cursors;
-            for (let cursorTuple of cursors) {
-              activeFlowItems.push({
-                type: "other-flow-cursor",
-                flowName: flowName,
-                region: cursorTuple[0],
-                cursorPos: cursorTuple[1],
-                leafID: iteratorLeafID,
-                path: cursorTuple[0],
-                searchableText: `* ${cursorTuple[0]}`,
-              });
-            }
-          },
-        );
       }
     });
 

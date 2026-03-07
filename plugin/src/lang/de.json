@@ -77,7 +77,7 @@
 
   "qol.showsystemFolder.setName show system folder": "${textFlowSystemFolderName} anzeigen",
   "qol.showsystemFolder.setDesc.1 hiding is recommended": "Es wird empfohlen, den Ordner versteckt zu halten, um seine Inhalte zu schützen, aber letztendlich ist es eine ästhetische/praktische Entscheidung.",
-  "qol.hidesystemFolder.setDesc.2 edits are still tracked": "Wenn du einen Flow direkt aus diesem Ordner heraus öffnest, wird er ebenfalls getrackt und hat Schreibschutz usw.",
+  "qol.showsystemFolder.setDesc.2 edits are still tracked": "Wenn du einen Flow direkt aus diesem Ordner heraus öffnest, wird er ebenfalls getrackt und hat Schreibschutz usw.",
 
   "-------- CREATE FLOWS": "Here the user can define flows-------------------------------------",
   "createFlows.createEl.text define a new flow": "Definiere einen neuen Flow",
@@ -191,7 +191,10 @@
   "restoreSettings.notice .json has been copied": "textFlowDefBackup.json wurde in textFlowSystemFolder erstellt.",
 
   "-------- MENU BAR": "The menu bar.-------------",
-  "menubar Expand menu bar": "Menüleiste ausklappen",
+  "menubar Expand": "Maximieren",
+  "menubar Expand warn": "Maximieren\nCompartments nicht gefunden. Um dies zu beheben:\n- Warte einen Moment \n- Min/max die Menüleiste \n- Klicke in ein anderes Leaf und wieder zurück \n- Lade Obsidian neu",
+  "menubar Collapse": "Minimieren",
+  "menubar Collapse warn": "Minimieren\nCompartments nicht gefunden. Um dies zu beheben:\n- Warte einen Moment \n- Min/max die Menüleiste \n- Klicke in ein anderes Leaf und wieder zurück \n- Lade Obsidian neu",
   "menuBar flow overlap": "Überlappt sich mit",
   "menubar.cursor history no stored cursors": "Keine Cursor gefunden",
   "menubar.cursor history stored cursors": "Gespeicherte Cursor",
@@ -201,8 +204,6 @@
   "menuBar.selectActiveRegion tracking error": "textFlow: Die aktive Region von ${flowName} kann aufgrund eine Tracking-Fehlers nicht ausgewählt werden. Bitte wähle den Text eigenhändig aus und baue den Flow neu, um den Fehler zu beheben.",
   "menuBar.selectButton.setTooltip export flow": "Flow exportieren",
   "menubar.selectButton.notice successful export": "textFlow: Dein Flow wurde nach ${exportedFlowPath} exportiert.",
-  "menubar Collapse menu bar": "Menüleiste minimieren",
-  "menubar warn": "Compartments nicht gefunden. Um dies zu beheben:\n- Warte einen Moment \n- Min/max die Menüleiste \n- Klicke in ein anderes Leaf und wieder zurück \n- Lade Obsidian neu",
 
   "------- CREATE FLOW FROM FOLDER MODAL": "LIKE IT SAYS ----------------",
   "CreateFlowFromFolderModal.headline": "Erzeuge neuen Flow aus dem gewählten Ordner.",
@@ -321,7 +322,9 @@
 
   "checkActiveRegion.notice region tracking error": "textFlow: Fehler beim Tracken der aktiven Region von ${flowName}. \nDu bist wahrscheinlich durch 'Rückgängig machen' (strg/cmd+z) in den Zustand vor einem Neubau zurückgesprungen. \nSetze das Rückgängigmachen fort, bis du den Zustand erreichst, den du haben willst, kopiere ihn, dann drücke 'Wiederholen' (strg/cmd+Umschalt+z), bis du wieder im Zustand nach dem Neubau angekommen bist, oder nimm einen Neubau an ${flowName} vor. Danach kannst du den kopierten Inhalt in deinen Flow einfügen",
   "checkActiveRegion.notice region tracking error resolved": "textFlow: Der Trackingfehler für ${flowName} wurde behoben.",
-  "checkActiveRegion.notice overlap detected": "Die aktuelle Region \"${regionName}\" überschneidet sich mit den folgenden Flows: \n${overlapString}",
+  "checkActiveRegion.notice overlap detected": "Die aktuelle Region \"${regionName}\" überschneidet sich mit den folgenden Flows:\n${overlapString}",
+
+  "endOfFlow.notice don't type here": "textFlow: Du bist über den Rand der Welt gesegelt.\nAlles, was du hier tippst, wird von Drachen verschlungen, wenn du den Flow neu baust.\nBitte erzeuge eine neue Notiz, die dem Flow hinzugefügt wird, um eine weitere Region anzuhängen.",
 
   "---------- FLOW SERVICE": "Eine Klasse die die meiste Funktionalität rund um den Settingtab usw. enthält",
   "settingsTabFunctions.progressNotice.notice initial notice": "textFlow: Baue ${this_flowName}: [oooooooooo] 0%",

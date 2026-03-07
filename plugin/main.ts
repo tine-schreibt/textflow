@@ -2286,6 +2286,15 @@ ${pseudoElement}
     // Get full document text from CodeMirror state
     const text = cmEditor.state.doc.toString();
 
+    if (cursorOffset >= text.length -1) {
+      new Notice(
+        this.t("endOfFlow.notice don't type here", {
+          flowName: flowName,
+        }),
+        11000
+      );
+    }
+
     // if this is the initial call for the leaf, give it an active region
     if (!this.settings.activeRegions[flowName][leafID]) {
       let activeRegionObject = this.findActiveRegion(
@@ -2566,10 +2575,11 @@ ${pseudoElement}
         };
         return activeRegionObject;
       }
-    } else {
+      // textFlow gets lost when the cursor is behind the last UUID, so we check for that and only notify if there is an actual problem
+    } else if (cursorOffset < text.length - 52) {
       console.error("textFlow: No UUID marker found in this.");
       return undefined;
-    }
+    } else return undefined;
   };
 
   // ------------------
@@ -2715,7 +2725,6 @@ ${pseudoElement}
           leaf.view.containerEl.addClass("hide-scrollbar");
         }
       }
-      
     }
 
     // Keep track of the last active leaf for the fuzzNav
@@ -2735,7 +2744,7 @@ ${pseudoElement}
       this.modalUpdateCallback();
     }
 
-    this.setupMenuBar(view, flowName)
+    this.setupMenuBar(view, flowName);
   };
 
   // ---- Make sure flows are set up when they are activated

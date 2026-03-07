@@ -1520,15 +1520,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         }),
       )
 
-      .addButton((restore) => {
-        restore
-          .setButtonText(
-            this.plugin.t("restoreSettings.setButtonText restore definitions"),
-          )
-          .onClick(async () => {
-            new Modals.RestoreFlowDefModal(this.app, this.plugin, this).open();
-          });
-      })
       .addButton((backupBackupButton) => {
         backupBackupButton
           .setButtonText(
@@ -1539,6 +1530,15 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             new Notice(
               this.plugin.t("restoreSettings.notice .json has been copied"),
             );
+          });
+      })
+      .addButton((restore) => {
+        restore
+          .setButtonText(
+            this.plugin.t("restoreSettings.setButtonText restore definitions"),
+          )
+          .onClick(async () => {
+            new Modals.RestoreFlowDefModal(this.app, this.plugin, this).open();
           });
       });
   };
