@@ -3,7 +3,7 @@
   "name": "textFlow",
   "version": "0.2.5",
   "minAppVersion": "1.4.0",
-  "description": "Compile multiple notes into editable flows. Like 'Scrivenings'. Define via bookmarks, path, tags and props. Auto-sync between flows and source notes.",
+  "description": "Compile multiple notes into editable flows. Like 'Scrivenings'. Define via bookmarks, paths, tags, props. Auto-sync between flows and source notes.",
   "author": "tine-schreibt",
   "authorUrl": "https://github.com/tine-schreibt",
   "fundingUrl": "https://ko-fi.com/tine_schreibt",
