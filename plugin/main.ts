@@ -1,6 +1,5 @@
 import {
   App,
-  Editor,
   MarkdownView,
   moment,
   normalizePath,
@@ -15,12 +14,7 @@ import {
 import { TextFlowSettingsTab } from "./src/settingsTab";
 import { TextFlowSettings, DEFAULT_SETTINGS } from "./src/types";
 import { EditorView, ViewUpdate, ViewPlugin } from "@codemirror/view";
-import {
-  Compartment,
-  EditorState,
-  StateEffect,
-  Extension,
-} from "@codemirror/state";
+import { Compartment, EditorState, StateEffect } from "@codemirror/state";
 import * as Types from "./src/types";
 import * as Modals from "./src/modals";
 import { MenuBar } from "./src/menuBar";
@@ -30,17 +24,25 @@ import path, { dirname, basename } from "path";
 import en from "./src/lang/en.json";
 import de from "./src/lang/de.json";
 
+// Any code that was actually written by AI is labelled
+
 //-----------------------------------------------------------------------------------------
-// This file is quite big, but everything is very interconnected, so that splitting it up would add more complexity overhead without actually improving readability
+// This file is quite big, but everything is deeply interconnected, so splitting it up actually made it more complicated and confusing
 //-----------------------------------------------------------------------------------------
-// TOC
+//
+//
+// Table of Contents, mostly to demonstrate the very sane file structure
 //-----------------------------------------------------------------------------------------
-// - Class variables, callbacks and other global stuff
-// - StatsOverlay
+//    - StatsOverlay
+//    - menuBar module
+//----------------------------------------------------------------------------------------
+// ----------- THE PLUGIN CLASS-------------------
+//-----------------------------------------------------------------------------------------
+// - assorted global variables, flags and objects to help the plugin talk to itself
 //----------------------------------------------------------------------------------------
 // - Utility functions
 //-----------------------------------------------------------------------------------------
-//    - load and save
+//    - load and save settings
 //    - ensureSystemFolder
 //-----------------------------------------------------------------------------------------
 // - Utility/general UI/UX
@@ -55,7 +57,7 @@ import de from "./src/lang/de.json";
 //-----------------------------------------------------------------------------------------
 //    - Listener helpers
 //      - getUniqueFileName
-//    - Click Events (in file explorer)
+//    - Context menu entries (in file explorer)
 //      - flag all flows containing file
 //      - create new file
 //      - create flow from folder
@@ -65,10 +67,9 @@ import de from "./src/lang/de.json";
 //      - create (flag or move and open)
 //      - delete (flag)
 //    - Window/editor/workspace events
-//      - blur (sync and statcheck active flows)
 //      - focus (statcheck active flows)
 //      - active-leaf-change (setup/close flow leaves)
-//      - layout-change (catch edge case when no flows open)
+//      - layout-change (setup/close flow leaves)
 //    - Navigation
 //      - isFileExplorerClick
 //      - fileExplorerOpenClickListener
@@ -76,10 +77,11 @@ import de from "./src/lang/de.json";
 //      - pertains to:
 //          - cursorListener
 //          - textChangeListener
-//          - writelock for UUIDs
+//          - transaction filter for UUIDs
 //      - makeCompartments
 //      - dispatchCompartments
 //      - resetCompartments
+//      - checkCompartments
 //    - TRACKING helpers
 //      - checkActiveRegion
 //      - addRegionTracking
@@ -175,17 +177,19 @@ declare module "obsidian" {
   }
 }
 
-// ----------- THE PLUGIN CLASS ITESELF
+// --------------------------------------------------
+// ----------- THE PLUGIN CLASS----------------------
+// --------------------------------------------------
 export default class TextFlowPlugin extends Plugin {
   settings: TextFlowSettings;
   settingsTabFunctions: settingsTabFunctions;
   settingsTab: TextFlowSettingsTab;
 
+  // ------------- global stuff ----------------------
   textFlowSystemFolderName = "textFlowSystemFolder";
   private i18n: Record<string, any> = {}; // localisation
 
   //--- some variables to keep track of things
-  private lastGlobalMenuBarRefresh = 0;
   private mostRecentActiveFlowLeaf: WorkspaceLeaf | null = null;
   private lastActiveRegion: string = "/";
   private lastActivity: { [key: string]: number } = {};
@@ -239,8 +243,6 @@ export default class TextFlowPlugin extends Plugin {
   }
 
   // ---------------------------------------------------------------
-  // this was mostly written by the Code Copilot version of ChatGPT
-  // I'm using temp->rename because for heavy users it would be an absolute pain in the ass to have to redo a ton of flow definitions
 
   saveSettings = async () => {
     // this.settingsTabFunctions.callStack("saveSettings");
@@ -300,8 +302,6 @@ export default class TextFlowPlugin extends Plugin {
     }
   };
 
-  rename = async (data: Types.TextFlowSettings) => {};
-
   // ---------------------------------------------------------------
   // see also: discernAndSetSystemFolderState for UI
   ensureSystemFolder = async () => {
@@ -349,7 +349,7 @@ export default class TextFlowPlugin extends Plugin {
 
   // ---------------- Functions: settingsTabFunctions: UI/UX -------------------------
 
-  // -------- Localisation (this part was quite obviously written by Claude 4 Sonnet)
+  // -------- Localisation (obviously written by Claude)
   // Prepare translation
 
   private loadLanguage = async () => {
@@ -457,6 +457,7 @@ export default class TextFlowPlugin extends Plugin {
       });
     }
 
+    // ---------------------------------------------------------------
     // rebuild active leaf flow
     this.addCommand({
       id: `text-flow-rebuild-active`,
@@ -475,6 +476,7 @@ export default class TextFlowPlugin extends Plugin {
       },
     });
 
+    // ---------------------------------------------------------------
     // Open the switcher modal
     this.addCommand({
       id: "text-flow-open-switcher",
@@ -492,6 +494,8 @@ export default class TextFlowPlugin extends Plugin {
       },
     });
 
+    // ---------------------------------------------------------------
+    // FuzzNav
     this.addCommand({
       id: "text-flow-open-fuzzy-nav-modal",
       name: this.t("main.registerCommand open fuzzy navigation"),
@@ -516,7 +520,8 @@ export default class TextFlowPlugin extends Plugin {
       },
     });
 
-    // turn off explorer navigation so multi-select works as expected
+    // ---------------------------------------------------------------
+    // toggle explorer navigation so multi-select works as expected
     this.addCommand({
       id: "text-flow-toggle-explorer-listener",
       name: this.t("main.registerCommand toggle explorer navigation"),
@@ -525,10 +530,18 @@ export default class TextFlowPlugin extends Plugin {
           ? (this.settings.explorerListener = false)
           : (this.settings.explorerListener = true);
         await this.saveSettings();
+        new Notice(
+          this.t("main toggle explorer navigation notice", {
+            explorerNavigationToggleState: this.settings.explorerListener
+              ? "ON"
+              : "OFF",
+          }),
+        );
       },
     });
 
-    // hide menu bar
+    // ---------------------------------------------------------------
+    // min/max menu bar
     this.addCommand({
       id: "text-flow-toggle-menu-bar",
       name: this.t("main.registerCommand toggle menu bar"),
@@ -561,8 +574,8 @@ export default class TextFlowPlugin extends Plugin {
       },
     });
 
+    // ---------------------------------------------------------------
     // export active flow
-
     this.addCommand({
       id: "text-flow-export-flow",
       name: this.t("main.registerCommand export active flow"),
@@ -576,6 +589,7 @@ export default class TextFlowPlugin extends Plugin {
       },
     });
 
+    // ---------------------------------------------------------------
     // select active region
     this.addCommand({
       id: "text-flow-select-active-region",
@@ -607,6 +621,7 @@ export default class TextFlowPlugin extends Plugin {
       },
     });
 
+    // ---------------------------------------------------------------
     // restore cursor position
     this.addCommand({
       id: "text-flow-restore-cursor",
@@ -634,7 +649,8 @@ export default class TextFlowPlugin extends Plugin {
       },
     });
 
-    // toggle scrollbar visibility
+    // ---------------------------------------------------------------
+    // toggle scrollbar
     this.addCommand({
       id: "text-flow-toggle-scroll-bar",
       name: this.t("main.registerCommand toggle scroll bar"),
@@ -652,8 +668,7 @@ export default class TextFlowPlugin extends Plugin {
     });
   };
 
-  // ----- is called onload and sets the visibility of textFlowSystemFolderName
-
+  // ----- this is called onload and sets the visibility of textFlowSystemFolderName
   discernAndSetSystemFolderState = (): void => {
     const systemFolderPath = this.settings.systemFolderPath;
     const systemFolderHidden = this.settings.systemFolderHidden;
@@ -684,13 +699,10 @@ export default class TextFlowPlugin extends Plugin {
         `;
       document.head.appendChild(hiddenStyle);
     };
-
-    // Try immediately and also with a small delay to ensure DOM is ready
     addStyle();
   };
 
   // ----- DECORATE SOURCE NOTES IN FILE EXPLORER -----------
-
   decorateSourceNotes = async (mode: Types.CalculationMode) => {
     let path = "";
     let handledPathsArray: string[] = [];
@@ -737,7 +749,7 @@ export default class TextFlowPlugin extends Plugin {
     };
 
     const updateStyles = (path: string, decoStyle: Types.DecoStyle) => {
-      // Remove trailing slash for files (if it exists)
+      // Remove trailing slash (if it exists)
       const cleanPath = path.endsWith("/") ? path.slice(0, -1) : path;
 
       // First remove any existing styles for this path
@@ -801,6 +813,7 @@ export default class TextFlowPlugin extends Plugin {
               ? `var(--color-accent)`
               : `var(--nav-item-color)`;
 
+          // The CSS part was written by Claude and refined by ChatGPT, amy logic is by me
           pseudoElement = `position: relative !important;
       }
       div[data-path='${this.escapeSelector(cleanPath)}']::before {
@@ -959,7 +972,7 @@ ${pseudoElement}
       document.head.appendChild(style);
     };
 
-    // -------- THE LOGIC -----------------
+    // -------- MORE LOGIC -----------------
     // handle general paths
     const handledPaths: { [key: string]: boolean } = {};
     let flowArray: string[] = [];
@@ -1012,8 +1025,8 @@ ${pseudoElement}
     }
   };
 
+  // ---------------------------------------------------------------
   // removing all styles on deactivation
-
   unDecorateSourceNotes = async () => {
     if (this.settings.explorerDecoStyle[0] != "--") return;
     let path = "";
@@ -1067,8 +1080,9 @@ ${pseudoElement}
     });
   };
 
+  // ---------------------------------------------------------------
   //------ function to clean up paths for CSS handling; used by deco function
-
+  // written by Claude
   escapeSelector = (str: string): string => {
     // Escape special characters that have meaning in CSS selectors
     return (
@@ -1081,8 +1095,7 @@ ${pseudoElement}
 
   // ---------------- Functions: Listener helper functions -------------------------
 
-  // this little thing was written by Claude 3.5 Sonnet and is needed
-  // by some of the listeners
+  // this little thing was written by Claude and painstakingly fixed by me
   getUniqueFileName = (
     basePath: string,
     inputName: string = "_untitled.md",
@@ -1185,6 +1198,7 @@ ${pseudoElement}
       );
     }
 
+    // ---------------------------------------------------------------
     // the thing to create a new file in the current folder
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file) => {
@@ -1218,7 +1232,8 @@ ${pseudoElement}
       }),
     );
 
-    // ---------------   // thing to make flow from selected folder
+    // ---------------------------------------------------------------
+    // thing to make flow from selected folder
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file) => {
         if (file instanceof TFile) return;
@@ -1263,7 +1278,8 @@ ${pseudoElement}
       }),
     );
 
-    // ------ same thing but for multiple folders
+    // ---------------------------------------------------------------
+    // ------ same but for multiple folders
     this.registerEvent(
       this.app.workspace.on("files-menu", (menu, files) => {
         let folders: number = 0;
@@ -1351,8 +1367,8 @@ ${pseudoElement}
       }),
     );
 
+    // ---------------------------------------------------------------
     // Rename events
-
     this.registerEvent(
       this.app.vault.on(
         "rename",
@@ -1503,6 +1519,7 @@ ${pseudoElement}
       ),
     );
 
+    // ---------------------------------------------------------------
     // Create events
     this.registerEvent(
       this.app.vault.on("create", async (file: TAbstractFile) => {
@@ -1519,7 +1536,7 @@ ${pseudoElement}
           parentFolder === this.settings.systemFolderPath &&
           file.path.endsWith(".md")
         ) {
-          // If a new .md file gets created in the system folder, it's because the user has set 'create new file in same folder as active file' so we simulate that behaviour by getting the path for last active region and moving the file into the respective folder
+          // If a new .md file gets created in the system folder, it's because the user has set 'create new file in same folder as active file', so we simulate that behaviour by getting the path for last active region and moving the file into the respective folder
 
           setTimeout(async () => {
             const baseName = basename(file.path);
@@ -1587,6 +1604,7 @@ ${pseudoElement}
       }),
     );
 
+    // ---------------------------------------------------------------
     // Delete events
     this.registerEvent(
       this.app.vault.on("delete", async (file: TAbstractFile) => {
@@ -1604,7 +1622,7 @@ ${pseudoElement}
         //
         if (file instanceof TFile) {
           for (let flowName of Object.keys(this.settings.flows)) {
-            // check if the user delete a flow file and flag it for rebuild
+            // check if the user deleted a flow file and flag it for rebuild
             if (basename(parentFolder) === flowName) {
               if (!this.settings.flows[flowName].flaggedForRebuild) {
                 this.settings.flows[flowName].flaggedForRebuild = true;
@@ -1641,15 +1659,14 @@ ${pseudoElement}
 
     // ---------- Window/Editor events
     // ----------------- Auto-sync and checks on focus  -------------------------------
-
     this.registerDomEvent(window, "focus", async () => {
       for (let flowName of Object.keys(this.settings.activeRegions)) {
         await this.checkStatsForFlow(flowName);
       }
     });
 
-    // ------------- Modifier key tracking
-    // this is so the fileExplorerClickListener doesn't interfere with stuff
+    // ------------- Modifier keys
+    // this is so the fileExplorerClickListener doesn't interfere as much
     this.registerDomEvent(document, "keydown", (event: KeyboardEvent) => {
       if (event.key === "Shift") this.modifierState.shift = true;
       if (event.key === "Alt") this.modifierState.alt = true;
@@ -1662,9 +1679,8 @@ ${pseudoElement}
       if (event.key === "Meta") this.modifierState.meta = false;
     });
 
-    // -- LEAF CHANGE - Call management for flow, source and vanilla notes ------
-    // setup functions take care of the details
-
+    // ---------------------------------------------------------------
+    // Opening/closing/switching of leaves
     this.registerEvent(
       this.app.workspace.on("active-leaf-change", async (leaf) => {
         // so we skip if the explorerClickListener is already taking care of stuff
@@ -1700,6 +1716,9 @@ ${pseudoElement}
       this.resetCompartments(leafID, cmView);
       return;
     }
+
+    // the three extensions were originally written with a lot of AI involvement
+    // getting it to actually work was mostly me, though
 
     // -------- CURSOR LISTENER -------------------
     if (!this.listenerBasket[leafID] || !this.listenerBasket[leafID].cursor) {
@@ -1893,10 +1912,10 @@ ${pseudoElement}
     if (!this.listenerBasket[leafID] || !this.listenerBasket[leafID].divider) {
       const dividerProtectionCompartment = new Compartment();
 
+      // And another bit of slop
       const dividerProtectionListener = EditorState.transactionFilter.of(
         (tr) => {
-          // if the flow is being rebuilt, we need to suspend protection
-          // otherwise the editor contents can't be updated
+          // if the flow is being rebuilt, we need to suspend protection otherwise the editor contents can't be updated
           if (this.isRebuilding) return tr;
 
           if (!tr.changes.empty) {
@@ -1952,6 +1971,8 @@ ${pseudoElement}
     this.dispatchCompartments(leafID, cmView);
   };
 
+  // ---------------------------------------------------------------
+  // for this I actually read the CodeMirror docu
   dispatchCompartments = (leafID: string, cmView: EditorView) => {
     const typesArray = ["cursor", "textChange", "divider"];
 
@@ -1984,6 +2005,8 @@ ${pseudoElement}
     }
   };
 
+  // ---------------------------------------------------------------
+  // I read so much docu, I feel like a snob
   resetCompartments = (leafID: string, cmView: EditorView) => {
     const typesArray = ["cursor", "textChange", "divider"];
 
@@ -2010,6 +2033,7 @@ ${pseudoElement}
     }
   };
 
+  // ---------------------------------------------------------------
   checkCompartments = (leafID: string, cmView: EditorView) => {
     const typesArray = ["cursor", "textChange", "divider"];
     for (let type of typesArray) {
@@ -2029,6 +2053,8 @@ ${pseudoElement}
     return true;
   };
 
+  // ---------------------------------------------------------------
+  // The listener parts of this were written by AI
   // -------- helpers for the fileExplorerClickListener
   // Are we even clicking into the file explorer?
   private isFileExplorerClick = (event: MouseEvent) => {
@@ -2048,6 +2074,7 @@ ${pseudoElement}
     return true;
   };
 
+  // ---------------------------------------------------------------
   // ---- This listener is for navigating flows via the file explorer
   // it is removed onunload. It's also a nervous steed, so just admire it from afar.
   private boundFileExplorerClick: (event: MouseEvent) => void;
@@ -2286,12 +2313,12 @@ ${pseudoElement}
     // Get full document text from CodeMirror state
     const text = cmEditor.state.doc.toString();
 
-    if (cursorOffset >= text.length -1) {
+    if (cursorOffset >= text.length - 1) {
       new Notice(
         this.t("endOfFlow.notice don't type here", {
           flowName: flowName,
         }),
-        11000
+        11000,
       );
     }
 
@@ -2445,6 +2472,7 @@ ${pseudoElement}
     }
   };
 
+  // ---------------------------------------------------------------
   // ----- add region tracking for new leafs, because we get errors if we don't
   addRegionTracking = async (flowName: string, leafID: string) => {
     const [path, targetObject] =
@@ -2470,7 +2498,7 @@ ${pseudoElement}
     }
   };
 
-  // ------------- region tracking settingsTabFunctions ----------------------
+  // ---------------------------------------------------------------
   // returns an activeRegion object
   private findActiveRegion = (
     flowName: string,
@@ -2479,6 +2507,7 @@ ${pseudoElement}
     cursorOffset: number,
     text: string,
   ) => {
+    // The regEx, of course, is AI slop
     const markerRegex =
       /[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46}<hr>/;
 
@@ -2582,7 +2611,7 @@ ${pseudoElement}
     } else return undefined;
   };
 
-  // ------------------
+  // ---------------------------------------------------------------
   // we still need this for scrolling, syncing and marking of regions!!!
   findStartOfRegion = (
     flow: Types.FlowDef,
@@ -2609,9 +2638,8 @@ ${pseudoElement}
   // ---------------- Functions: Flow management and UI -------------------------
 
   // ---- Identity check
-
   isFlowFile = (activeLeafPath: string) => {
-    const flowName = activeLeafPath.match(/([^/]+)(?=\.md$)/)?.[0]; // gets the flow name out of the path
+    const flowName = activeLeafPath.match(/([^/]+)(?=\.md$)/)?.[0]; // gets the flow name out of the path; written by AI
     if (flowName && this.settings.flows[flowName]) {
       return flowName;
     } else {
@@ -2619,9 +2647,9 @@ ${pseudoElement}
     }
   };
 
-  // ------ handle the opening, closing and switching of leaves
+  // ---------------------------------------------------------------
+  // handles the opening, closing and switching of leaves
   // is called by layout-change and active-leaf-change
-
   leafSwitching = async () => {
     await this.syncAllLeaves();
     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
@@ -2652,6 +2680,7 @@ ${pseudoElement}
     }
   };
 
+  // ---------------------------------------------------------------
   // The big bundle that centralises flow management
   setUpFlow = async (flowName: string, view: MarkdownView) => {
     // this.settingsTabFunctions.callStack("setUpFlow");
@@ -2692,7 +2721,6 @@ ${pseudoElement}
     }
 
     // ------------- REBUILDING ---------------------
-    // rebuild if appropriate
     if (this.settings.flows[flowName].flaggedForRebuild) {
       await this.settingsTabFunctions.rebuildFlow(flowName, "setUpFlow");
       isFreshlyBuilt = true;
@@ -2701,7 +2729,7 @@ ${pseudoElement}
     // ------------- SCROLLING ---------------------
     const leafID = this.settingsTabFunctions.getLeafId(view.leaf);
     // See if this is the inital activation of the flow/leaf and restore cursor
-    // we need this so outline navigation works (because it acts as a fresh open)
+    // we need this so Outline navigation works (because it triggers listeners)
     if (!this.alreadyActivated[flowName]) {
       if (!isFreshlyBuilt) this.UUIDIntegrityCheck(flowName);
       this.alreadyActivated[flowName] = {};
@@ -2713,7 +2741,7 @@ ${pseudoElement}
     }
 
     // ------------- PROTECTION ---------------------
-    // set up the editor with its other extensions and listeners
+    // set up the editor with its  extensions and listeners
     await this.makeCompartments(view);
 
     // ------------- HOUSEKEEPING ---------------------
@@ -2735,7 +2763,7 @@ ${pseudoElement}
     }
     this.settings.flows[flowName].lastActiveLeaves.unshift(leafID);
 
-    // ------------- VISUALS ---------------------
+    // -------------- VISUALS ---------------------
     // this has to happen first so the menuBar can just be set up
     await this.manageActiveRegions();
 
@@ -2747,6 +2775,7 @@ ${pseudoElement}
     this.setupMenuBar(view, flowName);
   };
 
+  // ---------------------------------------------------------------
   // ---- Make sure flows are set up when they are activated
   activateFlow = async (flowName: string) => {
     if (!this.settings.flows[flowName]) {
@@ -2788,6 +2817,7 @@ ${pseudoElement}
     }
   };
 
+  // ---------------------------------------------------------------
   // this function also removes obsolete entries from the listenerBasket
   manageActiveRegions = async () => {
     //this.settingsTabFunctions.callStack("manageActiveRegions");
@@ -2812,7 +2842,7 @@ ${pseudoElement}
           }
           foundFlowLeaves[flowName].add(leafID);
 
-          // Ensure the activeRegions exists
+          // Ensure the activeRegions exists in the object
           if (!this.settings.activeRegions[flowName]) {
             this.settings.activeRegions[flowName] = {};
           }
@@ -2847,7 +2877,7 @@ ${pseudoElement}
                 delete this.listenerBasket[leafID];
               }
 
-              // then, if a flow is all closed, we delete the main entry and syncthe flow, because all other syncs only care about active leaves
+              // then, if a flow is all closed, we delete the main entry and sync the flow, because all other syncs only care about active leaves
               if (
                 Object.keys(this.settings.activeRegions[flowName]).length === 0
               ) {
@@ -2895,6 +2925,7 @@ ${pseudoElement}
     }
   };
 
+  // ---------------------------------------------------------------
   // if a flow is replaced by a non-flow
   closeFlow = async (view: MarkdownView) => {
     //this.settingsTabFunctions.callStack("closeFlow");
@@ -2938,7 +2969,7 @@ ${pseudoElement}
     this.manageActiveRegions(); // also saves
   };
 
-  // ---- handle menuBar setup
+  // ---------------------------------------------------------------
   setupMenuBar = (view: MarkdownView, flowName: string) => {
     let menuBar: MenuBar;
     const leafID = this.settingsTabFunctions.getLeafId(view.leaf);
@@ -2958,6 +2989,7 @@ ${pseudoElement}
     view.menuBar.refresh(view.contentEl);
   };
 
+  // ---------------------------------------------------------------
   refreshMenuBars = async () => {
     if (this.isRebuilding) return;
 
@@ -2980,9 +3012,8 @@ ${pseudoElement}
     }
   };
 
-  // cleanup for the menu bar
+  // ---------------------------------------------------------------
   // creation happens in setUpFlow, using menuBar.ts
-
   cleanupMenuBar = (leaf: WorkspaceLeaf) => {
     if (leaf.view instanceof MarkdownView && leaf.view.menuBar) {
       leaf.view.menuBar.detach();
@@ -2992,7 +3023,6 @@ ${pseudoElement}
 
   // ---- Functions: Data safety ----------------------------
 
-  // Sync all leaves
   syncAllLeaves = async () => {
     const allLeaves = this.app.workspace.getLeavesOfType("markdown");
     const flowLeaves: Record<string, MarkdownView[]> = {};
@@ -3038,6 +3068,7 @@ ${pseudoElement}
     this.textFlowOperation = false; // unsuspends modify listener
   };
 
+  // ---------------------------------------------------------------
   //---- The actual sync function -------------
   syncBackToSource = async (flowName: string, text: string, leafID: string) => {
     // block syncing if there's a tracking error
@@ -3133,7 +3164,7 @@ ${pseudoElement}
     }
   };
 
-  // UUID integrity check
+  // ---------------------------------------------------------------
   UUIDIntegrityCheck = async (flowName: string) => {
     let flowFilePath = this.settings.flows[flowName].flowFilePath;
     const flowFile = this.app.vault.getAbstractFileByPath(flowFilePath);
@@ -3182,6 +3213,7 @@ ${pseudoElement}
     }
   };
 
+  // ---------------------------------------------------------------
   // a robot said I should do it like this, and who am I to question a robot?
   // it's to account for random delays in file writing and OS quirks to avoid false positives
   MTIME_DELTA = 1000;
@@ -3230,6 +3262,7 @@ ${pseudoElement}
     return changed;
   };
 
+  // ---------------------------------------------------------------
   // The actual checking logic
   checkStatsForNote = async (flowName: string, path: string) => {
     if (this.settings.checkExternalEdits === "no") return;
@@ -3283,6 +3316,7 @@ ${pseudoElement}
     return changed;
   };
 
+  // ---------------------------------------------------------------
   // Functionality to keep mtimes and hashes up to date
   updateStats = async (flowName: string, path: string, file: TFile) => {
     if (this.settings.flows[flowName].flowMap[path]) {
@@ -3297,7 +3331,7 @@ ${pseudoElement}
     }
   };
 
-  // so we got hashes to compare against
+  // ---------------------------------------------------------------
   initialHashing = async (flowName: string) => {
     for (const path of Object.keys(this.settings.flows[flowName].flowMap)) {
       if (!this.settings.hashes[path]) {
@@ -3311,12 +3345,12 @@ ${pseudoElement}
     await this.saveSettings();
   };
 
-  // like it says
+  // ---------------------------------------------------------------
   makeHash = (text: string) => {
     return XXH.h64(text, 0x0).toString(16);
   };
 
-  // yeah...
+  // ---------------------------------------------------------------
   checkHash = async (sourceFile: TFile, path: string, flowName: string) => {
     let changed = false;
     let fileContent: string = await this.app.vault.read(sourceFile);
@@ -3338,7 +3372,8 @@ ${pseudoElement}
     return changed;
   };
 
-  // ------ Functions: Misc
+  // ------ Functions: Misc -------------------
+
   manageCursorPos = async (
     flowName: string,
     leafID: string,
@@ -3431,6 +3466,7 @@ ${pseudoElement}
     }
   };
 
+  // ---------------------------------------------------------------
   notifyOfOverlap = (path: string, activeFlow: string, leafID: string) => {
     let overlappingFlows: string[] = [];
     for (let flowName of Object.keys(this.settings.activeRegions)) {
@@ -3525,6 +3561,7 @@ ${pseudoElement}
         );
       }
 
+      // ---------------------------------------------------------------
       // and finally, Listeners and commands
       this.fileExplorerOpenClickListener();
       const fileExplorer = document.querySelector(".nav-files-container");
@@ -3539,7 +3576,7 @@ ${pseudoElement}
   }
 
   // -------------------------------------------------------
-  // ------------------ ONUNLOAD---------------------------
+  // ------------------ ONUNLOAD----------------------------
   // -------------------------------------------------------
   onunload() {
     // ------------ Remove listeners -----------
@@ -3550,25 +3587,25 @@ ${pseudoElement}
       fileExplorer.removeEventListener("click", this.boundFileExplorerClick);
     }
 
+    // ------------ RESET compartments to []
     for (let leafID of Object.keys(this.listenerBasket)) {
       // skip the text change entries (we're removing both listeners anyway)
       if (leafID.endsWith("-changes")) continue;
-
       const leaves = this.app.workspace.getLeavesOfType("markdown");
       const targetLeaf = leaves.find(
         (leaf) => this.settingsTabFunctions.getLeafId(leaf) === leafID,
       );
-
       for (const leaf of leaves) {
-        // Check if the leaf's view is a MarkdownView and if its file path matches
         if (targetLeaf?.view instanceof MarkdownView) {
-          // this.removeCursorListener(targetLeaf.view);
-          // this.removeTextChangeListener(targetLeaf.view);
+          const cmView = this.settingsTabFunctions.getEditorView(
+            targetLeaf.view.editor,
+          );
+          if (cmView) this.resetCompartments(leafID, cmView);
         }
       }
     }
 
-    // --------------- Remove menu bar ------------------
+    // --------------- REMOVE menu bar ------------------
     this.app.workspace.iterateAllLeaves((leaf) => {
       if (leaf.view instanceof MarkdownView && leaf.view.menuBar) {
         leaf.view.menuBar.detach();

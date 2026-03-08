@@ -7,34 +7,31 @@ import {
   Notice,
   TFolder,
   TFile,
-  Vault,
   WorkspaceLeaf,
 } from "obsidian";
 import { EditorView } from "@codemirror/view";
 import TextFlow from "../main";
 import * as Types from "./types";
-import fs from "fs/promises";
-import path, { dirname, basename } from "path";
+import path from "path";
 import { getAPI } from "obsidian-dataview";
 
-//-----------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------
 // TOC
-//-----------------------------------------------------------------------------------------
-// - Progress stuff
-//-----------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------
+// - Progress stuff (required by flowBuilder())
+//-------------------------------------------------------------------------------------
 //    - class ProgressNotice
 //    - class LoadingOverlay
-//-----------------------------------------------------------------------------------------
-// - Required by settingsTab in order of mention
-//-----------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------
+// - Required by settingsTab, in order of appearance
+//-------------------------------------------------------------------------------------
 //    - checkSystemFolder
 //    - createSystemFolder
 //    - debouncedSaveSettings
-//    - radioButtonManager
 //    - isValidFlowName
 //    - renameFlow
 //    - radioButtonManager
-//    - CREATE FLOW DEFINITON
+//    - --- CREATE FLOW DEFINITON ------------
 //      - getBookmarkPathsByGroupName
 //      - ensureNoUndefined
 //      - getPathsByFoldersTagsProps
@@ -42,25 +39,25 @@ import { getAPI } from "obsidian-dataview";
 //    - conflictCollector
 //    - syncConflictObjects
 //    - resetFlowBuildBasket
-//    - REBUILD FLOW
+//    - --- REBUILD FLOW ----------------
 //      - flowBuilder
 //       - createInvisibleUUID
 //       - debugUID
 //    - backupFlowDefs
-//-----------------------------------------------------------------------------------------
-// - the + stuff
-//-----------------------------------------------------------------------------------------
-// restoreCursorPos
-// scrollToPos
-// safeCreateOrModifyFile
-// exportFlow
-// selectActiveRegion
-// getLeafId
-// getEditorView
-// callStack
-// updateScrollbarVisibility
-// getTimestamp
-// explorerDecoArray
+//-------------------------------------------------------------------------------------
+// - the + stuff which might need its own class but I tried it and it just confused me
+//-------------------------------------------------------------------------------------
+// - restoreCursorPos
+// - scrollToPos
+// - safeCreateOrModifyFile
+// - exportFlow
+// - selectActiveRegion
+// - getLeafId
+// - getEditorView
+// - callStack
+// - updateScrollbarVisibility
+// - getTimestamp
+// - explorerDecoArray
 
 interface ObsidianEditor extends Editor {
   cm?: EditorView;

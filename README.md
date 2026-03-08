@@ -9,8 +9,8 @@ wants to see and/or work on multiple notes in context. The UI has options for
 keyboard as well as mouse navigation.
 
 Please keep in mind that textFlow has been tested conscientiously but is **still
-in its beta phase**, so I'm sure not all quirks are known/fixed/worked around yet.
-If you find anything not mentioned in this Readme
+in its beta phase**, so I'm sure not all quirks are known/fixed/worked around
+yet. If you find anything not mentioned in this Readme
 [please let me know](#12-report-a-bug--report-your-love). Please also consider
 running Obsidian's own data recovery plugin,
 ['Edit history' by Antonio Tejada](https://github.com/antoniotejada/obsidian-edit-history)
@@ -73,7 +73,8 @@ smoothly?**
 3. **Edit flows like any other note:** textFlow keeps track of which region of a
    flow an edit happens in and automatically syncs it all back to the correct
    source note whenever you click into a different note. You can also sync
-   manually anytime you like (there's a command you can bind to a hotkey).
+   manually anytime you like (there's a command you can bind to a keyboard
+   shortcut).
 4. **Add frontmatter to your flows:** Just use the properties plugin as usual.
    Properties will be preserved across rebuilds and are useful if you want to
    keep track of your flows beyond the settings tab/flowSwitcher
@@ -441,7 +442,7 @@ in Outline. All the stuff in between can be shuffled around like usual, though.
 
 ### 7. Commands
 
-All commands can be tied to hotkeys in Obsidian's settings.
+All commands can be tied to keyboard shortcuts (hotkeys) in Obsidian's settings.
 
 - **Sync all leaves:** This also saves the current cursor position for all
   active leaves.

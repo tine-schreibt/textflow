@@ -31,7 +31,7 @@ import path from "path";
 // - FlowSwitcherModal
 // - FuzzyNavModal
 //--------------------------------------------------------------------------------
-//-----------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------
 
 //--------------------------------------------------------------------------------
 //----------- CREATE FLOW FROM FOLDER
@@ -57,6 +57,8 @@ export class CreateFlowFromFolder extends Modal {
         "CreateFlowFromFolderModal.description refine def in settings",
       ),
     });
+
+    //--------------------------------------------------------------------------------
     const chooseFlowName = new Setting(contentEl)
       .setName(
         this.plugin.t("createFlows.chooseFlowName.setName name your flow"),
@@ -74,6 +76,8 @@ export class CreateFlowFromFolder extends Modal {
           });
         }),
       );
+
+    //--------------------------------------------------------------------------------
     chooseFlowName.addText((setFlowName) => {
       // this value has already been set by the click that also calls this modal
       setFlowName.setValue(this.plugin.settings.flowBuildBasket.flowName);
@@ -84,6 +88,7 @@ export class CreateFlowFromFolder extends Modal {
       });
     });
 
+    //--------------------------------------------------------------------------------
     // FOLDER TITLES TOGGLE
     const toggleFolderTitles = new Setting(contentEl)
       .setName(this.plugin.t("modal_toggleFolderTitles.setName include folder"))
@@ -101,6 +106,7 @@ export class CreateFlowFromFolder extends Modal {
           });
       });
 
+    //--------------------------------------------------------------------------------
     // SORT ORDER TOGGLE
     const sortFlowPathsTagsProperties = new Setting(contentEl).setName(
       this.plugin.t("sortFlowPathsTagsProperties.setName sort order"),
@@ -139,6 +145,7 @@ export class CreateFlowFromFolder extends Modal {
       }),
     );
 
+    //--------------------------------------------------------------------------------
     sortFlowPathsTagsProperties.addDropdown((dropdown) => {
       dropdown
         .addOption(
@@ -168,6 +175,7 @@ export class CreateFlowFromFolder extends Modal {
       });
     });
 
+    //--------------------------------------------------------------------------------
     let subfoldersExcluded = false;
     const excludeSubfolders = new Setting(contentEl)
       .setName(
@@ -179,6 +187,7 @@ export class CreateFlowFromFolder extends Modal {
         });
       });
 
+    //--------------------------------------------------------------------------------
     const saveButton = new ButtonComponent(contentEl);
     saveButton
       .setButtonText(this.plugin.t("saveButton.setButtonText save flow def"))
@@ -260,6 +269,7 @@ export class CreateFlowFromFolder extends Modal {
         this.close();
       });
 
+    //--------------------------------------------------------------------------------
     const closeButton = new ButtonComponent(contentEl)
       .setButtonText(this.plugin.t("CreateFlowFromFolderModal.close"))
       .onClick(async () => {
@@ -270,6 +280,7 @@ export class CreateFlowFromFolder extends Modal {
       });
   }
 
+  //--------------------------------------------------------------------------------
   async onClose() {
     // and clean up the basket.
     this.plugin.settingsTabFunctions.resetFlowBuildBasket(
@@ -303,6 +314,7 @@ export class CreateNewItem extends Modal {
       text: this.plugin.t("CreateNewItem.headline"),
     });
 
+    //--------------------------------------------------------------------------------
     const selectItemDropdown = new Setting(modalTitle);
     selectItemDropdown.setClass("deco-dropdown").addDropdown((dropdown) => {
       const selectItemDropdownComponent = dropdown;
@@ -324,6 +336,7 @@ export class CreateNewItem extends Modal {
         });
     });
 
+    //--------------------------------------------------------------------------------
     const chooseTitle = new Setting(modalTitle).setName(
       this.plugin.t("CreateNewItemrModal.description title"),
     );
@@ -341,6 +354,7 @@ export class CreateNewItem extends Modal {
           .onClick(() => {});
       });
 
+    //--------------------------------------------------------------------------------
     const saveButton = new ButtonComponent(contentEl);
     saveButton
       .setButtonText(this.plugin.t("CreateNewItemrModal.createButton"))
@@ -349,6 +363,7 @@ export class CreateNewItem extends Modal {
         this.close();
       });
 
+    //--------------------------------------------------------------------------------
     const closeButton = new ButtonComponent(contentEl)
       .setButtonText(this.plugin.t("CreateFlowFromFolderModal.close"))
       .onClick(async () => {
@@ -358,6 +373,8 @@ export class CreateNewItem extends Modal {
         this.close();
       });
   }
+
+  //--------------------------------------------------------------------------------
   async onClose() {
     // and clean up the basket.
     this.plugin.settingsTabFunctions.resetFlowBuildBasket(
@@ -390,6 +407,7 @@ export class PreviewModal extends Modal {
       }),
     });
 
+    //--------------------------------------------------------------------------------
     // Show found overlaps
     if (Object.keys(this.flowBuildBasket.conflictObject).length > 0) {
       const conflictText = new Setting(contentEl).setDesc(
@@ -432,6 +450,7 @@ export class PreviewModal extends Modal {
       );
     }
 
+    //--------------------------------------------------------------------------------
     const previewContainer = contentEl.createDiv({
       cls: "preview-container",
     });
@@ -472,6 +491,8 @@ export class PreviewModal extends Modal {
         }
       }
     }
+
+    //--------------------------------------------------------------------------------
     // Close button with info text
     const closeModal = new Setting(contentEl).setDesc(
       createFragment((desc) => {
@@ -488,12 +509,16 @@ export class PreviewModal extends Modal {
         });
       }),
     );
+
+    //--------------------------------------------------------------------------------
     const closeButton = new ButtonComponent(closeModal.controlEl)
       .setButtonText(this.plugin.t("PreviewModal.button close preview"))
       .onClick(() => {
         this.close();
       });
   }
+
+  //--------------------------------------------------------------------------------
   onClose() {
     this.contentEl.empty();
   }
@@ -526,6 +551,7 @@ export class DeleteFlowDefModal extends Modal {
       cls: "Tag-modal-helper",
     });
 
+    //--------------------------------------------------------------------------------
     const deleteButton = new ButtonComponent(contentEl);
     deleteButton.setClass("action-button");
     deleteButton.setClass("action-button-delete-modal");
@@ -584,6 +610,7 @@ export class DeleteFlowDefModal extends Modal {
       this.close();
     });
 
+    //--------------------------------------------------------------------------------
     const cancelButton = new ButtonComponent(contentEl);
     cancelButton.setClass("action-button");
     cancelButton.setClass("action-button-cancel");
@@ -645,6 +672,7 @@ export class RestoreFlowDefModal extends Modal {
     return { parsedJson, backupPath };
   };
 
+  //--------------------------------------------------------------------------------
   onOpen = async () => {
     this.display();
   };
@@ -662,6 +690,7 @@ export class RestoreFlowDefModal extends Modal {
       cls: "headline-text",
     });
 
+    //--------------------------------------------------------------------------------
     // check if we have something to display
     const exists = await this.getBackup();
     if (!exists) {
@@ -679,6 +708,7 @@ export class RestoreFlowDefModal extends Modal {
           this.close();
         });
     } else {
+      //------------------------------------------------------------------------
       // if we do, display that
       const { parsedJson, backupPath } = exists;
 
@@ -690,6 +720,7 @@ export class RestoreFlowDefModal extends Modal {
         }),
       );
 
+      //--------------------------------------------------------------------------------
       const flowsSorted: string[] = [];
       Object.keys(parsedJson).forEach((flow) => {
         flowsSorted.push(flow);
@@ -803,6 +834,7 @@ export class RestoreFlowDefModal extends Modal {
             }),
           )
 
+          //---------------------------------------------------------------------------
           .addButton((replaceButton) => {
             replaceButton
               .setIcon("replace")
@@ -821,6 +853,7 @@ export class RestoreFlowDefModal extends Modal {
               });
           })
 
+          //---------------------------------------------------------------------------
           .addButton((restoreButton) => {
             restoreButton
               .setIcon("download")
@@ -838,6 +871,7 @@ export class RestoreFlowDefModal extends Modal {
                 }
               });
           })
+          //---------------------------------------------------------------------------
           .addButton((deleteButton) => {
             deleteButton
               .setIcon("trash")
@@ -856,6 +890,8 @@ export class RestoreFlowDefModal extends Modal {
               });
           });
       }
+
+      //------------------------------------------------------------------------------
       const okayButton = new ButtonComponent(contentEl);
       okayButton
         .setClass("setting-tab-button-spacing")
@@ -884,6 +920,7 @@ export class RestoreFlowDefModal extends Modal {
             });
           };
 
+          //--------------------------------------------------------------------------
           // function that just puts the definition back as is
           const restoreDef = () => {
             Object.keys(this.decisionBasket.restore).forEach((flowName) => {
@@ -914,6 +951,7 @@ export class RestoreFlowDefModal extends Modal {
           this.close();
         });
 
+      //---------------------------------------------------------------------------
       const dismissButton = new ButtonComponent(contentEl);
       dismissButton
         .setButtonText(
@@ -961,6 +999,7 @@ export class FlowSwitcherModal extends Modal {
     this.plugin.syncAllLeaves();
   };
 
+  //-----------------------------------------------------------------------------
   // so we can highlight the active leaf's entry
   private updateActiveLeafID = () => {
     if (!this.currentActiveLeafID) {
@@ -973,6 +1012,7 @@ export class FlowSwitcherModal extends Modal {
     }
   };
 
+  //--------------------------------------------------------------------------------
   // To keep track of our listeners
   private addManagedListener(
     element: HTMLElement | Document,
@@ -996,6 +1036,7 @@ export class FlowSwitcherModal extends Modal {
     this.display();
   };
 
+  //--------------------------------------------------------------------------------
   private closeLeaf = async (leafID: string) => {
     const targetLeaf = this.app.workspace.getLeafById(leafID);
     if (targetLeaf) {
@@ -1007,6 +1048,7 @@ export class FlowSwitcherModal extends Modal {
     }
   };
 
+  //--------------------------------------------------------------------------------
   async onOpen() {
     await this.display();
     this.plugin.registerModalUpdateCallback(async () => await this.display());
@@ -1152,7 +1194,7 @@ export class FlowSwitcherModal extends Modal {
         goRebuild = "must";
       }
 
-      // ------------ All the buttons for the active flowses headers
+      // ------------ All the buttons for the active flowses headers --------
       // Button that opens in a new tab
       const openActiveTabButton = new ButtonComponent(flowHeader)
         .setIcon("play")
@@ -1175,6 +1217,7 @@ export class FlowSwitcherModal extends Modal {
           }
         });
 
+      //------------------------------------------------------------------------------
       // Button that opens in split to the right
       const openActiveRightButton = new ButtonComponent(flowHeader)
         .setIcon("step-forward")
@@ -1195,6 +1238,7 @@ export class FlowSwitcherModal extends Modal {
           }
         });
 
+      //-----------------------------------------------------------------------------
       // Button that opens in a split down
       const openActiveDownButton = new ButtonComponent(flowHeader)
         .setIcon("step-forward")
@@ -1216,6 +1260,7 @@ export class FlowSwitcherModal extends Modal {
           }
         });
 
+      //-----------------------------------------------------------------------------
       // Button to sync
       const syncButton = new ButtonComponent(flowHeader)
         .setIcon("download")
@@ -1231,6 +1276,7 @@ export class FlowSwitcherModal extends Modal {
           }
         });
 
+      //----------------------------------------------------------------------------
       // Button to rebuild
       const rebuildButton = new ButtonComponent(flowHeader)
         .setIcon("rotate-cw")
@@ -1260,6 +1306,7 @@ export class FlowSwitcherModal extends Modal {
           }
         });
 
+      //---------------------------------------------------------------------------
       // Button to close all active leaves that contain this flow
       const closeButton = new ButtonComponent(flowHeader)
         .setIcon("x")
@@ -1409,7 +1456,7 @@ export class FlowSwitcherModal extends Modal {
       if (
         this.plugin.settings.flows[inactiveFlow].unsyncedRegionsArray.length > 0
       ) {
-        goOpen = "neutral"; // don't open
+        goOpen = "neutral";
         goRebuild = "no-go";
         goSync = "must"; // must sync
       }
@@ -1460,6 +1507,7 @@ export class FlowSwitcherModal extends Modal {
           }
         });
 
+      //----------------------------------------------------------------------------
       const openInactiveRightButton = new ButtonComponent(inactiveFlowHeader)
         .setIcon("step-forward")
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
@@ -1479,6 +1527,7 @@ export class FlowSwitcherModal extends Modal {
           }
         });
 
+      //--------------------------------------------------------------------------
       const openInactiveDownButton = new ButtonComponent(inactiveFlowHeader)
         .setIcon("step-forward")
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
@@ -1499,27 +1548,7 @@ export class FlowSwitcherModal extends Modal {
           }
         });
 
-      // ----------- Sync BUTTON ------------
-      /*   const syncButton = new ButtonComponent(inactiveFlowHeader)
-        .setIcon("download")
-        .setClass(`flow-switch-modal-header-button-${goSync}`)
-        .setClass("clickable-icon")
-        .setTooltip(this.plugin.t("switcherModal.buttons sync"))
-        .onClick(async () => {
-          if (goSync === "neutral" || goSync === "must") {
-            if (goSync === "neutral" || goSync === "must") {
-              await this.plugin.syncAllLeaves();
-              await this.plugin.saveSettings();
-              await this.display();
-            } else {
-              return;
-            }
-          } else {
-            return;
-          }
-        }); */
-
-      // ----------- REBUILD BUTTON ------------
+      // ----------- REBUILD BUTTON --------------------------------------
       const rebuildButton = new ButtonComponent(inactiveFlowHeader)
         .setIcon("rotate-cw")
         .setClass(`flow-switch-modal-header-button-${goRebuild}`)
@@ -1587,8 +1616,10 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
         placeholderText = `? ${this.activeFlowName}: ${activePath}`;
       }
     }
+
     this.setPlaceholder(`${placeholderText}`);
 
+    //----------------------------------------------------------------------------
     // Add instructions below the search box
     this.setInstructions([
       {
@@ -1607,6 +1638,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
     ]);
   }
 
+  //---------------------------------------------------------------------------
   getItems(): Types.SuggestionItem[] {
     const activeFlowItems: Types.SuggestionItem[] = [];
     const otherFlowItems: Types.SuggestionItem[] = [];
@@ -1662,10 +1694,12 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
     return [...activeFlowItems, ...otherFlowItems, ...flowNames];
   }
 
+  //--------------------------------------------------------------------------------
   getItemText(item: Types.SuggestionItem): string {
     return item.searchableText;
   }
 
+  //--------------------------------------------------------------------------------
   renderSuggestion(
     fuzzyMatch: FuzzyMatch<Types.SuggestionItem>,
     el: HTMLElement,
@@ -1702,6 +1736,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
     }
   }
 
+  //--------------------------------------------------------------------------------
   onChooseItem(item: Types.SuggestionItem, evt: MouseEvent | KeyboardEvent) {
     interface ObsidianEditor extends Editor {
       cm?: EditorView;
@@ -1783,6 +1818,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
       }
     };
 
+    //--------------------------------------------------------------------------------
     // if we got a region instead of a cursorPos we find its start pos
     const findCursorPos = async (
       item: Types.SuggestionItem,
@@ -1817,6 +1853,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
       }
     };
 
+    //--------------------------------------------------------------------------------
     // this only ever cares about the active view, which is why we made sure to open, activate and focus
     const scrollToTarget = async (
       item: Types.SuggestionItem,

@@ -263,6 +263,7 @@
   "main.registerCommand restore most recent cursor": "Restore most recent cursor position",
   "main.registerCommand select active region": "Select active region",
   "main.registerCommand toggle explorer navigation": "Toggle explorer navigation",
+  "main toggle explorer navigation notice": "textFlow: Navigation via file explorer is ${explorerNavigationToggleState}",
   "main.registerCommand toggle menu bar": "Toggle menu bar",
   "main.registerCommand toggle scroll bar": "Toggle scroll bar",
 

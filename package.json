@@ -1,6 +1,6 @@
 {
-  "name": "text-flow",
-  "version": "0.2.41",
+  "name": "textFlow",
+  "version": "0.2.5",
   "description": "Display, browse and edit multiple notes as one continuous document (flow). Flows can be defined using bookmarks, paths, tags and properties. Edits are automatically synced back to their source notes.",
   "main": "main.js",
   "scripts": {
@@ -16,7 +16,11 @@
   "include": [
     "**/*.ts"
   ],
-  "keywords": ["scrivenings", "dynamic documents", "compilation"],
+  "keywords": [
+    "scrivenings",
+    "dynamic documents",
+    "compilation"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {

@@ -31,9 +31,10 @@ export class MenuBar {
     this.leafID = leafID;
   }
 
-  // ------ uitilities ---------
+  // ------ utilities ---------
+
   // --- attachment of the menu bar
-  // <slop>
+  // This was written by AI
   public attach(containerEl: HTMLElement) {
     // check that we're talking about the same thing
     if (containerEl === this.associatedView.contentEl) {
@@ -57,6 +58,7 @@ export class MenuBar {
     }
   }
 
+  // -------------------------------------------------------
   private getAndSortPersistentCursors = (include: boolean) => {
     let cursorArray: [string, number, number][] = [];
     let zeroCursor = false; // to prevent a ton of 0 cursors
@@ -88,6 +90,7 @@ export class MenuBar {
     return cursorArray;
   };
 
+  // -------------------------------------------------------
   // To keep track of all the listeners we need to add for our custom dropdowns
   // the whole listener business is AI slop
   private addManagedListener(
@@ -130,12 +133,14 @@ export class MenuBar {
     }
   }
 
+  // -------------------------------------------------------
   // used by setUpFlow to coordinate
   public getFlowName(): string {
     return this.flowName;
   }
 
-  // functions to set/get dropdown state, because the address is so fucking long
+  // -------------------------------------------------------
+  // functions to get dropdown state because the address is so fucking long
   private getDropdownState(dropdown: string) {
     if (dropdown === "nav") {
       return (
@@ -150,7 +155,7 @@ export class MenuBar {
       );
   }
 
-  // self explanatory
+  // -------------------------------------------------------
   private setDropdownState = async (
     dropdown: string,
     state: "show" | "hide",
@@ -185,6 +190,7 @@ export class MenuBar {
     return path;
   };
 
+  // -------------------------------------------------------
   // gather overlap so we can mark these regions
   private overlapText = "";
 
@@ -214,10 +220,10 @@ export class MenuBar {
     return overlap;
   };
 
+  // -------------------------------------------------------
   // initialising this for the fuzzy search
   private filterList: string[] = [];
 
-  // handling the creation of entries
   private createNavDropdownEntry(path: string, dropdownEntries: HTMLElement) {
     // get flowOrder (also to search for start of region)
     if (path === "No results") {
@@ -307,6 +313,7 @@ export class MenuBar {
     }
   }
 
+  // -------------------------------------------------------
   // because the navDropdown needs to be dynamic
   private refreshNavDropdownEntries(
     dropdownEntries: HTMLElement,
@@ -325,6 +332,7 @@ export class MenuBar {
     }
   }
 
+  // -------------------------------------------------------
   private getPathArray = () => {
     let pathArray: string[] = [];
     Object.keys(this.plugin.settings.flows[this.flowName].flowMap).forEach(
@@ -356,7 +364,8 @@ export class MenuBar {
       //  new Notice(this.plugin.t("Compartment error"), 10000);
     }
 
-    // if the menuBar is MINIMISED
+    // ------------- THE MINIMISED BAR ------------------------------------------
+    // some checks for the design
     if (
       this.plugin.settings.activeRegions[this.flowName][this.leafID]
         .leafMenuBarSettings.menuBarDisplayState === "min"
@@ -375,6 +384,7 @@ export class MenuBar {
 
       if (!compartmentsGood) style = "textflow-menu-bar-min-warn";
 
+      // ------------------------------
       // now build the bar
       const menuBarEl = this.associatedView.contentEl.createDiv({
         cls: `textflow-menu-bar-min`,
@@ -399,11 +409,8 @@ export class MenuBar {
         });
       return menuBarEl;
     } else {
-      // ---------- FUNCTIONS -----------------
-
-      const pathArray = this.getPathArray();
-
-      // ----------- Preparatory checks
+      // ---------- THE MAXIMISED BAR ---------------------------------------------
+      // checks for the design and conditional functionality
       let goSync = "neutral";
       let goRebuild = "neutral";
 
@@ -475,19 +482,17 @@ export class MenuBar {
         });
 
       // ----------- NAVIGATION DROPDOWN ------
-      // compute text for initial dropdown headline
-      // get the path of the currently active region via the leafID
-
       // Pacify the Red Squiggle Demon's wrath at 'path' being explicitly typed as string | undefined
       let activeRegion: string | undefined = "";
-      // some optional chaining because I don't know how to make stairs work here
+
+      // this always exists because it's created before the menu bar is set up
       if (this.plugin.settings.activeRegions[this.flowName][this.leafID].path) {
         activeRegion =
           this.plugin.settings.activeRegions[this.flowName][this.leafID].path;
       }
 
       let activeRegionNoteName = "";
-      let titleClass = "blargh"; // could also have been "lalalalalalalalalalalalalalalalalalala"
+      let titleClass = "blargh"; // could also have been "lalalalalala"
       if (activeRegion) {
         activeRegionNoteName = this.makeNavPath(activeRegion);
         const overlap = this.getOverlap();
@@ -500,10 +505,10 @@ export class MenuBar {
       // If we don't have an active region - we always do, but still - be ready to use the first region
       const key = this.plugin.settings.flows[this.flowName].definitionMode;
 
+      const pathArray = this.getPathArray();
       const firstThingNoteName = this.makeNavPath(pathArray[0]);
 
       // --------- THE ACTUAL DROPDOWN COMPONENT ----------
-
       const navigationDropdown = menuBarEl.createDiv({
         cls: `menu-bar-navigation-dropdown spacing`,
       });
@@ -664,7 +669,6 @@ export class MenuBar {
       }
 
       // ------ The cursor stuff -----------------------------------
-
       const cursorDropdown = menuBarEl.createDiv({
         cls: "menu-bar-cursor-dropdown",
       });
@@ -674,8 +678,7 @@ export class MenuBar {
       });
 
       // the span that holds the icon
-      // there used to be a text dropdown here, but I replaced it with just the button and so far I haven't felt the necessary patience to rewrite all of this as a button
-
+      // there used to be a text dropdown here, but I replaced it with just the button and so far I haven't hat the necessary patience to rewrite all of this as a button
       const cursorIconSpan = cursorHeadline.createSpan();
       cursorIconSpan.setAttr(
         "aria-label",
@@ -838,6 +841,7 @@ export class MenuBar {
           });*/
       }
 
+      // -------------------------------------------------------
       // the button with which you can select the active region
       const selectButton = new ButtonComponent(menuBarEl);
       selectButton
@@ -859,6 +863,7 @@ export class MenuBar {
           }
         });
 
+      // -------------------------------------------------------
       // a button to export the flow with UUIDs stripped
       const exportButton = new ButtonComponent(menuBarEl);
       exportButton
@@ -873,6 +878,7 @@ export class MenuBar {
           this.plugin.settingsTabFunctions.exportFlow(this.flowName);
         });
 
+      // -------------------------------------------------------
       // a chevron to minimise
       const minimiseButton = new ButtonComponent(menuBarEl);
       minimiseButton

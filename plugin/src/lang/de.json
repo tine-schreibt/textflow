@@ -273,6 +273,7 @@
   "main.registerCommand select active region": "Aktive Region auswählen",
   "main.registerCommand sync all leaves": "Alle Leaves synchronisieren",
   "main.registerCommand toggle explorer navigation": "Navigation per Datei-Explorer umschalten",
+  "main toggle explorer navigation notice": "textFlow: Navigation per Datei-Explorer ist ${explorerNavigationToggleState}",
   "main.registerCommand toggle menu bar": "Menüleiste umschalten",
   "main.registerCommand toggle scroll bar": "Scrollbar umschalten",
 

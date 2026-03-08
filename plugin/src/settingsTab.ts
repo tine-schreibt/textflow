@@ -33,14 +33,14 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       cls: "headline-container",
     });
 
-    // ###############   SET UP A SYSTEM FOLDER   ###########################
+    //--------------------------------------------------------------------------------
+    //   SET UP A SYSTEM FOLDER
 
     const systemFolder = this.plugin.settingsTabFunctions.checkSystemFolder();
     if (systemFolder) {
       this.plugin.settings.systemFolderPath = systemFolder.path;
     }
     let newSystemFolderParent = "";
-
     const setSystemFolder = new Setting(setUpTextFlow)
       .setName(
         this.plugin.t("setSystemFolder.setName choose existing folder", {
@@ -148,8 +148,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
     // --------------------- UI settings
 
-    // -----------   flowSwitcherModal  ---------------
-
     const menuBarDefault = new Setting(setUpTextFlow)
       .setName(this.plugin.t("menuBarDefault.setName default menu bar setting"))
       .setDesc(
@@ -177,7 +175,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       });
 
     // -----------   flowSwitcherModal  ---------------
-
     const switcherModalPosition = new Setting(setUpTextFlow)
       .setName(
         this.plugin.t("switcherModalPosition.setName access flow switcher via"),
@@ -214,7 +211,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       });
 
     // ------------ explorer Deco
-    // Claude 3.5 Sonnet wrote this to preserve my sanity, which is also why it looks much more refined than my usual stuff
     const explorerDeco = new Setting(setUpTextFlow)
       .setName(this.plugin.t("explorerDeco.setName.1 choose deco"))
       .setDesc(
@@ -233,6 +229,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         }),
       );
 
+    // Claude 3.5 Sonnet wrote this dropdown to preserve my sanity
     const dropdownContainer = explorerDeco.controlEl.createDiv({
       cls: "explorer-deco-system",
     });
@@ -314,8 +311,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       flowModeExplorerDecoHeadline.removeEventListener("click", toggleDropdown);
     });
 
-    // --- And we're back to my own beginner style, though Claude still helps me to get better at this -.-
-
+    //--------------------------------------------------------------------------------
     const sourceHighlight = new Setting(setUpTextFlow)
       .setName(
         this.plugin.t(
@@ -365,7 +361,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           });
       });
 
-    // ------------ The Quality of Life stuff
+    //-----------------------------------------------------------------------
     const qol = containerEl.createEl("details", {
       cls: "advancedSettings-container",
     });
@@ -380,7 +376,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
     const qolSettings = qol.createDiv();
 
-    // -------------- Multi-select -----------------
+    // -------------- Navigation listener -----------------
     const navListener = new Setting(qol)
       .setName(this.plugin.t("qol.navListener.setName enable explorer nav"))
       .setDesc(
@@ -402,7 +398,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           });
       });
 
-    // can't get this to work, so I'm shelving it; user can still do the z-index thing
+    // can't get this to work, so I'm shelving it for now
     /*  // ------------ menu bar top margin
     const menuBarTopMargin = new Setting(qol)
       .setName(this.plugin.t("menuBarTopMargin.setName top margin"))
@@ -470,7 +466,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       });
 
     // -----------   hash  ---------------
-    const hash = new Setting(qol)
+    const checkForExternalEdits = new Setting(qol)
       .setName(this.plugin.t("qol.hash.setName hash?"))
       .setDesc(
         createFragment((desc) => {
@@ -582,7 +578,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     });
 
     //--------- FLOW NAME -----------------
-
     const chooseFlowName = new Setting(createFlows)
       .setName(
         this.plugin.t("createFlows.chooseFlowName.setName name your flow"),
@@ -681,7 +676,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     }
 
     // ------ BOOKMARKS INPUT ELEMENT AND STUFF --------------------------------------
-
     const bookmarksSortOrder = new Setting(createFlows);
     bookmarksSortOrder.settingEl.hide(); // HIDE INITIALLY
     bookmarksSortOrder
@@ -754,6 +748,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         });
       });
 
+    //-----------------------------------------------------------------------------
     const chooseBookmarks = new Setting(createFlows);
     chooseBookmarks.settingEl.hide(); // HIDE INITIALLY
     chooseBookmarks.settingEl.addClass("input-width-200");
@@ -888,6 +883,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       });
     });
 
+    //--------------------------------------------------------------------------------
     const headlineChoosePathsTagsProperties = new Setting(createFlows);
     headlineChoosePathsTagsProperties.settingEl.hide();
     headlineChoosePathsTagsProperties.setClass("input-width").setDesc(
@@ -918,7 +914,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       }),
     );
 
-    // ----- Folder include
+    // ----- Folder include ----------
     const folderIncludeInput = new Setting(createFlows);
     folderIncludeInput.settingEl.hide();
     folderIncludeInput.settingEl.addClass("border-top-none");
@@ -981,7 +977,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       });
     });
 
-    // ----- Folder exclude
+    // ----- Folder exclude ---------------
     const folderExcludeInput = new Setting(createFlows);
     folderExcludeInput.settingEl.hide();
     folderExcludeInput.settingEl.addClass("border-top-none");
@@ -1012,7 +1008,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         });
       });
 
-    // ----- Tags
+    // ----- Tags include --------------
     const tagsIncludeInput = new Setting(createFlows);
     tagsIncludeInput.settingEl.hide();
     tagsIncludeInput.settingEl.addClass("border-top-none");
@@ -1043,6 +1039,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         });
       });
 
+    //-------- Tags exclude -------
     const tagsExcludeInput = new Setting(createFlows);
     tagsExcludeInput.settingEl.hide();
     tagsExcludeInput.settingEl.addClass("border-top-none");
@@ -1072,7 +1069,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         });
       });
 
-    // ----- Properties
+    // ----- Properties include ------------
     const propertiesIncludeInput = new Setting(createFlows);
     propertiesIncludeInput.settingEl.hide();
     propertiesIncludeInput.settingEl.addClass("border-top-none");
@@ -1108,6 +1105,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         });
       });
 
+    // ---------- Properties exclude ---------
     const propertiesExcludeInput = new Setting(createFlows);
     propertiesExcludeInput.settingEl.hide();
     propertiesExcludeInput.settingEl.addClass("border-top-none");
@@ -1143,7 +1141,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         });
       });
 
-    // ---- RADIO BUTTON SETTINGS AND LOGIC
+    // ---- RADIO BUTTON SETTINGS AND LOGIC ---------------------
     // --- Presets for the BOOKMARKS button
     if (this.plugin.settings.flowBuildBasket.definitionMode === "bookmarks") {
       showOrHideAlLFoldersTagsProps("hide");
@@ -1229,6 +1227,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         }
       });
 
+    //-------------------------------------------------------------------
     const saveButton = new ButtonComponent(containerEl);
     saveButton
       .setClass("setting-tab-button-spacing")
@@ -1291,7 +1290,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         this.display();
       });
 
-    // ----- Clear the input mask
+    // ----- Clear the input mask ---------
     const clearValues = new ButtonComponent(containerEl);
     clearValues
       .setButtonText(this.plugin.t("clearValues.setButtonText clear values"))
@@ -1422,6 +1421,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             }
           }),
         )
+
+        //-----------------------------------------------------------------------------
         .addButton((rebuildButton) => {
           rebuildButton
             .setButtonText(
@@ -1456,6 +1457,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             });
         })
 
+        //-----------------------------------------------------------------------------
         .addButton((editFlow) => {
           editFlow
             .setButtonText(
@@ -1486,6 +1488,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             });
         })
 
+        //-----------------------------------------------------------------------------
         .addButton((deleteDef) => {
           deleteDef
             .setButtonText(
@@ -1520,6 +1523,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         }),
       )
 
+      //-----------------------------------------------------------------------------
       .addButton((backupBackupButton) => {
         backupBackupButton
           .setButtonText(
@@ -1532,6 +1536,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             );
           });
       })
+
+      //-----------------------------------------------------------------------------
       .addButton((restore) => {
         restore
           .setButtonText(
