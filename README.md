@@ -4,17 +4,20 @@ textFlow lets you create **flows** - dynamic documents built from the contents
 of multiple notes (think 'Scrivenings'). Flows can be defined from bookmarks,
 paths, tags and properties and edited like any other note. All changes to flows
 as well as their sources are registered automatically and synced both ways.
+
 textFlow is intended mainly for long form writers, but can be used by anyone who
-wants to see and/or work on multiple notes in context. The UI has options for
-keyboard as well as mouse navigation.
+wants to see and/or work on multiple notes in context.
+
+The UI has options for keyboard as well as mouse navigation.
 
 Please keep in mind that textFlow has been tested conscientiously but is **still
 in its beta phase**, so I'm sure not all quirks are known/fixed/worked around
 yet. If you find anything not mentioned in this Readme
-[please let me know](#12-report-a-bug--report-your-love). Please also consider
-running Obsidian's own data recovery plugin,
+[please let me know](#12-report-a-bug--report-your-love).
+
+Please also consider running Obsidian's own data recovery plugin,
 ['Edit history' by Antonio Tejada](https://github.com/antoniotejada/obsidian-edit-history)
-or another real time backup service - at least until textFlow has earned your
+or any other real time backup service - at least until textFlow has earned your
 trust.
 
 ---
@@ -45,7 +48,7 @@ smoothly?**
 
 ### 1. Functionality
 
-##### Already implemented:
+#### Already implemented:
 
 1. **'Smart' flows:** Define flows by using bookmark groups or folders, tags and
    [properties](#How-to-properties) as in/exclusion criteria. textFlow will copy
@@ -129,7 +132,7 @@ smoothly?**
     - Right-clicking into file explorer gives the option to create a new file in
       the current folder (this is basically just for me -.-)
 
-##### Maybe coming in the future if enough people [ask for it](https://github.com/tine-schreibt/textFlow/issues) (rough number in the bracket):
+#### Maybe coming in the future if enough people [ask for it](https://github.com/tine-schreibt/textFlow/issues) (rough number in the bracket):
 
 - **Export with properties:** (5) The option to keep properties when exporting a
   flow.
@@ -297,7 +300,7 @@ in Outline. All the stuff in between can be shuffled around like usual, though.
    into[Continuous Mode](https://github.com/gasparschott/obsidian-continuous-mode)
    or [sync-embeds](https://github.com/uthvah/sync-embeds/) instead.
 
-##### Not my plugin's fault
+#### Not my plugin's fault
 
 1. **Implicit size limit for flows:** Obsidian handles open notes in memory, so
    having your entire quarter-million word epic open - wether in one flow or

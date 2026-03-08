@@ -5,17 +5,20 @@ Inhalten mehrerer Notizen bestehen (vergleichbar mit 'Scrivenings'). Flows
 können aus Lesezeichen, Ordnern, Tags und Eigenschaften definiert, und Flows wie
 jede andere Notiz editiert werden. Alle Änderungen an Flows und ihren
 Quellnotizen werden dabei automatisch registriert und bidirektional gesynct.
+
 textFlow ist vor allem für Autor:innen längerer Texte gedacht, kann aber von
 allen genutzt werden, die ihre Texte im größeren Zusammenhang sehen und/oder
-editieren wollen. Die UI hat Optionen sowohl für Tastatur-, als auch für
-Maus-Navigation.
+editieren wollen.
+
+Die UI hat Optionen sowohl für Tastatur-, als auch für Maus-Navigation.
 
 Bitte beachte, dass textFlow nach bestem Wissen durchgetestet, aber trotzdem
-**noch in der Beta-Phase ist**. Deshalb sind sicher noch nicht alle Eigenheiten und
-Reibungspunkte bekannt/gefixt/mit Workaround versehen. Falls du etwas
+**noch in der Beta-Phase ist**. Deshalb sind sicher noch nicht alle Eigenheiten
+und Reibungspunkte bekannt/gefixt/mit Workaround versehen. Falls du etwas
 aufstöberst, das dieses Readme nicht erwähnt,
-[lass es mich wissen](#12-melde-einen-bug--zeig-deine-liebe). Bitte ziehe
-außerdem in Erwägung, Obsidians Datenwiederherstellung-Plugin,
+[lass es mich wissen](#12-melde-einen-bug--zeig-deine-liebe).
+
+Bitte ziehe außerdem in Erwägung, Obsidians Datenwiederherstellung-Plugin,
 ['Edit history' von Antonio Tejada](https://github.com/antoniotejada/obsidian-edit-history)oder
 einen anderen Echtzeit-Backup-Service mitlaufen zu lassen - zumindest bis sich
 textFlow dein Vertrauen verdient hat.
@@ -48,7 +51,7 @@ stressfrei benutzen kannst?**
 
 ### 1. Funktionalität
 
-##### Bereits implementiert:
+#### Bereits implementiert:
 
 1. **'Intelligente' Flows:** Definiere Flows, indem du Lesezeichen-Gruppen oder
    Ordner, Tags und [Eigenschaften](#wie-gehen-eigenschaften) als
@@ -138,7 +141,7 @@ stressfrei benutzen kannst?**
     - Rechtsklick in den Datei-Explorer gibt die Option eine neue Datei im
       aktuellen Ordner zu erzeugen (das ist im Grunde nur für mich -.-)
 
-##### Kommt vielleicht in der Zukunft, wenn genug Leute [danach fragen](https://github.com/tine-schreibt/textFlow/issues) (grobe Zahl in der Klammer):
+#### Kommt vielleicht in der Zukunft, wenn genug Leute [danach fragen](https://github.com/tine-schreibt/textFlow/issues) (grobe Zahl in der Klammer):
 
 - **Export mit Eigenschaften:** (5) Eigenschaften eines Flows beim Export
   mitnehmen.
@@ -326,7 +329,7 @@ gewohnt rumschieben.
    [Continuous Mode](https://github.com/gasparschott/obsidian-continuous-mode)
    oder [sync-embeds](https://github.com/uthvah/sync-embeds/) mal anschaun.
 
-##### Da kann mein Plugin nichts für
+#### Da kann mein Plugin nichts für
 
 1. **Implizite Größenbeschränkung für Flows:** Obsidian handhabt offene Notizen
    im RAM. Wenn du also dein Viertelmillion Worte langes Epos offen hast - sei
