@@ -440,7 +440,7 @@ If that didn't help and you also can't find your problem on this list, [let me k
 
 <hr>
 
-### 11 Comparing textFlow and Outline
+### 11. Comparing textFlow and Outline
 
 Obsidian already offers a way of browsing through a single, large document in the form of the core plugin 'Outline' - so when is textFlow worth a try?
 And when should you use both together? 
