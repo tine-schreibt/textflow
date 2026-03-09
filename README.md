@@ -1,9 +1,12 @@
 ### TL;DR 
-textFlow lets you create **flows** - dynamic documents built from the contents of multiple notes (think 'Scrivenings'). Flows can be defined from bookmarks, paths, tags and properties and edited like any other note. All changes to flows as well as their sources are registered automatically and synced both ways. 
+textFlow lets you create **flows** - dynamic documents built from the contents of multiple notes (think 'Scrivenings'). Flows can be defined from bookmarks, paths, tags and properties and edited like any other note. All changes to flows and their sources are registered automatically and synced both ways. 
+
 textFlow is intended mainly for long form writers, but can be used by anyone who wants to see and/or work on multiple notes in context. 
+
 The UI has options for keyboard as well as mouse navigation. 
 
-Please keep in mind that textFlow has been tested conscientiously but is still in its beta phase, so I'm sure not all quirks are known/fixed/worked around yet. If you find anything not mentioned in this Readme [please let me know](#12-report-a-bug--report-your-love). 
+Please keep in mind that textFlow has been tested conscientiously but **is still in its beta phase**, so I'm sure not all quirks are known/fixed/worked around yet. If you find anything not mentioned in this Readme [please let me know](#12-report-a-bug--report-your-love). 
+
 Please also consider running Obsidian's own data recovery plugin, ['Edit history' by Antonio Tejada](https://github.com/antoniotejada/obsidian-edit-history) or another real time backup service - at least until textFlow has earned your trust. 
 
 ---
@@ -42,7 +45,7 @@ Please also consider running Obsidian's own data recovery plugin, ['Edit history
 		2. Mirror the order of your *folders* as they appear in the file explorer[\*](#no-manual-sorting).
 	- Flows built from bookmark groups aren't tied to the alphanumeric thing and can also mirror the plain order of items regardless if they are notes or groups. 
 	Use whatever order feels more intuitive/less confusing to you or better fits the respective flow. Some sort orders also work better with folder/group title deactivated. 
-3. **Edit flows like any other note:** textFlow keeps track of which region of a flow an edit happens in and automatically syncs it all back to the correct source note whenever you click into a different note. You can also sync manually anytime you like (there's a command you can bind to a hotkey). 
+3. **Edit flows like any other note:** textFlow keeps track of which region of a flow an edit happens in. It automatically syncs it all back to the correct source note whenever you click into a different note. You can also sync manually anytime you like (there's a command you can bind to a shortcut). 
 4. **Add frontmatter to your flows:** Just use the properties plugin as usual. Properties will be preserved across rebuilds and are useful if you want to keep track of your flows beyond the settings tab/flowSwitcher modal/textFlow's (hidden) folder. 
 5. **A flow is really just an ordinary note with some API bling attached:** So *everything will still work within your flows*: Your themes still work. Inline-styles still work. Dataview tables will still be displayed as usual. Outline still works (well, [99%](#3-limitations-and-known-inconveniences)). In-note search still works. Callouts, lists, code blocks, tables, tabs, it all still works. Because, again, a flow is just a normal note with some API bling stuck on. 
 6. **Navigate within flows via the file explorer:** Yup. I know! textFlow can even highlight the active region's source note in one of four styles! [It's not perfect, though...](#3-limitations-and-known-inconveniences)
@@ -55,11 +58,11 @@ Please also consider running Obsidian's own data recovery plugin, ['Edit history
 8. **Do lots of stuff via the menu bar:** 
 	1. It has buttons for **syncing** and **rebuilding**.
 	2. **A navigation menu**: This dropdown makes it easy to navigate disjointed flows, or if the fickle focus thing is too frustrating for you. The menu also sports a fuzzy search to help you get around huge flows faster. The search term persists in-session, so you don't have to retype it.
-	3. **Your cursor history:** Whenever you sync, textFlow saves the last cursor position (for the last few regions of the last few leaves), so you can more easily jump around your document. textFlow also remembers the cursor positions across reloads and scrolls there automatically, and there's a command to restore the last known cursor position for the active leaf. 
+	3. **Your cursor history:** Whenever you sync, textFlow saves the last cursor position (for the last few regions of the last few leaves), so you can more easily jump around your document. textFlow remembers the cursor positions across reloads and scrolls there automatically. There's also a command to restore the last known cursor position for the active leaf. 
 	4. **A button to select the active region:** In case you want to do some copy/paste surgery. There's a command for this, too. 
 	5. **An export button:** This button creates a copy of your flow with all the UUIDs stripped out. It will be put in your root folder and named with the flow name and a time stamp.
 	6. **A min/max toggle:** There's a button to minimise/maximise the menu bar. There's also a command to toggle the menu. 
-		In its minimised state the menu bar is just a small grey chevron in the upper left corner of your editor, that turns into a warning triangle if the flow isn't setup right yet b
+		In its minimised state the menu bar is just a small grey chevron in the upper left corner of your editor. It turns into a warning triangle if the flow isn't setup right yet. 
 9. **Do stuff via the switcher modal:** In the flow switcher you've got buttons to: 
 	- open flows in a new tab or split
 	- switch between a flow's tabs 
@@ -85,7 +88,7 @@ If I develop motivation on my own, they may show up all by themselves one day.
 
 ### 2. Safety features
 
-1. **The menu bar:** Its mere existence signals that the plugin is up and running. Beyond that, the bar also checks if all the CodeMirror bling has been attached correctly. If that's not (yet) the case you will see a warning triangle instead of the min/max chevron. If you see that triangle:
+1. **The menu bar:** Its existence signals that the plugin is up and running. Beyond that, the bar also checks if all the CodeMirror bling has been attached correctly. If that's not (yet) the case you will see a warning triangle instead of the min/max chevron. If you see that triangle:
 	- wait a moment, 
 	- min/max the menu bar,
 	- click into a different leaf and back,
@@ -101,10 +104,10 @@ If I develop motivation on my own, they may show up all by themselves one day.
 		- **A flow is flagged for rebuild when...**
 			1. ... you rename, move, create or delete notes or folders that have been or likely will be part of that flow.
 			2. ... you have opened two overlapping flows and made changes within the overlapping regions. 
-				***IMPORTANT:** This really is **just a safety precaution** for accidental edits and not intended to be exploited in order to routinely work on overlap; **the mechanism will even become unstable** if a flow is being rebuilt while open in more than one leaf.*
+				***IMPORTANT:** This really is **just a safety precaution** for accidental edits. It is not intended to be exploited in order to routinely work on overlap; **the mechanism will even become unstable** if a flow is being rebuilt while open in more than one leaf.*
 				So when textFlow tells you that your cursor is within an overlapping region, close the overlapping flows before you start editing. 
 			3. ... you edit a flow's source note directly (this includes edits where you only changed irrelevant front matter; sorry)
-		- **All rebuilds are complete rebuilds:** The entire data structure in the background is recalculated, UUIDs are freshly generated, and the file is completely rewritten, so that their integrity is guaranteed and the old and current version can be told apart by textFlow. This way you can be informed if you ever happen to `ctrl/cmd+z` your way back into an old version. 
+		- **All rebuilds are complete rebuilds:** The entire data structure in the background is recalculated, UUIDs are freshly generated, and the file is completely rewritten. This guarantees their and also makes the old and current version distinguishable to textFlow. This way you can be informed if you ever happen to `ctrl/cmd+z` your way back into an old version. 
 		- **To avoid excessive rebuilds:** 
 			- Only keep open flows that you are actively working on. Closing a flow with all its leaves is just one click in the switcher modal, and reopening is just as fast. Also consider keeping flows in separate workspaces. 
 			- Avoid working on overlapping regions. 
@@ -120,11 +123,11 @@ If I develop motivation on my own, they may show up all by themselves one day.
 	- **always hash** - useful if you don't trust your sync service or are working in a high-risk setting (i.e. with git or a 'smart'/storage saving / streaming sync service). 
 	**These automatic checks run**
 	- for freshly opened flows,
-	- when you interact with a flow after at least 5 minutes of inactivity in relation to that flow (activating a leaf or editing content),
+	- when you interact with a flow after at least 5 minutes of inactivity (activating its leaf, scrolling or editing its content),
 	- whenever you click into a new region (only for that region, though).
 	In case it's important to you, you can also check all your flows manually via command. 
 	**IMPORTANT:** Of course these checks can only work if you give your sync service enough time to do its thing. So take care to wait for the sync of your vault to finish before you resume work. 
-9. **Manually mark for rebuild:** If you deactivate automatic checks, you can still right-click on a note in file explorer and select to have all flows containing it marked for rebuild. 
+9. **Manually mark for rebuild:** If you deactivate automatic checks, you can right-click on a note in file explorer and choose to have all flows containing that note marked for rebuild. 
 10. **Definition backup:** If you ever have to un/reinstall the plugin, you can create a backup of all your flow definitions. It will be stored as a .json file in textFlow's system folder.
 
 <hr>
@@ -134,7 +137,7 @@ If I develop motivation on my own, they may show up all by themselves one day.
 #### Mentioned stuff first: 
 
 #### **No manual sorting:** 
-Your file explorer's order will *not* be reflected in your flow if you have manually sorted your notes and folders. That is because textFlow uses Dataview, which accesses the system level, alphanumeric file tree and not sorting that happens at the UI level. 
+Your file explorer's order will *not* be reflected in your flow if you have manually sorted your notes and folders. That is because textFlow uses Dataview, which accesses the alphanumeric file tree at the system level and ignores any sorting that happens at the UI level. 
 If you absolutely don't want to number your folders and notes (it's so much more robust, though...), mirror your custom order in some bookmark groups and build your flows from there (I guess some of the manual sort plugins are based on bookmarks anyways). You can't use frontmatter to refine definitions based on bookmarks, though (at least not yet?). 
 
 **Reordering stuff in Outline:** 
@@ -151,7 +154,7 @@ Since the last section within in any region will contain the write locked UUID, 
 
 1. **Necessary data duplication:** Flows are extra notes which repeat their source notes' contents; it's the only way this works. So if data duplication makes your blood boil, this isn't the plugin for you and you may want to look into[Continuous Mode](https://github.com/gasparschott/obsidian-continuous-mode) or [sync-embeds](https://github.com/uthvah/sync-embeds/) instead.
 
-##### Not my plugin's fault
+#### Not my plugin's fault
 
 1. **Implicit size limit for flows:** Obsidian handles open notes in memory, so having your entire quarter-million word epic open - wether in one flow or spread over several - will make the UI sluggish. So maybe keep the flows on the smaller side and only open what you actually need.
 	For reference: Your unfinished 50.000 word novel is under 400kB, while a 250.000 word epos may crack 2MB.
@@ -167,7 +170,7 @@ Since the last section within in any region will contain the write locked UUID, 
 ### 4. Use cases
 
 - You're an author and want to see/work on your various scenes in context 
-- You want to be able to curate contexts to focus on specific aspects of your work 
+- You want to be able to easily curate multiple contexts to focus on specific aspects of your work 
 - You want to turn the whole or specific excerpts of your work into a single file in order to share it with others 
 - You want to basically have Scrivenings in Obsidian
 
@@ -231,7 +234,7 @@ Since the last section within in any region will contain the write locked UUID, 
 
 ### 7. Commands
 
-All commands can be tied to hotkeys in Obsidian's settings. 
+All commands can be tied to keyboard shortcuts (hotkeys) in Obsidian's settings. 
 
 - **Sync all leaves:** This also saves the current cursor position for all active leaves. 
 - **Rebuild flow in active leaf:** Sometimes you need a rebuild. 
@@ -361,6 +364,11 @@ If that didn't help and you also can't find your problem on this list, [let me k
 	- **Solution:**
 		- Have the other toolbar be displayed in a different place or hide it completely. 
 
+ - **Problem:** You input `ctrl/cmd+f` and now the menu bar is gone. 
+	 - **Solution:** 
+		 - Sometimes search and menu bar get in each other's way and the search input covers up the menu bar. 
+		 - Close the search input and the menu bar will show up again. 
+
 - **Problem**: I clicked out of Obsidian while the navigation menu was expanded, and now it won't close when I click outside of it
 	- **Solution:** Yeah... Click an entry in the menu, that will get it back on track. 
 
@@ -384,6 +392,11 @@ If that didn't help and you also can't find your problem on this list, [let me k
 		- But since you likely don't want to have a bunch of invisible UUIDs in your copied flow, export it instead (there's a button in the menu bar, and also a command). This will remove all UUIDs for you and you can handle the note without any restrictions. 
 
 #### Weird problems
+
+ - **Problem:** You input `ctrl/cmd+f` and but the search input doesn't show up. 
+	 - **Solution:** 
+		 - Sometimes search and menu bar get in each other's way and the menu bar covers up the search input. 
+		 - Close the menu bar and the search input will show up again. 
 
 - **Problem:** textFlow wants you to sync a flow, but when you click the button, nothing happens, and you can't rebuild the flow while it has unsynced edits. 
 	- **Solution:** 
@@ -436,8 +449,8 @@ And when should you use both together?
 - **Automation and Flexibility:** 
 	- With textFlow you can work on a dozen of differently composed excerpts of your vault without ever having to copy/paste anything by hand, missing parts, forgetting to update or getting confused as to which excerpt has which edit, because textFlow handles it all for you. 
 - **Snapshots:** 
-	- With Outline, if you want to take a snapshot of a certain part of your document, you have to copy-paste a region out into a new document and title it by hand.
-	- With textFlow, your source files all still exist; just take a snapshot (try 'Backitup' by hammadXP - best used together with 'Diff view' by Till Friebe to compare and selectively restore).
+	- With Outline, if you want to take a snapshot of a certain part of your document, you have to copy-paste it out into a new document and title it by hand.
+	- With textFlow, your source notes all still exist; just take a snapshot (try ['Backitup' by hammadXP](https://github.com/hammadxp/back-it-up) - best used together with ['Diff view' by Till Friebe](https://github.com/friebetill/obsidian-file-diff) to compare and selectively restore).
 - **File explorer:** 
 	- The plugin ['Quiet outline' by guopenghui](https://github.com/guopenghui/obsidian-quiet-outline) allows you to decorate headlines in Outline and to auto-expand the headline(s) under which you are working. But to change the deco, you have to browse your document instead of just clicking on note titles in a sidebar. And if you prefer a specific set of headlines to be expanded, you have to remake your workspace every time you reload your vault. 
 
