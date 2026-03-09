@@ -1,6 +1,6 @@
 {
   "COMMENT": {
-    "Keys": "Keys are made up of parent setting/class/function, wrapper function, prefix and description",
+    "Keys": "Keys are mostlymade up of parent setting/class/function, wrapper function, prefix and description",
     "prefixes": "numbers for when text is a fragment of a setDesc, 'alt+number' for when it is conditional"
   },
 
@@ -10,8 +10,8 @@
 
   "------ SET SYSTEM FOLDER": "Here the user chooses which path the system folder should have ----------------",
   "setSystemFolder.setName choose existing folder": "${textFlowSystemFolderName} location",
-  "setSystemFolder.setDesc.1 what is system folder used for": "Please provide the path to an existing folder in which textFlow can put the (invisible) folder with your flows.",
-  "setSystemFolder.setDesc.2 how to enter root": "Enter / or . to choose the root folder.",
+  "setSystemFolder.setDesc.1 what is system folder used for": "Please provide the path to an existing folder. textFlow will save an (invisible) folder with your flows there.",
+  "setSystemFolder.setDesc.2 how to enter root": "Enter / or . to choose your vault's root folder.",
   "setSystemFolder.addButton.setButtonText.alt create": "Create",
   "setSystemFolder.addButton.setButtonText.alt move": "Move",
   "setSystemFolder.addButton.notice folder successfully moved": "textFlow: ${textFlowSystemFolderName} moved to ${_newSystemFolderParent}",
@@ -33,8 +33,8 @@
 
   "---------- BACKUP MODAL": "Modal, which allows the user to restore flows from backups ----------",
   "backup.headline": "Your backups",
-  "backup.explanation empty": "You don't have any backups. Create or edit a flow to create one.",
-  "backup.explanation select": "Click once to select, a second time to deselect.",
+  "backup.explanation empty": "You don't have any backups. Create a backup via the button.",
+  "backup.explanation select": "Click once to select, click a second time to deselect.",
   "backup.restoreButton.setButtonText replace": "Replace existing definition",
   "backup.restoreButton.setButtonText restore": "Save as new definition",
   "backup.deleteButton.setButtonText delete": "Delete",
@@ -43,7 +43,7 @@
 
   "------ EXPLORER DECORATION": "Choose unicode characters to decorate source notes in file explorer ----------------",
   "explorerDeco.setName.1 choose deco": "File explorer decoration",
-  "explorerDeco.setDesc.2 what does deco do": "Marks the source notes of all currently active (opened) flows.",
+  "explorerDeco.setDesc.2 what does deco do": "Marks the source notes of all currently active flows.",
   "explorerDeco.setDesc.3 what do symbols mean": "First symbol: up to date; second symbol: waiting for sync.",
   "explorerDeco.setDesc.4 how to set colour": "The colour is the accent you chose in Obsidian's 'Appearance' settings.",
 
@@ -79,14 +79,14 @@
 
   "qol.hash.setName hash?": "Check for external edits",
   "qol.hash.setDesc.1 when should you check?": "If you also edit this vault on devices that can't run textFlow (i.e. your phone).",
-  "qol.hash.setDesc.2 mtime": "Modification dates will be compared - fast and safe enough for 99% of use cases.",
+  "qol.hash.setDesc.2 mtime": "Modification dates will be compared - fast and safe enough for most use cases.",
   "qol.hash.setDesc.3 xxhash": "Compares hash if mtime differs - best if you get unnecessary rebuilds.",
   "qol.hash.setDesc.4 always hash": "Always compares hashes - best if you don't trust your sync tool.",
   "qol.hash.addDropdown.addOption.1 don't check": "No checks",
 
   "qol.showsystemFolder.setName show system folder": "Show ${textFlowSystemFolderName}",
-  "qol.showsystemFolder.setDesc.1 hiding is recommended": "It is recommended to keep this folder hidden to protect its contents, but ultimately, it's an aesthetic and practical choice.",
-  "qol.hidesystemFolder.setDesc.2 edits are still tracked": "If you open flows directly from the folder, they will still be protected and tracked.",
+  "qol.showsystemFolder.setDesc.1 hiding is recommended": "It is recommended to keep this folder hidden to protect its contents. But ultimately, it's an aesthetic and practical choice.",
+  "qol.hidesystemFolder.setDesc.2 edits are still tracked": "Flows opened directly from the folder, will still be protected and tracked.",
 
   "-------- CREATE FLOWS": "Here the user can define flows-------------------------------------",
   "createFlows.createEl.text define a new flow": "Define a new flow",
@@ -210,7 +210,7 @@
   "menubar.cursor history this leaf": "--- This leaf ---",
   "menubar.cursor history other leaves": "--- Other leaves ---",
   "menuBar.selectButton.setTooltip select active region": "Select active region",
-  "menuBar.selectActiveRegion tracking error": "textFlow: Due to a tracking error in ${flowName} the active region can not be selected. Please select the text yourself, then rebuild the flow to fix the tracking error.",
+  "menuBar.selectActiveRegion tracking error": "textFlow: Active region can not be selected because of a tracking error. Please select the text manually, then rebuild the flow to fix the tracking error.",
   "menuBar.selectButton.setTooltip export flow": "Export flow",
   "menubar.selectButton.notice successful export": "textFlow: Your flow has been exported to ${exportedFlowPath}.",
 
@@ -296,7 +296,7 @@
   "main.checkStats no changes": "textFlow: No external edits have been detected.",
   "main.checkStats changes detected": "textFlow: Externe Bearbeitung festgestellt für:\n${changeString}",
 
-  "main.checkStatsForNote source note not found": "textFlow: The source note for the active region could not be found at ${path}. Please copy the active region to prevent data loss and make sure the source note wasn't accidentally deleted before manually rebuilding the flow.",
+  "main.checkStatsForNote source note not found": "textFlow: The source note for the active region could not be found at ${path}. Please copy the active region to prevent data loss and recreate the missing note.",
 
   "textChangeListener.notice error setting up listener": "textFlow Plugin: Error setting up change tracking.\nPlease report this issue on Github.",
 
@@ -306,20 +306,20 @@
   "manageActiveRegions.notice sync upon closing flow failed": "textFlow: Sync failed. The note at ${path} couldn't be found.",
 
   "syncBackToSource.notice sync failed source note": "textFlow: Source file not found at path: ${path}",
-  "syncBackToSource.failedStatCheck": "textFlow: Synchronisation has been aborted since the note at ${path} has been edited externally.\nPlease check if you really want to overwrite it. \nProcedure to overwrite: \n1. Copy the edit you just made.\n2. Rebuild the flow (via the settings panel). \n3. Paste the edit back into its spot. \n 4. Sync the flow.",
+  "syncBackToSource.failedStatCheck": "textFlow: Synchronisation has been stopped because the note at ${path} has been edited externally.\nPlease check if you really want to overwrite it. \nProcedure to overwrite: \n1. Copy the edit you just made.\n2. Rebuild the flow. \n3. Paste the edit back into its spot. \n 4. Sync.",
   "syncBackToSource.notice sync failed flow note": "textFlow: Sync failed. The flow at ${path} couldn't be found.",
   "syncBackToSource.notice other random error": "textFlow: An error occurred while trying to sync from ${flowName} to ${path}. \nPlease try again in a second. \nIf the error persists, consult the 'Fixing problems' section of the readme.",
-  "syncBackToSource tracking error": "textFlow: Due to a tracking error in ${flowName}, syncing isn't possible right now. Please copy the edit you wish to preserve, then rebuild the flow to fix the tracking error.",
+  "syncBackToSource tracking error": "textFlow: Syncing isn't possible right now because of a tracking error in ${flowName}. Please copy the edit you wish to preserve, rebuild the flow and paste your edit back in.",
 
   "brokenRegions NONE notification": "textFlow: There were no UUIDs found in ${flowName}. This means tracking and syncing are impossible right now. \nDo NOT EDIT this flow, REBUILD IT.",
 
-  "brokenRegions SOME notification": "textFlow: For some of the regions of flow ${flowName} no valid UUID could be found. This means tracking and syncing are unreliable right now. \nDo NOT EDIT this flow, REBUILD IT.\nAffected regions:\n- ${regions}",
+  "brokenRegions SOME notification": "textFlow: For some of the regions of flow ${flowName} no valid UUID could be found. This means tracking and syncing are unreliable right now. \nDo NOT EDIT this flow, REBUILD IT first.\nAffected regions:\n- ${regions}",
 
-  "checkActiveRegion.notice region tracking error": "textFlow: Region tracking error for ${flowName}.\nYou most likely undid (ctrl/cmd+z) your way into the state before a rebuild. \nKeep undooing until you reach the change you wish to return to, copy it, then redo (ctrl/cmd+shift+z) your way back into the current version of things, or rebuild ${flowName}. You can then past the copied content back into the flow.",
+  "checkActiveRegion.notice region tracking error": "textFlow: Region tracking error for ${flowName}.\nYou most likely undid (ctrl/cmd+z) your way into the state before a rebuild. \nKeep undoing until you reach the change you wish to return to, copy it. Then redo (ctrl/cmd+shift+z) until you get notified that you're back in the safe zone. You can also just rebuild ${flowName}. Finally, paste the copied content back into the flow.",
   "checkActiveRegion.notice region tracking error resolved": "textFlow: The tracking error for ${flowName} has been resolved.",
   "checkActiveRegion.notice overlap detected": "The current region ${regionName} is overlapping with the following flow(s): ${overlapString}",
 
-  "endOfFlow.notice don't type here": "textFlow: You have sailed over the edge of the world.\nEverything you type here will be devoured by dragons when you rebuild your flow.\nPlease create a new note that will be added to your flow in order to expand it.",
+  "endOfFlow.notice don't type here": "textFlow: You have sailed over the edge of the world.\nEverything you type here will be eaten by dragons when you rebuild your flow.\nPlease create a new note in this flow's source folder in order to expand it.\nIf the flow is defined by tags or properties, don't forget to add them to the new note.",
 
   "---------- FLOW SERVICE": "A class that holds most of the functionality for the settings tab and related stuff",
   "settingsTabFunctions.progressNotice.notice initial notice": "textFlow: Building ${this_flowName}: [oooooooooo] 0%",
@@ -335,8 +335,8 @@
 
   "flowBuilder.notice system folder not found": "textFlow: ${textFlowSystemFolderName} not found.",
   "flowBuilder.notice ingredient not found": "textFlow: The note at ${ingredient} couldn't be found.",
-  "flowBUilder.notice UUID found in source note": "textFlow: The note \n${ingredient}\n of flow\n ${flowName}\n contains at least one UUID. \nThis can come about due to sync errors.\nHow to proceed safely: \n1. Export ${flowName} to prevent any loss of edits and backup your vault, just to be safe.\n2. Check the mentioned note for any additional regions that have been accidentally copied into it (search for '<hr>'), and cut them out.\n3. Check the source notes of these regions to make sure they are up to date; if they aren't, copy/paste the latest version from your exported flow.\nTo make all of this easier, turn off navigation via file explorer (in the settings tab or command palette).\nAfterwards try another rebuild.",
+  "flowBUilder.notice UUID found in source note": "textFlow: The note \n${ingredient}\n of flow\n ${flowName}\n contains at least one UUID. \nThis can happen because of sync errors.\nHow to proceed safely: \n1. Export ${flowName} to prevent any loss of edits.\n2. Check the mentioned note for any additional regions that have been copied into it (search for '<hr>'), and cut them out.\n3. Check the source notes of these regions to make sure they are up to date. If they aren't, copy/paste the latest version from your exported flow.\nTo make all of this easier, turn off navigation via file explorer (in the settings tab or command palette).\nAfterwards try another rebuild.",
 
   "----------- The Blurb": " This is added as README to the system folder ---------------------------",
-  "readme": "This folder is textFlow's system folder. \n \n **What it should contain:**\n - this README \n - your flows\n \n **You may:** \n - delete flow files from this folder\n - move this entire folder to a different location\n \n **But please do not:** \n - add files to this folder\n - rename this folder\n - rename files in this folder (to rename flows, use the settings tab)\n \n **For further information, please refer to [the complete readme](https://github.com/tine-schreibt/textFlow/blob/main/README.md)**"
+  "readme": "This folder is textFlow's system folder. \n \n **What it should contain:**\n - this README \n - your flows\n - a .json file with your backups (not visible in Obsidian)\n \n **You may:** \n - delete flow files from this folder\n - move this entire folder to a different location\n \n **But please do not:** \n - add files to this folder\n - rename this folder\n - rename files in this folder (to rename flows, use the settings tab)\n \n **For further information, please refer to [the complete readme](https://github.com/tine-schreibt/textFlow/blob/main/README.md)**"
 }

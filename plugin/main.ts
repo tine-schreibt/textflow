@@ -2318,7 +2318,7 @@ ${pseudoElement}
         this.t("endOfFlow.notice don't type here", {
           flowName: flowName,
         }),
-        11000,
+        20000,
       );
     }
 
