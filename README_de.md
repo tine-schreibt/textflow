@@ -9,7 +9,7 @@ Bitte ziehe außerdem in Erwägung, Obsidians Datenwiederherstellungs-Plugin, ['
 ---
 
 **Du willst gleich loslegen?**
-- [Voraussetzungen und Einrichtung](#5-voraussetzungen-und-einrichtung)  
+- [Voraussetzungen und Einrichtung](#5-voraussetzungen-und-einrichtung) 
 - [Los gehts](#8-los-gehts)
 - [Probleme beheben](#9-probleme-beheben)
 
@@ -35,7 +35,7 @@ Bitte ziehe außerdem in Erwägung, Obsidians Datenwiederherstellungs-Plugin, ['
 1. **'Intelligente' Flows:** Definiere Flows, indem du Lesezeichen-Gruppen oder Ordner, Tags und [Eigenschaften](#wie-gehen-eigenschaften) als Ein/Ausschluss-Kriterien benutzt. textFlow kopiert die entsprechenden Notizen für dich in einer neuen Notiz zusammen (einem Flow) und markiert sie mit unsichtbaren UUIDs, um Textänderungen zu verfolgen. 
 	- **Praktisch:** 
 		- Wenn du in deinem Vault eine Notiz (oder einen Ordner) verschiebst, hinzufügst oder löschst, registriert textFlow diese Änderungen und markiert/baut betroffene Flows automatisch neu, um die Änderung widerzuspiegeln. 
-		- Rechts-Klick auf einen Ordner gibt die Option:  `textFlow: Erzeuge neuen Flow aus diesem Ordner`. Das Ganze funktioniert auch für eine Mehrfachauswahl von Ordnern. Du kannst die Definition danach in den Einstellungen mit Tags und Eigenschaften verfeinern. 
+		- Rechts-Klick auf einen Ordner gibt die Option: `textFlow: Erzeuge neuen Flow aus diesem Ordner`. Das Ganze funktioniert auch für eine Mehrfachauswahl von Ordnern. Du kannst die Definition danach in den Einstellungen mit Tags und Eigenschaften verfeinern. 
 2. **Strukturiere deine Flows:** 
 	- Flows, die über Ordner, Tags oder Eigenschaften definiert sind, habe zwei Sortieroptionen: 
 		1. Spiegle die Reihenfolge der *Notizen*, wie sie im Explorer auftauchen[\*](#keine-manuelle-sortierung). 
@@ -67,7 +67,7 @@ Bitte ziehe außerdem in Erwägung, Obsidians Datenwiederherstellungs-Plugin, ['
 10. **Kleinigkeiten:** 
 	- Du kannst die Scrolleisten verstecken.
 	- Rechtsklick in den Datei-Explorer gibt die Option eine neue Datei im aktuellen Ordner zu erzeugen (das ist im Grunde nur für mich -.-)
-##### Kommt vielleicht in der Zukunft, wenn genug Leute [danach fragen](https://github.com/tine-schreibt/textFlow/issues)  (grobe Zahl in der Klammer): 
+##### Kommt vielleicht in der Zukunft, wenn genug Leute [danach fragen](https://github.com/tine-schreibt/textFlow/issues) (grobe Zahl in der Klammer): 
 - **Export mit Eigenschaften:** (5) Eigenschaften eines Flows beim Export mitnehmen. 
 - **Öffne Wiki-Links in Flows:** (5) Das wäre dann eine Rechtsklick-Angelegenheit, schätze ich.
 - **Handgemachte Flows:** (10) Die Möglichkeit, eine beliebige Dateiliste als Quelle für Flows einzugeben. 
@@ -89,7 +89,7 @@ Sofern ich von allein Motivation entwickle, könnten sie eines Tages auch einfac
 	- min/max die Menüleiste,
 	- klick in ein anderes Leaf und wieder zurück.
 	Eines davon sollte die Warnung verschwinden lassen. Falls nicht, lade Obsidian neu. 
-2. **Unsichtbaren UUIDs sind schreibgeschützt:**  
+2. **Unsichtbaren UUIDs sind schreibgeschützt:** 
 	 UUIDs sind zufällige Strings aus 46 nicht-druckbaren Zeichen, die textFlow am Ende des Inhalts einer jeden Quelldatei platziert, um die Cursor-Position relativ dazu zu tracken. Sie sind schreibgeschützt, um ihre Integrität (und damit die Integrität deines Flows und deiner Quelldateien) zu garantieren. 
 	 Dieser Schutz ist natürlich nicht gegeben, wenn du einen Flow außerhalb von textFlows Kontext bearbeitest. Manche Texteditoren löschen nicht-druckbare Zeichen auch einfach, so dass schon das Öffnen eines Flows in so einem Editor seine Integrität zerstört. 
 3. **Integritätstest für Flows:** Wann immer du einen Flow öffnest, und dieser nicht im Öffnen neu gebaut wird, prüft textFlow die in der Datei enthaltenen UUIDS. Fehlen welche/sind beschädigt, sagt es bescheid, so dass du den Flow neu bauen kannst. 
@@ -292,7 +292,7 @@ Wenn du wissen willst, warum: [Sicherheitsfeatures](#2-safetyfeatures) / [Einsch
 - Beginne deinen Suchbegriff mit einem der Präfixe, falls du deine Suche eingrenzen willst: 
 	- `?`für Regionen im aktiven Flow, `
 	- `*` für Regionen in anderen Flows, 
-	- `:` für Flow-Namen.  
+	- `:` für Flow-Namen. 
 - Ergebnisse für den Flow im aktiven Leaf addressieren immer das aktive Leaf. 
 - Ergebnisse für andere Flows adressieren das zuletzt aktive Leaf des Flows. Gibt es das nicht, öffnen sie sich in einem neuen Leaf. 
 - Ergebnisse für Flow-Namen öffnen sich immer in einem neuen Leaf.
@@ -379,7 +379,7 @@ Falls das nicht hilft und du dein Problem auch nicht in der folgenden Liste find
 	- **Lösung:** 
 		- Du hast einen ungeschlossenen Code-Block irgendwo.
 			- Vielleicht ist es unabsichtlicher Code, wie `<blah`, dann musst du nur ein Leerzeichen zwischen die spitze Klammer und die Buchstaben setzen: < blah. 
-			- Aber wenn es ein ganzer html-artiger Tag ist, musst du ihn in Backticks (accent gràve) einschließen. Entweder einzelne, wenn du nur ein einzelnes Wort/Zeile isolieren willst - so: `<boolean>`, `<b>` - oder drei  - ` ``` `- in der Zeile über und der Zeile unter dem Textblock, damit Obsidian versteht, dass es nichts interpretieren soll, was in diesem Block steht. 
+			- Aber wenn es ein ganzer html-artiger Tag ist, musst du ihn in Backticks (accent gràve) einschließen. Entweder einzelne, wenn du nur ein einzelnes Wort/Zeile isolieren willst - so: `<boolean>`, `<b>` - oder drei - ` ``` `- in der Zeile über und der Zeile unter dem Textblock, damit Obsidian versteht, dass es nichts interpretieren soll, was in diesem Block steht. 
 			- Je nach Ursache funktionieren die drei Backticks allerdings nicht. 
 
 - **Problem:** Du versuchst, den gesamten Flow mit `ctrl+a` zu markieren, aber das funktioniert nicht.
@@ -419,7 +419,7 @@ Falls das nicht hilft und du dein Problem auch nicht in der folgenden Liste find
 
 <hr>
 
-### 10.  Spickzettel
+### 10. Spickzettel
 **Lingo und Konzepte, die textFlow benutzt**
 - **Die Grundidee:** textFlow kopiert den Inhalt bestimmter (Quell-)Notizen in eine neue Notiz (einen Flow) und synchronisiert Änderungen dieser neuen Notiz mit den Quellnotizen. Und das wars auch schon. Das ist das Plugin. Braucht anscheinend trotzdem ein 6.000+ Worte Readme...
 - **Eigenschaften:** Oder YAML oder Properties. Metadaten, die du Notizen in Obsidian zufügen kannst. Du kannst Eigenschaften benutzen, um sehr spezifische Flows zu erstellen. Die Eigenschaften deiner Quellnotizen werden *nicht* in den Flow eingebaut, aber du kannst einem Flow als Ganzes Eigenschaften geben, wenn du möchtest. 

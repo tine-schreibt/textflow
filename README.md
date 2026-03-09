@@ -12,7 +12,7 @@ Please also consider running Obsidian's own data recovery plugin, ['Edit history
 ---
 
 **Want to jump right in?**
-- [Requirements and setup](#5-requirements-and-setup)  
+- [Requirements and setup](#5-requirements-and-setup) 
 - [Getting started](#8-getting-started)
 - [Fixing problems](#9-fixing-problems)
 
@@ -178,7 +178,7 @@ Since the last section within in any region will contain the write locked UUID, 
 
 ### 5. Requirements and setup
 
-- **Prerequisites:** The Dataview plugin needs to be installed in order for textFlow to work. Just open Obsidian's `Settings > Community plugins > Browse`, then search for `dataview`, click `Install`, then click `Activate` (both the same button).  
+- **Prerequisites:** The Dataview plugin needs to be installed in order for textFlow to work. Just open Obsidian's `Settings > Community plugins > Browse`, then search for `dataview`, click `Install`, then click `Activate` (both the same button). 
 - **Minimum Obsidian Version:** 1.4.0 (the first version with [properties](#how-to-properties))
 	- There may be bug in at least one version older than 1.8.10 that prepends the note title to every note's content. If you see this issue in your flows, please let me know which version you are using so I can include this info here. 
 - **Installation without marketplace:** While the plugin hasn't been released to the marketplace yet, you can install it using BRAT or going the manual route:
@@ -225,7 +225,7 @@ Since the last section within in any region will contain the write locked UUID, 
 	- name
 	- source
 	- definition criteria
-- **Rebuild:** This button assembles the flow note according to your definition. Use it in case something goes wrong with the menu bar or flow switcher.  
+- **Rebuild:** This button assembles the flow note according to your definition. Use it in case something goes wrong with the menu bar or flow switcher. 
 - **Edit:** If you need to change something about the flow definition. 
 - **Delete:** This will delete the flow definition, flow note (if it exists) and any trace of them in the data structure (except for backups, which will deleted based on time stamp age).
 - **Restore old flow definitions:** Here you can create a backup of your flow definitions and restore old definitions. The backup will be saved as .json file in textFlowSystemFolder. So it won't be visible in Obsidian.
@@ -260,7 +260,7 @@ All commands can be tied to keyboard shortcuts (hotkeys) in Obsidian's settings.
 #### Best practice
 
 If you want to know why: [Safety features](#2-safety-features) / [Limitations](#3-limitations-and-known-inconveniences)
-1. Wait for the menu bar to be displayed and the warning triangle to disappear. Hover your pointer over the triangle for instructions if it doesn't disappear on its own.  
+1. Wait for the menu bar to be displayed and the warning triangle to disappear. Hover your pointer over the triangle for instructions if it doesn't disappear on its own. 
 2. Open as few flows in as few tabs as possible.
 3. Only open and edit flows in Obsidian and while textFlow is active.
 
@@ -303,7 +303,7 @@ If you want to know why: [Safety features](#2-safety-features) / [Limitations](#
 
 <hr>
 
-### 9.  Fixing problems
+### 9. Fixing problems
 
 Have you tried turning it off and on again? 
 - **close and reopen the problem flow**
@@ -383,7 +383,7 @@ If that didn't help and you also can't find your problem on this list, [let me k
 	- **Solution:** 
 		- You've got yourself an unenclosed code block somewhere. 
 			- Maybe it's unintentional code, like `<blah`, then you just need to put a space between the pointy bracket and the letters: < blah. 
-			- But if it's a whole html style tag it needs to be enclose in back ticks (accent gràves). Either single ones, if you want to isolate just a word - like so: `<boolean>`, `<b>` - or three  - ` ``` `- on the line above and the line below the text block for Obsidian to understand that it should not interpret anything written in that block. 
+			- But if it's a whole html style tag it needs to be enclose in back ticks (accent gràves). Either single ones, if you want to isolate just a word - like so: `<boolean>`, `<b>` - or three - ` ``` `- on the line above and the line below the text block for Obsidian to understand that it should not interpret anything written in that block. 
 			- Depending on the cause the three backticks may not work. 
 
 - **Problem:** You're trying to select an entire flow using `crtl+a`, but it doesn't work. 
@@ -423,7 +423,7 @@ If that didn't help and you also can't find your problem on this list, [let me k
 
 <hr>
 
-### 10.  Cheat sheet
+### 10. Cheat sheet
 **Lingo and concepts used by textFlow**
 - **Basic idea:** textFlow copies the contents of certain (source) notes into a new note (a flow), then syncs things you change within that new note back into the source notes. That's it. That's the plugin. Still needs a 6.000+ word Readme, though, apparently. 
 - **Frontmatter:** Also called YAML or [properties](#how-to-properties). Metadata that you can add to notes in Obsidian. You can use frontmatter to make very specific flows. Your source notes' frontmatter is *not* included in flows, but you can add frontmatter to any of your flows as a whole, if you want. 
@@ -434,7 +434,7 @@ If that didn't help and you also can't find your problem on this list, [let me k
 - **Region:** The contents of any single note within a flow. Regions are separated by invisible UUIDs and grey lines, so textFlow can attribute your edits to the correct note and sync them back to it. 
 - **Tracking:** textFlow attaches three compartments with extensions to every leaf that contains a flow: 
 	1. A cursor listener, so textFlow knows, where im Flow your are. This listener calls a function which looks for UUIDs, to see which region you are in. 
-	2. An update listener for the document in the editor, so textFlow notices when you edit a region. This listener calls a function that saves to `/.obsidian/plugins/textFlow/data.json`  which region was edited. 
+	2. An update listener for the document in the editor, so textFlow notices when you edit a region. This listener calls a function that saves to `/.obsidian/plugins/textFlow/data.json` which region was edited. 
 	3. A transaction filter which continually checks the 60 characters before and after the cursor for UUIDs - using a regEx - to see if the cursor is touching a UUID. If the test returns true, all transactions are blocked, thus protecting the UUID. 
 	**This tracking does *not* send any data to any servers!** textFlow doesn't even know the internet exists.
 
