@@ -17,7 +17,7 @@ Please also consider running Obsidian's own data recovery plugin, ['Edit history
 - [Fixing problems](#9-fixing-problems)
 
 **Want to know what you're getting first and understand how to use textFlow smoothly?**
-1. [Functionality](#1-functionalizy)
+1. [Functionality](#1-functionality)
 2. [Safety features](#2-safety-features)
 3. [Limitations and known inconveniences](#3-limitations-and-known-inconveniences)
 4. [Use cases](#4-use-cases)
