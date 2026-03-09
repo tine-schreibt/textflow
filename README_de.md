@@ -313,7 +313,7 @@ Falls das nicht hilft und du dein Problem auch nicht in der folgenden Liste find
 2. [Flow-Switcher](#flow-switcher)
 3. [Menüleiste](#menüleiste)
 4. [Flow / Leaf](#flow--leaf)
-5. [Komische Sachen](#komische-sachen)
+5. [Komische Probleme](#komische-probleme)
 6. [Mehr Probleme](#mehr-probleme)
 
 #### Flow-Erzeugung
