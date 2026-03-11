@@ -396,66 +396,59 @@ export default class TextFlowPlugin extends Plugin {
       },
     });
 
-    if (this.settings.checkExternalEdits === "no") {
-      this.addCommand({
-        id: `text-flow-flag-rebuild`,
-        name: this.t("main.registerCommand flag for rebuild"),
-        callback: async () => {
-          // flag for rebuild
-          for (let flowName of Object.keys(this.settings.flows)) {
-            this.settings.flows[flowName].flaggedForRebuild = true;
-          }
-          await this.saveSettings();
+    this.addCommand({
+      id: `text-flow-flag-all-for-rebuild`,
+      name: this.t("main.registerCommand flag all for rebuild"),
+      callback: async () => {
+        // flag for rebuild
+        for (let flowName of Object.keys(this.settings.flows)) {
+          this.settings.flows[flowName].flaggedForRebuild = true;
+        }
+        await this.saveSettings();
 
-          // refresh menu bars
-          const allLeaves = this.app.workspace.getLeavesOfType("markdown");
-          for (const leaf of allLeaves) {
-            const view = leaf.view as MarkdownView;
-            if (!view.menuBar) continue;
-            view.menuBar.refresh(view.contentEl);
-          }
-        },
-      });
-    }
+        // refresh menu bars
+        const allLeaves = this.app.workspace.getLeavesOfType("markdown");
+        for (const leaf of allLeaves) {
+          const view = leaf.view as MarkdownView;
+          if (!view.menuBar) continue;
+          view.menuBar.refresh(view.contentEl);
+        }
+      },
+    });
 
-    if (
-      this.settings.checkExternalEdits === "mtime" ||
-      this.settings.checkExternalEdits === "mtime+hash" ||
-      this.settings.checkExternalEdits === "always hash"
-    ) {
-      this.addCommand({
-        id: `text-flow-check-stats`,
-        name: this.t("main.registerCommand check stats"),
-        callback: async () => {
-          // flag for rebuild
-          const changeArray = [];
+    // check stats for all flows
+    this.addCommand({
+      id: `text-flow-check-stats`,
+      name: this.t("main.registerCommand check stats"),
+      callback: async () => {
+        // flag for rebuild
+        const changeArray = [];
 
-          for (let flowName of Object.keys(this.settings.flows)) {
-            const changes = await this.checkStatsForFlow(flowName);
-            if (changes) {
-              changeArray.push(flowName);
-            }
+        for (let flowName of Object.keys(this.settings.flows)) {
+          const changes = await this.checkStatsForFlow(flowName);
+          if (changes) {
+            changeArray.push(flowName);
           }
-          if (changeArray.length === 0) {
-            new Notice(this.t("main.checkStats no changes"));
-          } else {
-            const changeString = changeArray.join("\n");
-            new Notice(
-              this.t("main.checkStats changes detected", {
-                changeString: changeString,
-              }),
-            );
-          }
-          // refresh menu bars
-          const allLeaves = this.app.workspace.getLeavesOfType("markdown");
-          for (const leaf of allLeaves) {
-            const view = leaf.view as MarkdownView;
-            if (!view.menuBar) continue;
-            view.menuBar.refresh(view.contentEl);
-          }
-        },
-      });
-    }
+        }
+        if (changeArray.length === 0) {
+          new Notice(this.t("main.checkStats no changes"));
+        } else {
+          const changeString = changeArray.join("\n");
+          new Notice(
+            this.t("main.checkStats changes detected", {
+              changeString: changeString,
+            }),
+          );
+        }
+        // refresh menu bars
+        const allLeaves = this.app.workspace.getLeavesOfType("markdown");
+        for (const leaf of allLeaves) {
+          const view = leaf.view as MarkdownView;
+          if (!view.menuBar) continue;
+          view.menuBar.refresh(view.contentEl);
+        }
+      },
+    });
 
     // ---------------------------------------------------------------
     // rebuild active leaf flow
@@ -1259,10 +1252,10 @@ ${pseudoElement}
               this.settings.flowBuildBasket.oldFlowName = `${basename(
                 parentFolder,
               )}`;
-              this.settings.flowBuildBasket.flowCookbook.folderIncluded =
+              this.settings.flowBuildBasket.flowDefinition.folderIncluded =
                 parentFolder;
               this.settings.flowBuildBasket.definitionMode = "foldersTagsProps";
-              this.settings.flowBuildBasket.flowCookbook.pathsTagsPropertiesSortOrder =
+              this.settings.flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder =
                 "noteOrder";
               this.settings.flowBuildBasket.folderTitles = true;
               // reset of the basket happens in the modal
@@ -1317,10 +1310,10 @@ ${pseudoElement}
             this.settings.flowBuildBasket.flowName = this.t("modal_flowName");
             this.settings.flowBuildBasket.oldFlowName =
               this.t("modal_flowName");
-            this.settings.flowBuildBasket.flowCookbook.folderIncluded =
+            this.settings.flowBuildBasket.flowDefinition.folderIncluded =
               inclusionPathArray.join(",");
             this.settings.flowBuildBasket.definitionMode = "foldersTagsProps";
-            this.settings.flowBuildBasket.flowCookbook.pathsTagsPropertiesSortOrder =
+            this.settings.flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder =
               "noteOrder";
             this.settings.flowBuildBasket.folderTitles = true;
             // reset of the basket happens in the modal
@@ -1480,10 +1473,14 @@ ${pseudoElement}
               }
             }
 
-            // if the parent is included
+            // if the flow is defined from bookmarks, we can move on
+            if (this.settings.flows[flowName].definitionMode === "bookmarks")
+              continue;
+
+            // if the flow is defined from a path and the parent is included
             if (
               newParentFolder ===
-              this.settings.flows[flowName].flowCookbook.folderIncluded
+              this.settings.flows[flowName].flowDefinition.folderIncluded
             ) {
               this.settings.flows[flowName].flaggedForRebuild = true;
               // await this.saveSettings();
@@ -1492,18 +1489,19 @@ ${pseudoElement}
             if (
               // if the path starts with inclusion path and subfolders aren't excluded
               newParentFolder.startsWith(
-                this.settings.flows[flowName].flowCookbook.folderIncluded + "/",
+                this.settings.flows[flowName].flowDefinition.folderIncluded +
+                  "/",
               ) &&
               !this.settings.flows[
                 flowName
-              ].flowCookbook.folderIncluded.endsWith("/")
+              ].flowDefinition.folderIncluded.endsWith("/")
             ) {
               // if the exclusion criterion isn't empty
-              if (this.settings.flows[flowName].flowCookbook.folderExcluded) {
+              if (this.settings.flows[flowName].flowDefinition.folderExcluded) {
                 const exclusionArray =
                   this.settings.flows[
                     flowName
-                  ].flowCookbook.folderExcluded.split(",");
+                  ].flowDefinition.folderExcluded.split(",");
                 const isExcluded = exclusionArray.some((path) =>
                   newParentFolder.includes(path.trim() + "/"),
                 );
@@ -1579,19 +1577,19 @@ ${pseudoElement}
             // if the path starts with the inclusion path, and either IS the inclusion path
             // or subfolders aren't excluded
             parentFolder.startsWith(
-              this.settings.flows[flowName].flowCookbook.folderIncluded,
+              this.settings.flows[flowName].flowDefinition.folderIncluded,
             ) &&
             (parentFolder ===
-              this.settings.flows[flowName].flowCookbook.folderIncluded ||
+              this.settings.flows[flowName].flowDefinition.folderIncluded ||
               !this.settings.flows[
                 flowName
-              ].flowCookbook.folderIncluded.endsWith("/"))
+              ].flowDefinition.folderIncluded.endsWith("/"))
           ) {
-            if (this.settings.flows[flowName].flowCookbook.folderExcluded) {
+            if (this.settings.flows[flowName].flowDefinition.folderExcluded) {
               const exclusionArray =
-                this.settings.flows[flowName].flowCookbook.folderExcluded.split(
-                  ",",
-                );
+                this.settings.flows[
+                  flowName
+                ].flowDefinition.folderExcluded.split(",");
               const isExcluded = exclusionArray.some((path) =>
                 parentFolder.includes(path.trim() + "/"),
               );
@@ -2318,7 +2316,7 @@ ${pseudoElement}
         this.t("endOfFlow.notice don't type here", {
           flowName: flowName,
         }),
-        20000,
+        30000,
       );
     }
 

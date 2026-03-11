@@ -173,14 +173,14 @@
 
   "-------- FLOW DISPLAY": "All the user's flows-------------------------------------",
   "flowDisplay.createEl.text your flow definitions": "Your flow definitions",
-  "flowDisplay.source.alt bookmark group": "Bookmark group \"${shownFlow_flowCookbook_bookmarks}\"",
+  "flowDisplay.source.alt bookmark group": "Bookmark group \"${shownFlow_flowDefinition_bookmarks}\"",
 
-  "flowDisplay.included tags": "tags: ${shownFlow_flowCookbook_tagsIncluded}",
-  "flowDisplay.included props": "props: ${shownFlow_flowCookbook_propsIncluded}",
+  "flowDisplay.included tags": "tags: ${shownFlow_flowDefinition_tagsIncluded}",
+  "flowDisplay.included props": "props: ${shownFlow_flowDefinition_propsIncluded}",
 
-  "flowDisplay.excluded folders": "folders: ${shownFlow_flowCookbook_folderExcluded}",
-  "flowDisplay.excluded tags": "tags: ${shownFlow_flowCookbook_tagsExcluded}",
-  "flowDisplay.excluded props": "props: ${shownFlow_flowCookbook_propsExcluded}",
+  "flowDisplay.excluded folders": "folders: ${shownFlow_flowDefinition_folderExcluded}",
+  "flowDisplay.excluded tags": "tags: ${shownFlow_flowDefinition_tagsExcluded}",
+  "flowDisplay.excluded props": "props: ${shownFlow_flowDefinition_propsExcluded}",
 
   "flowDisplay.flowShow.setDesc.1 source": "Source: ${source}",
   "flowDisplay.flowShow.setDesc.2 inclusion criteria": "Inclusion criteria: ${inclusionString}",
@@ -256,7 +256,7 @@
   "main.registerCommand sync all leaves": "Sync all leaves",
   "main.registerCommand check stats": "Check vault for external edits",
   "main.registerCommand export active flow": "Export flow in active leaf",
-  "main.registerCommand flag for rebuild": "Flag all flows for rebuild",
+  "main.registerCommand flag all for rebuild": "Flag all flows for rebuild",
   "main.registerCommand rebuild active leaf": "Rebuild flow in active leaf",
   "main.registerCommand open fuzzy navigation": "Open fuzzy navigation modal",
   "main.registerCommand open switcher": "Open flow switcher modal",
@@ -317,7 +317,7 @@
 
   "checkActiveRegion.notice region tracking error": "textFlow: Region tracking error for ${flowName}.\nYou most likely undid (ctrl/cmd+z) your way into the state before a rebuild. \nKeep undoing until you reach the change you wish to return to, copy it. Then redo (ctrl/cmd+shift+z) until you get notified that you're back in the safe zone. You can also just rebuild ${flowName}. Finally, paste the copied content back into the flow.",
   "checkActiveRegion.notice region tracking error resolved": "textFlow: The tracking error for ${flowName} has been resolved.",
-  "checkActiveRegion.notice overlap detected": "The current region ${regionName} is overlapping with the following flow(s): ${overlapString}",
+  "checkActiveRegion.notice overlap detected": "The current region ${regionName} is overlapping with the following flow(s): ${overlapString}\nPlease close the overlapping flows before you edit this region.",
 
   "endOfFlow.notice don't type here": "textFlow: You have sailed over the edge of the world.\nEverything you type here will be eaten by dragons when you rebuild your flow.\nPlease create a new note in this flow's source folder in order to expand it.\nIf the flow is defined by tags or properties, don't forget to add them to the new note.",
 
@@ -327,10 +327,10 @@
 
   "createSystemFolder.notice folder created": "textFlow: System folder created successfully - /${newSystemFolderPath}",
 
-  "createFlowDefinition.notice enter bookmark group": "textFlow: Please enter a bookmark group.",
-  "createFlowDefinition.notice definition leads to empty flow": "textFlow: Your definition leads to an empty flow. Please check for typos or make your criteria less restrictive.",
-  "createFlowDefinition.notice random error, please check console": "textFlow: An error occurred while creating the finalRecipe for your flow. Please check the console (cmd+alt+i) for details.",
-  "createFlowDefinition.notice bookmark group not found": "textFlow: Please check the name of the bookmark group you submitted.",
+  "createFlowNoteList.notice enter bookmark group": "textFlow: Please enter a bookmark group.",
+  "createFlowNoteList.notice definition leads to empty flow": "textFlow: Your definition leads to an empty flow. Please check for typos or make your criteria less restrictive.",
+  "createFlowNoteList.notice random error, please check console": "textFlow: An error occurred while creating the flowNotesList for your flow. Please check the console (cmd+alt+i) for details.",
+  "createFlowNoteList.notice bookmark group not found": "textFlow: Please check the name of the bookmark group you submitted.",
   "getPathsByFoldersTagsProps.notice dataview not installed": "textFlow: Dataview API not available. Please make sure you have installed the Dataview plugin (Settings > Community plugins > Browse).",
 
   "flowBuilder.notice system folder not found": "textFlow: ${textFlowSystemFolderName} not found.",

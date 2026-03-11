@@ -165,14 +165,14 @@
 
   "-------- FLOW DISPLAY": "All the user's flows-------------------------------------",
   "flowDisplay.createEl.text your flow definitions": "Deine Flow-Definitionen",
-  "flowDisplay.source.alt bookmark group": "Lesezeichengruppe \"${shownFlow_flowCookbook_bookmarks}\"",
+  "flowDisplay.source.alt bookmark group": "Lesezeichengruppe \"${shownFlow_flowDefinition_bookmarks}\"",
 
-  "flowDisplay.included tags": "Tags: ${shownFlow_flowCookbook_tagsIncluded}",
-  "flowDisplay.included props": "Properties: ${shownFlow_flowCookbook_propsIncluded}",
+  "flowDisplay.included tags": "Tags: ${shownFlow_flowDefinition_tagsIncluded}",
+  "flowDisplay.included props": "Properties: ${shownFlow_flowDefinition_propsIncluded}",
 
-  "flowDisplay.excluded folders": "Ordner: ${shownFlow_flowCookbook_folderExcluded}",
-  "flowDisplay.excluded tags": "Tags: ${shownFlow_flowCookbook_tagsExcluded}",
-  "flowDisplay.excluded props": "Properties: ${shownFlow_flowCookbook_propsExcluded}",
+  "flowDisplay.excluded folders": "Ordner: ${shownFlow_flowDefinition_folderExcluded}",
+  "flowDisplay.excluded tags": "Tags: ${shownFlow_flowDefinition_tagsExcluded}",
+  "flowDisplay.excluded props": "Properties: ${shownFlow_flowDefinition_propsExcluded}",
 
   "flowDisplay.flowShow.setDesc.1 source": "Quelle: ${source}",
   "flowDisplay.flowShow.setDesc.2 inclusion criteria": "Einschlusskriterien: ${inclusionString}",
@@ -265,7 +265,7 @@
 
   "main.registerCommand check stats": "Prüfe Vault auf externe Edits",
   "main.registerCommand export active flow": "Exportiere den Flow im aktiven leaf",
-  "main.registerCommand flag for rebuild": "Alle Flows für Neubau markieren",
+  "main.registerCommand flag all for rebuild": "Alle Flows für Neubau markieren",
   "main.registerCommand rebuild active leaf": "Baue den Flow im aktiven Leaf neu",
   "main.registerCommand restore most recent cursor": "Letzte Cursor-Position wiederherstellen",
   "main.registerCommand open fuzzy navigation": "Fuzzy-Navigation öffnen",
@@ -323,7 +323,7 @@
 
   "checkActiveRegion.notice region tracking error": "textFlow: Fehler beim Tracken der aktiven Region von ${flowName}. \nDu bist wahrscheinlich durch 'Rückgängig machen' (strg/cmd+z) in den Zustand vor einem Neubau zurückgesprungen. \nSetze das Rückgängigmachen fort, bis du den Zustand erreichst, den du haben willst, kopiere ihn, dann drücke 'Wiederholen' (strg/cmd+Umschalt+z), bis du wieder im Zustand nach dem Neubau angekommen bist, oder nimm einen Neubau an ${flowName} vor. Danach kannst du den kopierten Inhalt in deinen Flow einfügen",
   "checkActiveRegion.notice region tracking error resolved": "textFlow: Der Trackingfehler für ${flowName} wurde behoben.",
-  "checkActiveRegion.notice overlap detected": "Die aktuelle Region \"${regionName}\" überschneidet sich mit den folgenden Flows:\n${overlapString}",
+  "checkActiveRegion.notice overlap detected": "Die aktuelle Region \"${regionName}\" überschneidet sich mit den folgenden Flows:\n${overlapString}.\nBitte schließe die überlappenden Flows, bevor du diese Region bearbeitest.",
 
   "endOfFlow.notice don't type here": "textFlow: Du bist über den Rand der Welt gesegelt.\nAlles, was du hier tippst, wird von Drachen verschlungen, wenn du den Flow neu baust.\nBitte erzeuge eine neue Notiz, im Quellordner des Flows, so dass sie hinzugefügt werden.\nFalls du den Flow mit Tags und Properties definierst, vergiss nicht, sie der neuen Notiz hinzuzufügen.",
 
@@ -333,10 +333,10 @@
 
   "createSystemFolder.notice folder created": "textFlow: Sytemordner erfolgreich erzeugt - /${newSystemFolderPath}",
 
-  "createFlowDefinition.notice enter bookmark group": "textFlow: Bitte gib eine Lesezeichengruppe ein.",
-  "createFlowDefinition.notice definition leads to empty flow": "textFlow: Deine Kriterien erzeugt einen leeren Flow. Bitte prüfe sie auf Tippfehler und/oder gestalte sie weniger restriktiv.",
-  "createFlowDefinition.notice random error, please check console": "textFlow: Ein Fehler ist aufgetreten, während das finalReceipe für deinen Flow erzeugt wurde. Bitte sieh in die Konsole (cmd+alt+i), um Details zu erfahren.",
-  "createFlowDefinition.notice bookmark group not found": "textFlow: Bitte prüfe den Namen der eingegebenen Lesezeichengruppe.",
+  "createFlowNoteList.notice enter bookmark group": "textFlow: Bitte gib eine Lesezeichengruppe ein.",
+  "createFlowNoteList.notice definition leads to empty flow": "textFlow: Deine Kriterien erzeugt einen leeren Flow. Bitte prüfe sie auf Tippfehler und/oder gestalte sie weniger restriktiv.",
+  "createFlowNoteList.notice random error, please check console": "textFlow: Ein Fehler ist aufgetreten, während das finalReceipe für deinen Flow erzeugt wurde. Bitte sieh in die Konsole (cmd+alt+i), um Details zu erfahren.",
+  "createFlowNoteList.notice bookmark group not found": "textFlow: Bitte prüfe den Namen der eingegebenen Lesezeichengruppe.",
   "getPathsByFoldersTagsProps.notice dataview not installed": "textFlow: Dataview API nicht verfügbar. Bitte stelle sicher, dass du das Dataview-Plugin installiert hast (Einstellungen > Externe Plugins > Durchsuchen)",
 
   "flowBuilder.notice system folder not found": "textFlow: ${textFlowSystemFolderName} konnte nicht gefunden werden.",

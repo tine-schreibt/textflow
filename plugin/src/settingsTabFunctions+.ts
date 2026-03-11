@@ -323,6 +323,8 @@ export class settingsTabFunctions {
     return { valid: true };
   };
 
+  // --------- renaming of flows -----------------
+
   renameFlow = async () => {
     // this only handles the clean-up of the old version;
     // the creation of the new version happens in the save button code
@@ -419,23 +421,25 @@ export class settingsTabFunctions {
     unselectedButton1.buttonEl.removeClass("settings-radio-button-active");
   }
 
-  createFlowDefinition = (flowBuildBasket: Types.flowBuildBasket) => {
-    // -------- Putting the finalRecipe together by fetching/filtering all paths
+  // The function that turns the user's criteria into a list of notes aka flowNotesList ---------
+
+  createFlowNoteList = (flowBuildBasket: Types.flowBuildBasket) => {
+    // -------- Putting the flowNotesList together by fetching/filtering all paths
     try {
       // ----------- FINAL RECIPE FOR BOOKMARKS ---------------------
       if (flowBuildBasket.definitionMode === "bookmarks") {
         if (
-          flowBuildBasket.flowCookbook.bookmarks === undefined ||
-          flowBuildBasket.flowCookbook.bookmarks === ""
+          flowBuildBasket.flowDefinition.bookmarks === undefined ||
+          flowBuildBasket.flowDefinition.bookmarks === ""
         ) {
           new Notice(
-            this.plugin.t("createFlowDefinition.notice enter bookmark group"),
+            this.plugin.t("createFlowNoteList.notice enter bookmark group"),
           );
           flowBuildBasket.success = false;
         } else {
           const bookmarkPathArray =
             this.getBookmarkPathsByGroupName(flowBuildBasket);
-          flowBuildBasket.finalRecipe = bookmarkPathArray;
+          flowBuildBasket.flowNotesList = bookmarkPathArray;
         }
 
         // ------ FINAL RECIPE FOR PATH TAG PROPERTY -----------------------
@@ -444,13 +448,13 @@ export class settingsTabFunctions {
 
         const foldersTagsPropsPathArray =
           this.getPathsByFoldersTagsProps(flowBuildBasket);
-        flowBuildBasket.finalRecipe = foldersTagsPropsPathArray;
+        flowBuildBasket.flowNotesList = foldersTagsPropsPathArray;
       }
       // ---- Check for empty
-      if (flowBuildBasket.finalRecipe.length === 0) {
+      if (flowBuildBasket.flowNotesList.length === 0) {
         new Notice(
           this.plugin.t(
-            "createFlowDefinition.notice definition leads to empty flow",
+            "createFlowNoteList.notice definition leads to empty flow",
           ),
         );
         flowBuildBasket.success = false;
@@ -461,7 +465,7 @@ export class settingsTabFunctions {
     } catch (error) {
       new Notice(
         this.plugin.t(
-          "createFlowDefinition.notice random error, please check console",
+          "createFlowNoteList.notice random error, please check console",
         ),
       );
       flowBuildBasket.success = false;
@@ -473,11 +477,11 @@ export class settingsTabFunctions {
 
   // ---- GET PATHS IN BOOKMARK GROUP ----------------
   getBookmarkPathsByGroupName = (flowBuildBasket: Types.flowBuildBasket) => {
-    let groupName = flowBuildBasket.flowCookbook.bookmarks;
+    let groupName = flowBuildBasket.flowDefinition.bookmarks;
 
     // since groupName could be a path, prepare it for further processing:
     const cleanPath = groupName.replace(/\/+/g, "/");
-    flowBuildBasket.flowCookbook.bookmarks = cleanPath;
+    flowBuildBasket.flowDefinition.bookmarks = cleanPath;
     const groupPathArray = cleanPath.split("/");
 
     // if the user wants to exclude subgroups, flag and remove the trailing /
@@ -493,7 +497,7 @@ export class settingsTabFunctions {
     const bookmarkItems = bookmarks.items;
     let bookmarkedNotePathsArray: string[] = [];
 
-    //-- Function to navigate to the group and dissect out its contents
+    //-- Function to navigate to the group and dissect out its contents, written by Claude
     const navigateToGroup = (
       items: Types.BookmarkItem[],
       pathParts: string[],
@@ -516,10 +520,9 @@ export class settingsTabFunctions {
     // Call to the function we just defined
     const finalGroup = navigateToGroup(bookmarkItems, groupPathArray);
 
-    // -- the collection triplet was birthed by Claude 3.5 Sonnet --------------------
-    //-- as the midspouse, I shed quite some sweat, though, and maybe even some tears-------
-
-    //-- Function to collect stuff DEPTH FIRST
+    // -- the following collection triplet was also birthed by Claude --------------------
+    // as the doula, I shed quite some sweat, though, and maybe even some tears
+    //-------------- Reflecting note order -------------------
     const collectPathsNoteOrder = (
       items: Types.BookmarkItem[],
       flowBuildBasket: Types.flowBuildBasket,
@@ -577,7 +580,7 @@ export class settingsTabFunctions {
       return bookmarkedNotePathsArray;
     };
 
-    // ---- notes first
+    // ---- Reflecting folder order ----------------------
     const collectPathsFolderOrder = (
       items: Types.BookmarkItem[],
       flowBuildBasket: Types.flowBuildBasket,
@@ -632,11 +635,10 @@ export class settingsTabFunctions {
       return bookmarkedNotePathsArray;
     };
 
-    // --- Take everything as it comes: CUSTOM
-    // iterator is needed so it doesn't add the main group's name before every
-    // new level of the hierarchy
+    // ------------- Preserving custom order
+    // iterator is needed so it doesn't add the main group's name before every level
     let iterator = 0;
-    const collectPathsPreserveOrder = (
+    const collectPathsManualOrder = (
       items: Types.BookmarkItem[],
       flowBuildBasket: Types.flowBuildBasket,
     ): string[] => {
@@ -659,7 +661,7 @@ export class settingsTabFunctions {
             bookmarkedNotePathsArray.push(`#${item.title ?? "Unnamed Group"}`);
           }
           // Recursively process group contents and add results to our array
-          const subGroupPaths = collectPathsPreserveOrder(
+          const subGroupPaths = collectPathsManualOrder(
             item.items,
             flowBuildBasket,
           );
@@ -670,11 +672,11 @@ export class settingsTabFunctions {
       return bookmarkedNotePathsArray;
     };
 
-    // Call to the function we just defined
+    // Call to the functions we just defined
     if (finalGroup?.items) {
       if (
-        flowBuildBasket.flowCookbook.bookmarksSortOrder === "noteOrder" ||
-        flowBuildBasket.flowCookbook.bookmarksSortOrder === undefined
+        flowBuildBasket.flowDefinition.bookmarksSortOrder === "noteOrder" ||
+        flowBuildBasket.flowDefinition.bookmarksSortOrder === undefined
       ) {
         bookmarkedNotePathsArray = collectPathsNoteOrder(
           finalGroup.items,
@@ -683,7 +685,7 @@ export class settingsTabFunctions {
         );
         return bookmarkedNotePathsArray;
       } else if (
-        flowBuildBasket.flowCookbook.bookmarksSortOrder === "folderOrder"
+        flowBuildBasket.flowDefinition.bookmarksSortOrder === "folderOrder"
       ) {
         bookmarkedNotePathsArray = collectPathsFolderOrder(
           finalGroup.items,
@@ -692,7 +694,7 @@ export class settingsTabFunctions {
         );
         return bookmarkedNotePathsArray;
       } else {
-        bookmarkedNotePathsArray = collectPathsPreserveOrder(
+        bookmarkedNotePathsArray = collectPathsManualOrder(
           finalGroup.items,
           flowBuildBasket,
         );
@@ -700,37 +702,37 @@ export class settingsTabFunctions {
       }
     } else {
       new Notice(
-        this.plugin.t("createFlowDefinition.notice bookmark group not found"),
+        this.plugin.t("createFlowNoteList.notice bookmark group not found"),
       );
       return [];
     }
   };
 
   // --- GET ALL PATHS FROM FOLDER TAG PROPERTY ---------------------------
-  // But first we snappily ensure we don't have undefineds and make the ! type assertion later on safe to use
+  // But first we ensure we don't have undefineds and make the ! type assertion later on safe to use
   ensureNoUndefined = async (flowBuildBasket: Types.flowBuildBasket) => {
-    if (flowBuildBasket.flowCookbook.folderIncluded === undefined) {
-      flowBuildBasket.flowCookbook.folderIncluded = "";
+    if (flowBuildBasket.flowDefinition.folderIncluded === undefined) {
+      flowBuildBasket.flowDefinition.folderIncluded = "";
     }
-    if (flowBuildBasket.flowCookbook.folderExcluded === undefined) {
-      flowBuildBasket.flowCookbook.folderExcluded = "";
+    if (flowBuildBasket.flowDefinition.folderExcluded === undefined) {
+      flowBuildBasket.flowDefinition.folderExcluded = "";
     }
-    if (flowBuildBasket.flowCookbook.tagsIncluded === undefined) {
-      flowBuildBasket.flowCookbook.tagsIncluded = "";
+    if (flowBuildBasket.flowDefinition.tagsIncluded === undefined) {
+      flowBuildBasket.flowDefinition.tagsIncluded = "";
     }
-    if (flowBuildBasket.flowCookbook.tagsExcluded === undefined) {
-      flowBuildBasket.flowCookbook.tagsExcluded = "";
+    if (flowBuildBasket.flowDefinition.tagsExcluded === undefined) {
+      flowBuildBasket.flowDefinition.tagsExcluded = "";
     }
-    if (flowBuildBasket.flowCookbook.propsIncluded === undefined) {
-      flowBuildBasket.flowCookbook.propsIncluded = "";
+    if (flowBuildBasket.flowDefinition.propsIncluded === undefined) {
+      flowBuildBasket.flowDefinition.propsIncluded = "";
     }
-    if (flowBuildBasket.flowCookbook.propsExcluded === undefined) {
-      flowBuildBasket.flowCookbook.propsExcluded = "";
+    if (flowBuildBasket.flowDefinition.propsExcluded === undefined) {
+      flowBuildBasket.flowDefinition.propsExcluded = "";
     }
   };
 
   // --- Function to get the paths -------
-
+  // Claude helped me figure out the filter logic
   getPathsByFoldersTagsProps = (flowBuildBasket: Types.flowBuildBasket) => {
     const dv = getAPI();
     if (!dv) {
@@ -742,7 +744,7 @@ export class settingsTabFunctions {
       return [];
     }
     // unpack into shorthand for easier reading
-    const shCookbook = flowBuildBasket.flowCookbook;
+    const shCookbook = flowBuildBasket.flowDefinition;
     // ---- Pre-flight checks and cleanup --------------
 
     //--- INCLUDED FOLDER - only one path; notify if multiple
@@ -793,10 +795,11 @@ export class settingsTabFunctions {
     }
 
     // save the handled results
-    flowBuildBasket.flowCookbook.folderIncluded =
+    flowBuildBasket.flowDefinition.folderIncluded =
       cleanFolderInclusionArray.join(",");
 
-    // Leave the cleanup. I know it's redundant, but if you touch it, it releases a curse.
+    // !!!LEAVE THE CLEANUP!!!
+    // I know it's redundant, but if you touch it, it releases a curse that screws up everything.
     //--- EXCLUDED FOLDERS - clean up paths
     let cleanFolderExclusionArray: string[] = [];
 
@@ -810,11 +813,11 @@ export class settingsTabFunctions {
         cleanFolderExclusionArray.push(cleanExcludedPath);
       }
       // save cleaned values
-      flowBuildBasket.flowCookbook.folderExcluded =
+      flowBuildBasket.flowDefinition.folderExcluded =
         cleanFolderExclusionArray.join(",");
     } else {
       cleanFolderExclusionArray.push("");
-      flowBuildBasket.flowCookbook.folderExcluded = "";
+      flowBuildBasket.flowDefinition.folderExcluded = "";
     }
 
     // add the system folder path so it gets exluded
@@ -841,10 +844,10 @@ export class settingsTabFunctions {
 
     // use cleanup on tags and save cleaned strings back
     const cleanTagInclusionArray = tagCleanup(shCookbook.tagsIncluded);
-    flowBuildBasket.flowCookbook.tagsIncluded =
+    flowBuildBasket.flowDefinition.tagsIncluded =
       cleanTagInclusionArray.join(",");
     const cleanTagExclusionArray = tagCleanup(shCookbook.tagsExcluded);
-    flowBuildBasket.flowCookbook.tagsExcluded =
+    flowBuildBasket.flowDefinition.tagsExcluded =
       cleanTagExclusionArray.join(",");
 
     //--- INCLUDED and  EXCLUDED PROPERTIES - clean up and split at =
@@ -883,17 +886,18 @@ export class settingsTabFunctions {
     // add this to keep exports excluded
     cleanPropertiesExclusionArray.push(["textFlowExport"]);
 
-    // Do NOT save cleaned up proprties back to the cookbook!
+    // !!!! Do NOT save cleaned up proprties back to the cookbook !!!!!
     // The formatting is not what's expected by the cleanup and it will break.
 
     // -------- cleanup done ----------------
 
     // --- FETCH FILE TREE FOR SORTING PURPOSES
+    // unsurprisingly, this is AI, too, and it took hours
     // some globals for the whole path stuff
     const fileTreeArray: string[] = [];
     const vault = this.app.vault;
 
-    // Build tree in the same order as seen in fileExplorer
+    // Build tree following note order
     const buildNoteOrderFileTree = (folder: TFolder) => {
       // Split and sort folders and files separately
       const folders = folder.children
@@ -915,7 +919,7 @@ export class settingsTabFunctions {
       }
     };
 
-    // Recursive function to build file tree notes first (changes order)
+    // Build file tree following folder order
     const buildFolderOrderFileTree = (folder: TFolder) => {
       const children = folder.children.sort((a, b) =>
         a.name.localeCompare(b.name),
@@ -935,10 +939,10 @@ export class settingsTabFunctions {
       }
     };
 
-    // Build the complete file tree (which puts results in fileTreeArray)
-    this.plugin.settings.flowBuildBasket.flowCookbook
+    // Build the file tree (puts results in fileTreeArray)
+    this.plugin.settings.flowBuildBasket.flowDefinition
       .pathsTagsPropertiesSortOrder === "noteOrder" ||
-    this.plugin.settings.flowBuildBasket.flowCookbook
+    this.plugin.settings.flowBuildBasket.flowDefinition
       .pathsTagsPropertiesSortOrder === undefined
       ? buildNoteOrderFileTree(vault.getRoot())
       : buildFolderOrderFileTree(vault.getRoot());
@@ -1063,7 +1067,7 @@ export class settingsTabFunctions {
     );
 
     // pack the cookbook back into the basket
-    flowBuildBasket.flowCookbook = shCookbook;
+    flowBuildBasket.flowDefinition = shCookbook;
 
     // presto
     return pathArrayWithFolderTitles;
@@ -1076,8 +1080,8 @@ export class settingsTabFunctions {
     flowBuildBasket: Types.flowBuildBasket,
   ) => {
     // handle double slashes
-    if (flowBuildBasket.flowCookbook.folderIncluded === "//") {
-      flowBuildBasket.flowCookbook.folderIncluded = "/";
+    if (flowBuildBasket.flowDefinition.folderIncluded === "//") {
+      flowBuildBasket.flowDefinition.folderIncluded = "/";
     }
 
     // -------- CREATE THE FLOW OBJECT -------------------------------
@@ -1086,7 +1090,7 @@ export class settingsTabFunctions {
         `${this.plugin.settings.systemFolderPath}/${flowBuildBasket.flowName}.md`,
       ),
       definitionMode: flowBuildBasket.definitionMode,
-      flowCookbook: flowBuildBasket.flowCookbook,
+      flowDefinition: flowBuildBasket.flowDefinition,
       folderTitles: flowBuildBasket.folderTitles,
       isFreshBuild: true,
       flowBuilt: false,
@@ -1104,14 +1108,14 @@ export class settingsTabFunctions {
 
   conflictCollector = (flowBuildBasket: Types.flowBuildBasket) => {
     const conflictObject: Types.ConflictObject = {};
-    const key = Object.keys(flowBuildBasket.finalRecipe)[0];
+    const key = Object.keys(flowBuildBasket.flowNotesList)[0];
     if (Object.keys(this.plugin.settings.flows).length >= 1) {
       flowLoop: for (let referenceFlow in this.plugin.settings.flows) {
         if (
           referenceFlow != flowBuildBasket.oldFlowName &&
           referenceFlow != flowBuildBasket.flowName
         ) {
-          for (let path of flowBuildBasket.finalRecipe) {
+          for (let path of flowBuildBasket.flowNotesList) {
             if (
               !path.startsWith("#") &&
               this.plugin.settings.flows[referenceFlow].flowMap[path]
@@ -1158,7 +1162,8 @@ export class settingsTabFunctions {
     });
   };
 
-  // --- Reset flowBuildBasket -------------
+  // --- Reset the flowBuildBasket -------------
+
   resetFlowBuildBasket = (resetFlowBuildBasket: Types.flowBuildBasket) => {
     resetFlowBuildBasket.createOrEdit = "create";
     resetFlowBuildBasket.dataviewSearchArray = [];
@@ -1167,14 +1172,15 @@ export class settingsTabFunctions {
     resetFlowBuildBasket.oldFlowName = "";
     resetFlowBuildBasket.definitionMode = "";
     resetFlowBuildBasket.folderTitles = true;
-    resetFlowBuildBasket.flowCookbook = {};
-    resetFlowBuildBasket.finalRecipe = [];
+    resetFlowBuildBasket.flowDefinition = {};
+    resetFlowBuildBasket.flowNotesList = [];
     resetFlowBuildBasket.conflictObject = {};
     resetFlowBuildBasket.lastActiveLeaves = [];
     resetFlowBuildBasket.persistentCursors = {};
   };
 
-  // ------ The function that handles everything necessary to (re)build a flow
+  // ------ The function that manages everything surrounding the rebuild of a flow
+
   rebuildFlow = async (flowName: string, caller: string) => {
     this.plugin.isRebuilding = true;
     const flowReBuildBasket: Types.flowBuildBasket = {
@@ -1187,17 +1193,17 @@ export class settingsTabFunctions {
       oldFlowName: flowName,
       definitionMode: this.plugin.settings.flows[flowName].definitionMode,
       folderTitles: this.plugin.settings.flows[flowName].folderTitles,
-      flowCookbook: this.plugin.settings.flows[flowName].flowCookbook,
-      finalRecipe: [],
+      flowDefinition: this.plugin.settings.flows[flowName].flowDefinition,
+      flowNotesList: [],
       conflictObject: this.plugin.settings.flows[flowName].conflictObject,
       lastActiveLeaves: this.plugin.settings.flows[flowName].lastActiveLeaves,
       persistentCursors: this.plugin.settings.flows[flowName].persistentCursors,
     };
 
     // do the thing
-    this.createFlowDefinition(flowReBuildBasket);
+    this.createFlowNoteList(flowReBuildBasket);
 
-    // exit; error messages are sent by createFlowDefinition
+    // exit; error messages are sent by createFlowNoteList
     if (!flowReBuildBasket.success) {
       // clean up and save
       this.resetFlowBuildBasket(flowReBuildBasket);
@@ -1244,7 +1250,7 @@ export class settingsTabFunctions {
     // Call the build function; didn't think we'd get here...
 
     await this.flowBuilder(
-      flowReBuildBasket.finalRecipe,
+      flowReBuildBasket.flowNotesList,
       updatedFlow,
       flowName,
       mapValueBasket,
@@ -1262,6 +1268,7 @@ export class settingsTabFunctions {
       currentEnd: 0,
       idDivider: "",
     };
+
     this.resetFlowBuildBasket(flowReBuildBasket);
     // reset the out of sync array
     const filteredArray = this.plugin.flowOutOfSync.filter((filterFlowname) => {
@@ -1272,7 +1279,8 @@ export class settingsTabFunctions {
     await this.plugin.saveSettings();
   };
 
-  // ------ The flowBuilder --------------------------
+  // ------ The function that actually builds the flow --------------------------
+
   flowBuilder = async (
     recipeArray: string[],
     flow: Types.FlowDef,

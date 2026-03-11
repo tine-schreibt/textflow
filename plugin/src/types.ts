@@ -83,8 +83,8 @@ export interface flowBuildBasket {
   oldFlowName: string;
   definitionMode: string;
   folderTitles: boolean;
-  flowCookbook: { [key: string]: string };
-  finalRecipe: string[];
+  flowDefinition: { [key: string]: string };
+  flowNotesList: string[];
   conflictObject: ConflictObject;
   lastActiveLeaves: string[];
   persistentCursors: CursorData;
@@ -107,7 +107,7 @@ export interface CursorData {
 export interface FlowDef {
   flowFilePath: string;
   definitionMode: string;
-  flowCookbook: { [key: string]: string }; // user input
+  flowDefinition: { [key: string]: string }; // user input
   folderTitles: boolean;
   isFreshBuild: boolean;
   flowBuilt: boolean;
@@ -167,8 +167,8 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
     oldFlowName: "",
     definitionMode: "",
     folderTitles: true,
-    flowCookbook: {},
-    finalRecipe: [],
+    flowDefinition: {},
+    flowNotesList: [],
     conflictObject: {},
     lastActiveLeaves: [],
     persistentCursors: {},

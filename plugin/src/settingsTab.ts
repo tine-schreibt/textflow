@@ -738,11 +738,11 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             this.plugin.t("bookmarksSortOrder.addDropdown.addOption.3 custom"),
           );
         dropdown.setValue(
-          this.plugin.settings.flowBuildBasket.flowCookbook
+          this.plugin.settings.flowBuildBasket.flowDefinition
             .bookmarksSortOrder ?? "noteOrder",
         );
         dropdown.onChange(async (value) => {
-          this.plugin.settings.flowBuildBasket.flowCookbook.bookmarksSortOrder =
+          this.plugin.settings.flowBuildBasket.flowDefinition.bookmarksSortOrder =
             value as Types.SortOrder;
           await this.plugin.saveSettings();
         });
@@ -779,7 +779,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     );
     chooseBookmarks.addText((setBookmarksGroup) => {
       setBookmarksGroup.onChange(async (value) => {
-        this.plugin.settings.flowBuildBasket.flowCookbook.bookmarks =
+        this.plugin.settings.flowBuildBasket.flowDefinition.bookmarks =
           value.trim();
         await this.plugin.settingsTabFunctions.debouncedSaveSettings();
       });
@@ -870,14 +870,14 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         );
       dropdown.setValue(
         // remove "custom" as option
-        this.plugin.settings.flowBuildBasket.flowCookbook
+        this.plugin.settings.flowBuildBasket.flowDefinition
           .pathsTagsPropertiesSortOrder
-          ? this.plugin.settings.flowBuildBasket.flowCookbook
+          ? this.plugin.settings.flowBuildBasket.flowDefinition
               .pathsTagsPropertiesSortOrder
           : "noteOrder",
       );
       dropdown.onChange(async (value) => {
-        this.plugin.settings.flowBuildBasket.flowCookbook.pathsTagsPropertiesSortOrder =
+        this.plugin.settings.flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder =
           value as Types.SortOrder;
         await this.plugin.saveSettings();
       });
@@ -939,7 +939,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
     folderIncludeInput.addText((folderIncludeInput) => {
       const storedValue =
-        this.plugin.settings.flowBuildBasket.flowCookbook.folderIncluded;
+        this.plugin.settings.flowBuildBasket.flowDefinition.folderIncluded;
 
       // this is so setValue is either a filled string or undefined;
       // with an empty string for some reason not all folders get included when editing
@@ -951,20 +951,21 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         storedValue === "//" ||
         storedValue === "."
       ) {
-        delete this.plugin.settings.flowBuildBasket.flowCookbook.folderIncluded;
+        delete this.plugin.settings.flowBuildBasket.flowDefinition
+          .folderIncluded;
       }
       folderIncludeInput.setPlaceholder(
         this.plugin.t("folderIncludeInput.setPlaceholder"),
       );
       // When displaying the value
       folderIncludeInput.setValue(
-        this.plugin.settings.flowBuildBasket.flowCookbook.folderIncluded,
+        this.plugin.settings.flowBuildBasket.flowDefinition.folderIncluded,
       );
 
       folderIncludeInput.onChange(async (value) => {
         // do not normalise because we need those trailing slashes!
         // When storing the value; "root/" is handled by getPathsByFoldersTagsProps()
-        this.plugin.settings.flowBuildBasket.flowCookbook.folderIncluded =
+        this.plugin.settings.flowBuildBasket.flowDefinition.folderIncluded =
           !value ||
           value === "" ||
           value === "root" ||
@@ -997,11 +998,11 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           this.plugin.t("folderExcludeInput.setPlaceholder"),
         );
         chooseExcludedFolders.setValue(
-          this.plugin.settings.flowBuildBasket.flowCookbook.folderExcluded,
+          this.plugin.settings.flowBuildBasket.flowDefinition.folderExcluded,
         );
         chooseExcludedFolders.onChange(async (value) => {
           // cleanup happens on preview/save
-          this.plugin.settings.flowBuildBasket.flowCookbook.folderExcluded =
+          this.plugin.settings.flowBuildBasket.flowDefinition.folderExcluded =
             value;
 
           await this.plugin.settingsTabFunctions.debouncedSaveSettings();
@@ -1028,11 +1029,11 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           this.plugin.t("tagsIncludeInput.setPlaceholder"),
         );
         chooseIncludedTags.setValue(
-          this.plugin.settings.flowBuildBasket.flowCookbook.tagsIncluded,
+          this.plugin.settings.flowBuildBasket.flowDefinition.tagsIncluded,
         );
         chooseIncludedTags.onChange(async (value) => {
           // cleanup happens on preview/save
-          this.plugin.settings.flowBuildBasket.flowCookbook.tagsIncluded =
+          this.plugin.settings.flowBuildBasket.flowDefinition.tagsIncluded =
             value;
 
           await this.plugin.settingsTabFunctions.debouncedSaveSettings();
@@ -1059,11 +1060,11 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           this.plugin.t("tagsExcludeInput.setPlaceholder"),
         );
         chooseExcludedTags.setValue(
-          this.plugin.settings.flowBuildBasket.flowCookbook.tagsExcluded,
+          this.plugin.settings.flowBuildBasket.flowDefinition.tagsExcluded,
         );
         chooseExcludedTags.onChange(async (value) => {
           // cleanup happens on preview/save
-          this.plugin.settings.flowBuildBasket.flowCookbook.tagsExcluded =
+          this.plugin.settings.flowBuildBasket.flowDefinition.tagsExcluded =
             value;
           await this.plugin.settingsTabFunctions.debouncedSaveSettings();
         });
@@ -1095,11 +1096,11 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           this.plugin.t("propertiesIncludeInput.setPlaceholder"),
         );
         chooseIncludedProperties.setValue(
-          this.plugin.settings.flowBuildBasket.flowCookbook.propsIncluded,
+          this.plugin.settings.flowBuildBasket.flowDefinition.propsIncluded,
         );
         chooseIncludedProperties.onChange(async (value) => {
           // cleanup happens on preview/save
-          this.plugin.settings.flowBuildBasket.flowCookbook.propsIncluded =
+          this.plugin.settings.flowBuildBasket.flowDefinition.propsIncluded =
             value;
           await this.plugin.settingsTabFunctions.debouncedSaveSettings();
         });
@@ -1131,11 +1132,11 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           this.plugin.t("propertiesExcludeInput.setPlaceholder"),
         );
         chooseExcludedProperties.setValue(
-          this.plugin.settings.flowBuildBasket.flowCookbook.propsExcluded,
+          this.plugin.settings.flowBuildBasket.flowDefinition.propsExcluded,
         );
         chooseExcludedProperties.onChange(async (value) => {
           // cleanup happens on preview/save
-          this.plugin.settings.flowBuildBasket.flowCookbook.propsExcluded =
+          this.plugin.settings.flowBuildBasket.flowDefinition.propsExcluded =
             value;
           await this.plugin.settingsTabFunctions.debouncedSaveSettings();
         });
@@ -1212,7 +1213,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           return;
         }
         // do the logic that leads to a list of note paths
-        this.plugin.settingsTabFunctions.createFlowDefinition(
+        this.plugin.settingsTabFunctions.createFlowNoteList(
           this.plugin.settings.flowBuildBasket,
         );
 
@@ -1252,7 +1253,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           return;
         }
 
-        this.plugin.settingsTabFunctions.createFlowDefinition(
+        this.plugin.settingsTabFunctions.createFlowNoteList(
           this.plugin.settings.flowBuildBasket,
         );
         if (!this.plugin.settings.flowBuildBasket.success) {
@@ -1326,34 +1327,35 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
       // SOURCE
       let source = "";
-      if (shownFlow.flowCookbook.bookmarks) {
+      if (shownFlow.flowDefinition.bookmarks) {
         source += this.plugin.t("flowDisplay.source.alt bookmark group", {
-          shownFlow_flowCookbook_bookmarks: shownFlow.flowCookbook.bookmarks,
+          shownFlow_flowDefinition_bookmarks:
+            shownFlow.flowDefinition.bookmarks,
         });
       } else if (
-        shownFlow.flowCookbook.folderIncluded === "" ||
-        shownFlow.flowCookbook.folderIncluded === "/"
+        shownFlow.flowDefinition.folderIncluded === "" ||
+        shownFlow.flowDefinition.folderIncluded === "/"
       ) {
         source += "/";
       } else {
-        source += `${shownFlow.flowCookbook.folderIncluded}`;
+        source += `${shownFlow.flowDefinition.folderIncluded}`;
       }
 
       // INCLUSION
       const included: string[] = [];
-      if (shownFlow.flowCookbook.tagsIncluded?.trim()) {
+      if (shownFlow.flowDefinition.tagsIncluded?.trim()) {
         included.push(
           this.plugin.t("flowDisplay.included tags", {
-            shownFlow_flowCookbook_tagsIncluded:
-              shownFlow.flowCookbook.tagsIncluded,
+            shownFlow_flowDefinition_tagsIncluded:
+              shownFlow.flowDefinition.tagsIncluded,
           }),
         );
       }
-      if (shownFlow.flowCookbook.propsIncluded?.trim()) {
+      if (shownFlow.flowDefinition.propsIncluded?.trim()) {
         included.push(
           this.plugin.t("flowDisplay.included props", {
-            shownFlow_flowCookbook_propsIncluded:
-              shownFlow.flowCookbook.propsIncluded,
+            shownFlow_flowDefinition_propsIncluded:
+              shownFlow.flowDefinition.propsIncluded,
           }),
         );
       }
@@ -1362,29 +1364,29 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       // EXCLUSION
       const excluded: string[] = [];
       if (
-        !shownFlow.flowCookbook.bookmarks &&
-        shownFlow.flowCookbook.folderExcluded?.trim()
+        !shownFlow.flowDefinition.bookmarks &&
+        shownFlow.flowDefinition.folderExcluded?.trim()
       ) {
         excluded.push(
           this.plugin.t("flowDisplay.excluded folders", {
-            shownFlow_flowCookbook_folderExcluded:
-              shownFlow.flowCookbook.folderExcluded,
+            shownFlow_flowDefinition_folderExcluded:
+              shownFlow.flowDefinition.folderExcluded,
           }),
         );
       }
-      if (shownFlow.flowCookbook.tagsExcluded?.trim()) {
+      if (shownFlow.flowDefinition.tagsExcluded?.trim()) {
         excluded.push(
           this.plugin.t("flowDisplay.excluded tags", {
-            shownFlow_flowCookbook_tagsExcluded:
-              shownFlow.flowCookbook.tagsExcluded,
+            shownFlow_flowDefinition_tagsExcluded:
+              shownFlow.flowDefinition.tagsExcluded,
           }),
         );
       }
-      if (shownFlow.flowCookbook.propsExcluded?.trim()) {
+      if (shownFlow.flowDefinition.propsExcluded?.trim()) {
         excluded.push(
           this.plugin.t("flowDisplay.excluded props", {
-            shownFlow_flowCookbook_propsExcluded:
-              shownFlow.flowCookbook.propsExcluded,
+            shownFlow_flowDefinition_propsExcluded:
+              shownFlow.flowDefinition.propsExcluded,
           }),
         );
       }
@@ -1434,16 +1436,16 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               // delete unneeded flowDef information
               if (
                 shownFlow.definitionMode === "bookmarks" &&
-                shownFlow.flowCookbook.foldersTagsProps
+                shownFlow.flowDefinition.foldersTagsProps
               ) {
-                delete shownFlow.flowCookbook.foldersTagsProps;
-                delete shownFlow.flowCookbook.foldersTagsPropsSortOrder;
+                delete shownFlow.flowDefinition.foldersTagsProps;
+                delete shownFlow.flowDefinition.foldersTagsPropsSortOrder;
               } else if (
                 shownFlow.definitionMode === "foldersTagsProps" &&
-                shownFlow.flowCookbook.bookmarks
+                shownFlow.flowDefinition.bookmarks
               ) {
-                delete shownFlow.flowCookbook.bookmarks;
-                delete shownFlow.flowCookbook.bookmarksSortOrder;
+                delete shownFlow.flowDefinition.bookmarks;
+                delete shownFlow.flowDefinition.bookmarksSortOrder;
               }
 
               // gather all info for the flowDefinition
@@ -1473,8 +1475,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
                 oldFlowName: flowName,
                 definitionMode: shownFlow.definitionMode,
                 folderTitles: shownFlow.folderTitles,
-                flowCookbook: shownFlow.flowCookbook,
-                finalRecipe: [],
+                flowDefinition: shownFlow.flowDefinition,
+                flowNotesList: [],
                 conflictObject: shownFlow.conflictObject,
                 lastActiveLeaves: shownFlow.lastActiveLeaves,
                 persistentCursors: shownFlow.persistentCursors,

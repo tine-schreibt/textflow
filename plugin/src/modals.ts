@@ -162,14 +162,14 @@ export class CreateFlowFromFolder extends Modal {
         );
       dropdown.setValue(
         // remove "custom" as option
-        this.plugin.settings.flowBuildBasket.flowCookbook
+        this.plugin.settings.flowBuildBasket.flowDefinition
           .pathsTagsPropertiesSortOrder
-          ? this.plugin.settings.flowBuildBasket.flowCookbook
+          ? this.plugin.settings.flowBuildBasket.flowDefinition
               .pathsTagsPropertiesSortOrder
           : "noteOrder",
       );
       dropdown.onChange(async (value) => {
-        this.plugin.settings.flowBuildBasket.flowCookbook.pathsTagsPropertiesSortOrder =
+        this.plugin.settings.flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder =
           value as Types.SortOrder;
         await this.plugin.saveSettings();
       });
@@ -214,21 +214,21 @@ export class CreateFlowFromFolder extends Modal {
 
         if (subfoldersExcluded) {
           const folderArray =
-            this.plugin.settings.flowBuildBasket.flowCookbook.folderIncluded.split(
+            this.plugin.settings.flowBuildBasket.flowDefinition.folderIncluded.split(
               ",",
             );
           const excludedArray = [];
           for (let folder of folderArray) {
             excludedArray.push(`${folder}/`);
           }
-          this.plugin.settings.flowBuildBasket.flowCookbook.folderIncluded =
+          this.plugin.settings.flowBuildBasket.flowDefinition.folderIncluded =
             excludedArray.join(",");
         }
 
         // It really helps to save stuff... -.-
         await this.plugin.saveSettings();
 
-        this.plugin.settingsTabFunctions.createFlowDefinition(
+        this.plugin.settingsTabFunctions.createFlowNoteList(
           this.plugin.settings.flowBuildBasket,
         );
 
@@ -457,7 +457,7 @@ export class PreviewModal extends Modal {
 
     const key = this.flowBuildBasket.definitionMode;
 
-    const recipeItems = this.flowBuildBasket.finalRecipe ?? [];
+    const recipeItems = this.flowBuildBasket.flowNotesList ?? [];
     if (recipeItems.length === 0) {
       previewContainer.setText(
         this.plugin.t(
@@ -466,7 +466,7 @@ export class PreviewModal extends Modal {
       );
     } else {
       // Format the elements of the array for display
-      for (let ingredient of this.flowBuildBasket.finalRecipe!) {
+      for (let ingredient of this.flowBuildBasket.flowNotesList!) {
         if (ingredient.startsWith("#")) {
           previewContainer.createEl("p", {
             text: ingredient.replace("#", ""),
@@ -736,34 +736,35 @@ export class RestoreFlowDefModal extends Modal {
 
         // SOURCE
         let source = "";
-        if (shownFlow.flowCookbook.definitionMode == "bookmarks") {
+        if (shownFlow.flowDefinition.definitionMode == "bookmarks") {
           source += this.plugin.t("flowDisplay.source.alt bookmark group", {
-            shownFlow_flowCookbook_bookmarks: shownFlow.flowCookbook.bookmarks,
+            shownFlow_flowDefinition_bookmarks:
+              shownFlow.flowDefinition.bookmarks,
           });
         } else if (
-          shownFlow.flowCookbook.folderIncluded === "" ||
-          shownFlow.flowCookbook.folderIncluded === "/"
+          shownFlow.flowDefinition.folderIncluded === "" ||
+          shownFlow.flowDefinition.folderIncluded === "/"
         ) {
           source += "/";
         } else {
-          source += `/${shownFlow.flowCookbook.folderIncluded}`;
+          source += `/${shownFlow.flowDefinition.folderIncluded}`;
         }
 
         // INCLUSION
         const included: string[] = [];
-        if (shownFlow.flowCookbook.tagsIncluded?.trim()) {
+        if (shownFlow.flowDefinition.tagsIncluded?.trim()) {
           included.push(
             this.plugin.t("flowDisplay.included tags", {
-              shownFlow_flowCookbook_tagsIncluded:
-                shownFlow.flowCookbook.tagsIncluded,
+              shownFlow_flowDefinition_tagsIncluded:
+                shownFlow.flowDefinition.tagsIncluded,
             }),
           );
         }
-        if (shownFlow.flowCookbook.propsIncluded?.trim()) {
+        if (shownFlow.flowDefinition.propsIncluded?.trim()) {
           included.push(
             this.plugin.t("flowDisplay.included props", {
-              shownFlow_flowCookbook_propsIncluded:
-                shownFlow.flowCookbook.propsIncluded,
+              shownFlow_flowDefinition_propsIncluded:
+                shownFlow.flowDefinition.propsIncluded,
             }),
           );
         }
@@ -772,29 +773,29 @@ export class RestoreFlowDefModal extends Modal {
         // EXCLUSION
         const excluded: string[] = [];
         if (
-          !shownFlow.flowCookbook.bookmarks &&
-          shownFlow.flowCookbook.folderExcluded?.trim()
+          !shownFlow.flowDefinition.bookmarks &&
+          shownFlow.flowDefinition.folderExcluded?.trim()
         ) {
           excluded.push(
             this.plugin.t("flowDisplay.excluded folders", {
-              shownFlow_flowCookbook_folderExcluded:
-                shownFlow.flowCookbook.folderExcluded,
+              shownFlow_flowDefinition_folderExcluded:
+                shownFlow.flowDefinition.folderExcluded,
             }),
           );
         }
-        if (shownFlow.flowCookbook.tagsExcluded?.trim()) {
+        if (shownFlow.flowDefinition.tagsExcluded?.trim()) {
           excluded.push(
             this.plugin.t("flowDisplay.excluded tags", {
-              shownFlow_flowCookbook_tagsExcluded:
-                shownFlow.flowCookbook.tagsExcluded,
+              shownFlow_flowDefinition_tagsExcluded:
+                shownFlow.flowDefinition.tagsExcluded,
             }),
           );
         }
-        if (shownFlow.flowCookbook.propsExcluded?.trim()) {
+        if (shownFlow.flowDefinition.propsExcluded?.trim()) {
           excluded.push(
             this.plugin.t("flowDisplay.excluded props", {
-              shownFlow_flowCookbook_propsExcluded:
-                shownFlow.flowCookbook.propsExcluded,
+              shownFlow_flowDefinition_propsExcluded:
+                shownFlow.flowDefinition.propsExcluded,
             }),
           );
         }
@@ -906,8 +907,8 @@ export class RestoreFlowDefModal extends Modal {
               if (this.plugin.settings.flows[cleanedFlowName]) {
                 this.plugin.settings.flows[cleanedFlowName].definitionMode =
                   parsedJson[flowName].definitionMode;
-                this.plugin.settings.flows[cleanedFlowName].flowCookbook =
-                  parsedJson[flowName].flowCookbook;
+                this.plugin.settings.flows[cleanedFlowName].flowDefinition =
+                  parsedJson[flowName].flowDefinition;
                 this.plugin.settings.flows[cleanedFlowName].folderTitles =
                   parsedJson[flowName].folderTitles;
                 this.plugin.settings.flows[cleanedFlowName].flaggedForRebuild =
