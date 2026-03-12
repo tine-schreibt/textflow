@@ -606,7 +606,7 @@ findest, [sag bescheid](#12-melde-einen-bug--zeig-deine-liebe).
 
 **Inhaltsverzeichnis**
 
-1. [Flow Erzeugung](#flow-erzeugung)
+1. [Flow-Erzeugung](#flow-erzeugung)
 2. [Flow-Switcher](#flow-switcher)
 3. [Menüleiste](#menüleiste)
 4. [Flow / Leaf](#flow--leaf)
@@ -622,6 +622,10 @@ findest, [sag bescheid](#12-melde-einen-bug--zeig-deine-liebe).
   - **Lösung:**
     - Ersetze die unzulässigen Zeichen durch zulässige.
     - Vergiss nicht, den Ordnernamen auch in der Definition zu ändern.
+
+- **Problem:** Ich habe einen Ordner gebookmarkt, aber wenn ich einen Flow daraus bauen will, behauptet textFlow, es wären keine Notizen darin.
+	- **Lösung:** Du musst die Notizen bookmarken. Vorher kannst du eine neue Lesezeichen-Gruppe mit dem Namen ihres Ordners anlegen. 
+	- **TIP:** Wenn du eine Notiz noch in einer zweiten Sammlung haben willst, musst du sie öffnen und dann in der Lesezeichenansicht auf 'Lesezeichen für den aktiven Tab anlegen' klicken. 
 
 - **Problem:** Die Notizen in deiner Preview sind in einer ganz anderen
   Reihenfolge als die Notizen in deinem Datei-Explorer, obwohl du 'Notizen' als
