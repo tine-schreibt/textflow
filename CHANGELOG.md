@@ -1,3 +1,6 @@
+### 0.2.9
+- I don't understand git's tag system
+
 ### 0.2.8
 
 - tiny update to the manifest description
