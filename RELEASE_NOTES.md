@@ -1,3 +1,3 @@
-### 0.2.7
-
-- some minor stuff under the hood
+### 0.2.8
+- tiny update to the manifest description
+- this is so cumbersome
