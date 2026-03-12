@@ -811,8 +811,7 @@ order):**
 **Together they shine:**
 
 - But why choose when you can just use both for their greatest strengths -
-  textFlow to create flexible documents and Outline to granularly navigate your
-  flows.
+  textFlow to create flexible documents and Outline to granularly navigate them.
 
 <hr>
 

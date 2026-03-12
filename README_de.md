@@ -623,9 +623,13 @@ findest, [sag bescheid](#12-melde-einen-bug--zeig-deine-liebe).
     - Ersetze die unzulässigen Zeichen durch zulässige.
     - Vergiss nicht, den Ordnernamen auch in der Definition zu ändern.
 
-- **Problem:** Ich habe einen Ordner gebookmarkt, aber wenn ich einen Flow daraus bauen will, behauptet textFlow, es wären keine Notizen darin.
-	- **Lösung:** Du musst die Notizen bookmarken. Vorher kannst du eine neue Lesezeichen-Gruppe mit dem Namen ihres Ordners anlegen. 
-	- **TIP:** Wenn du eine Notiz noch in einer zweiten Sammlung haben willst, musst du sie öffnen und dann in der Lesezeichenansicht auf 'Lesezeichen für den aktiven Tab anlegen' klicken. 
+- **Problem:** Ich habe einen Ordner gebookmarkt, aber wenn ich einen Flow
+  daraus bauen will, behauptet textFlow, es wären keine Notizen darin.
+  - **Lösung:** Du musst die Notizen bookmarken. Vorher kannst du eine neue
+    Lesezeichen-Gruppe mit dem Namen ihres Ordners anlegen.
+  - **TIP:** Wenn du eine Notiz noch in einer zweiten Sammlung haben willst,
+    musst du sie öffnen und dann in der Lesezeichenansicht auf 'Lesezeichen für
+    den aktiven Tab anlegen' klicken.
 
 - **Problem:** Die Notizen in deiner Preview sind in einer ganz anderen
   Reihenfolge als die Notizen in deinem Datei-Explorer, obwohl du 'Notizen' als
@@ -873,7 +877,7 @@ nachvollziehen kannst:**
 
 - Aber warum auswählen, wenn du die größten Stärken beider Plugins nutzen
   kannst - textFlow, um flexible Dokumente zu erzeugen, und die
-  Gliederungsansicht, um granular durch deine Flows zu navigieren?
+  Gliederungsansicht, um sie granular zu navigieren?
 
 <hr>
 
