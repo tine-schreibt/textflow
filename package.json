@@ -1,7 +1,7 @@
 {
   "name": "textFlow",
-  "version": "0.2.9",
-  "description": "Display, browse and edit multiple notes as one continuous document (flow). Flows can be defined using bookmarks, paths, tags and properties. Edits are automatically synced back to their source notes.",
+  "version": "0.2.8",
+  "description": "Compile multiple notes into a single editable flow - like Scrivenings. Define from bookmarks or paths/tags/props. Auto-sync flow <-> source notes.",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
