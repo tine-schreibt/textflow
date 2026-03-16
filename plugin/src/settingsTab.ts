@@ -12,6 +12,8 @@ import TextFlow from "../main";
 import * as Types from "./types";
 import path, { dirname, basename } from "path";
 
+// Any code that was actually written by AI is labelled
+
 // ----------------------------------
 // Find TOC by looking at settingsTab
 // ----------------------------------
@@ -1213,7 +1215,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           return;
         }
         // do the logic that leads to a list of note paths
-        this.plugin.settingsTabFunctions.createFlowNoteList(
+        this.plugin.settingsTabFunctions.createSourceNotePathArray(
           this.plugin.settings.flowBuildBasket,
         );
 
@@ -1253,7 +1255,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           return;
         }
 
-        this.plugin.settingsTabFunctions.createFlowNoteList(
+        this.plugin.settingsTabFunctions.createSourceNotePathArray(
           this.plugin.settings.flowBuildBasket,
         );
         if (!this.plugin.settings.flowBuildBasket.success) {
@@ -1261,20 +1263,19 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         }
 
         // write the whole stuff (also flags for rebuild, just to be sure)
-        await this.plugin.settingsTabFunctions.writeFlowDef(
-          this.plugin.settings,
+        await this.plugin.settingsTabFunctions.writeAndSaveFlowDef(
           this.plugin.settings.flowBuildBasket,
         );
 
         // (re)build
-        this.plugin.settingsTabFunctions.rebuildFlow(
+        this.plugin.settingsTabFunctions.flowBuildingBundle(
           this.plugin.settings.flowBuildBasket.flowName,
           "settingsTab",
         );
         this.plugin.refreshMenuBars();
 
-        // update conflicts,
-        this.plugin.settingsTabFunctions.syncConflictObjects(
+        // update overlaps,
+        this.plugin.settingsTabFunctions.syncOverlaps(
           this.plugin.settings.flowBuildBasket,
         );
 
@@ -1449,7 +1450,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               }
 
               // gather all info for the flowDefinition
-              this.plugin.settingsTabFunctions.rebuildFlow(
+              this.plugin.settingsTabFunctions.flowBuildingBundle(
                 flowName,
                 "settingsTab",
               );
@@ -1476,8 +1477,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
                 definitionMode: shownFlow.definitionMode,
                 folderTitles: shownFlow.folderTitles,
                 flowDefinition: shownFlow.flowDefinition,
-                flowNotesList: [],
-                conflictObject: shownFlow.conflictObject,
+                flowNotesPathArray: [],
+                overlapObject: shownFlow.overlapObject,
                 lastActiveLeaves: shownFlow.lastActiveLeaves,
                 persistentCursors: shownFlow.persistentCursors,
               };

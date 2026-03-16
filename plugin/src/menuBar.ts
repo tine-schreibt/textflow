@@ -6,10 +6,10 @@ import * as Types from "./types";
 
 export class MenuBar {
   private app: App;
-  private element: HTMLElement;
+  private element: HTMLElement; // the bar
   private plugin: TextFlowPlugin;
   private flowName: string;
-  private associatedView: MarkdownView; // Store reference to our specific view
+  private associatedView: MarkdownView; // reference to our specific view
   private listeners: Array<{
     element: HTMLElement | Document;
     type: string;
@@ -31,7 +31,11 @@ export class MenuBar {
     this.leafID = leafID;
   }
 
-  // ------ utilities ---------
+  // Any code that was actually written by AI is labelled
+
+  // -------------------------------------------------------------
+  // ------ UTILITIES ---------
+  // -------------------------------------------------------------
 
   // --- attachment of the menu bar
   // This was written by AI
@@ -200,13 +204,13 @@ export class MenuBar {
     if (this.plugin.settings.activeRegions) {
       if (Object.keys(this.plugin.settings.activeRegions).length > 0) {
         Object.keys(this.plugin.settings.activeRegions).forEach((flowName) => {
-          if (this.plugin.settings.flows[this.flowName].conflictObject) {
+          if (this.plugin.settings.flows[this.flowName].overlapObject) {
             if (
-              this.plugin.settings.flows[this.flowName].conflictObject[flowName]
+              this.plugin.settings.flows[this.flowName].overlapObject[flowName]
             ) {
               overlap[0].push(flowName);
               Object.keys(
-                this.plugin.settings.flows[this.flowName].conflictObject[
+                this.plugin.settings.flows[this.flowName].overlapObject[
                   flowName
                 ],
               ).forEach((path) => {
@@ -345,7 +349,9 @@ export class MenuBar {
     return pathArray;
   };
 
+  // -------------------------------------------------------------
   // ----------- THE MENU BAR ITSELF
+  // -------------------------------------------------------------
   createMenuBarElement = (): HTMLElement => {
     //this.plugin.settingsTabFunctions.callStack("createMenuBarElement");
 
@@ -474,7 +480,7 @@ export class MenuBar {
         .setTooltip(this.plugin.t("switcherModal.buttons rebuild"))
         .onClick(async () => {
           if (goRebuild === "neutral" || goRebuild === "must") {
-            await this.plugin.settingsTabFunctions.rebuildFlow(
+            await this.plugin.settingsTabFunctions.flowBuildingBundle(
               this.flowName,
               "menuBar",
             );
@@ -879,7 +885,7 @@ export class MenuBar {
         });
 
       // -------------------------------------------------------
-      // a chevron to minimise
+      // a chevron to minimise (or warning triangle)
       const minimiseButton = new ButtonComponent(menuBarEl);
       minimiseButton
         .setIcon(compartmentsGood ? "chevron-left" : "alert-triangle")

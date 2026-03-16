@@ -11,7 +11,7 @@ import { Compartment, Extension } from "@codemirror/state";
 //    - DecorationEntry
 //    - ActiveRegionHighlight
 //    - flowBuildBasket
-//       - ConflictObject
+//       - overlapObject
 //       - CursorData
 //    - FlowDef
 //       - ActiveRegion
@@ -84,14 +84,14 @@ export interface flowBuildBasket {
   definitionMode: string;
   folderTitles: boolean;
   flowDefinition: { [key: string]: string };
-  flowNotesList: string[];
-  conflictObject: ConflictObject;
+  flowNotesPathArray: string[];
+  overlapObject: OverlapObject;
   lastActiveLeaves: string[];
   persistentCursors: CursorData;
 }
 
 // ---- subtypes of flowBuildBasket and FlowDef ------------
-export interface ConflictObject {
+export interface OverlapObject {
   [key: string]: { [key: string]: boolean };
 }
 
@@ -102,19 +102,19 @@ export interface CursorData {
     cursors: [string, number, number][]; // path, cursorPos, timestamp
   };
 }
-// ------------------------------
 
+// ------------------------------
 export interface FlowDef {
   flowFilePath: string;
   definitionMode: string;
-  flowDefinition: { [key: string]: string }; // user input
+  flowDefinition: { [key: string]: string }; // user input; is cleaned up when flow is built
   folderTitles: boolean;
   isFreshBuild: boolean;
   flowBuilt: boolean;
   flaggedForRebuild: boolean;
-  conflictObject: ConflictObject;
+  overlapObject: OverlapObject;
   persistentCursors: CursorData;
-  lastActiveLeaves: string[]; // FLOWBUILDBASKET, RENAME
+  lastActiveLeaves: string[];
   unsyncedRegionsArray: string[];
   flowMap: { [key: string]: SourceFileObject };
 }
@@ -168,8 +168,8 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
     definitionMode: "",
     folderTitles: true,
     flowDefinition: {},
-    flowNotesList: [],
-    conflictObject: {},
+    flowNotesPathArray: [],
+    overlapObject: {},
     lastActiveLeaves: [],
     persistentCursors: {},
   },
@@ -181,7 +181,6 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
 // ---- flow creation helper objects and utility types ------
 export interface mapValueBasket {
   concatenatedFileContents: string;
-  initialIteration: boolean;
   basicUUID: string;
   invisibleUUID: string;
   flowOrder: number;
@@ -219,7 +218,7 @@ export interface BookmarksData {
   items: BookmarkItem[];
 }
 
-// ------- Dataview stuff (flow creation)
+// ------- Dataview stuff (flow source note path gathering)
 export interface DataviewFolder {
   file: {
     folder: string;
@@ -248,7 +247,7 @@ export interface ObsidianEditor extends Editor {
   cm?: EditorView;
 }
 
-// keeps all the listeners in one place
+// keeps all the compartments and extensions in one place
 export interface ListenerBasketItem {
   [key: string]: {
     compartment: Compartment;
@@ -262,29 +261,18 @@ export interface EditorWithCM extends Editor {
 }
 
 // for handling leaves
-export type LeafId = string & { readonly __leafId: unique symbol };
-
-// for the writelock
-export type ProtectionType = "divider" | "sync";
-
-// needed for scroll into view
-export interface ObsidianEditor extends Editor {
-  cm?: EditorView;
-}
+export type LeafID = string & { readonly __leafID: unique symbol };
 
 // explorer deco
-export type CalculationMode = "redo" | "update" | "single";
-
-export type DecoStyle = "neutral" | "unsynced" | "none" | "active";
+export type CalculationMode = "update" | "single" | "redo";
+export type DecoStyle = "neutral" | "active" | "unsynced" | "none";
 
 // stuff that's used by the menuBar
 export type DropdownState = "hide" | "show";
-
 export type MenuBarDisplayState = "max" | "min";
 
 // the nav dropdown
 export type SearchItem = { path: string; displayName: string };
-
 export type SearchResult = SearchItem | FuseResult<SearchItem>;
 
 // the nav suggest modal
@@ -299,13 +287,6 @@ export interface SuggestionItem {
 }
 
 export type SuggestionType =
-  | "header"
   | "active-flow-path"
   | "other-flow-path"
-  | "flow-name"
-  | "active-region"
-  | "alphabetic-item";
-
-export interface ObsidianEditor extends Editor {
-  cm?: EditorView;
-}
+  | "flow-name";

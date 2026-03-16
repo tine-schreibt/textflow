@@ -27,10 +27,9 @@ import de from "./src/lang/de.json";
 // Any code that was actually written by AI is labelled
 
 //-----------------------------------------------------------------------------------------
-// This file is quite big, but everything is deeply interconnected, so splitting it up actually made it more complicated and confusing
+// This file is quite big, but everything is deeply interconnected, so splitting it up further actually made it more complicated and confusing
 //-----------------------------------------------------------------------------------------
-//
-//
+
 // Table of Contents, mostly to demonstrate the very sane file structure
 //-----------------------------------------------------------------------------------------
 //    - StatsOverlay
@@ -55,25 +54,25 @@ import de from "./src/lang/de.json";
 //-----------------------------------------------------------------------------------------
 // - LISTENERS
 //-----------------------------------------------------------------------------------------
-//    - Listener helpers
+// ---- Listener helper -------------------------------------------------------------
 //      - getUniqueFileName
-//    - Context menu entries (in file explorer)
+// ---- Context menu entries (in file explorer) -------------------------------------
 //      - flag all flows containing file
 //      - create new file
 //      - create flow from folder
-//    - File Events
+// ---- File Events ------------------------------------------------------------------
 //      - modify (flag for rebuild)
 //      - rename (flag or restore name)
 //      - create (flag or move and open)
 //      - delete (flag)
-//    - Window/editor/workspace events
+// ---- Window/editor/workspace events -----------------------------------------------
 //      - focus (statcheck active flows)
 //      - active-leaf-change (setup/close flow leaves)
 //      - layout-change (setup/close flow leaves)
-//    - Navigation
+// ---- Navigation -------------------------------------------------------------------
 //      - isFileExplorerClick
 //      - fileExplorerOpenClickListener
-//    - Compartments for TRACKING and SAFETY
+// ---- COMPARTMENTS -----------------------------------------------------------------
 //      - pertains to:
 //          - cursorListener
 //          - textChangeListener
@@ -82,7 +81,7 @@ import de from "./src/lang/de.json";
 //      - dispatchCompartments
 //      - resetCompartments
 //      - checkCompartments
-//    - TRACKING helpers
+// ---- Compartment tracking helpers --------------------------------------------------
 //      - checkActiveRegion
 //      - addRegionTracking
 //      - findActiveRegion
@@ -99,9 +98,8 @@ import de from "./src/lang/de.json";
 //      - refreshMenuBars
 //      - cleanupMenuBar
 //-----------------------------------------------------------------------------------------
-// - Data safety
+// - Data safety (for writelocks/tracking see compartments)
 //-----------------------------------------------------------------------------------------
-//      - (for writelocks/tracking see compartments)
 //      - syncAllLeaves
 //      - syncBackToSource
 //      - updateStats
@@ -465,7 +463,10 @@ export default class TextFlowPlugin extends Plugin {
         const flowName = this.isFlowFile(activeLeafPath);
         if (!flowName) return;
         // rebuild
-        await this.settingsTabFunctions.rebuildFlow(flowName, "switcher");
+        await this.settingsTabFunctions.flowBuildingBundle(
+          flowName,
+          "switcher",
+        );
       },
     });
 
@@ -481,7 +482,7 @@ export default class TextFlowPlugin extends Plugin {
         if (!view) {
           new Modals.FlowSwitcherModal(this.app, this).open();
         } else {
-          const leafID = this.settingsTabFunctions.getLeafId(view.leaf);
+          const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
           new Modals.FlowSwitcherModal(this.app, this, leafID).open();
         }
       },
@@ -547,7 +548,7 @@ export default class TextFlowPlugin extends Plugin {
           const flowName = this.isFlowFile(path);
           if (!flowName) return;
 
-          const leafID = this.settingsTabFunctions.getLeafId(activeView.leaf);
+          const leafID = this.settingsTabFunctions.getLeafID(activeView.leaf);
           if (!leafID) return;
 
           for (let leaf of Object.keys(this.settings.activeRegions[flowName])) {
@@ -593,7 +594,7 @@ export default class TextFlowPlugin extends Plugin {
         if (!view.file) return;
 
         const activeLeafPath = view.file.path;
-        const leafID = this.settingsTabFunctions.getLeafId(view.leaf);
+        const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
         const flowName = this.isFlowFile(activeLeafPath);
         if (!flowName) return;
         if (!this.settings.activeRegions[flowName]) return;
@@ -632,7 +633,7 @@ export default class TextFlowPlugin extends Plugin {
         const flowName = this.isFlowFile(activeLeafPath);
         if (!flowName) return;
 
-        const leafID = this.settingsTabFunctions.getLeafId(activeView.leaf);
+        const leafID = this.settingsTabFunctions.getLeafID(activeView.leaf);
         // check if we got data for that leafID
         this.settingsTabFunctions.restoreCursorPos(
           flowName,
@@ -712,7 +713,7 @@ export default class TextFlowPlugin extends Plugin {
         if (activeLeafPath) {
           const flowName = this.isFlowFile(activeLeafPath);
           if (flowName) {
-            const leafID = this.settingsTabFunctions.getLeafId(activeView.leaf);
+            const leafID = this.settingsTabFunctions.getLeafID(activeView.leaf);
 
             for (let flowName of Object.keys(this.settings.activeRegions)) {
               if (this.settings.activeRegions[flowName][leafID]) {
@@ -1207,7 +1208,7 @@ ${pseudoElement}
                 parentFolder = dirname(normalisedPath);
               }
 
-              const itemCreationModal = new Modals.CreateNewItem(
+              const itemCreationModal = new Modals.CreateNewFile(
                 this.app,
                 this,
                 parentFolder,
@@ -1701,7 +1702,7 @@ ${pseudoElement}
   // -------------- Listeners: Compartments -----------------------------------------
   private makeCompartments = async (view: MarkdownView) => {
     const cmView = this.settingsTabFunctions.getEditorView(view.editor);
-    const leafID = this.settingsTabFunctions.getLeafId(view.leaf);
+    const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
 
     if (!cmView) return;
     if (!view) return;
@@ -2429,7 +2430,7 @@ ${pseudoElement}
                 activeRegionPath,
               );
               if (flowHasEdits) {
-                await this.settingsTabFunctions.rebuildFlow(
+                await this.settingsTabFunctions.flowBuildingBundle(
                   flowName,
                   "menuBar",
                 );
@@ -2666,7 +2667,7 @@ ${pseudoElement}
         if (isFlow) {
           await this.setUpFlow(isFlow, leaf.view);
 
-          const leafID = this.settingsTabFunctions.getLeafId(view.leaf);
+          const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
 
           this.mostRecentActiveFlowLeaf = leaf;
           return;
@@ -2720,12 +2721,12 @@ ${pseudoElement}
 
     // ------------- REBUILDING ---------------------
     if (this.settings.flows[flowName].flaggedForRebuild) {
-      await this.settingsTabFunctions.rebuildFlow(flowName, "setUpFlow");
+      await this.settingsTabFunctions.flowBuildingBundle(flowName, "setUpFlow");
       isFreshlyBuilt = true;
     }
 
     // ------------- SCROLLING ---------------------
-    const leafID = this.settingsTabFunctions.getLeafId(view.leaf);
+    const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
     // See if this is the inital activation of the flow/leaf and restore cursor
     // we need this so Outline navigation works (because it triggers listeners)
     if (!this.alreadyActivated[flowName]) {
@@ -2827,7 +2828,7 @@ ${pseudoElement}
       // get info for all leaves' contents, initalised or not
       const leafViewState = leaf.getViewState();
       if (leafViewState.type === "markdown" && leafViewState.state?.file) {
-        const leafID = this.settingsTabFunctions.getLeafId(leaf);
+        const leafID = this.settingsTabFunctions.getLeafID(leaf);
         const leafPath = leafViewState.state?.file;
         if (typeof leafPath != "string") return; // behaves like 'continue' in this callback
 
@@ -2931,7 +2932,7 @@ ${pseudoElement}
     await this.syncAllLeaves();
 
     // reset the compartments
-    const leafID = this.settingsTabFunctions.getLeafId(view.leaf);
+    const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
     const cmView = this.settingsTabFunctions.getEditorView(view.editor);
     if (cmView) {
       this.resetCompartments(leafID, cmView);
@@ -2970,7 +2971,7 @@ ${pseudoElement}
   // ---------------------------------------------------------------
   setupMenuBar = (view: MarkdownView, flowName: string) => {
     let menuBar: MenuBar;
-    const leafID = this.settingsTabFunctions.getLeafId(view.leaf);
+    const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
     // If we got one, check if it belongs to the flow
     if (view.menuBar) {
       if ((view.menuBar as MenuBar).getFlowName() != flowName) {
@@ -3059,7 +3060,7 @@ ${pseudoElement}
       }
       for (let view of flowLeaves[flowName]) {
         const text = view.editor.getValue();
-        const leafID = this.settingsTabFunctions.getLeafId(view.leaf);
+        const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
         await this.syncBackToSource(flowName, text, leafID);
       }
     }
@@ -3249,7 +3250,10 @@ ${pseudoElement}
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (view?.file?.path.endsWith(`${flowName}.md`)) {
           // rebuild immediately
-          await this.settingsTabFunctions.rebuildFlow(flowName, "switcher");
+          await this.settingsTabFunctions.flowBuildingBundle(
+            flowName,
+            "switcher",
+          );
         }
       } else {
         // if it's inactive, just flag for rebuild
@@ -3414,10 +3418,10 @@ ${pseudoElement}
 
       if (leaves.length > 5) {
         // find the leaf with the oldest timestamp using forbidden magic that a robot showed me
-        const [oldestLeafId] = leaves.reduce((oldest, current) => {
+        const [oldestLeafID] = leaves.reduce((oldest, current) => {
           return current[1].update < oldest[1].update ? current : oldest;
         });
-        delete this.settings.flows[flowName].persistentCursors[oldestLeafId];
+        delete this.settings.flows[flowName].persistentCursors[oldestLeafID];
       }
       return;
     }
@@ -3538,7 +3542,7 @@ ${pseudoElement}
           if (!view) {
             new Modals.FlowSwitcherModal(this.app, this).open();
           } else {
-            const leafID = this.settingsTabFunctions.getLeafId(view.leaf);
+            const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
             new Modals.FlowSwitcherModal(this.app, this, leafID).open();
           }
         });
@@ -3552,7 +3556,7 @@ ${pseudoElement}
             if (!view) {
               new Modals.FlowSwitcherModal(this.app, this).open();
             } else {
-              const leafID = this.settingsTabFunctions.getLeafId(view.leaf);
+              const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
               new Modals.FlowSwitcherModal(this.app, this, leafID).open();
             }
           },
@@ -3591,7 +3595,7 @@ ${pseudoElement}
       if (leafID.endsWith("-changes")) continue;
       const leaves = this.app.workspace.getLeavesOfType("markdown");
       const targetLeaf = leaves.find(
-        (leaf) => this.settingsTabFunctions.getLeafId(leaf) === leafID,
+        (leaf) => this.settingsTabFunctions.getLeafID(leaf) === leafID,
       );
       for (const leaf of leaves) {
         if (targetLeaf?.view instanceof MarkdownView) {

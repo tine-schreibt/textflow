@@ -212,13 +212,13 @@
   "CreateFlowFromFolderModal.close": "Verwerfen",
 
   "------- CREATE NEW ITEM": "CREATE NEW FILE OR FOLDER IN SELECTED FOLDER ----------------",
-  "CreateNewItemModal.headline": "Erzeuge neues Element in diesem Ordner",
-  "CreateNewItemrModal.description": "Welche Art Element möchtest du erzeugen?",
-  "CreateNewItemrModal.description note": "Notiz",
-  "CreateNewItemrModal.description folder": "Ordner",
-  "CreateNewItemrModal.description title": "Gib einen Titel für das Objekt ein.",
-  "CreateNewItemrModal.createButton": "Erzeugen",
-  "CreateNewItemrModal.dismissButton": "Verwerfen",
+  "CreateNewFileModal.headline": "Erzeuge neues Element in diesem Ordner",
+  "CreateNewFilerModal.description": "Welche Art Element möchtest du erzeugen?",
+  "CreateNewFilerModal.description note": "Notiz",
+  "CreateNewFilerModal.description folder": "Ordner",
+  "CreateNewFilerModal.description title": "Gib einen Titel für das Objekt ein.",
+  "CreateNewFilerModal.createButton": "Erzeugen",
+  "CreateNewFilerModal.dismissButton": "Verwerfen",
 
   "----------- PREVIEW MODAL": "Modal that shows the users the structure of their flow---------",
   "PreviewModal.modalTitle preview for flow": "Vorschau für Flow ${this_flowBuildBasket_flowName}.",
@@ -333,15 +333,15 @@
 
   "createSystemFolder.notice folder created": "textFlow: Sytemordner erfolgreich erzeugt - /${newSystemFolderPath}",
 
-  "createFlowNoteList.notice enter bookmark group": "textFlow: Bitte gib eine Lesezeichengruppe ein.",
-  "createFlowNoteList.notice definition leads to empty flow": "textFlow: Deine Kriterien erzeugt einen leeren Flow. Bitte prüfe sie auf Tippfehler und/oder gestalte sie weniger restriktiv.",
-  "createFlowNoteList.notice random error, please check console": "textFlow: Ein Fehler ist aufgetreten, während das finalReceipe für deinen Flow erzeugt wurde. Bitte sieh in die Konsole (cmd+alt+i), um Details zu erfahren.",
-  "createFlowNoteList.notice bookmark group not found": "textFlow: Bitte prüfe den Namen der eingegebenen Lesezeichengruppe.",
+  "createSourceNotePathArray.notice enter bookmark group": "textFlow: Bitte gib eine Lesezeichengruppe ein.",
+  "createSourceNotePathArray.notice definition leads to empty flow": "textFlow: Deine Kriterien erzeugt einen leeren Flow. Bitte prüfe sie auf Tippfehler und/oder gestalte sie weniger restriktiv.",
+  "createSourceNotePathArray.notice random error, please check console": "textFlow: Ein Fehler ist aufgetreten, während das finalReceipe für deinen Flow erzeugt wurde. Bitte sieh in die Konsole (cmd+alt+i), um Details zu erfahren.",
+  "createSourceNotePathArray.notice bookmark group not found": "textFlow: Bitte prüfe den Namen der eingegebenen Lesezeichengruppe.",
   "getPathsByFoldersTagsProps.notice dataview not installed": "textFlow: Dataview API nicht verfügbar. Bitte stelle sicher, dass du das Dataview-Plugin installiert hast (Einstellungen > Externe Plugins > Durchsuchen)",
 
   "flowBuilder.notice system folder not found": "textFlow: ${textFlowSystemFolderName} konnte nicht gefunden werden.",
-  "flowBuilder.notice ingredient not found": "textFlow: Die Notiz ${ingredient} konnte nicht gefunden werden.",
-  "flowBUilder.notice UUID found in source note": "textFlow: Die Notiz \n ${ingredient}\n für Flow\n ${flowName}\n enthält mindestens eine UUID. \nDas kann durch Fehler bei der Synchronisation verursacht werden. \n Die nächsten Schritte: \n1. Exportiere ${flowName}, um den Verlust von Änderungen zu verhindern. \n2. Prüfe die erwähnte Quellnotiz, ob zusätzliche Regionen hinein kopiert wurden (suche nach '<hr>'), und schneide sie aus. \n3. Prüfe die Quellnotizen dieser Regionen, um sicher zu sein, dass sie auf dem neusten STand sind. Sind sie es nicht, copy/past die letzte Version aus deinem exportierten Flow. \nMach es dir einfacher, indem du Navigation per Datei-Explorer abschaltest (Settings-Tab oder Befehlspalette).\nVersuche danach noch mal einen Neubau.",
+  "flowBuilder.notice path not found": "textFlow: Die Notiz ${path} konnte nicht gefunden werden.",
+  "flowBUilder.notice UUID found in source note": "textFlow: Die Notiz \n ${path}\n für Flow\n ${flowName}\n enthält mindestens eine UUID. \nDas kann durch Fehler bei der Synchronisation verursacht werden. \n Die nächsten Schritte: \n1. Exportiere ${flowName}, um den Verlust von Änderungen zu verhindern. \n2. Prüfe die erwähnte Quellnotiz, ob zusätzliche Regionen hinein kopiert wurden (suche nach '<hr>'), und schneide sie aus. \n3. Prüfe die Quellnotizen dieser Regionen, um sicher zu sein, dass sie auf dem neusten STand sind. Sind sie es nicht, copy/past die letzte Version aus deinem exportierten Flow. \nMach es dir einfacher, indem du Navigation per Datei-Explorer abschaltest (Settings-Tab oder Befehlspalette).\nVersuche danach noch mal einen Neubau.",
 
   "----------- The Blurb": " Wird als README dem Systemordner hinzugefügt ---------------------------",
   "readme": "Das hier ist textFlows Systemordner. \n \n **Was er enthalten sollte:** \n - dieses README \n - deine Flows \n - ein .json mit deinen Backups (wird von Obsidian nicht angezeigt)\n \n **Du darfst:** \n - Flows aus diesem Ordner löschen\n - den gesamten Ordner an einen anderen Ort verschieben\n \n **Aber bitte unterlasse es:** \n - Dateien zu diesem Ordner hinzuzufügen\n - diesen Ordner umzubenennen\n - Dateien in diesem Ordner umzubenennen (um Flows umzubenennen, benutze die Einstellungen)\n \n **Weiterführende Informationen findest du [im tatsächlichen readme](https://github.com/tine-schreibt/textFlow/blob/main/README_de.md).**"

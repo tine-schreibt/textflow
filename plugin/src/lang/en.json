@@ -327,15 +327,15 @@
 
   "createSystemFolder.notice folder created": "textFlow: System folder created successfully - /${newSystemFolderPath}",
 
-  "createFlowNoteList.notice enter bookmark group": "textFlow: Please enter a bookmark group.",
-  "createFlowNoteList.notice definition leads to empty flow": "textFlow: Your definition leads to an empty flow. Please check for typos or make your criteria less restrictive.",
-  "createFlowNoteList.notice random error, please check console": "textFlow: An error occurred while creating the flowNotesList for your flow. Please check the console (cmd+alt+i) for details.",
-  "createFlowNoteList.notice bookmark group not found": "textFlow: Please check the name of the bookmark group you submitted.",
+  "createSourceNotePathArray.notice enter bookmark group": "textFlow: Please enter a bookmark group.",
+  "createSourceNotePathArray.notice definition leads to empty flow": "textFlow: Your definition leads to an empty flow. Please check for typos or make your criteria less restrictive.",
+  "createSourceNotePathArray.notice random error, please check console": "textFlow: An error occurred while creating the flowNotesPathArray for your flow. Please check the console (cmd+alt+i) for details.",
+  "createSourceNotePathArray.notice bookmark group not found": "textFlow: Please check the name of the bookmark group you submitted.",
   "getPathsByFoldersTagsProps.notice dataview not installed": "textFlow: Dataview API not available. Please make sure you have installed the Dataview plugin (Settings > Community plugins > Browse).",
 
   "flowBuilder.notice system folder not found": "textFlow: ${textFlowSystemFolderName} not found.",
-  "flowBuilder.notice ingredient not found": "textFlow: The note at ${ingredient} couldn't be found.",
-  "flowBUilder.notice UUID found in source note": "textFlow: The note \n${ingredient}\n of flow\n ${flowName}\n contains at least one UUID. \nThis can happen because of sync errors.\nHow to proceed safely: \n1. Export ${flowName} to prevent any loss of edits.\n2. Check the mentioned note for any additional regions that have been copied into it (search for '<hr>'), and cut them out.\n3. Check the source notes of these regions to make sure they are up to date. If they aren't, copy/paste the latest version from your exported flow.\nTo make all of this easier, turn off navigation via file explorer (in the settings tab or command palette).\nAfterwards try another rebuild.",
+  "flowBuilder.notice path not found": "textFlow: The note at ${path} couldn't be found.",
+  "flowBUilder.notice UUID found in source note": "textFlow: The note \n${path}\n of flow\n ${flowName}\n contains at least one UUID. \nThis can happen because of sync errors.\nHow to proceed safely: \n1. Export ${flowName} to prevent any loss of edits.\n2. Check the mentioned note for any additional regions that have been copied into it (search for '<hr>'), and cut them out.\n3. Check the source notes of these regions to make sure they are up to date. If they aren't, copy/paste the latest version from your exported flow.\nTo make all of this easier, turn off navigation via file explorer (in the settings tab or command palette).\nAfterwards try another rebuild.",
 
   "----------- The Blurb": " This is added as README to the system folder ---------------------------",
   "readme": "This folder is textFlow's system folder. \n \n **What it should contain:**\n - this README \n - your flows\n - a .json file with your backups (not visible in Obsidian)\n \n **You may:** \n - delete flow files from this folder\n - move this entire folder to a different location\n \n **But please do not:** \n - add files to this folder\n - rename this folder\n - rename files in this folder (to rename flows, use the settings tab)\n \n **For further information, please refer to [the complete readme](https://github.com/tine-schreibt/textFlow/blob/main/README.md)**"

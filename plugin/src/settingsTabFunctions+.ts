@@ -15,6 +15,8 @@ import * as Types from "./types";
 import path from "path";
 import { getAPI } from "obsidian-dataview";
 
+// Any code that was actually written by AI is labelled
+
 //-------------------------------------------------------------------------------------
 // TOC
 //-------------------------------------------------------------------------------------
@@ -31,39 +33,43 @@ import { getAPI } from "obsidian-dataview";
 //    - isValidFlowName
 //    - renameFlow
 //    - radioButtonManager
-//    - --- CREATE FLOW DEFINITON ------------
+//    - --- CREATE FLOW PATH ARRAY ------------
+//    - createSourceNotePathArray
 //      - getBookmarkPathsByGroupName
+//          - collectBookmarkPathsFolderOrder
+//          - collectBookmarkPathsNoteOrder
+//          - collectBookmarkPathsManualOrder
 //      - ensureNoUndefined
 //      - getPathsByFoldersTagsProps
-//    - writeFlowDef
-//    - conflictCollector
-//    - syncConflictObjects
+//        - makeNoteOrderPathArray
+//        - makeFolderOrderPathArray
+//        - findAndAddFolderTitles
+//    - overlapCollector
+//    - writeAndSaveFlowDef
+//    - syncOverlaps
 //    - resetFlowBuildBasket
-//    - --- REBUILD FLOW ----------------
+//    - --- BUILD FLOW ----------------
+//      - flowBuildingBundle
 //      - flowBuilder
-//       - createInvisibleUUID
-//       - debugUID
+//      - createInvisibleUUID
 //    - backupFlowDefs
 //-------------------------------------------------------------------------------------
-// - the + stuff which might need its own class but I tried it and it just confused me
+// - the + stuff whichI tried to put into its own class but that just confused me
 //-------------------------------------------------------------------------------------
+// - getLeafID
+// - getEditorView
+// - callStack
 // - restoreCursorPos
 // - scrollToPos
 // - safeCreateOrModifyFile
 // - exportFlow
 // - selectActiveRegion
-// - getLeafId
-// - getEditorView
-// - callStack
 // - updateScrollbarVisibility
 // - getTimestamp
 // - explorerDecoArray
 
-interface ObsidianEditor extends Editor {
-  cm?: EditorView;
-}
-
-// --- A class for the build progress notice (shown when rebuilding from settings tab)
+//--------------------------------------------------
+// --- A class for the build progress toast (shown when rebuilding from settings tab)
 class ProgressNotice {
   private notice: Notice;
   private flowName: string;
@@ -106,6 +112,7 @@ class ProgressNotice {
   }
 }
 
+//--------------------------------------------------
 // the overlay for active flows
 class LoadingOverlay {
   private plugin: TextFlow;
@@ -178,11 +185,12 @@ export class settingsTabFunctions {
     private plugin: TextFlow,
     private app: App,
   ) {}
-  //#######################################################################
-  //###########################    Functions   ############################
-  //#######################################################################
+  //--------------------------------------------------
+  //-------------------- Functions ----------------
+  //--------------------------------------------------
 
-  // stuff is sorted in the order in which it is being called from settingsTab
+  // stuff is sorted in the order in which it is being called from settingsTab / a bundle function
+
   // -------- see if a system folder already exists -------
 
   checkSystemFolder = () => {
@@ -196,6 +204,7 @@ export class settingsTabFunctions {
     return systemFolder instanceof TFolder ? systemFolder : null;
   };
 
+  //--------------------------------------------------
   createSystemFolder = async (newSystemFolderPath: string) => {
     try {
       // Ensure the folder exists, create it if necessary
@@ -228,6 +237,7 @@ export class settingsTabFunctions {
     }
   };
 
+  //--------------------------------------------------
   // ----- To slow down saving on input fields
   private debouncedSaveTimer: NodeJS.Timeout | undefined;
 
@@ -241,8 +251,8 @@ export class settingsTabFunctions {
     }, 200); // .2 second delay
   };
 
+  //--------------------------------------------------
   // --------- Make sure only valid file names can be entered as flow names
-
   isValidFlowName = (name: string): { valid: boolean; reason?: string } => {
     // Check for null/undefined names
     if (!name) {
@@ -323,8 +333,7 @@ export class settingsTabFunctions {
     return { valid: true };
   };
 
-  // --------- renaming of flows -----------------
-
+  //--------------------------------------------------
   renameFlow = async () => {
     // this only handles the clean-up of the old version;
     // the creation of the new version happens in the save button code
@@ -364,21 +373,19 @@ export class settingsTabFunctions {
       // delete its entry in activeRegions
       delete this.plugin.settings.activeRegions[oldFlowName];
 
-      // handle conflictObjects for the flow
+      // handle overlapObjects for the flow
       Object.keys(this.plugin.settings.flows).forEach((otherFlowName) => {
-        if (this.plugin.settings.flows[otherFlowName].conflictObject) {
+        if (this.plugin.settings.flows[otherFlowName].overlapObject) {
           if (
-            this.plugin.settings.flows[otherFlowName].conflictObject[
-              oldFlowName
-            ]
+            this.plugin.settings.flows[otherFlowName].overlapObject[oldFlowName]
           ) {
-            this.plugin.settings.flows[otherFlowName].conflictObject[
+            this.plugin.settings.flows[otherFlowName].overlapObject[
               newFlowName
             ] =
-              this.plugin.settings.flows[otherFlowName].conflictObject[
+              this.plugin.settings.flows[otherFlowName].overlapObject[
                 oldFlowName
               ];
-            delete this.plugin.settings.flows[otherFlowName].conflictObject[
+            delete this.plugin.settings.flows[otherFlowName].overlapObject[
               oldFlowName
             ];
           }
@@ -411,7 +418,7 @@ export class settingsTabFunctions {
     }
   };
 
-  // --- RADIO BUTTON MANAGER -----------------
+  //--------------------------------------------------
   radioButtonManager(
     selectedButton: ButtonComponent,
     unselectedButton1: ButtonComponent,
@@ -421,51 +428,53 @@ export class settingsTabFunctions {
     unselectedButton1.buttonEl.removeClass("settings-radio-button-active");
   }
 
-  // The function that turns the user's criteria into a list of notes aka flowNotesList ---------
-
-  createFlowNoteList = (flowBuildBasket: Types.flowBuildBasket) => {
-    // -------- Putting the flowNotesList together by fetching/filtering all paths
+  //--------------------------------------------------
+  // The function that turns the user's criteria into a sorted and filtered array of paths ---------
+  createSourceNotePathArray = (flowBuildBasket: Types.flowBuildBasket) => {
+    // -------- Putting the flowNotesPathArray together by fetching/filtering all paths
     try {
-      // ----------- FINAL RECIPE FOR BOOKMARKS ---------------------
+      // ----------- BOOKMARK FLOWS ---------------------
       if (flowBuildBasket.definitionMode === "bookmarks") {
         if (
           flowBuildBasket.flowDefinition.bookmarks === undefined ||
           flowBuildBasket.flowDefinition.bookmarks === ""
         ) {
           new Notice(
-            this.plugin.t("createFlowNoteList.notice enter bookmark group"),
+            this.plugin.t(
+              "createSourceNotePathArray.notice enter bookmark group",
+            ),
           );
           flowBuildBasket.success = false;
         } else {
           const bookmarkPathArray =
             this.getBookmarkPathsByGroupName(flowBuildBasket);
-          flowBuildBasket.flowNotesList = bookmarkPathArray;
+          flowBuildBasket.flowNotesPathArray = bookmarkPathArray;
         }
 
-        // ------ FINAL RECIPE FOR PATH TAG PROPERTY -----------------------
+        // ------ PATH/TAG/PROPERTY FLOWS -----------------------
       } else {
         this.ensureNoUndefined(flowBuildBasket);
 
         const foldersTagsPropsPathArray =
           this.getPathsByFoldersTagsProps(flowBuildBasket);
-        flowBuildBasket.flowNotesList = foldersTagsPropsPathArray;
+        flowBuildBasket.flowNotesPathArray = foldersTagsPropsPathArray;
       }
       // ---- Check for empty
-      if (flowBuildBasket.flowNotesList.length === 0) {
+      if (flowBuildBasket.flowNotesPathArray.length === 0) {
         new Notice(
           this.plugin.t(
-            "createFlowNoteList.notice definition leads to empty flow",
+            "createSourceNotePathArray.notice definition leads to empty flow",
           ),
         );
         flowBuildBasket.success = false;
       }
-      // get conflict info
-      flowBuildBasket.conflictObject = this.conflictCollector(flowBuildBasket);
+      // get overlap info
+      flowBuildBasket.overlapObject = this.overlapCollector(flowBuildBasket);
       flowBuildBasket.success = true;
     } catch (error) {
       new Notice(
         this.plugin.t(
-          "createFlowNoteList.notice random error, please check console",
+          "createSourceNotePathArray.notice random error, please check console",
         ),
       );
       flowBuildBasket.success = false;
@@ -473,7 +482,7 @@ export class settingsTabFunctions {
   };
 
   // --- HELPER FUNCTIONS FOR FETCHING PATHS (AND CLEANING UP STUFF)
-  // Also we're using the opportunity to get a clean cookbook (user input) for storage
+  // Also we're using the opportunity to get a clean definition (user input) for storage
 
   // ---- GET PATHS IN BOOKMARK GROUP ----------------
   getBookmarkPathsByGroupName = (flowBuildBasket: Types.flowBuildBasket) => {
@@ -520,10 +529,10 @@ export class settingsTabFunctions {
     // Call to the function we just defined
     const finalGroup = navigateToGroup(bookmarkItems, groupPathArray);
 
-    // -- the following collection triplet was also birthed by Claude --------------------
+    // -- the following collection triplet was birthed by Claude 3.5 Sonnet --------------------
     // as the doula, I shed quite some sweat, though, and maybe even some tears
     //-------------- Reflecting note order -------------------
-    const collectPathsNoteOrder = (
+    const collectBookmarkPathsNoteOrder = (
       items: Types.BookmarkItem[],
       flowBuildBasket: Types.flowBuildBasket,
       topLevelTitle: string, // Add parameter for top level title
@@ -581,7 +590,7 @@ export class settingsTabFunctions {
     };
 
     // ---- Reflecting folder order ----------------------
-    const collectPathsFolderOrder = (
+    const collectBookmarkPathsFolderOrder = (
       items: Types.BookmarkItem[],
       flowBuildBasket: Types.flowBuildBasket,
       topLevelTitle: string,
@@ -591,7 +600,7 @@ export class settingsTabFunctions {
       // First handle top-level files
       const topLevelFiles = items.filter((item) => item.type === "file");
       if (topLevelTitle && flowBuildBasket.folderTitles) {
-        bookmarkedNotePathsArray.push(`#${topLevelTitle}`);
+        bookmarkedNotePathsArray.push(`# ${topLevelTitle}`);
       }
       topLevelFiles.forEach((file) => {
         if (file.type === "file" && file.path) {
@@ -604,7 +613,7 @@ export class settingsTabFunctions {
         if (item.type === "group" && item.items) {
           // Add this group's name and its direct files
           if (flowBuildBasket.folderTitles) {
-            bookmarkedNotePathsArray.push(`#${item.title ?? "Unnamed Group"}`);
+            bookmarkedNotePathsArray.push(`# ${item.title ?? "Unnamed Group"}`);
           }
           // Add direct files
           item.items.forEach((file) => {
@@ -619,7 +628,7 @@ export class settingsTabFunctions {
               if (subItem.type === "group") {
                 if (flowBuildBasket.folderTitles) {
                   bookmarkedNotePathsArray.push(
-                    `#${subItem.title ?? "Unnamed Group"}`,
+                    `# ${subItem.title ?? "Unnamed Group"}`,
                   );
                 }
                 subItem.items?.forEach((file) => {
@@ -635,10 +644,10 @@ export class settingsTabFunctions {
       return bookmarkedNotePathsArray;
     };
 
-    // ------------- Preserving custom order
+    // ------------- Preserving custom order --------------------------------------
     // iterator is needed so it doesn't add the main group's name before every level
     let iterator = 0;
-    const collectPathsManualOrder = (
+    const collectBookmarkPathsManualOrder = (
       items: Types.BookmarkItem[],
       flowBuildBasket: Types.flowBuildBasket,
     ): string[] => {
@@ -658,10 +667,10 @@ export class settingsTabFunctions {
           bookmarkedNotePathsArray.push(item.path);
         } else if (includeSubgroups && item.type === "group" && item.items) {
           if (flowBuildBasket.folderTitles) {
-            bookmarkedNotePathsArray.push(`#${item.title ?? "Unnamed Group"}`);
+            bookmarkedNotePathsArray.push(`# ${item.title ?? "Unnamed Group"}`);
           }
           // Recursively process group contents and add results to our array
-          const subGroupPaths = collectPathsManualOrder(
+          const subGroupPaths = collectBookmarkPathsManualOrder(
             item.items,
             flowBuildBasket,
           );
@@ -672,13 +681,13 @@ export class settingsTabFunctions {
       return bookmarkedNotePathsArray;
     };
 
-    // Call to the functions we just defined
+    // Call to the functions we just defined ---------------------------------
     if (finalGroup?.items) {
       if (
         flowBuildBasket.flowDefinition.bookmarksSortOrder === "noteOrder" ||
         flowBuildBasket.flowDefinition.bookmarksSortOrder === undefined
       ) {
-        bookmarkedNotePathsArray = collectPathsNoteOrder(
+        bookmarkedNotePathsArray = collectBookmarkPathsNoteOrder(
           finalGroup.items,
           flowBuildBasket,
           groupPathArray[groupPathArray.length - 1],
@@ -687,14 +696,14 @@ export class settingsTabFunctions {
       } else if (
         flowBuildBasket.flowDefinition.bookmarksSortOrder === "folderOrder"
       ) {
-        bookmarkedNotePathsArray = collectPathsFolderOrder(
+        bookmarkedNotePathsArray = collectBookmarkPathsFolderOrder(
           finalGroup.items,
           flowBuildBasket,
           groupPathArray[groupPathArray.length - 1],
         );
         return bookmarkedNotePathsArray;
       } else {
-        bookmarkedNotePathsArray = collectPathsManualOrder(
+        bookmarkedNotePathsArray = collectBookmarkPathsManualOrder(
           finalGroup.items,
           flowBuildBasket,
         );
@@ -702,7 +711,9 @@ export class settingsTabFunctions {
       }
     } else {
       new Notice(
-        this.plugin.t("createFlowNoteList.notice bookmark group not found"),
+        this.plugin.t(
+          "createSourceNotePathArray.notice bookmark group not found",
+        ),
       );
       return [];
     }
@@ -731,8 +742,9 @@ export class settingsTabFunctions {
     }
   };
 
-  // --- Function to get the paths -------
-  // Claude helped me figure out the filter logic
+  // --- FUNCTION TO GET THE PATHS -------
+  // Since this whole thing is strictly chronological and all its constituent functions are only ever used in here, I have left it as a behenmoth
+  // also I may be scared to break something again
   getPathsByFoldersTagsProps = (flowBuildBasket: Types.flowBuildBasket) => {
     const dv = getAPI();
     if (!dv) {
@@ -744,13 +756,18 @@ export class settingsTabFunctions {
       return [];
     }
     // unpack into shorthand for easier reading
-    const shCookbook = flowBuildBasket.flowDefinition;
-    // ---- Pre-flight checks and cleanup --------------
+    const shFlowDefinition = flowBuildBasket.flowDefinition;
 
-    //--- INCLUDED FOLDER - only one path; notify if multiple
+    // -------------------------------------------------
+    // ---- PRE FLIGHT CHECKS AND CLEANUP --------------
+    // -------------------------------------------------
+    // !!!!!YES, LEAVE THE CLEANUP!!!!!
+    // I know it's redundant, but if you touch it, it releases an ancient, unbreakable curse.
+
+    //--- INCLUDED FOLDERS ---------------------
     let cleanFolderInclusionArray: string[] = [];
 
-    const folderInclusionArray = shCookbook.folderIncluded.split(",");
+    const folderInclusionArray = shFlowDefinition.folderIncluded.split(",");
     if (folderInclusionArray.length >= 1) {
       const nonEmptyFolderInclusionArray = folderInclusionArray.filter(
         (x) => x.length > 0,
@@ -798,12 +815,10 @@ export class settingsTabFunctions {
     flowBuildBasket.flowDefinition.folderIncluded =
       cleanFolderInclusionArray.join(",");
 
-    // !!!LEAVE THE CLEANUP!!!
-    // I know it's redundant, but if you touch it, it releases a curse that screws up everything.
-    //--- EXCLUDED FOLDERS - clean up paths
+    //--- EXCLUDED FOLDERS -------------------------------------------------
     let cleanFolderExclusionArray: string[] = [];
 
-    const folderExclusionArray = shCookbook.folderExcluded.split(",");
+    const folderExclusionArray = shFlowDefinition.folderExcluded.split(",");
     if (folderExclusionArray.length >= 1) {
       const nonEmptyFolderExclusionArray = folderExclusionArray
         .map((x) => x.trim())
@@ -825,7 +840,7 @@ export class settingsTabFunctions {
       cleanFolderExclusionArray.push(this.plugin.settings.systemFolderPath);
     }
 
-    //--- INCLUDED and EXCLUDED TAGS - strip #
+    //--- INCLUDED and EXCLUDED TAGS - strip # --------------------------------
     const tagCleanup = (tagString: string) => {
       let nonEmptyTagArray: string[] = [];
       const tagArray = tagString.split(",");
@@ -842,15 +857,14 @@ export class settingsTabFunctions {
       return nonEmptyTagArray;
     };
 
-    // use cleanup on tags and save cleaned strings back
-    const cleanTagInclusionArray = tagCleanup(shCookbook.tagsIncluded);
+    const cleanTagInclusionArray = tagCleanup(shFlowDefinition.tagsIncluded);
     flowBuildBasket.flowDefinition.tagsIncluded =
       cleanTagInclusionArray.join(",");
-    const cleanTagExclusionArray = tagCleanup(shCookbook.tagsExcluded);
+    const cleanTagExclusionArray = tagCleanup(shFlowDefinition.tagsExcluded);
     flowBuildBasket.flowDefinition.tagsExcluded =
       cleanTagExclusionArray.join(",");
 
-    //--- INCLUDED and  EXCLUDED PROPERTIES - clean up and split at =
+    //--- INCLUDED and  EXCLUDED PROPERTIES - clean up and split at = -------------------
     const propertyCleanup = (propertyString: string) => {
       let cleanPropertyArray = [];
       const propertyArray = propertyString.split(",");
@@ -875,30 +889,31 @@ export class settingsTabFunctions {
       return cleanPropertyArray;
     };
 
-    // Use cleanup on properties
     let cleanPropertiesInclusionArray = propertyCleanup(
-      shCookbook.propsIncluded,
+      shFlowDefinition.propsIncluded,
     );
-
     let cleanPropertiesExclusionArray = propertyCleanup(
-      shCookbook.propsExcluded,
+      shFlowDefinition.propsExcluded,
     );
-    // add this to keep exports excluded
-    cleanPropertiesExclusionArray.push(["textFlowExport"]);
-
-    // !!!! Do NOT save cleaned up proprties back to the cookbook !!!!!
+    // !!! Do NOT save cleaned up proprties back to the recipe !!!
     // The formatting is not what's expected by the cleanup and it will break.
 
-    // -------- cleanup done ----------------
+    // add this to keep exports excluded (tag currently not being added on export)
+    //  cleanPropertiesExclusionArray.push(["textFlowExport"]);
 
-    // --- FETCH FILE TREE FOR SORTING PURPOSES
-    // unsurprisingly, this is AI, too, and it took hours
+    // -------- cleanup done ---------------------------------------------------
+
+    // ----------------------------------------------------------
+    // --- FUNCTIONS TO MAKE SORTED PATH ARRAYS ---------------------
+    // ----------------------------------------------------------
+    // unsurprisingly, these are AI, too
+
     // some globals for the whole path stuff
-    const fileTreeArray: string[] = [];
+    const sortedFilePathArray: string[] = [];
     const vault = this.app.vault;
 
-    // Build tree following note order
-    const buildNoteOrderFileTree = (folder: TFolder) => {
+    // Make array following note order -----------------------------------
+    const makeNoteOrderPathArray = (folder: TFolder) => {
       // Split and sort folders and files separately
       const folders = folder.children
         .filter((child): child is TFolder => child instanceof TFolder)
@@ -910,17 +925,17 @@ export class settingsTabFunctions {
 
       // then recurse into subfolders, if we don't exclude them
       for (const subfolder of folders) {
-        buildNoteOrderFileTree(subfolder);
+        makeNoteOrderPathArray(subfolder);
       }
 
       // Always process files in current folder
       for (const file of files) {
-        fileTreeArray.push(file.path);
+        sortedFilePathArray.push(file.path);
       }
     };
 
-    // Build file tree following folder order
-    const buildFolderOrderFileTree = (folder: TFolder) => {
+    // Make array following folder order ------------------------------------
+    const makeFolderOrderPathArray = (folder: TFolder) => {
       const children = folder.children.sort((a, b) =>
         a.name.localeCompare(b.name),
       );
@@ -928,26 +943,29 @@ export class settingsTabFunctions {
       // Get notes first
       for (const child of children) {
         if (child instanceof TFile) {
-          fileTreeArray.push(child.path);
+          sortedFilePathArray.push(child.path);
         }
       }
       // then recurse into subfolders, if we don't exclude them
       for (const child of children) {
         if (child instanceof TFolder) {
-          buildFolderOrderFileTree(child);
+          makeFolderOrderPathArray(child);
         }
       }
     };
 
-    // Build the file tree (puts results in fileTreeArray)
+    // Call for the array makers (puts stuff in filePathArray) -------------------------
     this.plugin.settings.flowBuildBasket.flowDefinition
       .pathsTagsPropertiesSortOrder === "noteOrder" ||
     this.plugin.settings.flowBuildBasket.flowDefinition
       .pathsTagsPropertiesSortOrder === undefined
-      ? buildNoteOrderFileTree(vault.getRoot())
-      : buildFolderOrderFileTree(vault.getRoot());
+      ? makeNoteOrderPathArray(vault.getRoot())
+      : makeFolderOrderPathArray(vault.getRoot());
 
-    // ---- CALL DATAVIEW API to fetch all included, then filter
+    // ----------------------------------------------------------
+    // ---- USE DATAVIEW API to get and filter notes
+    // ----------------------------------------------------------
+    // a global to ship stuff between functions
     let finalPathArray: string[] = [];
 
     for (let dvInclusionTuple of flowBuildBasket.dataviewSearchArray) {
@@ -1004,26 +1022,26 @@ export class settingsTabFunctions {
         );
       });
 
-      // pick the paths out of the resulting array
-      const filteredPathArray = Array.from(filteredNotes).map(
-        (note) => (note as Types.DVNote).file.path,
-      );
+      // USE FILTERED LIST TO NARROW DOWN SORTED LIST --------------------------
+      // put the paths into an object to speed up things
       const filteredPathObject: { [key: string]: boolean } = {};
-      for (let path of filteredPathArray) {
-        filteredPathObject[path] = true;
+      for (let note of filteredNotes) {
+        filteredPathObject[(note as Types.DVNote).file.path] = true;
       }
-      // maybe I should semantic version these pathArrays....
-      for (let path of fileTreeArray) {
+      // now filter
+      for (let path of sortedFilePathArray) {
         if (filteredPathObject[path] && !finalPathArray.includes(path)) {
           finalPathArray.push(path);
         }
       }
     }
 
-    // Helper functions for including folder titles
+    // --------------------------------------------------------------------
+    // HELPER FUNCTIONS FOR INCLUDING FOLDER TITLES IN PATH DEFINED FLOWS
+    // --------------------------------------------------------------------
+    // Because I'm sure you could put this step into the original sorting function but at this point implementing that would likely make me lose my will to live, so...
 
-    // Depth first approach
-    const findFolderTitlesNoteOrder = (
+    const findAndAddFolderTitles = (
       finalPathArray: string[],
       flowBuildBasket: Types.flowBuildBasket,
     ) => {
@@ -1038,7 +1056,7 @@ export class settingsTabFunctions {
         // if there is no parent
         if (currentPathSegments.length === 1 && flowBuildBasket.folderTitles) {
           if (lastParentFolder != this.app.vault.getName()) {
-            arrayWithFolderTitles.push(`#${this.app.vault.getName()}`);
+            arrayWithFolderTitles.push(`# ${this.app.vault.getName()}`);
             arrayWithFolderTitles.push(`${currentPath}`);
           }
           lastParentFolder = this.app.vault.getName();
@@ -1049,7 +1067,7 @@ export class settingsTabFunctions {
             currentPathSegments[currentPathSegments.length - 2];
           if (lastParentFolder != currentParentFolder) {
             // if it's a new parent, push it and replace
-            arrayWithFolderTitles.push(`#${currentParentFolder}`);
+            arrayWithFolderTitles.push(`# ${currentParentFolder}`);
             lastParentFolder = currentParentFolder;
           }
         }
@@ -1059,33 +1077,59 @@ export class settingsTabFunctions {
       return arrayWithFolderTitles;
     };
 
-    //-- function call for folder titles
-
-    let pathArrayWithFolderTitles = findFolderTitlesNoteOrder(
+    let pathArrayWithFolderTitles = findAndAddFolderTitles(
       finalPathArray,
       flowBuildBasket,
     );
 
-    // pack the cookbook back into the basket
-    flowBuildBasket.flowDefinition = shCookbook;
+    // pack the definition back into the basket
+    flowBuildBasket.flowDefinition = shFlowDefinition;
 
-    // presto
+    // presto; as a reminder: this is handed back all the way up in createSourceNotePathArray
     return pathArrayWithFolderTitles;
   };
 
-  // ----- Save the stuff we just put together --------------
+  // ------ function that checks if flows overlap ------------
+  // it's also called wayyyy back by createSourceNotePathArray
 
-  writeFlowDef = async (
-    settings: Types.TextFlowSettings,
-    flowBuildBasket: Types.flowBuildBasket,
-  ) => {
-    // handle double slashes
+  overlapCollector = (flowBuildBasket: Types.flowBuildBasket) => {
+    const overlapObject: Types.OverlapObject = {};
+    const key = Object.keys(flowBuildBasket.flowNotesPathArray)[0];
+    if (Object.keys(this.plugin.settings.flows).length >= 1) {
+      flowLoop: for (let referenceFlow in this.plugin.settings.flows) {
+        if (
+          referenceFlow != flowBuildBasket.oldFlowName &&
+          referenceFlow != flowBuildBasket.flowName
+        ) {
+          for (let path of flowBuildBasket.flowNotesPathArray) {
+            if (
+              !path.startsWith("#") &&
+              this.plugin.settings.flows[referenceFlow].flowMap[path]
+            ) {
+              if (!overlapObject[referenceFlow]) {
+                overlapObject[referenceFlow] = {};
+              }
+              overlapObject[referenceFlow][path] = true;
+            }
+          }
+        }
+      }
+    }
+    return overlapObject;
+  };
+
+  // --------------------------------------
+  // WRITE DOWN AND SAVE ALL THE STUFF WE PUT TOGETHER UP THERE
+  // --------------------------------------
+
+  writeAndSaveFlowDef = async (flowBuildBasket: Types.flowBuildBasket) => {
+    // handle double slashes, because those things would survive a nuclear winter
     if (flowBuildBasket.flowDefinition.folderIncluded === "//") {
       flowBuildBasket.flowDefinition.folderIncluded = "/";
     }
 
     // -------- CREATE THE FLOW OBJECT -------------------------------
-    settings.flows[flowBuildBasket.flowName] = {
+    this.plugin.settings.flows[flowBuildBasket.flowName] = {
       flowFilePath: normalizePath(
         `${this.plugin.settings.systemFolderPath}/${flowBuildBasket.flowName}.md`,
       ),
@@ -1095,7 +1139,7 @@ export class settingsTabFunctions {
       isFreshBuild: true,
       flowBuilt: false,
       flaggedForRebuild: true,
-      conflictObject: flowBuildBasket.conflictObject,
+      overlapObject: flowBuildBasket.overlapObject,
       lastActiveLeaves: flowBuildBasket.lastActiveLeaves,
       persistentCursors: flowBuildBasket.persistentCursors,
       unsyncedRegionsArray: [],
@@ -1104,57 +1148,29 @@ export class settingsTabFunctions {
     await this.plugin.saveSettings();
   };
 
-  // ------ function that checks if flows overlap
+  // ----------------- sync overlap info across flows -----------------------
 
-  conflictCollector = (flowBuildBasket: Types.flowBuildBasket) => {
-    const conflictObject: Types.ConflictObject = {};
-    const key = Object.keys(flowBuildBasket.flowNotesList)[0];
-    if (Object.keys(this.plugin.settings.flows).length >= 1) {
-      flowLoop: for (let referenceFlow in this.plugin.settings.flows) {
-        if (
-          referenceFlow != flowBuildBasket.oldFlowName &&
-          referenceFlow != flowBuildBasket.flowName
-        ) {
-          for (let path of flowBuildBasket.flowNotesList) {
-            if (
-              !path.startsWith("#") &&
-              this.plugin.settings.flows[referenceFlow].flowMap[path]
-            ) {
-              if (!conflictObject[referenceFlow]) {
-                conflictObject[referenceFlow] = {};
-              }
-              conflictObject[referenceFlow][path] = true;
-            }
-          }
-        }
-      }
-    }
-    return conflictObject;
-  };
-
-  // ----------------- sync conflicts
-
-  syncConflictObjects = (referenceFlow: Types.flowBuildBasket) => {
+  syncOverlaps = (referenceFlow: Types.flowBuildBasket) => {
     let refFlowName = referenceFlow.flowName;
 
     Object.keys(this.plugin.settings.flows).forEach((syncFlowName) => {
-      // Case 1: Flow is in reference conflicts
-      if (syncFlowName != refFlowName && referenceFlow.conflictObject) {
-        if (!this.plugin.settings.flows[syncFlowName].conflictObject) {
-          this.plugin.settings.flows[syncFlowName].conflictObject = {};
+      // Case 1: Flow is in reference overlaps
+      if (syncFlowName != refFlowName && referenceFlow.overlapObject) {
+        if (!this.plugin.settings.flows[syncFlowName].overlapObject) {
+          this.plugin.settings.flows[syncFlowName].overlapObject = {};
         }
-        this.plugin.settings.flows[syncFlowName].conflictObject[refFlowName] =
-          referenceFlow.conflictObject[syncFlowName];
+        this.plugin.settings.flows[syncFlowName].overlapObject[refFlowName] =
+          referenceFlow.overlapObject[syncFlowName];
       }
-      // Case 2: Syncflow is not in reference conflicts, but reference is in syncFlow's conflicts
+      // Case 2: Syncflow is not in reference overlaps, but reference is in syncFlow's overlaps
       if (
-        !referenceFlow.conflictObject[syncFlowName] &&
-        this.plugin.settings.flows[syncFlowName].conflictObject
+        !referenceFlow.overlapObject[syncFlowName] &&
+        this.plugin.settings.flows[syncFlowName].overlapObject
       ) {
         if (
-          this.plugin.settings.flows[syncFlowName].conflictObject[refFlowName]
+          this.plugin.settings.flows[syncFlowName].overlapObject[refFlowName]
         ) {
-          delete this.plugin.settings.flows[syncFlowName].conflictObject[
+          delete this.plugin.settings.flows[syncFlowName].overlapObject[
             refFlowName
           ];
         }
@@ -1173,15 +1189,15 @@ export class settingsTabFunctions {
     resetFlowBuildBasket.definitionMode = "";
     resetFlowBuildBasket.folderTitles = true;
     resetFlowBuildBasket.flowDefinition = {};
-    resetFlowBuildBasket.flowNotesList = [];
-    resetFlowBuildBasket.conflictObject = {};
+    resetFlowBuildBasket.flowNotesPathArray = [];
+    resetFlowBuildBasket.overlapObject = {};
     resetFlowBuildBasket.lastActiveLeaves = [];
     resetFlowBuildBasket.persistentCursors = {};
   };
 
-  // ------ The function that manages everything surrounding the rebuild of a flow
+  // ------ The function that manages everything surrounding the rebuilding of a flow
 
-  rebuildFlow = async (flowName: string, caller: string) => {
+  flowBuildingBundle = async (flowName: string, caller: string) => {
     this.plugin.isRebuilding = true;
     const flowReBuildBasket: Types.flowBuildBasket = {
       // rebuild specific properties
@@ -1194,16 +1210,16 @@ export class settingsTabFunctions {
       definitionMode: this.plugin.settings.flows[flowName].definitionMode,
       folderTitles: this.plugin.settings.flows[flowName].folderTitles,
       flowDefinition: this.plugin.settings.flows[flowName].flowDefinition,
-      flowNotesList: [],
-      conflictObject: this.plugin.settings.flows[flowName].conflictObject,
+      flowNotesPathArray: [],
+      overlapObject: this.plugin.settings.flows[flowName].overlapObject,
       lastActiveLeaves: this.plugin.settings.flows[flowName].lastActiveLeaves,
       persistentCursors: this.plugin.settings.flows[flowName].persistentCursors,
     };
 
     // do the thing
-    this.createFlowNoteList(flowReBuildBasket);
+    this.createSourceNotePathArray(flowReBuildBasket);
 
-    // exit; error messages are sent by createFlowNoteList
+    // exit; error messages are sent by createSourceNotePathArray
     if (!flowReBuildBasket.success) {
       // clean up and save
       this.resetFlowBuildBasket(flowReBuildBasket);
@@ -1212,10 +1228,10 @@ export class settingsTabFunctions {
     }
 
     // do the other thing
-    await this.writeFlowDef(this.plugin.settings, flowReBuildBasket);
+    await this.writeAndSaveFlowDef(flowReBuildBasket);
 
-    // update conflicts, reset flag, clean up the basket
-    this.syncConflictObjects(flowReBuildBasket); // null unsavedRegions
+    // update overlaps, reset flag, clean up the basket
+    this.syncOverlaps(flowReBuildBasket); // null unsavedRegions
     this.plugin.settings.flows[flowName].flaggedForRebuild = false;
     await this.plugin.saveSettings();
 
@@ -1226,7 +1242,6 @@ export class settingsTabFunctions {
     // the object that keeps track of stuff and shuttles values between the various parts of the function
     let mapValueBasket: Types.mapValueBasket = {
       concatenatedFileContents: "",
-      initialIteration: true,
       basicUUID: "",
       invisibleUUID: "",
       flowOrder: 0,
@@ -1250,17 +1265,16 @@ export class settingsTabFunctions {
     // Call the build function; didn't think we'd get here...
 
     await this.flowBuilder(
-      flowReBuildBasket.flowNotesList,
+      flowReBuildBasket.flowNotesPathArray,
       updatedFlow,
       flowName,
       mapValueBasket,
       caller,
     );
 
-    // null the basket, just to be thorough.
+    // null the value basket, just to be thorough
     mapValueBasket = {
       concatenatedFileContents: "",
-      initialIteration: true,
       basicUUID: "",
       invisibleUUID: "",
       flowOrder: 0,
@@ -1279,10 +1293,10 @@ export class settingsTabFunctions {
     await this.plugin.saveSettings();
   };
 
-  // ------ The function that actually builds the flow --------------------------
+  // ------ The function that actually builds flows --------------------------
 
   flowBuilder = async (
-    recipeArray: string[],
+    flowNotesPathArray: string[],
     flow: Types.FlowDef,
     flowName: string,
     mapValueBasket: Types.mapValueBasket,
@@ -1303,9 +1317,7 @@ export class settingsTabFunctions {
 
     type ProgressVisualizer = ProgressNotice;
 
-    // prepare variable for the progress notice
-    // in case the call came from inside the...
-    // settingsTab
+    // prepare variable for the progress notice in case the call came from inside the... settingsTab
     let progressToast: ProgressVisualizer | null = null;
     if (caller === "settingsTab" || caller === "switcher") {
       progressToast = new ProgressNotice(flowName, this.plugin.t);
@@ -1313,7 +1325,7 @@ export class settingsTabFunctions {
 
     // Get an object started for the rest of cases
     let progressOverlays: { [key: string]: LoadingOverlay } = {};
-    const IDAndEditorObject: { [key: string]: WorkspaceLeaf } = {};
+    const leafIDAndEditorObject: { [key: string]: WorkspaceLeaf } = {};
     if (this.plugin.settings.activeRegions[flowName]) {
       Object.keys(this.plugin.settings.activeRegions[flowName]).forEach(
         async (leafID) => {
@@ -1322,7 +1334,7 @@ export class settingsTabFunctions {
             // make sure the leaf has ben properly initialised
             await leaf.loadIfDeferred();
 
-            IDAndEditorObject[leafID] = leaf;
+            leafIDAndEditorObject[leafID] = leaf;
             progressOverlays[leafID] = new LoadingOverlay(
               leaf,
               flowName,
@@ -1338,7 +1350,6 @@ export class settingsTabFunctions {
     // the part that persists flow frontmatter
     // fetch frontmatter if there is any
     let flowFilePath = this.plugin.settings.flows[flowName].flowFilePath;
-    // get the file to extract its frontmatter
     const flowFile = this.app.vault.getAbstractFileByPath(flowFilePath);
     if (flowFile instanceof TFile) {
       const cache = this.app.metadataCache.getFileCache(flowFile);
@@ -1349,15 +1360,15 @@ export class settingsTabFunctions {
           0,
           frontmatterPosition.end.offset + 1,
         );
-        // put it in the basket
+        // put it in the basket with a line break
         mapValueBasket.concatenatedFileContents = frontmatter + "\n";
       }
     }
 
-    // Info exange with the progress bar
+    // Info exange with the progress bar for toast and overlay
     let counter = 0;
-    const total = recipeArray.length;
-    for (let ingredient of recipeArray) {
+    const total = flowNotesPathArray.length;
+    for (let path of flowNotesPathArray) {
       // create update the progress bar
       counter++;
       if (caller === "settingsTab") {
@@ -1397,49 +1408,42 @@ export class settingsTabFunctions {
       }
 
       // --- The actual handling of content ----------
-      // If the ingredient (array entry) is a title
-      if (ingredient.startsWith("#")) {
+      // If the ingredient (array entry) is a folder/group title
+      if (path.startsWith("#")) {
         mapValueBasket.flowOrder++;
         this.createInvisibleUID(mapValueBasket);
         // make the proper divider
-        const divider = `\r${mapValueBasket.invisibleUUID}<hr>\r\r`;
+        mapValueBasket.idDivider = `\r${mapValueBasket.invisibleUUID}<hr>\r\r`;
 
-        // unencoded divider for debugging purposes (there's also debugUID())
-        // const divider = `\r${mapValueBasket.identifier}<hr>\r\r`;
-        mapValueBasket.idDivider = divider.replace(/\\r/g, "\r");
+        // visible divider for debugging purposes (there's also debugUID())
+        // mapValueBasket.idDivider = `\r${mapValueBasket.identifier}<hr>\r\r`;
 
-        // stripping # so Outline will look as expected
-        const ingredientName = ingredient.replace("#", "# ");
-
-        // The object that holds the info about the folder/group
-        flow.flowMap[ingredient] = {
+        flow.flowMap[path] = {
           type: "folder",
-          path: ingredient,
+          path: path,
           basicUUID: mapValueBasket.basicUUID,
           invisibleUUID: mapValueBasket.invisibleUUID,
           flowOrder: mapValueBasket.flowOrder,
         } as Types.SourceFileObject;
-        mapValueBasket.initialIteration = false;
 
         // Add content with marker before divider
-        mapValueBasket.concatenatedFileContents += `${ingredientName}${mapValueBasket.idDivider}`;
+        mapValueBasket.concatenatedFileContents += `${path}${mapValueBasket.idDivider}`;
       }
       // if the ingredient is a path
       else {
         mapValueBasket.flowOrder++;
         this.createInvisibleUID(mapValueBasket);
+        mapValueBasket.idDivider = `\r${mapValueBasket.invisibleUUID}<hr>\r\r`;
 
         // unencoded divider for debugging purposes (there's also debugUID())
-        // const divider = `\r${mapValueBasket.identifier}<hr>\r\r`;
-        const divider = `\r${mapValueBasket.invisibleUUID}<hr>\r\r`;
-        mapValueBasket.idDivider = divider.replace(/\\r/g, "\r");
+        // mapValueBasket.idDivider = `\r${mapValueBasket.identifier}<hr>\r\r`;
 
         // get the note
-        const note = this.app.vault.getAbstractFileByPath(ingredient);
+        const note = this.app.vault.getAbstractFileByPath(path);
         if (!note) {
           new Notice(
-            this.plugin.t("flowBuilder.notice ingredient not found", {
-              ingredient: ingredient,
+            this.plugin.t("flowBuilder.notice path not found", {
+              path: path,
             }),
           );
           return;
@@ -1449,14 +1453,11 @@ export class settingsTabFunctions {
         if (note instanceof TFile) {
           let fileContent: string = await this.app.vault.read(note);
 
-          // make a hash if we don't have one yet
-          if (
-            this.plugin.settings.checkExternalEdits === "mtime+hash" ||
-            this.plugin.settings.checkExternalEdits === "always hash"
-          ) {
-            if (!this.plugin.settings.hashes[ingredient]) {
+          // make a hash if we don't have one yet but need it
+          if (this.plugin.settings.checkExternalEdits != "no") {
+            if (!this.plugin.settings.hashes[path]) {
               const hash = this.plugin.makeHash(fileContent);
-              this.plugin.settings.hashes[ingredient] = hash;
+              this.plugin.settings.hashes[path] = hash;
             }
           }
 
@@ -1466,15 +1467,7 @@ export class settingsTabFunctions {
             /[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46}/;
 
           if ((match = regex.exec(fileContent) !== null)) {
-            new Notice(
-              this.plugin.t("flowBUilder.notice UUID found in source note", {
-                ingredient: ingredient,
-                flowName: flowName,
-              }),
-              0,
-            );
-
-            // remove the progress stuff
+            // remove any progress stuff so the user isn't stuck with the overlay/has to click away the toast
             if (caller === "settingsTab" || caller === "switcher") {
               if (progressToast) {
                 progressToast.close();
@@ -1485,6 +1478,17 @@ export class settingsTabFunctions {
                 progressOverlays[leafID].remove();
               });
             }
+
+            // tell the user
+            new Notice(
+              this.plugin.t("flowBUilder.notice UUID found in source note", {
+                path: path,
+                flowName: flowName,
+              }),
+              0,
+            );
+
+            // then stop
             return;
           }
 
@@ -1493,29 +1497,18 @@ export class settingsTabFunctions {
             .replace(/^---\n[\s\S]*?\n---\n*/, "")
             .trim();
 
-          // get mtime regardless of user settings
+          // get mtime regardless of user settings because we gotta put something in the object
           const mtime = note.stat.mtime;
 
           // put all info in the note object
-          flow.flowMap[ingredient] = {
+          flow.flowMap[path] = {
             type: "file",
             mtime: mtime,
-            path: ingredient,
+            path: path,
             basicUUID: mapValueBasket.basicUUID,
             invisibleUUID: mapValueBasket.invisibleUUID,
             flowOrder: mapValueBasket.flowOrder,
-            startEndInFlow: {
-              start: mapValueBasket.initialIteration
-                ? 0
-                : mapValueBasket.concatenatedFileContents.length,
-              end:
-                mapValueBasket.concatenatedFileContents.length +
-                fileContent.length +
-                mapValueBasket.idDivider.length,
-            },
           } as Types.SourceFileObject;
-
-          mapValueBasket.initialIteration = false;
 
           // Add content with marker before divider
           mapValueBasket.concatenatedFileContents += `${mapValueBasket.singleFileContent}${mapValueBasket.idDivider}`;
@@ -1539,7 +1532,7 @@ export class settingsTabFunctions {
       if (progressToast) {
         progressToast.close();
       }
-      // and finally, scroll and remove progress overlay
+      // also, scroll and remove progress overlay
       Object.keys(progressOverlays).forEach((leafID) => {
         Object.keys(this.plugin.settings.activeRegions).forEach((flowName) => {
           if (this.plugin.settings.activeRegions[flowName][leafID]) {
@@ -1557,7 +1550,7 @@ export class settingsTabFunctions {
                 return;
               } else {
                 // if we do, we first scroll there
-                const leaf = IDAndEditorObject[leafID];
+                const leaf = leafIDAndEditorObject[leafID];
                 if (!leaf || !(leaf.view instanceof MarkdownView)) {
                   progressOverlays[leafID].remove();
                   return;
@@ -1570,6 +1563,7 @@ export class settingsTabFunctions {
                     leafID,
                   );
                 }
+                // remove the operlay
                 progressOverlays[leafID].remove();
               }
             }
@@ -1581,29 +1575,34 @@ export class settingsTabFunctions {
     }
   };
 
-  // ---- Like it says....
+  // ---- Like it says.... --------------------------
   createInvisibleUID = (mapValueBasket: Types.mapValueBasket) => {
     const invisibleChars = [
-      "\u200B", // Zero-width space 0
-      "\u200C", // Zero-width non-joiner 1
-      "\u200D", // Zero-width joiner 2
-      "\u2060", // Word joiner 3
-      "\u2061", // Function application 4
-      "\u2062", // Invisible times 5
-      "\u2063", // Invisible separator 6
-      "\u2064", // Invisible plus 7
-      "\uFEFF", // Zero-width no-break space 8
-      "\u00A0", // No-Break Space 9
+      "\u00A0", // No-Break Space 0
+      "\u200B", // Zero-width space 1
+      "\u200C", // Zero-width non-joiner 2
+      "\u200D", // Zero-width joiner 3
+      "\u2060", // Word joiner 4
+      "\u2061", // Function application 5
+      "\u2062", // Invisible times 6
+      "\u2063", // Invisible separator 7
+      "\u2064", // Invisible plus 8
+      "\uFEFF", // Zero-width no-break space 9
     ];
+
+    // for debugging
+    /*
+    const invisibleChars = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+    */
 
     // get the initial UUID
     let UUID = crypto.randomUUID();
 
-    // turn it into base9 piecemeal (to avoid bigint), then join and pad
+    // turn it into base9 piecemeal (to avoid bigint), then join and pad so the rexEx always fits
     const base9Transform = (identifier: string) => {
       const initialIdentifierArray = identifier.split("-");
       const base9IdentifierArray: string[] = [];
-
+      // this transformer is all AI
       for (let hexNumber of initialIdentifierArray) {
         const numberIdentifier = parseInt(hexNumber, 16);
         const base9 = numberIdentifier.toString(9);
@@ -1629,43 +1628,7 @@ export class settingsTabFunctions {
     mapValueBasket.invisibleUUID = paddedBase9Identifier;
   };
 
-  // for debugging
-  debugUID = (uid: string) => {
-    console.log({
-      originalNumber: uid.match(/【(\d+)】/)?.[1],
-      invisiblePart: uid.match(/⟦([\u200B\u200C\u200D]+)⟧/)?.[1],
-      invisiblePartLength: uid.match(/⟦([\u200B\u200C\u200D]+)⟧/)?.[1]?.length,
-      chars: Array.from(uid.match(/⟦([\u200B\u200C\u200D]+)⟧/)?.[1] || "").map(
-        (char) => ({
-          char,
-          code: char.charCodeAt(0).toString(10),
-          type:
-            char === "\u00A0"
-              ? "NBSP"
-              : char === "\u200B"
-                ? "ZWSP"
-                : char === "\u200C"
-                  ? "ZWNJ"
-                  : char === "\u200D"
-                    ? "ZWJ"
-                    : char === "\u2060"
-                      ? "WJ"
-                      : char === "\u2061"
-                        ? "FA"
-                        : char === "\u2062"
-                          ? "*"
-                          : char === "\u2063"
-                            ? "IS"
-                            : char === "\u2064"
-                              ? "+"
-                              : char === "\uFEFF"
-                                ? "NBZWS"
-                                : "unknown",
-        }),
-      ),
-    });
-  };
-
+  // puts copy of all flow defs in a .json into textFlowSystemFolder in the user's vault
   backupFlowDefs = async () => {
     let datedFlows: { [key: string]: Types.FlowDef } = {};
 
@@ -1677,7 +1640,7 @@ export class settingsTabFunctions {
       );
       datedFlows[backupName].flowBuilt = false;
       datedFlows[backupName].flaggedForRebuild = true;
-      datedFlows[backupName].conflictObject = {};
+      datedFlows[backupName].overlapObject = {};
       datedFlows[backupName].lastActiveLeaves = [];
       datedFlows[backupName].persistentCursors = {};
       datedFlows[backupName].unsyncedRegionsArray = [];
@@ -1709,8 +1672,26 @@ export class settingsTabFunctions {
     );
   };
 
-  // -----------------
-  // settingsTabFunctions
+  // </settingsTabFunctions>
+  // ---------------------------------------------------------------
+
+  //--------------------------------------------------
+  // a robot told me these two would help to keep the scope clean with regards to type
+  getLeafID = (leaf: WorkspaceLeaf): Types.LeafID => {
+    return (leaf as any).id as Types.LeafID;
+  };
+
+  getEditorView = (editor: Editor): EditorView | null => {
+    const cm = (editor as Types.EditorWithCM).cm;
+    return cm instanceof EditorView ? cm : null;
+  };
+
+  // For debugging ------------------------------------------
+  callStack = (recipient: string) => {
+    const stack = new Error().stack;
+    if (!stack) return;
+    console.log(recipient, stack, Date.now());
+  };
 
   // -------- Restore cursorPos for known and unknown leafIDs
   restoreCursorPos = (flowName: string, view: MarkdownView, leafID: string) => {
@@ -1771,7 +1752,7 @@ export class settingsTabFunctions {
     }
   };
 
-  // this function was written by Claude 3.5 Sonnet
+  // this function was written by Claude 3.5 Sonnet ---------------------------
   scrollToPos = (
     editor: Types.ObsidianEditor,
     cursorPos: number,
@@ -1814,14 +1795,16 @@ export class settingsTabFunctions {
     }
   };
 
+  // ---------------------------------------------
   safeCreateOrModifyFile = async (path: string, newContent: string) => {
     try {
       // this.callStack("safeCreateFile");
       const existingFile = this.app.vault.getAbstractFileByPath(path);
-      this.plugin.textFlowOperation = true;
 
       if (existingFile instanceof TFile) {
-        // check if the file is open
+        // suspend write protection so editor content can be replaced if we need that
+        this.plugin.textFlowOperation = true;
+        // check if the file is open so we can explicitly replace the editor content with our new flow; this avoids problems with the content not updating, resulting in tracking errors
         const leaves = this.app.workspace.getLeavesOfType("markdown");
         for (const leaf of leaves) {
           await leaf.loadIfDeferred();
@@ -1831,25 +1814,33 @@ export class settingsTabFunctions {
           ) {
             const editor = leaf.view.editor as Types.ObsidianEditor;
             editor.setValue(newContent);
+            // remove flag
+            this.plugin.textFlowOperation = false;
+            // we only need to catch one instance b/c replacing content in one editor replaces content in all editors holding that file
             return;
           }
         }
         // if the file exists but is not open, we get to here
         await this.app.vault.process(existingFile, (content) => {
+          // remove flag
+          this.plugin.textFlowOperation = false;
           return newContent;
         });
       } else {
-        this.plugin.textFlowOperation = true;
         await this.app.vault.create(path, newContent);
+        // remove flag
         this.plugin.textFlowOperation = false;
       }
     } catch (error) {
+      // remove flag
+      this.plugin.textFlowOperation = false;
       console.error(`Failed to create/modify file at ${path}:`, error);
       throw error;
     }
   };
-  // export active flow
 
+  // -------------------------------------------------
+  // removes UUIDs and puts it in a new file in root with time stamped title
   exportFlow = async (flowName: string) => {
     const path = this.plugin.settings.flows[flowName].flowFilePath;
     const file = this.app.vault.getAbstractFileByPath(path);
@@ -1880,6 +1871,7 @@ export class settingsTabFunctions {
     }
   };
 
+  // ----------------------------------------
   selectActiveRegion = (
     flowName: string,
     path: string,
@@ -1921,24 +1913,7 @@ export class settingsTabFunctions {
     }
   };
 
-  //---------------------
-  // robot told me these would help to keep the scope clean with regards to type
-  getLeafId = (leaf: WorkspaceLeaf): Types.LeafId => {
-    return (leaf as any).id as Types.LeafId;
-  };
-
-  getEditorView = (editor: Editor): EditorView | null => {
-    const cm = (editor as Types.EditorWithCM).cm;
-    return cm instanceof EditorView ? cm : null;
-  };
-
-  callStack = (recipient: string) => {
-    const stack = new Error().stack;
-    if (!stack) return;
-    console.log(recipient, stack, Date.now());
-  };
-
-  //-----------
+  //--------------------------------------------------
   updateScrollbarVisibility = async () => {
     // Handle all leaves
     // add hider if all are hidden
@@ -1978,6 +1953,7 @@ export class settingsTabFunctions {
     }
   };
 
+  //--------------------------------------------------
   // this was written by Claude 3.5 Sonnet
   getTimestamp = (timestamp?: number): string => {
     const date = new Date(timestamp || Date.now());
@@ -1991,7 +1967,8 @@ export class settingsTabFunctions {
     return `${year}-${month}-${day}_${hours}-${minutes}`;
   };
 
-  // The arrays with the deco stuff, which I made, by hand. I like pain sometimes.
+  //--------------------------------------------------
+  // The arrays with the deco stuff, which I made, one by one, by hand. Because I like pain sometimes.
   explorerDecoArray: Types.DecorationEntry[] = [
     ["--", "", "large-high-contrast-neutral", "large-high-contrast-unsynced"],
 
