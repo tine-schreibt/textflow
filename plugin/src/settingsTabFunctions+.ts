@@ -1598,7 +1598,7 @@ export class settingsTabFunctions {
     // get the initial UUID
     let UUID = crypto.randomUUID();
 
-    // turn it into base9 piecemeal (to avoid bigint), then join and pad so the rexEx always fits
+    // turn it into base9 piecemeal (to avoid bigint), then join and pad so the regEx is easier and faster
     const base9Transform = (identifier: string) => {
       const initialIdentifierArray = identifier.split("-");
       const base9IdentifierArray: string[] = [];
@@ -1614,7 +1614,7 @@ export class settingsTabFunctions {
       const finalIdentifier = base9IdentifierArray.join("");
       const paddedTransformedIdentifier = finalIdentifier.padStart(
         46,
-        invisibleChars[0],
+        invisibleChars[1],
       );
 
       return paddedTransformedIdentifier;
@@ -1800,10 +1800,9 @@ export class settingsTabFunctions {
     try {
       // this.callStack("safeCreateFile");
       const existingFile = this.app.vault.getAbstractFileByPath(path);
-
+      // suspend write protection and the create listener
+      this.plugin.textFlowOperation = true;
       if (existingFile instanceof TFile) {
-        // suspend write protection so editor content can be replaced if we need that
-        this.plugin.textFlowOperation = true;
         // check if the file is open so we can explicitly replace the editor content with our new flow; this avoids problems with the content not updating, resulting in tracking errors
         const leaves = this.app.workspace.getLeavesOfType("markdown");
         for (const leaf of leaves) {

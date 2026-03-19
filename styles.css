@@ -210,15 +210,14 @@ button.setting-tab-button-spacing {
   top: 100%;
   left: 0;
   width: var(--size-4-18);
-  max-height: 2var (--size-4-10); /* Set maximum height */
+  max-height: 240px; /* Set maximum height */
   overflow-y: auto; /* Enable vertical scrolling */
   align-items: center; /* Add this */
   background: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
   border-radius: var(--size-2-2);
   margin-top: var(--size-2-2);
-
-  box-shadow: var(--shadow-s);
+  box-shadow: var(--shadow);
 }
 
 .explorer-deco-dropdown-container.show {
