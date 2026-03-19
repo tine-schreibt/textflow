@@ -13,10 +13,10 @@ editieren wollen.
 
 Die UI hat Optionen sowohl für Tastatur-, als auch für Maus-Navigation.
 
-Bitte beachte, dass textFlow nach bestem Wissen durchgetestet, aber trotzdem
-**noch in der Beta-Phase ist**. Deshalb sind sicher noch nicht alle Eigenheiten
-und Reibungspunkte bekannt/gefixt/mit Workaround versehen. Falls du etwas
-aufstöberst, das dieses Readme nicht erwähnt,
+Bitte beachte, dass textFlow nach bestem Wissen und Gewissen durchgetestet, aber
+trotzdem **noch in der Beta-Phase ist**. Deshalb sind sicher noch nicht alle
+Eigenheiten und Reibungspunkte bekannt/gefixt/mit Workaround versehen. Falls du
+etwas aufstöberst, das dieses Readme nicht erwähnt,
 [lass es mich wissen](#12-melde-einen-bug--zeig-deine-liebe).
 
 Bitte ziehe außerdem in Erwägung, Obsidians Datenwiederherstellungs-Plugin,
@@ -606,7 +606,7 @@ findest, [sag bescheid](#12-melde-einen-bug--zeig-deine-liebe).
 
 **Inhaltsverzeichnis**
 
-1. [Flow-Erzeugung](#flow-erzeugung)
+1. [Flow Erzeugung](#flow-erzeugung)
 2. [Flow-Switcher](#flow-switcher)
 3. [Menüleiste](#menüleiste)
 4. [Flow / Leaf](#flow--leaf)
@@ -679,10 +679,16 @@ findest, [sag bescheid](#12-melde-einen-bug--zeig-deine-liebe).
 
 - **Problem:** textFlows Menüleiste verdeckt die Editing Toolbar von
   Cuman/verdeckt die Sucheingabe/wird von der Sucheingabe verdeckt.
+  - **Erklärung:**
+    - Es ist einfach schwierig bis unmöglich, Elemente, die sehr nahe bei
+      einander angebracht sind, zur friedlichen Koexistenz zu bewegen.
   - **Lösung:**
     - min/max die Menüleiste.
+    - Falls sie nicht sichtbar ist, benutze den Befehl: `strg/cmd + p` und dann
+      'Menüleiste' eingeben. Du kannst den Befehl auch mit einer
+      Tastenkombination verknüpfen (in Obsidians Einstellungen).
 
-- **Problem:** Die textFlow Menüleiste wird von einer anderen Menüleiste
+- **Problem:** Die textFlow Menüleiste wird immer von einer anderen Menüleiste
   verdeckt
   - **Lösung:**
     - Lass dir die anderen Menüleisten an einer anderen Position anzeigen oder

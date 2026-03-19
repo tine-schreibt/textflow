@@ -1,11 +1,5 @@
 ### TL;DR
 
-textFlow lets you create **flows** - dynamic documents built from the contents
-of multiple notes (think 'Scrivenings'). Flows can be defined from bookmark
-groups or from paths, tags and properties and edited like any other note. All
-changes to flows and their sources are registered automatically and synced both
-ways.
-
 textFlow is intended mainly for long form writers, but can be used by anyone who
 wants to see and/or work on multiple notes in context.
 
@@ -54,7 +48,7 @@ smoothly?**
 1. **'Smart' flows:** Define flows from bookmark groups or by using folders,
    tags and [properties](#How-to-properties) as in/exclusion criteria. textFlow
    will copy those notes into a new note (a flow) and mark each one with
-   invisible UUIDs, so it can keep track of them.
+   [invisible UUIDs](#what-are-invisible-uuids), so it can keep track of them.
    - **Convenient:**
      - Flows that are defined from a path will be automatically checked and
        flagged/rebuilt whenever you move, add, or delete a note (or folder) in
@@ -627,23 +621,23 @@ If that didn't help and you also can't find your problem on this list,
     - Close the flow and rebuild it. If the rebuild button is greyed out, do it
       through the settings tab.
 
-- **Problem:** textFlow's menu bar covers up Editing Toolbar by Cuman
+- **Problem:** textFlow's menu bar covers up Editing Toolbar by Cuman/covers the
+  search input/is covered by the search input.
+  - **Explanation:**
+    - It's simply difficult to impossible to make elements which are attached
+      close to each other to coexist peacefully.
   - **Solution:**
     - min/max the menu bar, it will make Editing Toolbar show up again.
+    - If the menu bar isn't visible, use the command: `crtl/cmd + p`, then enter
+      'menu bar'. You can also bind the command to a keyboard shortcut (in
+      Obsidian's settings).
 
-- **Problem:** textFlow's menu bar is being covered by another toolbar.
-  - **Solution:**
-    - Have the other toolbar be displayed in a different place or hide it
-      completely.
-
-- **Problem:** You input `ctrl/cmd+f` and now the menu bar is gone.
-  - **Solution:**
-    - Sometimes search and menu bar get in each other's way and the search input
-      covers up the menu bar.
-    - Close the search input and the menu bar will show up again.
+- **Problem:** textFlow's menu bar is always being covered by another toolbar.
+- **Solution:** - Have the other toolbar be displayed in a different place or
+  hide it completely.
 
 - **Problem**: I clicked out of Obsidian while the navigation menu was expanded,
-  and now it won't close when I click outside of it
+  and now it won't close when I click outside of it.
   - **Solution:** Yeah... Click an entry in the menu, that will get it back on
     track.
 
@@ -679,6 +673,22 @@ If that didn't help and you also can't find your problem on this list,
       without any restrictions.
 
 #### Weird problems
+
+- **Problem:** You did a find/replace for an invisible character in your
+  mathematical paper and now textFlow can't find some of the invisible UUIDs for
+  that note.
+  - **Solution:** Rebuild your flow.
+    - These are the invisible characters textFlow uses to make its UUIDs:
+      - \u00A0 - No-Break Space
+      - \u200B - Zero-width space
+      - \u200C - Zero-width non-joiner
+      - \u200D - Zero-width joiner
+      - \u2060 - Word joiner
+      - \u2061 - Function application
+      - \u2062 - Invisible times
+      - \u2063 - Invisible separator
+      - \u2064 - Invisible plus
+      - \uFEFF - Zero-width no-break space
 
 - **Problem:** You input `ctrl/cmd+f` and but the search input doesn't show up.
   - **Solution:**

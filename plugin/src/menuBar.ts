@@ -457,13 +457,11 @@ export class MenuBar {
 
         .onClick(async () => {
           if (goSync === "neutral" || goSync === "must") {
-            this.plugin.textFlowOperation = true;
             await this.plugin.syncBackToSource(
               this.flowName,
               this.associatedView.editor.getValue(),
               this.leafID,
             );
-            this.plugin.textFlowOperation = false;
             await this.plugin.saveSettings();
             this.refresh(this.associatedView.contentEl);
           } else {

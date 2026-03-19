@@ -216,10 +216,12 @@ export class settingsTabFunctions {
         // add a little readme with info on how to not fuck up the folder
         const readmePath = normalizePath(`${newSystemFolderPath}/README.md`);
         const content = this.plugin.t("readme");
+        this.plugin.textFlowOperation = true;
         await this.plugin.settingsTabFunctions.safeCreateOrModifyFile(
           readmePath,
           content,
         );
+        this.plugin.textFlowOperation = false;
 
         // inform the user of success
         new Notice(
@@ -1523,10 +1525,12 @@ export class settingsTabFunctions {
       );
 
       // this also takes care of flags for write protection and listeners
+      this.plugin.textFlowOperation = true;
       await this.plugin.settingsTabFunctions.safeCreateOrModifyFile(
         flowFilePath,
         mapValueBasket.concatenatedFileContents,
       );
+      this.plugin.textFlowOperation = false;
 
       // remove the progress toast if it exists
       if (progressToast) {
@@ -1799,9 +1803,9 @@ export class settingsTabFunctions {
   safeCreateOrModifyFile = async (path: string, newContent: string) => {
     try {
       // this.callStack("safeCreateFile");
+
       const existingFile = this.app.vault.getAbstractFileByPath(path);
       // suspend write protection and the create listener
-      this.plugin.textFlowOperation = true;
       if (existingFile instanceof TFile) {
         // check if the file is open so we can explicitly replace the editor content with our new flow; this avoids problems with the content not updating, resulting in tracking errors
         const leaves = this.app.workspace.getLeavesOfType("markdown");
@@ -1813,26 +1817,18 @@ export class settingsTabFunctions {
           ) {
             const editor = leaf.view.editor as Types.ObsidianEditor;
             editor.setValue(newContent);
-            // remove flag
-            this.plugin.textFlowOperation = false;
             // we only need to catch one instance b/c replacing content in one editor replaces content in all editors holding that file
             return;
           }
         }
         // if the file exists but is not open, we get to here
         await this.app.vault.process(existingFile, (content) => {
-          // remove flag
-          this.plugin.textFlowOperation = false;
           return newContent;
         });
       } else {
         await this.app.vault.create(path, newContent);
-        // remove flag
-        this.plugin.textFlowOperation = false;
       }
     } catch (error) {
-      // remove flag
-      this.plugin.textFlowOperation = false;
       console.error(`Failed to create/modify file at ${path}:`, error);
       throw error;
     }
@@ -1861,7 +1857,9 @@ export class settingsTabFunctions {
       const exportedFlowPath = normalizePath(
         `${flowName}_export_${this.getTimestamp()}.md`,
       );
+      this.plugin.textFlowOperation = true;
       await this.safeCreateOrModifyFile(exportedFlowPath, contentWithYaml);
+      this.plugin.textFlowOperation = false;
       new Notice(
         this.plugin.t("menubar.selectButton.notice successful export", {
           exportedFlowPath: exportedFlowPath,

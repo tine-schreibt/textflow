@@ -1150,6 +1150,8 @@ ${pseudoElement}
                       !this.settings.flows[flowName].flaggedForRebuild &&
                       this.settings.flows[flowName].flowMap[normalisedPath]
                     ) {
+                      console.log("file-menu flagging for rebuild");
+
                       this.settings.flows[flowName].flaggedForRebuild = true;
                       await this.saveSettings();
                     }
@@ -1353,6 +1355,8 @@ ${pseudoElement}
               !this.settings.flows[flowName].flaggedForRebuild &&
               this.settings.flows[flowName].flowMap[file.path]
             ) {
+              console.log("modify flagging for rebuild");
+
               this.settings.flows[flowName].flaggedForRebuild = true;
               await this.saveSettings();
             }
@@ -1456,6 +1460,7 @@ ${pseudoElement}
               file instanceof TFile &&
               this.settings.flows[flowName].flowMap[oldPath]
             ) {
+              console.log("rename listener flagging for rebuild");
               this.settings.flows[flowName].flaggedForRebuild = true;
               // await this.saveSettings();
               continue;
@@ -1683,6 +1688,8 @@ ${pseudoElement}
     this.registerEvent(
       this.app.workspace.on("active-leaf-change", async (leaf) => {
         // so we skip if the explorerClickListener is already taking care of stuff
+        await this.syncAllLeaves();
+
         if (this.explorerClickListenerActive) {
           return;
         }
@@ -1692,6 +1699,8 @@ ${pseudoElement}
 
     this.registerEvent(
       this.app.workspace.on("layout-change", async () => {
+        await this.syncAllLeaves();
+
         this.leafSwitching();
       }),
     );
@@ -2650,7 +2659,6 @@ ${pseudoElement}
   // handles the opening, closing and switching of leaves
   // is called by layout-change and active-leaf-change
   leafSwitching = async () => {
-    await this.syncAllLeaves();
     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (!view) return;
     if (!view.file) return;
@@ -3042,8 +3050,6 @@ ${pseudoElement}
       }
     }
     // Perform syncs
-    this.textFlowOperation = true; // suspends modify listener
-
     for (let flowName of Object.keys(flowLeaves)) {
       // before we get to actually modifying, let's flag other flows
       for (let otherFlowName of Object.keys(this.settings.flows)) {
@@ -3061,10 +3067,12 @@ ${pseudoElement}
       for (let view of flowLeaves[flowName]) {
         const text = view.editor.getValue();
         const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
+
+        this.textFlowOperation = true; // suspends modify listener
         await this.syncBackToSource(flowName, text, leafID);
+        this.textFlowOperation = false; // unsuspends modify listener
       }
     }
-    this.textFlowOperation = false; // unsuspends modify listener
   };
 
   // ---------------------------------------------------------------
