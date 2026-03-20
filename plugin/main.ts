@@ -836,10 +836,14 @@ export default class TextFlowPlugin extends Plugin {
           if (this.settings.activeRegionHighlight === "olAccent") {
             activeColour = `var(--color-accent)`;
             opacity = "1";
-          } else if (this.settings.activeRegionHighlight === "olText") {
+          }
+          if (this.settings.activeRegionHighlight === "olText") {
             activeColour = `var(--nav-item-color)`;
-            opacity =
-              this.settings.activeRegionHighlight === "olText" ? `0.5` : `0.2`;
+            opacity = `0.5`;
+          }
+          if (this.settings.activeRegionHighlight === "olMuted") {
+            activeColour = `var(--nav-item-color)`;
+            opacity = `0.2`;
           } else if (this.settings.activeRegionHighlight === "arrow") {
             opacity = "0";
           }
@@ -1150,8 +1154,6 @@ ${pseudoElement}
                       !this.settings.flows[flowName].flaggedForRebuild &&
                       this.settings.flows[flowName].flowMap[normalisedPath]
                     ) {
-                      console.log("file-menu flagging for rebuild");
-
                       this.settings.flows[flowName].flaggedForRebuild = true;
                       await this.saveSettings();
                     }
@@ -1355,8 +1357,6 @@ ${pseudoElement}
               !this.settings.flows[flowName].flaggedForRebuild &&
               this.settings.flows[flowName].flowMap[file.path]
             ) {
-              console.log("modify flagging for rebuild");
-
               this.settings.flows[flowName].flaggedForRebuild = true;
               await this.saveSettings();
             }
@@ -1460,7 +1460,6 @@ ${pseudoElement}
               file instanceof TFile &&
               this.settings.flows[flowName].flowMap[oldPath]
             ) {
-              console.log("rename listener flagging for rebuild");
               this.settings.flows[flowName].flaggedForRebuild = true;
               // await this.saveSettings();
               continue;

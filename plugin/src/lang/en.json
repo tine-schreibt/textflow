@@ -33,7 +33,7 @@
 
   "---------- BACKUP MODAL": "Modal, which allows the user to restore flows from backups ----------",
   "backup.headline": "Your backups",
-  "backup.explanation empty": "You don't have any backups. Create a backup via the button.",
+  "backup.explanation empty": "You don't have any backups. Create a backup with the button.",
   "backup.explanation select": "Click once to select, click a second time to deselect.",
   "backup.restoreButton.setButtonText replace": "Replace existing definition",
   "backup.restoreButton.setButtonText restore": "Save as new definition",
@@ -106,11 +106,11 @@
   "modal_toggleSubfolders.setName exclude subfolders": "Exclude subfolders",
   "toggleFolderTitles.setDesc will also turn off titles in nav dropdown": "This also determines if the titles are visible in the flow navigation dropdown.",
 
-  "defineFlow.setName define your flow": "Define your flow...",
+  "defineFlow.setName define your flow": "Define your flow from...",
   "defineFlow.setDesc.1 only active method will be used": "Only the active definition method will be used for your flow.",
 
-  "buttons.bookmarks.setButtonText by bookmark group": "... by a bookmark group",
-  "buttons.foldersTagsProps.setButtonText by folders, tags, props": "... by folders, tags, properties",
+  "buttons.bookmarks.setButtonText by bookmark group": "... a bookmark group",
+  "buttons.foldersTagsProps.setButtonText by folders, tags, props": "... folders, tags, properties",
 
   "bookmarksSortOrder.setName sort order": "Sort order",
   "bookmarksSortOrder.setDesc.1 note order": "Notes: ",
@@ -173,7 +173,7 @@
 
   "-------- FLOW DISPLAY": "All the user's flows-------------------------------------",
   "flowDisplay.createEl.text your flow definitions": "Your flow definitions",
-  "flowDisplay.source.alt bookmark group": "Bookmark group \"${shownFlow_flowDefinition_bookmarks}\"",
+  "flowDisplay.source.alt bookmark group": "Source (bmg): ",
 
   "flowDisplay.included tags": "tags: ${shownFlow_flowDefinition_tagsIncluded}",
   "flowDisplay.included props": "props: ${shownFlow_flowDefinition_propsIncluded}",
@@ -182,9 +182,9 @@
   "flowDisplay.excluded tags": "tags: ${shownFlow_flowDefinition_tagsExcluded}",
   "flowDisplay.excluded props": "props: ${shownFlow_flowDefinition_propsExcluded}",
 
-  "flowDisplay.flowShow.setDesc.1 source": "Source: ${source}",
-  "flowDisplay.flowShow.setDesc.2 inclusion criteria": "Inclusion criteria: ${inclusionString}",
-  "flowDisplay.flowShow.setDesc.3 exclusion criteria": "Exclusion criteria: ${exclusionString}",
+  "flowDisplay.flowShow.setDesc.1 source": "Source (fldr): ",
+  "flowDisplay.flowShow.setDesc.2 inclusion criteria": "Incl: ${inclusionString}",
+  "flowDisplay.flowShow.setDesc.3 exclusion criteria": "Excl: ${exclusionString}",
 
   "flowDisplay.rebuildButton.setButtonText (re)build": "Rebuild",
   "flowDisplay.editButton.setButtonText edit": "Edit",

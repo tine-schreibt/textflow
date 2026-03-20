@@ -10,7 +10,7 @@ import {
 } from "obsidian";
 import TextFlow from "../main";
 import * as Types from "./types";
-import path, { dirname, basename } from "path";
+import { dirname } from "path";
 
 // Any code that was actually written by AI is labelled
 
@@ -91,6 +91,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               `${newSystemFolderParent}/${this.plugin.textFlowSystemFolderName}`,
             );
             this.plugin.settings.systemFolderPath = newPath;
+
+            this.plugin.saveSettings();
 
             // Create SystemFolder
             if (!systemFolder) {
@@ -173,6 +175,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         dropdown.onChange(async (value) => {
           this.plugin.settings.menuBarDefault =
             value as Types.MenuBarDisplayState;
+          this.plugin.saveSettings();
         });
       });
 
@@ -209,6 +212,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         dropdown.setValue(this.plugin.settings.switcherPos);
         dropdown.onChange(async (value) => {
           this.plugin.settings.switcherPos = value;
+          this.plugin.saveSettings();
         });
       });
 
@@ -294,6 +298,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         flowModeExplorerDecoContainer.classList.remove("show");
         updateHeadlineDisplay(entry);
         this.plugin.decorateSourceNotes("redo");
+        this.plugin.saveSettings();
       });
     });
 
@@ -360,6 +365,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.settings.activeRegionHighlight = value;
             this.plugin.decorateSourceNotes("update");
+            this.plugin.saveSettings();
           });
       });
 
@@ -394,13 +400,12 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         navListenerToggle
           .setValue(this.plugin.settings.explorerListener)
           .onChange(async (value) => {
-            console.log("explorerListener", value);
             this.plugin.settings.explorerListener = value;
-            //this.plugin.saveSettings();
+            this.plugin.saveSettings();
           });
       });
 
-    // can't get this to work, so I'm shelving it for now
+    // can't get this to work right now, so I'm shelving it
     /*  // ------------ menu bar top margin
     const menuBarTopMargin = new Setting(qol)
       .setName(this.plugin.t("menuBarTopMargin.setName top margin"))
@@ -464,6 +469,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.settings.hideScrollbar = value;
             this.plugin.settingsTabFunctions.updateScrollbarVisibility();
+            this.plugin.saveSettings();
           });
       });
 
@@ -513,7 +519,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .setValue(this.plugin.settings.checkExternalEdits)
           .onChange(async (value) => {
             if (
-              // if the user upgrades their checking level to include hashes
               // mtime is always stored in flowMaps, regardless of settings
               !this.plugin.settings.checkExternalEdits.includes("hash") &&
               value.includes("hash")
@@ -533,6 +538,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
             this.plugin.settings.checkExternalEdits =
               value as Types.ExternalEditsType;
+
+            this.plugin.saveSettings();
           });
       });
 
@@ -563,6 +570,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .setValue(!this.plugin.settings.systemFolderHidden)
           .onChange(async (value) => {
             this.plugin.settings.systemFolderHidden = !value;
+
+            this.plugin.saveSettings();
 
             if (this.plugin.settings.systemFolderPath) {
               this.plugin.discernAndSetSystemFolderState();
@@ -653,14 +662,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     // -------- Radio Buttons ---------------
     // Just creating and styling the buttons; the dependent UI and .onClick behaviour
     // are below the input element setup because I want to keep the hide/show with its elements
-    buttons.bookmarks = new ButtonComponent(radioButtonContainer)
-      .setButtonText(
-        this.plugin.t("buttons.bookmarks.setButtonText by bookmark group"),
-      )
-      .setClass("settings-radio-button");
-    if (this.plugin.settings.flowBuildBasket.definitionMode === "bookmarks") {
-      buttons.bookmarks.buttonEl.addClass("settings-radio-button-active");
-    }
 
     buttons.foldersTagsProps = new ButtonComponent(radioButtonContainer)
       .setButtonText(
@@ -675,6 +676,15 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       buttons.foldersTagsProps.buttonEl.addClass(
         "settings-radio-button-active",
       );
+    }
+
+    buttons.bookmarks = new ButtonComponent(radioButtonContainer)
+      .setButtonText(
+        this.plugin.t("buttons.bookmarks.setButtonText by bookmark group"),
+      )
+      .setClass("settings-radio-button");
+    if (this.plugin.settings.flowBuildBasket.definitionMode === "bookmarks") {
+      buttons.bookmarks.buttonEl.addClass("settings-radio-button-active");
     }
 
     // ------ BOOKMARKS INPUT ELEMENT AND STUFF --------------------------------------
@@ -780,6 +790,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       }),
     );
     chooseBookmarks.addText((setBookmarksGroup) => {
+      setBookmarksGroup.setValue(
+        this.plugin.settings.flowBuildBasket.flowDefinition.bookmarks ?? "",
+      );
       setBookmarksGroup.onChange(async (value) => {
         this.plugin.settings.flowBuildBasket.flowDefinition.bookmarks =
           value.trim();
@@ -1328,18 +1341,22 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
       // SOURCE
       let source = "";
-      if (shownFlow.flowDefinition.bookmarks) {
-        source += this.plugin.t("flowDisplay.source.alt bookmark group", {
-          shownFlow_flowDefinition_bookmarks:
-            shownFlow.flowDefinition.bookmarks,
-        });
-      } else if (
-        shownFlow.flowDefinition.folderIncluded === "" ||
-        shownFlow.flowDefinition.folderIncluded === "/"
-      ) {
-        source += "/";
-      } else {
-        source += `${shownFlow.flowDefinition.folderIncluded}`;
+      if (shownFlow.definitionMode === "bookmarks") {
+        source +=
+          this.plugin.t("flowDisplay.source.alt bookmark group") +
+          shownFlow.flowDefinition.bookmarks;
+      }
+      if (shownFlow.definitionMode === "foldersTagsProps") {
+        source += this.plugin.t("flowDisplay.flowShow.setDesc.1 source");
+
+        if (
+          shownFlow.flowDefinition.folderIncluded === "" ||
+          shownFlow.flowDefinition.folderIncluded === "/"
+        ) {
+          source += "/";
+        } else {
+          source += `${shownFlow.flowDefinition.folderIncluded}`;
+        }
       }
 
       // INCLUSION
@@ -1360,7 +1377,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           }),
         );
       }
-      const inclusionString = included.length > 0 ? included.join(" / ") : "";
+      const inclusionString = included.length > 0 ? included.join(" | ") : "";
 
       // EXCLUSION
       const excluded: string[] = [];
@@ -1391,7 +1408,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           }),
         );
       }
-      const exclusionString = excluded.length > 0 ? excluded.join(" / ") : "";
+      const exclusionString = excluded.length > 0 ? excluded.join(" | ") : "";
 
       // --- THE DISPLAY ITSELF -------------------------------
       const flowShow = new Setting(flowDisplay);
@@ -1400,9 +1417,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         .setDesc(
           createFragment((desc) => {
             desc.createSpan({
-              text: this.plugin.t("flowDisplay.flowShow.setDesc.1 source", {
-                source: source,
-              }),
+              text: source,
             });
             if (inclusionString != "" && inclusionString != undefined) {
               desc.createEl("br");
