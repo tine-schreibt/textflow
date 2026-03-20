@@ -1,2 +1,3 @@
 ### 0.2.8
-- just an update to the manifest description
+
+- just some small stuff updated/fixed in the UI
