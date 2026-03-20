@@ -1,6 +1,6 @@
 {
-  "id": "text-flow",
-  "name": "Text Flow",
+  "id": "textflow",
+  "name": "textFlow",
   "version": "0.2.9",
   "minAppVersion": "1.4.0",
   "description": "Compile multiple notes into a single editable flow - like Scrivenings. Define from paths/tags/props or bookmarks. Auto-sync flow <-> source notes.",
