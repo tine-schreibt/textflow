@@ -54,7 +54,7 @@ jobs:
       - name: Verify version equals tag
         run: |
           set -x
-          node -e "const fs=require('fs');const v=JSON.parse(fs.readFileSync('manifest.json','utf8')).version;const t=process.env.GITHUB_REF_NAME; if(v!==t){console.error(`Tag (${t}) does not match manifest.json version (${v})`);process.exit(1)}"
+          node -e "const fs=require('fs');const v=JSON.parse(fs.readFileSync('plugin/manifest.json','utf8')).version;const t=process.env.GITHUB_REF_NAME; if(v!==t){console.error(`Tag (${t}) does not match manifest.json version (${v})`);process.exit(1)}"
 
       - name: Package
         run: |
