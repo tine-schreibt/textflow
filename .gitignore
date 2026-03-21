@@ -10,6 +10,7 @@
 # and also: 
 !manifest.json
 !styles.css
+!LICENSE.txt
 !README.md 
 !README_de.md 
 !RELEASE_NOTES.md
