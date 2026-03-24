@@ -183,8 +183,8 @@ If I develop motivation on my own, they may show up all by themselves one day.
 	- **BRAT guide**: https://tfthacker.com/brat-quick-guide
 	- **Manual install:** 
 		- Download the the `main.js`, `manifest.json` and `styles.css` from the release. 
-		- Create a folder `textFlow` in your vault's `.obsidian/plugins` folder. 
-		- Paste the files to there (the internet will tell you how to make hidden folders visible). 
+		- Create a folder `textFlow` in your vault's `.obsidian/plugins` folder (the internet will tell you how to make hidden folders visible). 
+		- Paste the files to there. 
 		- Reload your vault. 
 		- Go to Obsidian's `Settings > Community plugins` and search for textFlow. 
 		- Toggle to activate, then click the cog to get to the settings. 
