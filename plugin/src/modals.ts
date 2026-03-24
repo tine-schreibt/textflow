@@ -980,10 +980,10 @@ export class FlowSwitcherModal extends Modal {
     handler: EventListener;
   }> = [];
 
-  constructor(app: App, plugin: TextFlowPlugin, currentActiveLeafID?: string) {
+  constructor(app: App, plugin: TextFlowPlugin) {
     super(app);
     this.plugin = plugin;
-    this.currentActiveLeafID = currentActiveLeafID;
+    this.currentActiveLeafID = this.getActiveLeafID();
     this.rebuildString = "";
   }
 
@@ -1003,15 +1003,15 @@ export class FlowSwitcherModal extends Modal {
 
   //-----------------------------------------------------------------------------
   // so we can highlight the active leaf's entry
-  private updateActiveLeafID = () => {
-    if (!this.currentActiveLeafID) {
-      const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-      if (view) {
-        this.currentActiveLeafID = this.plugin.settingsTabFunctions.getLeafID(
-          view.leaf,
-        );
-      }
+  private getActiveLeafID = (): string => {
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (view) {
+      const currentActiveLeafID = this.plugin.settingsTabFunctions.getLeafID(
+        view.leaf,
+      );
+      return currentActiveLeafID;
     }
+    return "";
   };
 
   //--------------------------------------------------------------------------------
@@ -1045,7 +1045,7 @@ export class FlowSwitcherModal extends Modal {
       targetLeaf.detach();
       this.plugin.manageActiveRegions();
       await this.plugin.saveSettings();
-      this.updateActiveLeafID();
+      this.currentActiveLeafID = this.getActiveLeafID();
       await this.display();
     }
   };

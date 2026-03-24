@@ -1,5 +1,6 @@
 import {
   App,
+  Editor,
   MarkdownView,
   moment,
   normalizePath,
@@ -385,122 +386,151 @@ export default class TextFlowPlugin extends Plugin {
 
   // ---------------- all our nice commands
   registerCommands = () => {
-    // Command for syncing
+    // Command for syncing all leaves, provided at least one flow is opened
     this.addCommand({
       id: `text-flow-sync`,
       name: this.t("main.registerCommand sync all leaves"),
-      callback: async () => {
-        await this.syncAllLeaves();
+      checkCallback: (checking: boolean) => {
+        // this was written by a bot
+        // This check (more formally a predicate, you live, you learn) runs until it finds a true, else it returns false
+        const flowIsOpen = this.app.workspace
+          .getLeavesOfType("markdown")
+          .some((leaf) => {
+            const file = leaf.getViewState().state?.file;
+            return typeof file === "string" && !!this.isFlowFile(file);
+          });
+
+        if (flowIsOpen) {
+          if (!checking) {
+            this.syncAllLeaves();
+          }
+          return true;
+        }
+        return false;
       },
     });
 
+    // Flag all for rebuild, provided auto check is NOT enabled -----------------------------
     this.addCommand({
       id: `text-flow-flag-all-for-rebuild`,
       name: this.t("main.registerCommand flag all for rebuild"),
-      callback: async () => {
-        // flag for rebuild
-        for (let flowName of Object.keys(this.settings.flows)) {
-          this.settings.flows[flowName].flaggedForRebuild = true;
-        }
-        await this.saveSettings();
+      checkCallback: (checking: boolean) => {
+        const dontCheckExternalEdits =
+          this.settings.checkExternalEdits === "no" ? true : false;
 
-        // refresh menu bars
-        const allLeaves = this.app.workspace.getLeavesOfType("markdown");
-        for (const leaf of allLeaves) {
-          const view = leaf.view as MarkdownView;
-          if (!view.menuBar) continue;
-          view.menuBar.refresh(view.contentEl);
+        if (dontCheckExternalEdits) {
+          if (!checking) {
+            for (let flowName of Object.keys(this.settings.flows)) {
+              this.settings.flows[flowName].flaggedForRebuild = true;
+            }
+            this.saveSettings();
+
+            // refresh menu bars
+            const allLeaves = this.app.workspace.getLeavesOfType("markdown");
+            for (const leaf of allLeaves) {
+              const view = leaf.view as MarkdownView;
+              if (!view.menuBar) continue;
+              view.menuBar.refresh(view.contentEl);
+            }
+          }
+          return true;
         }
+        return false;
       },
     });
 
-    // check stats for all flows
+    // check stats for all flows, provided auto checks are enabled -------------------
     this.addCommand({
       id: `text-flow-check-stats`,
       name: this.t("main.registerCommand check stats"),
-      callback: async () => {
-        // flag for rebuild
-        const changeArray = [];
+      checkCallback: (checking: boolean) => {
+        const checkExternalEdits =
+          this.settings.checkExternalEdits != "no" ? true : false;
 
-        for (let flowName of Object.keys(this.settings.flows)) {
-          const changes = await this.checkStatsForFlow(flowName);
-          if (changes) {
-            changeArray.push(flowName);
+        if (checkExternalEdits) {
+          if (!checking) {
+            const changeArray: string[] = [];
+            // since the function returns a promise, we need to wrap it in async:
+            const asyncisiseCheckStatsForFlow = async (flowName: string) => {
+              const changes = await this.checkStatsForFlow(flowName);
+              if (changes) {
+                changeArray.push(flowName);
+              }
+            };
+
+            for (let flowName of Object.keys(this.settings.flows)) {
+              asyncisiseCheckStatsForFlow(flowName);
+            }
+
+            if (changeArray.length === 0) {
+              new Notice(this.t("main.checkStats no changes"));
+            } else {
+              const changeString = changeArray.join("\n");
+              new Notice(
+                this.t("main.checkStats changes detected", {
+                  changeString: changeString,
+                }),
+              );
+            }
+            // refresh menu bars
+            const allLeaves = this.app.workspace.getLeavesOfType("markdown");
+            for (const leaf of allLeaves) {
+              const view = leaf.view as MarkdownView;
+              if (!view.menuBar) continue;
+              view.menuBar.refresh(view.contentEl);
+            }
+            return true;
           }
         }
-        if (changeArray.length === 0) {
-          new Notice(this.t("main.checkStats no changes"));
-        } else {
-          const changeString = changeArray.join("\n");
-          new Notice(
-            this.t("main.checkStats changes detected", {
-              changeString: changeString,
-            }),
-          );
-        }
-        // refresh menu bars
-        const allLeaves = this.app.workspace.getLeavesOfType("markdown");
-        for (const leaf of allLeaves) {
-          const view = leaf.view as MarkdownView;
-          if (!view.menuBar) continue;
-          view.menuBar.refresh(view.contentEl);
-        }
+        return false;
       },
     });
 
     // ---------------------------------------------------------------
-    // rebuild active leaf flow
+    // rebuild active leaf flow, provided active leaf is flow
     this.addCommand({
       id: `text-flow-rebuild-active`,
       name: this.t("main.registerCommand rebuild active leaf"),
-      callback: async () => {
-        // get the active leaf
-        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (!view) return;
-        if (!view.file) return;
+      editorCheckCallback: (
+        checking: boolean,
+        editor: Editor,
+        view: MarkdownView,
+      ) => {
+        if (!view) return false;
+        if (!view.file) return false;
 
-        const activeLeafPath = view.file.path;
-        const flowName = this.isFlowFile(activeLeafPath);
-        if (!flowName) return;
-        // rebuild
-        await this.settingsTabFunctions.flowBuildingBundle(
-          flowName,
-          "switcher",
-        );
+        const flowName = this.isFlowFile(view.file.path);
+        if (flowName) {
+          if (!checking) {
+            this.settingsTabFunctions.flowBuildingBundle(flowName, "switcher");
+          }
+          return true;
+        }
+        return false;
       },
     });
 
     // ---------------------------------------------------------------
-    // Open the switcher modal
+    // Open the switcher modal (unconditional)
     this.addCommand({
       id: "text-flow-open-switcher",
       name: this.t("main.registerCommand open switcher"),
       callback: async () => {
-        // toggle
-        // also get the active leafID, so we can highlight the leaf
-        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (!view) {
-          new Modals.FlowSwitcherModal(this.app, this).open();
-        } else {
-          const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
-          new Modals.FlowSwitcherModal(this.app, this, leafID).open();
-        }
+        new Modals.FlowSwitcherModal(this.app, this).open();
       },
     });
 
     // ---------------------------------------------------------------
-    // FuzzNav
+    // FuzzNav (unconditional)
     this.addCommand({
       id: "text-flow-open-fuzzy-nav-modal",
       name: this.t("main.registerCommand open fuzzy navigation"),
-      callback: async () => {
+      callback: () => {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-        let flowName: string | null = "";
-        if (view) {
-          if (view.file) {
-            flowName = this.isFlowFile(view.file.path);
-          }
-        }
+        if (!view) return;
+        if (!view.file) return;
+
+        const flowName = this.isFlowFile(view.file.path);
         if (flowName) {
           new Modals.FuzzyNavModal(
             this.app,
@@ -515,7 +545,7 @@ export default class TextFlowPlugin extends Plugin {
     });
 
     // ---------------------------------------------------------------
-    // toggle explorer navigation so multi-select works as expected
+    // toggle explorer navigation so multi-select works as expected (unconditional)
     this.addCommand({
       id: "text-flow-toggle-explorer-listener",
       name: this.t("main.registerCommand toggle explorer navigation"),
@@ -535,111 +565,128 @@ export default class TextFlowPlugin extends Plugin {
     });
 
     // ---------------------------------------------------------------
-    // min/max menu bar
+    // min/max menu bar, provided active leaf is flow
     this.addCommand({
       id: "text-flow-toggle-menu-bar",
       name: this.t("main.registerCommand toggle menu bar"),
-      callback: async () => {
-        const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (activeView) {
-          const path = activeView.file?.path;
-          if (!path) return;
+      editorCheckCallback: (
+        checking: boolean,
+        editor: Editor,
+        view: MarkdownView,
+      ) => {
+        if (!view) return false;
+        if (!view.file) return false;
 
-          const flowName = this.isFlowFile(path);
-          if (!flowName) return;
+        const flowName = this.isFlowFile(view.file.path);
+        if (flowName) {
+          if (!checking) {
+            const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
+            if (!leafID) return;
 
-          const leafID = this.settingsTabFunctions.getLeafID(activeView.leaf);
-          if (!leafID) return;
-
-          for (let leaf of Object.keys(this.settings.activeRegions[flowName])) {
+            // toggle the setting
+            this.settings.activeRegions[flowName][leafID].leafMenuBarSettings
+              .menuBarDisplayState === "max"
+              ? (this.settings.activeRegions[flowName][
+                  leafID
+                ].leafMenuBarSettings.menuBarDisplayState = "min")
+              : (this.settings.activeRegions[flowName][
+                  leafID
+                ].leafMenuBarSettings.menuBarDisplayState = "max");
+            this.saveSettings();
+            this.refreshMenuBars();
           }
-          // toggle the setting
-          this.settings.activeRegions[flowName][leafID].leafMenuBarSettings
-            .menuBarDisplayState === "max"
-            ? (this.settings.activeRegions[flowName][
-                leafID
-              ].leafMenuBarSettings.menuBarDisplayState = "min")
-            : (this.settings.activeRegions[flowName][
-                leafID
-              ].leafMenuBarSettings.menuBarDisplayState = "max");
-          await this.saveSettings();
-          this.refreshMenuBars();
+          return true;
         }
+        return false;
       },
     });
 
     // ---------------------------------------------------------------
-    // export active flow
+    // export active flow, provided active leaf is flow
     this.addCommand({
       id: "text-flow-export-flow",
       name: this.t("main.registerCommand export active flow"),
-      callback: () => {
-        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (!view) return;
-        if (!view.file) return;
+      editorCheckCallback: (
+        checking: boolean,
+        editor: Editor,
+        view: MarkdownView,
+      ) => {
+        if (!view) return false;
+        if (!view.file) return false;
+
         const flowName = this.isFlowFile(view.file.path);
-        if (!flowName) return;
-        this.settingsTabFunctions.exportFlow(flowName);
+        if (flowName) {
+          if (!checking) {
+            this.settingsTabFunctions.exportFlow(flowName);
+          }
+          return true;
+        }
+        return false;
       },
     });
 
     // ---------------------------------------------------------------
-    // select active region
+    // select active region, provided active leaf is flow
     this.addCommand({
       id: "text-flow-select-active-region",
       name: this.t("main.registerCommand select active region"),
-      callback: () => {
-        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (!view) return;
-        if (!view.file) return;
+      editorCheckCallback: (
+        checking: boolean,
+        editor: Editor,
+        view: MarkdownView,
+      ) => {
+        if (!view) return false;
+        if (!view.file) return false;
 
-        const activeLeafPath = view.file.path;
-        const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
-        const flowName = this.isFlowFile(activeLeafPath);
-        if (!flowName) return;
-        if (!this.settings.activeRegions[flowName]) return;
-        if (!this.settings.activeRegions[flowName][leafID]) return;
-        if (!this.settings.activeRegions[flowName][leafID].path) return;
+        const flowName = this.isFlowFile(view.file.path);
+        if (flowName) {
+          if (!checking) {
+            const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
 
-        const activeRegion = normalizePath(
-          this.settings.activeRegions[flowName][leafID].path,
-        );
-        if (!activeRegion) return;
+            if (!this.settings.activeRegions[flowName]) return;
+            if (!this.settings.activeRegions[flowName][leafID]) return;
+            if (!this.settings.activeRegions[flowName][leafID].path) return;
 
-        this.settingsTabFunctions.selectActiveRegion(
-          flowName,
-          activeRegion,
-          view.editor.getValue(),
-          view.editor,
-        );
+            const activeRegion = normalizePath(
+              this.settings.activeRegions[flowName][leafID].path,
+            );
+            if (!activeRegion) return;
+
+            this.settingsTabFunctions.selectActiveRegion(
+              flowName,
+              activeRegion,
+              view.editor.getValue(),
+              view.editor,
+            );
+          }
+          return true;
+        }
+        return false;
       },
     });
 
     // ---------------------------------------------------------------
-    // restore cursor position
+    // restore cursor position, provided active leaf is flow
     this.addCommand({
       id: "text-flow-restore-cursor",
       name: this.t("main.registerCommand restore most recent cursor"),
-      callback: async () => {
-        const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (!activeView || !activeView.file) {
-          return;
+      editorCheckCallback: (
+        checking: boolean,
+        editor: Editor,
+        view: MarkdownView,
+      ) => {
+        if (!view) return false;
+        if (!view.file) return false;
+
+        const flowName = this.isFlowFile(view.file.path);
+        if (flowName) {
+          if (!checking) {
+            const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
+            this.settingsTabFunctions.restoreCursorPos(flowName, view, leafID);
+          }
+          return true;
         }
-
-        const activeLeafPath = activeView.file.path;
-        if (!activeLeafPath) return;
-
-        // if active leaf is flow, set it up
-        const flowName = this.isFlowFile(activeLeafPath);
-        if (!flowName) return;
-
-        const leafID = this.settingsTabFunctions.getLeafID(activeView.leaf);
-        // check if we got data for that leafID
-        this.settingsTabFunctions.restoreCursorPos(
-          flowName,
-          activeView,
-          leafID,
-        );
+        return false;
       },
     });
 
@@ -706,23 +753,18 @@ export default class TextFlowPlugin extends Plugin {
     // find the active region path
     let activeRegionPath: string | undefined = "";
     const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-    if (activeView) {
-      if (activeView.file) {
-        const activeLeafPath = activeView.file.path;
+    if (!activeView) return;
+    if (!activeView.file) return;
+    const activeLeafPath = activeView.file.path;
+    if (!activeLeafPath) return;
 
-        if (activeLeafPath) {
-          const flowName = this.isFlowFile(activeLeafPath);
-          if (flowName) {
-            const leafID = this.settingsTabFunctions.getLeafID(activeView.leaf);
+    const flowName = this.isFlowFile(activeLeafPath);
+    if (!flowName) return;
+    const leafID = this.settingsTabFunctions.getLeafID(activeView.leaf);
 
-            for (let flowName of Object.keys(this.settings.activeRegions)) {
-              if (this.settings.activeRegions[flowName][leafID]) {
-                activeRegionPath =
-                  this.settings.activeRegions[flowName][leafID].path;
-              }
-            }
-          }
-        }
+    for (let flowName of Object.keys(this.settings.activeRegions)) {
+      if (this.settings.activeRegions[flowName][leafID]) {
+        activeRegionPath = this.settings.activeRegions[flowName][leafID].path;
       }
     }
 
@@ -2644,7 +2686,8 @@ ${pseudoElement}
 
   // ---------------- Functions: Flow management and UI -------------------------
 
-  // ---- Identity check
+  // ---- Identity checks and some helper functions around that
+
   isFlowFile = (activeLeafPath: string) => {
     const flowName = activeLeafPath.match(/([^/]+)(?=\.md$)/)?.[0]; // gets the flow name out of the path; written by AI
     if (flowName && this.settings.flows[flowName]) {
@@ -3545,27 +3588,14 @@ ${pseudoElement}
 
         flowSwitcher.addEventListener("click", () => {
           // also get the active leafID, so we can highlight the leaf
-          const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-          if (!view) {
-            new Modals.FlowSwitcherModal(this.app, this).open();
-          } else {
-            const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
-            new Modals.FlowSwitcherModal(this.app, this, leafID).open();
-          }
+          new Modals.FlowSwitcherModal(this.app, this).open();
         });
       } else if (this.settings.switcherPos === "ribbon") {
         this.addRibbonIcon(
           "scroll-text",
           "Open flowSwitcher",
           (evt: MouseEvent) => {
-            // also get the active leafID, so we can highlight the leaf
-            const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-            if (!view) {
-              new Modals.FlowSwitcherModal(this.app, this).open();
-            } else {
-              const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
-              new Modals.FlowSwitcherModal(this.app, this, leafID).open();
-            }
+            new Modals.FlowSwitcherModal(this.app, this).open();
           },
         );
       }

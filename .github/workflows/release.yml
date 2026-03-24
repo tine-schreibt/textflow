@@ -6,7 +6,7 @@ on:
       - "*"
 
 env:
-  PLUGIN_NAME: Text Flow
+  PLUGIN_NAME: TextFlow
 
 permissions:
   contents: write
