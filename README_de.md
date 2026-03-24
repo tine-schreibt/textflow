@@ -234,7 +234,7 @@ Sofern ich von allein Motivation entwickle, könnten sie eines Tages auch einfac
 
 Alle Befehle können in Obsidians Einstellungen mit Tastenkürzeln verknüpft werden. 
 
-- **Alle Leaves synchronisieren:** Speichert auch die aktuelle Cursor-Position
+- **Alle Leaves synchronisieren:** Speichert auch die aktuelle Cursor-Position.
 - **Flow im aktive Leaf neubauen:** Manchmal ist ein Neubau außer der Reihe nötig. 
 - **Letzte Cursor-Position wiederherstellen:** Wie die Beschreibung schon sagt. 
 - **Aktive Region auswählen:** Wählt den Text der aktiven Region des aktiven Flows aus. 
@@ -242,10 +242,10 @@ Alle Befehle können in Obsidians Einstellungen mit Tastenkürzeln verknüpft we
 
 - **Fuzzy-Navigation öffnen:** Für die Navigation per Tastatur
 - **Flow-Switcher öffnen:** Falls du das Modal nicht mit Buttons öffnen willst, kannst du stattdessen diesen Befehl nutzen. 
-- **Menüleiste umschalten:** Wechselt zwischen min/max für die Menüleiste. 
+- **Menüleiste umschalten:** Wechselt zwischen min/max für die Menüleiste.
 
 - **Flagge alle Flows für den Neubau:** Falls du keine automatischen Checks für externe Edits hast und unsicher bist, welche Notizen du extern bearbeitet hast. 
-- **Prüfe Vault auf externe Edits:** Falls du auch für deine gerade inaktiven Flows einen Check möchtest (die automatischen Checks prüfen nur aktive Flows, bzw. Flows die geöffnet werden)
+- **Prüfe Vault auf externe Edits:** Falls du auch für deine gerade inaktiven Flows einen Check möchtest (die automatischen Checks prüfen nur aktive Flows, bzw. Flows die geöffnet werden). 
 
 - **Scrollbar umschalten:** Für den schnellen Wechsel. 
 - **Navigation per Explorer umschalten:** Falls du die Mehrfachauswahl brauchst.

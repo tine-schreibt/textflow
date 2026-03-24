@@ -245,7 +245,7 @@ All commands can be tied to keyboard shortcuts (hotkeys) in Obsidian's settings.
 - **Toggle menu bar:** Min/max the menu bar
 
 - **Flag all flows for rebuild:** If you're not sure which notes you edited outside of Obsidian, or you are worried about forgetting one. 
-- **Check vault for external edits:** If you also want to have your inactive flows checked (automatic checks only run for your active flows and flows that are being opened) 
+- **Check vault for external edits:** If you also want to have your inactive flows checked (automatic checks only run for your active flows and flows that are being opened). 
 
 - **Toggle scroll bar visibility:** So you can quickly switch it off when it's twitchy and back on when you need it.
 - **Toggle explorer navigation:** If you need multi-select to work right, this command is your friend and ally.
