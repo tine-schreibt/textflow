@@ -1288,7 +1288,9 @@ export class FlowSwitcherModal extends Modal {
           if (goRebuild === "neutral" || goRebuild === "must") {
             const allLeaves = this.app.workspace.getLeavesOfType("markdown");
             for (const leaf of allLeaves) {
-              const view = leaf.view as MarkdownView;
+              const view =
+                this.plugin.settingsTabFunctions.getMarkdownView(leaf);
+              if (!view) continue;
               const filePath = view.file?.path;
               if (!filePath) continue;
               const flowName = this.plugin.isFlowFile(filePath);
@@ -1831,28 +1833,26 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
       await leaf.loadIfDeferred();
 
       let text = "";
-      const view = leaf.view as MarkdownView;
-      if (view) {
-        const editor = view?.editor as ObsidianEditor | null;
-        if (editor) {
-          const cmEditor = editor.cm;
-          if (cmEditor) {
-            text = cmEditor.state.doc.toString();
-          }
-          let flowOrder = 0;
-          if (item.region) {
-            flowOrder =
-              this.plugin.settings.flows[item.flowName].flowMap[item.region]
-                .flowOrder;
-          }
-          const startPosInFlow = this.plugin.findStartOfRegion(
-            this.settings.flows[item.flowName],
-            flowOrder,
-            text,
-          );
-          return startPosInFlow;
-        }
+      const view = this.plugin.settingsTabFunctions.getMarkdownView(leaf);
+      if (!view) return;
+      const editor = this.plugin.settingsTabFunctions.getEditor(view);
+      if (!editor) return;
+      const cmEditor = editor.cm;
+      if (cmEditor) {
+        text = cmEditor.state.doc.toString();
       }
+      let flowOrder = 0;
+      if (item.region) {
+        flowOrder =
+          this.plugin.settings.flows[item.flowName].flowMap[item.region]
+            .flowOrder;
+      }
+      const startPosInFlow = this.plugin.findStartOfRegion(
+        this.settings.flows[item.flowName],
+        flowOrder,
+        text,
+      );
+      return startPosInFlow;
     };
 
     //--------------------------------------------------------------------------------
@@ -1862,14 +1862,13 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
       cursorPos?: number,
     ) => {
       const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-      const editor = view?.editor as ObsidianEditor | null;
-      if (editor) {
-        const cmEditor = editor.cm;
-        if (cursorPos) {
-          this.plugin.settingsTabFunctions.scrollToPos(editor, cursorPos);
-        } else if (item.cursorPos) {
-          this.plugin.settingsTabFunctions.scrollToPos(editor, item.cursorPos);
-        }
+      if (!view) return;
+      const editor = this.plugin.settingsTabFunctions.getEditor(view);
+      if (!editor) return;
+      if (cursorPos) {
+        this.plugin.settingsTabFunctions.scrollToPos(editor, cursorPos);
+      } else if (item.cursorPos) {
+        this.plugin.settingsTabFunctions.scrollToPos(editor, item.cursorPos);
       }
     };
 

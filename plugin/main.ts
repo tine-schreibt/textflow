@@ -415,10 +415,10 @@ export default class TextFlowPlugin extends Plugin {
       id: `text-flow-flag-all-for-rebuild`,
       name: this.t("main.registerCommand flag all for rebuild"),
       checkCallback: (checking: boolean) => {
-        const dontCheckExternalEdits =
-          this.settings.checkExternalEdits === "no" ? true : false;
+        const checkExternalEdits =
+          this.settings.checkExternalEdits != "no" ? true : false;
 
-        if (dontCheckExternalEdits) {
+        if (!checkExternalEdits) {
           if (!checking) {
             for (let flowName of Object.keys(this.settings.flows)) {
               this.settings.flows[flowName].flaggedForRebuild = true;
@@ -428,7 +428,8 @@ export default class TextFlowPlugin extends Plugin {
             // refresh menu bars
             const allLeaves = this.app.workspace.getLeavesOfType("markdown");
             for (const leaf of allLeaves) {
-              const view = leaf.view as MarkdownView;
+              const view = this.settingsTabFunctions.getMarkdownView(leaf);
+              if (!view) continue;
               if (!view.menuBar) continue;
               view.menuBar.refresh(view.contentEl);
             }
@@ -475,12 +476,13 @@ export default class TextFlowPlugin extends Plugin {
             // refresh menu bars
             const allLeaves = this.app.workspace.getLeavesOfType("markdown");
             for (const leaf of allLeaves) {
-              const view = leaf.view as MarkdownView;
+              const view = this.settingsTabFunctions.getMarkdownView(leaf);
+              if (!view) continue;
               if (!view.menuBar) continue;
               view.menuBar.refresh(view.contentEl);
             }
-            return true;
           }
+          return true;
         }
         return false;
       },
@@ -1228,7 +1230,8 @@ ${pseudoElement}
                 const allLeaves =
                   this.app.workspace.getLeavesOfType("markdown");
                 for (const leaf of allLeaves) {
-                  const view = leaf.view as MarkdownView;
+                  const view = this.settingsTabFunctions.getMarkdownView(leaf);
+                  if (!view) continue;
                   if (!view.menuBar) continue;
                   view.menuBar.refresh(view.contentEl);
                 }
@@ -1751,7 +1754,7 @@ ${pseudoElement}
 
   // -------------- Listeners: Compartments -----------------------------------------
   private makeCompartments = async (view: MarkdownView) => {
-    const cmView = this.settingsTabFunctions.getEditorView(view.editor);
+    const cmView = this.settingsTabFunctions.getEditorCM(view.editor);
     const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
 
     if (!cmView) return;
@@ -2177,7 +2180,7 @@ ${pseudoElement}
       const noteIsOpen = leaves.find(
         (leaf) =>
           leaf.view instanceof MarkdownView &&
-          (leaf.view as MarkdownView).file?.path === clickedFilePath,
+          leaf.view.file?.path === clickedFilePath,
       );
 
       // then check if it's a flow file
@@ -2228,8 +2231,7 @@ ${pseudoElement}
             // Check if the most recently active flow leaf matches our target
             if (
               this.mostRecentActiveFlowLeaf?.view instanceof MarkdownView &&
-              (this.mostRecentActiveFlowLeaf.view as MarkdownView).file
-                ?.path === flowFilePath
+              this.mostRecentActiveFlowLeaf.view.file?.path === flowFilePath
             ) {
               flowLeaf = this.mostRecentActiveFlowLeaf;
             } else {
@@ -2249,7 +2251,7 @@ ${pseudoElement}
                 .find(
                   (leaf) =>
                     leaf.view instanceof MarkdownView &&
-                    (leaf.view as MarkdownView).file?.path === flowFilePath,
+                    leaf.view.file?.path === flowFilePath,
                 );
 
               // if we couldn't set up the leaf for some reason, bow out
@@ -2265,10 +2267,12 @@ ${pseudoElement}
             await new Promise((resolve) => setTimeout(resolve, 150)); // 150ms, adjust if needed
 
             // Now prepare for the scrolling
-            const flowView = flowLeaf.view as MarkdownView;
-            const editor = flowView.editor as Types.ObsidianEditor;
+            const flowView =
+              this.settingsTabFunctions.getMarkdownView(flowLeaf);
+            if (!flowView) return;
+            const editor = this.settingsTabFunctions.getEditor(flowView);
+            if (!editor) return;
             const cmEditor = editor.cm;
-
             if (!cmEditor) {
               return;
             }
@@ -2355,7 +2359,8 @@ ${pseudoElement}
     const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (!activeView) return;
 
-    const editor = activeView.editor as Types.ObsidianEditor;
+    const editor = this.settingsTabFunctions.getEditor(activeView);
+    if (!editor) return;
     const cmEditor = editor.cm;
     if (!cmEditor) return;
 
@@ -2965,7 +2970,8 @@ ${pseudoElement}
     this.decorateSourceNotes("redo");
     const allLeaves = this.app.workspace.getLeavesOfType("markdown");
     for (const leaf of allLeaves) {
-      const view = leaf.view as MarkdownView;
+      const view = this.settingsTabFunctions.getMarkdownView(leaf);
+      if (!view) continue;
       const filePath = view.file?.path;
       if (!filePath) continue;
 
@@ -2983,7 +2989,7 @@ ${pseudoElement}
 
     // reset the compartments
     const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
-    const cmView = this.settingsTabFunctions.getEditorView(view.editor);
+    const cmView = this.settingsTabFunctions.getEditorCM(view.editor);
     if (cmView) {
       this.resetCompartments(leafID, cmView);
     }
@@ -3024,7 +3030,7 @@ ${pseudoElement}
     const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
     // If we got one, check if it belongs to the flow
     if (view.menuBar) {
-      if ((view.menuBar as MenuBar).getFlowName() != flowName) {
+      if (view.menuBar.getFlowName() != flowName) {
         view.menuBar.detach();
         delete view.menuBar;
       }
@@ -3044,7 +3050,8 @@ ${pseudoElement}
 
     const leaves = this.app.workspace.getLeavesOfType("markdown");
     for (let leaf of leaves) {
-      const view = leaf.view as MarkdownView;
+      const view = this.settingsTabFunctions.getMarkdownView(leaf);
+      if (!view) continue;
       const filePath = view.file?.path;
       if (!filePath) continue;
 
@@ -3078,7 +3085,8 @@ ${pseudoElement}
 
     // Populate flowLeaves
     for (const leaf of allLeaves) {
-      const view = leaf.view as MarkdownView;
+      const view = this.settingsTabFunctions.getMarkdownView(leaf);
+      if (!view) continue;
       const filePath = view.file?.path;
       if (filePath) {
         const flowName = this.isFlowFile(filePath);
@@ -3636,7 +3644,7 @@ ${pseudoElement}
       );
       for (const leaf of leaves) {
         if (targetLeaf?.view instanceof MarkdownView) {
-          const cmView = this.settingsTabFunctions.getEditorView(
+          const cmView = this.settingsTabFunctions.getEditorCM(
             targetLeaf.view.editor,
           );
           if (cmView) this.resetCompartments(leafID, cmView);

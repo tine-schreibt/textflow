@@ -57,7 +57,9 @@ import { getAPI } from "obsidian-dataview";
 // - the + stuff whichI tried to put into its own class but that just confused me
 //-------------------------------------------------------------------------------------
 // - getLeafID
-// - getEditorView
+// - getEditor
+// - getEditorCM
+// - getMarkdownView
 // - callStack
 // - restoreCursorPos
 // - scrollToPos
@@ -1680,14 +1682,25 @@ export class settingsTabFunctions {
   // ---------------------------------------------------------------
 
   //--------------------------------------------------
-  // a robot told me these two would help to keep the scope clean with regards to type
+  // To encapsulate this apparently unavoidable 'as any' type casting; a robot said this is how you do it
   getLeafID = (leaf: WorkspaceLeaf): Types.LeafID => {
     return (leaf as any).id as Types.LeafID;
   };
 
-  getEditorView = (editor: Editor): EditorView | null => {
+  // I have no idea if this even does anything, but I actually feel more comfortable like this, so...
+  getEditor = (view: MarkdownView): Types.ObsidianEditor | null => {
+    const editor = view.editor as Types.ObsidianEditor;
+    return editor ?? null;
+  };
+
+  getEditorCM = (editor: Editor): EditorView | null => {
     const cm = (editor as Types.EditorWithCM).cm;
     return cm instanceof EditorView ? cm : null;
+  };
+
+  getMarkdownView = (leaf: WorkspaceLeaf): MarkdownView | null => {
+    const view = leaf.view as MarkdownView;
+    return view ?? null;
   };
 
   // For debugging ------------------------------------------
@@ -1703,16 +1716,14 @@ export class settingsTabFunctions {
       this.plugin.settings.flows[flowName].persistentCursors &&
       this.plugin.settings.flows[flowName].persistentCursors[leafID]
     ) {
-      const editor = view.editor as Types.ObsidianEditor;
-      const cmEditor = editor.cm;
-      if (cmEditor) {
-        const cursorPos =
-          this.plugin.settings.flows[flowName].persistentCursors[leafID]
-            .cursors[0][1];
+      const editor = this.plugin.settingsTabFunctions.getEditor(view);
+      if (!editor) return;
+      const cursorPos =
+        this.plugin.settings.flows[flowName].persistentCursors[leafID]
+          .cursors[0][1];
 
-        if (cursorPos !== undefined && cursorPos >= 0) {
-          this.scrollToPos(editor, cursorPos);
-        }
+      if (cursorPos !== undefined && cursorPos >= 0) {
+        this.scrollToPos(editor, cursorPos);
       }
     } else {
       // get the most recent time stamp for the active flow
@@ -1750,7 +1761,8 @@ export class settingsTabFunctions {
           });
         }
 
-        const editor = view.editor as Types.ObsidianEditor;
+        const editor = this.plugin.settingsTabFunctions.getEditor(view);
+        if (!editor) return;
         mostRecentCursor ? this.scrollToPos(editor, mostRecentCursor) : "";
       }
     }
@@ -1815,7 +1827,10 @@ export class settingsTabFunctions {
             leaf.view instanceof MarkdownView &&
             leaf.view.file?.path === path
           ) {
-            const editor = leaf.view.editor as Types.ObsidianEditor;
+            const editor = this.plugin.settingsTabFunctions.getEditor(
+              leaf.view,
+            );
+            if (!editor) continue;
             editor.setValue(newContent);
             // we only need to catch one instance b/c replacing content in one editor replaces content in all editors holding that file
             return;
@@ -1894,15 +1909,15 @@ export class settingsTabFunctions {
     const endPos = text.indexOf(map[path].invisibleUUID) - 1; // subtract 1 for the \r before the UID
 
     if (startPos && endPos) {
-      const cmView = this.getEditorView(viewDotEditor);
-      if (cmView) {
+      const cmEditor = this.getEditorCM(viewDotEditor);
+      if (cmEditor) {
         // Type guard for ObsidianEditor
         try {
-          cmView.dispatch({
+          cmEditor.dispatch({
             selection: { anchor: startPos + 1, head: endPos },
             scrollIntoView: true, // Optional: scroll the selection into view
           });
-          cmView.focus(); // Optional: focus the editor
+          cmEditor.focus(); // Optional: focus the editor
         } catch (error) {
           console.error("Failed to set selection:", error);
         }

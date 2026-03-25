@@ -290,7 +290,10 @@ export class MenuBar {
 
         this.addManagedListener(dropdownEntry, "click", (event) => {
           // scroll into view
-          const editor = this.associatedView.editor as Types.ObsidianEditor;
+          const editor = this.plugin.settingsTabFunctions.getEditor(
+            this.associatedView,
+          );
+          if (!editor) return;
           const cmEditor = editor.cm;
           let text = "";
           if (cmEditor) {
@@ -356,7 +359,7 @@ export class MenuBar {
     //this.plugin.settingsTabFunctions.callStack("createMenuBarElement");
 
     // being paranoid about the TRACKING COMPARTMENTS
-    const cmView = this.plugin.settingsTabFunctions.getEditorView(
+    const cmView = this.plugin.settingsTabFunctions.getEditorCM(
       this.associatedView.editor,
     );
 
@@ -765,7 +768,10 @@ export class MenuBar {
               })`,
             });
             const cursorPos = inclusiveCursorArray[index][1];
-            const editor = this.associatedView.editor as Types.ObsidianEditor;
+            const editor = this.plugin.settingsTabFunctions.getEditor(
+              this.associatedView,
+            );
+            if (!editor) continue;
             this.addManagedListener(
               cursorDropdownEntryPos,
               "click",
@@ -805,8 +811,10 @@ export class MenuBar {
               cursorDropdownEntryPos,
               "click",
               (event) => {
-                const editor = this.associatedView
-                  .editor as Types.ObsidianEditor;
+                const editor = this.plugin.settingsTabFunctions.getEditor(
+                  this.associatedView,
+                );
+                if (!editor) return;
                 this.plugin.settingsTabFunctions.scrollToPos(editor, cursorPos);
               },
             );
@@ -838,7 +846,8 @@ export class MenuBar {
               : this.plugin.t("menubar.cursor history no stored cursors"),
           )
           .onClick(() => {
-            const editor = this.associatedView.editor as ObsidianEditor;
+            const editor = this.plugin.settingsTabFunctions.getEditor(this.associatedView)
+            if (!editor) return;
             mostRecentCursor
               ? this.plugin.settingsTabFunctions.scrollToPos(editor, mostRecentCursor)
               : "";

@@ -1,3 +1,5 @@
+[en version](https://github.com/tine-schreibt/textflow/blob/main/README.md)
+
 ### TL;DR 
 textFlow erlaubt dir **Flows** zu erzeugen - dynamische Dokumente, die aus den Inhalten mehrerer Notizen bestehen (vergleichbar mit 'Scrivenings'). Flows können aus Lesezeichen-Gruppen oder aus Ordnern, Tags und Eigenschaften definiert, und Flows wie jede andere Notiz editiert werden. Alle Änderungen an Flows und ihren Quellnotizen werden dabei automatisch registriert und bidirektional gesynct. 
 

@@ -1,3 +1,5 @@
+[de version](https://github.com/tine-schreibt/textflow/blob/main/README_de.md)
+
 ### TL;DR 
 
 textFlow is intended mainly for long form writers, but can be used by anyone who wants to see and/or work on multiple notes in context. 

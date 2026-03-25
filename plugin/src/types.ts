@@ -260,7 +260,7 @@ export interface EditorWithCM extends Editor {
   cm?: EditorView;
 }
 
-// for handling leaves
+// for handling leafIDs
 export type LeafID = string & { readonly __leafID: unique symbol };
 
 // explorer deco
