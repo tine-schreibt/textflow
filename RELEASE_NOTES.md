@@ -1,2 +1,2 @@
-### 0.2.9
-- Trying to submit to Obsidian
+### 0.2.10
+- some bugfixing and stuff under the hood, as they say
