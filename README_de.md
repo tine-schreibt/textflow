@@ -1,7 +1,6 @@
 [en version](https://github.com/tine-schreibt/textflow/blob/main/README.md)
-
 ### TL;DR 
-textFlow erlaubt dir **Flows** zu erzeugen - dynamische Dokumente, die aus den Inhalten mehrerer Notizen bestehen (vergleichbar mit 'Scrivenings'). Flows können aus Lesezeichen-Gruppen oder aus Ordnern, Tags und Eigenschaften definiert, und Flows wie jede andere Notiz editiert werden. Alle Änderungen an Flows und ihren Quellnotizen werden dabei automatisch registriert und bidirektional gesynct. 
+textFlow erlaubt dir **Flows** zu erzeugen - dynamische Dokumente, die aus den Inhalten mehrerer Notizen bestehen (vergleichbar mit 'Scrivenings'). Flows können aus Lesezeichen-Gruppen oder aus Ordnern, Tags und Eigenschaften definiert, und Flows wie jede andere Notiz editiert werden. Alle Änderungen an Flows und ihren Quellnotizen werden dabei automatisch registriert und bidirektional gesynct.
 
 textFlow ist vor allem für Autor:innen längerer Texte gedacht, kann aber von allen genutzt werden, die ihre Texte im größeren Zusammenhang sehen und/oder editieren wollen. 
 
@@ -280,10 +279,11 @@ Wenn du wissen willst, warum: [Sicherheitsfeatures](#2-safetyfeatures) / [Einsch
 
 #### Wie gehen Eigenschaften
 
+- Öffne Obsidians Einstellungen > Obsidian-Plugins und aktiviere 'Eigenschaften-Ansicht'.
 - Öffne eine Notiz deiner Wahl. 
 - Tippe `cmd + p` für die Befehlspalette und such nach `Eigenschaften`.
-- Du siehst den Befehl `Zeige Dateieiegenschaften`
-- Den wählst du aus, um die Eigenschaften der Notiz im aktiven Leafs in der rechten Seitenleiste anzeigen zu lassen. 
+- Du siehst den Befehl `Eigenschaften-Ansicht: Zeige Dateieigenschaften` (und `Eigenschaften-Ansicht: Alle Eigenschaften anzeigen`)
+- Den ersten wählst du aus, um die Eigenschaften der Notiz im aktiven Leafs in der rechten Seitenleiste anzeigen zu lassen (den zweiten, um alle Eigenschaften aller Notizen in deinem Vault zu sehen). 
 - Klick auf `Eigenschaft hinzufügen`. 
 - Es gibt einige Standardeigenschaften - `tags`, `cssclasses`, und `aliases` - die du auswählen kannst. Du kannst aber auch einfach in das Eingabefeld über dem kleinen Modal klicken und einen frei gewählten Namen für deine Eigenschaft angeben.
 - Klick dann auf das Icon mit den drei Strichen. Jetzt kannst du einen Typ für deine Eigenschaften aussuchen. Was genau die bedeuten, kannst du selber recherchieren, aber die Namen sind recht selbsterklärend. 

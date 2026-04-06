@@ -1,5 +1,4 @@
 [de version](https://github.com/tine-schreibt/textflow/blob/main/README_de.md)
-
 ### TL;DR 
 
 textFlow is intended mainly for long form writers, but can be used by anyone who wants to see and/or work on multiple notes in context. 
@@ -280,10 +279,11 @@ If you want to know why: [Safety features](#2-safety-features) / [Limitations](#
 
 #### How to properties
 
+- Open Obsidian's Settings > Core Plugins and activate 'Properties View'. 
 - Open a note of your choice. 
 - Type `cmd + p` to open the command palette and search for `properties`. 
-- You'll see the command `Show file properties`
-- Click it to open an overview of the properties for the note in the active leaf. 
+- You'll see the commands `Properties View: Show file properties` (and `Properties View: Show all properties`)
+- Click it the first to open an overview of the properties for the note in the active leaf (or the second to see all properties that exist on any not in your vault). 
 - Now click the `Add property` button. 
 - There are some default properties to choose from - `tags`, `cssclasses`, and `aliases` - but you can also just click the the input field and start typing a property name. 
 - Afterwards, click the hamburger menu to the left to choose a type for your property. You can research what they mean, but the names are pretty self explanatory. 

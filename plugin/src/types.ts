@@ -2,6 +2,7 @@ import type { FuseResult } from "fuse.js";
 import { App, Editor } from "obsidian";
 import { EditorView } from "@codemirror/view";
 import { Compartment, Extension } from "@codemirror/state";
+import xxhash from "xxhash-wasm";
 
 // --------------------------------------------------------------------------------
 // TOC
@@ -290,3 +291,5 @@ export type SuggestionType =
   | "active-flow-path"
   | "other-flow-path"
   | "flow-name";
+
+export type XXHashAPI = Awaited<ReturnType<typeof xxhash>>;

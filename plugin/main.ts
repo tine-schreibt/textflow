@@ -20,7 +20,7 @@ import * as Types from "./src/types";
 import * as Modals from "./src/modals";
 import { MenuBar } from "./src/menuBar";
 import { settingsTabFunctions } from "./src/settingsTabFunctions+";
-import XXH from "xxhashjs";
+import xxhash from "xxhash-wasm";
 import path, { dirname, basename } from "path";
 import en from "./src/lang/en.json";
 import de from "./src/lang/de.json";
@@ -219,6 +219,7 @@ export default class TextFlowPlugin extends Plugin {
   private pendingSettingsSave: {} | null = null;
   private morePendingSettingsSave: boolean = false;
 
+  private xxh!: Types.XXHashAPI;
   // ---------------- Some callbacks -------------------------
 
   // for timing of flowSwitcherModal display() calls, we need to access them from setUpFlow()
@@ -3406,8 +3407,10 @@ ${pseudoElement}
   };
 
   // ---------------------------------------------------------------
+
   makeHash = (text: string) => {
-    return XXH.h64(text, 0x0).toString(16);
+    // --- This is needed for hashing
+    return this.xxh.h64ToString(text);
   };
 
   // ---------------------------------------------------------------
@@ -3565,6 +3568,9 @@ ${pseudoElement}
     this.register(() => {
       this.isUnloading = true;
     });
+
+    // needed for hashing
+    this.xxh = await xxhash();
 
     // set up the class so main.ts can act as an access hub to the functions in settingsTabFunctions.ts
     // this needs to happen before layoutReady, or else there will be errors
