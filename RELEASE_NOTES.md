@@ -1,2 +1,2 @@
-### 0.2.11
-- updated some dependencies in the hopes that the url parse warning goes away
+### 0.2.12
+- Updated sconfig. Maybe that'll fix it?
