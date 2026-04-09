@@ -1,6 +1,8 @@
 [de version](https://github.com/tine-schreibt/textflow/blob/main/README_de.md)
 ### TL;DR 
 
+textFlow lets you create **flows** - dynamic documents built from the contents of multiple notes (think 'Scrivenings'). Flows can be defined from bookmark groups or from paths, tags and properties and edited like any other note. All changes to flows and their sources are registered automatically and synced both ways. 
+
 textFlow is intended mainly for long form writers, but can be used by anyone who wants to see and/or work on multiple notes in context. 
 
 The UI has options for keyboard as well as mouse navigation. 
