@@ -1,6 +1,6 @@
 {
   "name": "textFlow",
-  "version": "0.2.12",
+  "version": "0.2.13",
   "description": "Compile multiple notes into a single editable flow - like Scrivenings. Define from paths/tags/props or bookmarks. Auto-sync flow <-> source notes.",
   "main": "main.js",
   "scripts": {
@@ -17,7 +17,7 @@
   "license": "MIT",
   "dependencies": {
     "@types/js-yaml": "4.0.9",
-    "@types/node": "22.10.6",
+    "@types/node": "22.19.17",
     "@typescript-eslint/eslint-plugin": "8.20.0",
     "@typescript-eslint/parser": "8.20.0",
     "builtin-modules": "4.0.0",
