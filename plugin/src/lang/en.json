@@ -15,7 +15,7 @@
   "setSystemFolder.addButton.setButtonText.alt create": "Create",
   "setSystemFolder.addButton.setButtonText.alt move": "Move",
   "setSystemFolder.addButton.notice folder successfully moved": "textFlow: ${textFlowSystemFolderName} moved to ${_newSystemFolderParent}",
-  "setSystemFolder.addButton.notice failed to move folder": "textFlow: Failed to move folder: ${error_message}",
+  "setSystemFolder.addButton.notice failed to move folder": "textFlow: Failed to move folder.",
   "sysFolder please setup": "textFlow: Please set up a system folder in the settings tab.",
 
   "------ MENU BAR DEFAULT": "Default state of menu bar ----------------",

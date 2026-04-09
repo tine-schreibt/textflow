@@ -1,6 +1,7 @@
 import {
   App,
   Editor,
+  MarkdownFileInfo,
   MarkdownView,
   moment,
   normalizePath,
@@ -180,9 +181,10 @@ declare module "obsidian" {
 // ----------- THE PLUGIN CLASS----------------------
 // --------------------------------------------------
 export default class TextFlowPlugin extends Plugin {
-  settings: TextFlowSettings;
-  settingsTabFunctions: settingsTabFunctions;
-  settingsTab: TextFlowSettingsTab;
+  // assert so typescript doesn't whine about incorrect initialisation
+  settings!: TextFlowSettings;
+  settingsTabFunctions!: settingsTabFunctions;
+  settingsTab!: TextFlowSettingsTab;
 
   // ------------- global stuff ----------------------
   textFlowSystemFolderName = "textFlowSystemFolder";
@@ -497,12 +499,12 @@ export default class TextFlowPlugin extends Plugin {
       editorCheckCallback: (
         checking: boolean,
         editor: Editor,
-        view: MarkdownView,
+        ctx: MarkdownView | MarkdownFileInfo,
       ) => {
-        if (!view) return false;
-        if (!view.file) return false;
+        if (!(ctx instanceof MarkdownView)) return false;
+        if (!ctx.file) return false;
 
-        const flowName = this.isFlowFile(view.file.path);
+        const flowName = this.isFlowFile(ctx.file.path);
         if (flowName) {
           if (!checking) {
             this.settingsTabFunctions.flowBuildingBundle(flowName, "switcher");
@@ -575,15 +577,15 @@ export default class TextFlowPlugin extends Plugin {
       editorCheckCallback: (
         checking: boolean,
         editor: Editor,
-        view: MarkdownView,
+        ctx: MarkdownView | MarkdownFileInfo,
       ) => {
-        if (!view) return false;
-        if (!view.file) return false;
+        if (!(ctx instanceof MarkdownView)) return false;
+        if (!ctx.file) return false;
 
-        const flowName = this.isFlowFile(view.file.path);
+        const flowName = this.isFlowFile(ctx.file.path);
         if (flowName) {
           if (!checking) {
-            const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
+            const leafID = this.settingsTabFunctions.getLeafID(ctx.leaf);
             if (!leafID) return;
 
             // toggle the setting
@@ -612,12 +614,12 @@ export default class TextFlowPlugin extends Plugin {
       editorCheckCallback: (
         checking: boolean,
         editor: Editor,
-        view: MarkdownView,
+        ctx: MarkdownView | MarkdownFileInfo,
       ) => {
-        if (!view) return false;
-        if (!view.file) return false;
+        if (!(ctx instanceof MarkdownView)) return false;
+        if (!ctx.file) return false;
 
-        const flowName = this.isFlowFile(view.file.path);
+        const flowName = this.isFlowFile(ctx.file.path);
         if (flowName) {
           if (!checking) {
             this.settingsTabFunctions.exportFlow(flowName);
@@ -636,15 +638,15 @@ export default class TextFlowPlugin extends Plugin {
       editorCheckCallback: (
         checking: boolean,
         editor: Editor,
-        view: MarkdownView,
+        ctx: MarkdownView | MarkdownFileInfo,
       ) => {
-        if (!view) return false;
-        if (!view.file) return false;
+        if (!(ctx instanceof MarkdownView)) return false;
+        if (!ctx.file) return false;
 
-        const flowName = this.isFlowFile(view.file.path);
+        const flowName = this.isFlowFile(ctx.file.path);
         if (flowName) {
           if (!checking) {
-            const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
+            const leafID = this.settingsTabFunctions.getLeafID(ctx.leaf);
 
             if (!this.settings.activeRegions[flowName]) return;
             if (!this.settings.activeRegions[flowName][leafID]) return;
@@ -658,8 +660,8 @@ export default class TextFlowPlugin extends Plugin {
             this.settingsTabFunctions.selectActiveRegion(
               flowName,
               activeRegion,
-              view.editor.getValue(),
-              view.editor,
+              ctx.editor.getValue(),
+              ctx.editor,
             );
           }
           return true;
@@ -676,16 +678,16 @@ export default class TextFlowPlugin extends Plugin {
       editorCheckCallback: (
         checking: boolean,
         editor: Editor,
-        view: MarkdownView,
+        ctx: MarkdownView | MarkdownFileInfo,
       ) => {
-        if (!view) return false;
-        if (!view.file) return false;
+        if (!(ctx instanceof MarkdownView)) return false;
+        if (!ctx.file) return false;
 
-        const flowName = this.isFlowFile(view.file.path);
+        const flowName = this.isFlowFile(ctx.file.path);
         if (flowName) {
           if (!checking) {
-            const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
-            this.settingsTabFunctions.restoreCursorPos(flowName, view, leafID);
+            const leafID = this.settingsTabFunctions.getLeafID(ctx.leaf);
+            this.settingsTabFunctions.restoreCursorPos(flowName, ctx, leafID);
           }
           return true;
         }
@@ -2130,10 +2132,11 @@ ${pseudoElement}
   // ---------------------------------------------------------------
   // ---- This listener is for navigating flows via the file explorer
   // it is removed onunload. It's also a nervous steed, so just admire it from afar.
-  private boundFileExplorerClick: (event: MouseEvent) => void;
+  private boundFileExplorerClick!: (event: MouseEvent) => void;
 
   fileExplorerOpenClickListener = () => {
-    this.boundFileExplorerClick = async (event: MouseEvent) => {
+    this.boundFileExplorerClick = async (event: Event) => {
+      const mouseEvent = event as MouseEvent;
       if (
         this.modifierState.shift === true ||
         this.modifierState.alt === true ||
@@ -2145,7 +2148,7 @@ ${pseudoElement}
         return;
       }
 
-      if (!this.isFileExplorerClick(event)) {
+      if (!this.isFileExplorerClick(mouseEvent)) {
         return;
       }
 
@@ -2340,7 +2343,7 @@ ${pseudoElement}
           // Since we prevented the default, we must roleplay it now
           const openInNewSplit =
             this.app.workspace.getLeavesOfType("markdown").length > 0 &&
-            (event.metaKey || event.ctrlKey);
+            (mouseEvent.metaKey || mouseEvent.ctrlKey);
           this.app.workspace.openLinkText(clickedFilePath, "", openInNewSplit);
         }
       }
@@ -3617,7 +3620,9 @@ ${pseudoElement}
       // ---------------------------------------------------------------
       // and finally, Listeners and commands
       this.fileExplorerOpenClickListener();
-      const fileExplorer = document.querySelector(".nav-files-container");
+      const fileExplorer = document.querySelector(
+        ".nav-files-container",
+      ) as HTMLElement | null;
       if (fileExplorer && this.boundFileExplorerClick) {
         fileExplorer.addEventListener("click", this.boundFileExplorerClick);
       }
@@ -3635,7 +3640,9 @@ ${pseudoElement}
     // ------------ Remove listeners -----------
 
     //------------ REMOVE explorer click listener -----------
-    const fileExplorer = document.querySelector(".nav-files-container");
+    const fileExplorer = document.querySelector(
+      ".nav-files-container",
+    ) as HTMLElement | null;
     if (fileExplorer && this.boundFileExplorerClick) {
       fileExplorer.removeEventListener("click", this.boundFileExplorerClick);
     }

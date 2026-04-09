@@ -15,7 +15,7 @@
   "setSystemFolder.addButton.setButtonText.alt create": "Erzeugen",
   "setSystemFolder.addButton.setButtonText.alt move": "Verschieben",
   "setSystemFolder.addButton.notice folder successfully moved": "text Flow: ${textFlowSystemFolderName} wurde nach ${_newSystemFolderParent} verschoben.",
-  "setSystemFolder.addButton.notice failed to move folder": "textFlow: Verschieben des Ordners fehlgeschlagen: ${error_message}.",
+  "setSystemFolder.addButton.notice failed to move folder": "textFlow: Verschieben des Ordners fehlgeschlagen.",
 
   "sysFolder please setup": "textFlow: Bitte richte in den Einstellungen einen Systemordner ein.",
 

@@ -142,7 +142,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
                 new Notice(
                   this.plugin.t(
                     "setSystemFolder.addButton.notice failed to move folder",
-                    { error_message: error.message },
                   ),
                 );
               }

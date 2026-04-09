@@ -6,7 +6,7 @@ import * as Types from "./types";
 
 export class MenuBar {
   private app: App;
-  private element: HTMLElement; // the bar
+  private element!: HTMLElement; // the bar
   private plugin: TextFlowPlugin;
   private flowName: string;
   private associatedView: MarkdownView; // reference to our specific view
@@ -565,8 +565,10 @@ export class MenuBar {
             }
 
             // Listener that will close dropdown if we click outside it
-            this.addManagedListener(document, "click", (e: MouseEvent) => {
-              const target = e.target as HTMLElement;
+            this.addManagedListener(document, "click", (event: Event) => {
+              const mouseEvent = event as MouseEvent;
+
+              const target = mouseEvent.target as HTMLElement;
               // Check if click is outside the navigation dropdown
               if (!navigationDropdown.contains(target)) {
                 this.filterList = [];
@@ -708,8 +710,10 @@ export class MenuBar {
           }
 
           // Listener that will close dropdown if we click outside it
-          this.addManagedListener(document, "click", (e: MouseEvent) => {
-            const target = e.target as HTMLElement;
+          this.addManagedListener(document, "click", (event: Event) => {
+            const mouseEvent = event as MouseEvent;
+
+            const target = mouseEvent.target as HTMLElement;
             // Check if click is outside the navigation dropdown
             if (!cursorDropdown.contains(target)) {
               this.filterList = [];
