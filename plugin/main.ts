@@ -20,7 +20,7 @@ import { Compartment, EditorState, StateEffect } from "@codemirror/state";
 import * as Types from "./src/types";
 import * as Modals from "./src/modals";
 import { MenuBar } from "./src/menuBar";
-import { settingsTabFunctions } from "./src/settingsTabFunctions+";
+import { settingsTabFunctions } from "./src/settingsTabFunctionsPlus";
 import xxhash from "xxhash-wasm";
 import path, { dirname, basename } from "path";
 import en from "./src/lang/en.json";
