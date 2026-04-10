@@ -1,7 +1,8 @@
 [de version](https://github.com/tine-schreibt/textflow/blob/main/README_de.md)
+
 ### TL;DR 
 
-textFlow lets you create **flows** - dynamic documents built from the contents of multiple notes (think 'Scrivenings'). Flows can be defined from bookmark groups or from paths, tags and properties and edited like any other note. All changes to flows and their sources are registered automatically and synced both ways. 
+textFlow lets you create **flows** - dynamic documents built from the contents of multiple notes (think 'Scrivenings'). Flows can be defined from bookmark groups, or from paths, tags and properties. They can be edited like any other note. All changes to flows and their sources are registered automatically and synced both ways.
 
 textFlow is intended mainly for long form writers, but can be used by anyone who wants to see and/or work on multiple notes in context. 
 
@@ -119,12 +120,15 @@ If I develop motivation on my own, they may show up all by themselves one day.
 	- **time stamp of last modification** - this is fine for most use cases and the default setting
 	- **time stamp and hash** - activate this if you get too many unnecessary rebuilds
 	- **always hash** - useful if you don't trust your sync service or are working in a high-risk setting (i.e. with git or a 'smart'/storage saving / streaming sync service). 
+	
 	**These automatic checks run**
 	- for freshly opened flows,
 	- when you interact with a flow after at least 5 minutes of inactivity (activating its leaf, scrolling or editing its content),
 	- whenever you click into a new region (only for that region, though).
 	In case it's important to you, you can also check all your flows manually via command. 
+
 	**IMPORTANT:** Of course these checks can only work if you give your sync service enough time to do its thing. So take care to wait for the sync of your vault to finish before you resume work. 
+
 9. **Manually mark for rebuild:** If you deactivate automatic checks, you can right-click on a note in file explorer and choose to have all flows containing that note marked for rebuild. 
 10. **Definition backup:** If you ever have to un/reinstall the plugin, you can create a backup of all your flow definitions. It will be stored as a .json file in textFlow's system folder.
 
@@ -149,22 +153,20 @@ If I develop motivation on my own, they may show up all by themselves one day.
 	Sometimes the listener also just... goes on a strike for some reason? To fix that, you have to reload Obsidian. 
 2. **Interference:**
 	1. **Multi-Select:** Multi selection via alt key works as expected, but multi selection via shift key tends to get confused about which element is the start of the selection. So if you need to select with shift, switch off the explorer listener in settings (there's also a command for that).
-	2. **Other plugins:** If you are using other plugins which change the way clicks into the file explorer are handled, it's possible that some of it won't work anymore. So if you encounter problems there, try switching off textFlow's listener (there's also a command for that). 
+	2. **Other plugins:** If you are using other plugins which change the way clicks into the file explorer are handled, it's possible that some of it won't work anymore. So if you encounter problems there, try switching off textFlow's listener. 
 
 #### The other stuff: 
 
-1. **Necessary data duplication:** Flows are extra notes which repeat their source notes' contents; it's the only way this works. So if data duplication makes your blood boil, this isn't the plugin for you and you may want to look into[Continuous Mode](https://github.com/gasparschott/obsidian-continuous-mode) or [sync-embeds](https://github.com/uthvah/sync-embeds/) instead.
+1. **Necessary data duplication:** Flows are extra notes which repeat their source notes' contents; it's the only way this works. So if data duplication makes your blood boil, this isn't the plugin for you and you may want to look into [Continuous Mode](https://github.com/gasparschott/obsidian-continuous-mode) or [sync-embeds](https://github.com/uthvah/sync-embeds/) instead.
 
 #### Not my plugin's fault
 
 1. **Implicit size limit for flows:** Obsidian handles open notes in memory, so having your entire quarter-million word epic open - wether in one flow or spread over several - will make the UI sluggish. So maybe keep the flows on the smaller side and only open what you actually need.
 	For reference: Your unfinished 50.000 word novel is under 400kB, while a 250.000 word epos may crack 2MB.
-2. **Full rewrites of flows:** Obsidian doesn't do partial updates of files. So if you have a large flow, Obsidian will write that entire thing over and over to your drive while you edit it. *This is not a problem for modern SSDs*, but if you're working with a small and/or older SSD, you, again, may want to keep your flows on the smaller side. *Also: Backup your data, backup your data and backup your data.*
-3. **Alphabetical order is relative:** If you name files like 'basename', 'basename 1', 'basename 2', they may be sorted like you'd expect in fileExplorer, but JavaScript considers 'basename' to come *after* 'basename 1' in the alphabet. So in your flow, all the numbered basename files will come before the naked basename file. Solution: 'basename 0'
-4. **No auto-sync on closing Obsidian:** Onunload, Obsidian gives plugins barely enough time to clean up and save settings. Flows and sources are always saved the way all notes are, so you can always sync/rebuild when you open your vault again. 
-5. **textFlow's menu bar sometimes overlaps Editing Toolbar or the search bar or is being overlapped by the search bar:** Due to certain quirks of CSS and Obsidian, it isn't easy to have those elements coexist peacefully. The current state is the optimum of what I can achieve with my knowledge. 
-	- The minimised textFlow menu bar partially covers the outermost button of the Editing Toolbar. The button is still reachable and works. 
-	- If you use `ctrl/cmd+arrowDown` to skip to the end of a flow, Editing Toolbar slips under textFlows menu bar. You can uncover it by simply performing a min/max of the menu bar.
+2. **Alphabetical order is relative:** If you name files like 'basename', 'basename 1', 'basename 2', they may be sorted like you'd expect in fileExplorer, but JavaScript considers 'basename' to come *after* 'basename 1' in the alphabet. So in your flow, all the numbered basename files will come before the naked basename file. Solution: 'basename 0'
+3. **No auto-sync on closing Obsidian:** Onunload, Obsidian gives plugins barely enough time to clean up and save settings, let alone write entire files. But your Flows are always saved the way all notes are, so you can always sync when you open your vault again. 
+4. **textFlow's menu bar sometimes overlaps Editing Toolbar or the search bar or is being overlapped by the search bar:** Due to certain quirks of CSS and Obsidian, it isn't easy to have those elements coexist peacefully. The current state is the optimum of what I can achieve with my knowledge. You can always solve conflicts by min/maxing the menu bar, though. 
+	- The only exception: The minimised textFlow menu bar will always cover up bars that lie below it. But it's tiny and shouldn't interfere with functionality.
 
 <hr>
 
@@ -190,7 +192,7 @@ If I develop motivation on my own, they may show up all by themselves one day.
 		- Paste the files to there. 
 		- Reload your vault. 
 		- Go to Obsidian's `Settings > Community plugins` and search for textFlow. 
-		- Toggle to activate, then click the cog to get to the settings. 
+		- Toggle to activate, then click the cog to get to the settings.
 - **Install via marketplace:** Once textFlow is released to the market place: 
 	- Go to Obsidian `Settings > Community plugins > Browse`.
 	- Search for textFlow, click`Install`, click `Activate`, then click `Options` (all the same button, just give it a second).
@@ -496,4 +498,4 @@ And when should you use both together?
 If you encounter any bugs or weird behaviour that the chapter on [fixing problems](#9-fixing-problems) doesn't cover, hit me up on github: https://github.com/tine-schreibt/textFlow/issues
 You can also send the report via email: tine at tine-schreibt dot de. 
 
-If you just love this plugin and want to tell me that, an email or a dm are a good way of doing that, too. Or if you got some coin to spare, you can tip me on kofi: https://ko-fi.com/tine_schreibt
+If you just love this plugin and got some coin to spare, you can tip me on Ko-fi: https://ko-fi.com/tine_schreibt
