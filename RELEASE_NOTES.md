@@ -1,2 +1,3 @@
-### 0.2.15
-- moved most deps to devDeps in hopes it will fix the tweaking of the bot
+### 0.2.16
+- Fixed sources not being shown in backup modal
+- removed some unused dependencies
