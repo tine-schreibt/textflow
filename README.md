@@ -1,5 +1,4 @@
 [de version](https://github.com/tine-schreibt/textflow/blob/main/README_de.md)
-
 ### TL;DR 
 
 textFlow lets you create **flows** - dynamic documents built from the contents of multiple notes (think 'Scrivenings'). Flows can be defined from bookmark groups, or from paths, tags and properties. They can be edited like any other note. All changes to flows and their sources are registered automatically and synced both ways.
@@ -8,7 +7,8 @@ textFlow is intended mainly for long form writers, but can be used by anyone who
 
 The UI has options for keyboard as well as mouse navigation. 
 
-Please keep in mind that textFlow has been tested conscientiously but **is still in its beta phase**, so I'm sure not all quirks are known/fixed/worked around yet. If you find anything not mentioned in this Readme [please let me know](#12-report-a-bug--report-your-love). 
+Please keep in mind that textFlow has been tested conscientiously but **is still in its beta phase**, so I'm sure not all quirks are known/fixed/worked around yet. 
+Please check out [the trouble shooting guide](#9-fixing-problems) before filing a [bug report](#12-report-a-bug--report-your-love), though. 
 
 Please also consider running Obsidian's own data recovery plugin, ['Edit history' by Antonio Tejada](https://github.com/antoniotejada/obsidian-edit-history) or another real time backup service - at least until textFlow has earned your trust. 
 
