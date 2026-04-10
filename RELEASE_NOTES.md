@@ -1,3 +1,2 @@
-### 0.2.16
-- Fixed sources not being shown in backup modal
-- removed some unused dependencies
+### 0.2.17
+- just testing if the new release.yml works
