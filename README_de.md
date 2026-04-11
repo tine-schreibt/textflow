@@ -22,11 +22,11 @@ habe. Hier ist eine [Anleitung zur Fehlerbehebung](#9-probleme-beheben), in die
 ihr reinschauen könnt, bevor ihr einen
 [Bug Report ](#12-melde-einen-bug--zeig-deine-liebe) einreicht.
 
-Bitte lass außerdem Obsidians Datenwiederherstellungs-Plugin,
+Bitte lasst außerdem Obsidians Datenwiederherstellungs-Plugin,
 ['Edit history' von Antonio Tejada](https://github.com/antoniotejada/obsidian-edit-history)oder
 einen anderen Echtzeit-Backup-Service mitlaufen - zumindest bis sich textFlow
-dein Vertrauen verdient hat. (Aber eigentlich solltest du immer Backups
-mitlaufen lassen, egal was du tust. Immer. Bitte mach Backups! o.o)
+dein Vertrauen verdient hat. (Aber eigentlich solltet ihr immer Backups
+mitlaufen lassen, egal was ihr tut. Immer. Bitte macht Backups! o.o)
 
 ---
 
@@ -301,6 +301,10 @@ so auftauchen.
   Du kannst allerdings (derzeit noch?) keine Eigenschaften benutzen, um eine auf
   Lesezeichen basierende Definition zu verfeinern.
 
+**Eigenschaften sind nicht perfekt:** Manchmal werden manche Eigenschaften oder
+Werte einfach nicht erkannt. Ich weiß nicht, warum, und ich weiß nicht, wie ich
+das reparieren könnte.
+
 **Kein automatischen Checks bei Bearbeitung von Lesezeichen-Gruppen:**
 
 - Obsidian sagt nicht bescheid, wenn du die Reihenfolge oder Zusammensetzung
@@ -458,9 +462,10 @@ so auftauchen.
   - **Lesezeichengruppe:** Hier kannst du den Namen bzw. Pfad einer
     Lesezeichengruppe eingeben.
   - **Ordner, Tag, [Property](#wie-gehen-eigenschaften):** Du kannst
-    einschließen oder ausschließen. Die Logik ist also sehr simpel. Wenn du
-    kompliziertere Kriterien brauchst, musst du sie in Bases oder Dataview
-    formulieren und die Ergebnisse taggen.
+    einschließen oder ausschließen. Die Logik ist also sehr simpel und
+    funktioniert nur so gut wie Dataview. Wenn du kompliziertere Kriterien
+    brauchst, musst du sie in Bases oder Dataview formulieren und die Ergebnisse
+    taggen.
 - **Sortierreihenfolge:** Es steht dir frei, ob du die Notizen in der selben
   Reihenfolge haben willst, wie sie im Datei-Explorer erscheinen, oder ob sie
   lieber der Ordner-Reihenfolge entsprechen
@@ -631,10 +636,25 @@ findest, [sag bescheid](#12-melde-einen-bug--zeig-deine-liebe).
     - Ersetze die unzulässigen Zeichen durch zulässige.
     - Vergiss nicht, den Ordnernamen auch in der Definition zu ändern.
 
+- **Problem:** Ich versuche, einen Flow aus einer bestimmten Eigenschaft zu
+  definieren, aber sie wird ignoriert.
+  - **Erklärung:** Der Typ der Eigenschaft ist eine Liste und Datview mag nicht,
+    wie sie aussieht.
+  - **Lösung:** Einfachste Lösung:
+    1. Mach ne Base (Obsidian Bases),
+    2. Wähle die Property, die du bearbeiten willst, als Spalte (klick auf
+       Eigenschaft und wähl sie aus)
+    3. Rechts-klick auf den Eigenschaftennamen im Titel der Spalte und setz den
+       Typ auf Text
+    4. nochmal Rechts-klick und setz den Typ zurück auf Liste.
+    5. Wenn das nicht funktioniert, versuch mal, einzeln durch die betroffenen
+       Notizen zu gehen und die Typen hin und her zu switchen.
+
 - **Problem:** Ich habe einen Ordner gebookmarkt, aber wenn ich einen Flow
   daraus bauen will, behauptet textFlow, es wären keine Notizen darin.
-  - **Lösung:** Du musst die Notizen bookmarken. Vorher kannst du eine neue
-    Lesezeichen-Gruppe mit dem Namen ihres Ordners anlegen.
+  - **Lösung:** Du musst die Notizen in dem Ordner bookmarken. Vorher kannst du
+    noch eine neue Lesezeichen-Gruppe mit dem Namen des Ordners anlegen, den du
+    ursprünglich bookmarken wolltest.
   - **TIP:** Wenn du eine Notiz noch in einer zweiten Sammlung haben willst,
     musst du sie öffnen und dann in der Lesezeichenansicht auf 'Lesezeichen für
     den aktiven Tab anlegen' klicken.
