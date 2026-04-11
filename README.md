@@ -145,12 +145,12 @@ smoothly?**
 
 - **Export with properties:** (5) The option to keep properties when exporting a
   flow.
-- **Redirect for internal links:** (15) An entry in the context menu for
+- **Redirect for internal links:** (10) An entry in the context menu for
   internal links that allows you to open the link in a flow instead of the
   originally addressed note.
-- **Bespoke artisanal flows:** (15) The option to input a random file list as
+- **Bespoke artisanal flows:** (10) The option to input a random file list as
   flow source.
-- **Favourites for the switcher modal:** (20) In case you have a gazillion
+- **Favourites for the switcher modal:** (10) In case you have a gazillion
   flows, need help staying on top of them, and frontmatter/Dataview seem scary
   to you.
 - **Tags and properties for bookmark flows:** (50) So you can narrow them down

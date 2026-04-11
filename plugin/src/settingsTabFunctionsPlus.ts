@@ -1008,7 +1008,11 @@ export class settingsTabFunctions {
               return !!note[extractedProperty]; // the first! turns the property into a (false) boolean, the second ! inverts to return true
             } else if (Array.isArray(property) && property.length === 2) {
               const [key, value] = property;
-              return note[key] === value;
+              const noteValue = note[key];
+              if (Array.isArray(noteValue)) {
+                return noteValue.includes(value);
+              }
+              return noteValue === value;
             }
             return false;
           }) &&
@@ -1019,7 +1023,11 @@ export class settingsTabFunctions {
               return note[extractedProperty];
             } else if (property.length === 2) {
               const [key, value] = property;
-              return note[key] === value;
+              const noteValue = note[key];
+              if (Array.isArray(noteValue)) {
+                return noteValue.includes(value);
+              }
+              return noteValue === value;
             }
             return false;
           })

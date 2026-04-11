@@ -151,12 +151,12 @@ stressfrei benutzen kannst?**
 
 - **Export mit Eigenschaften:** (5) Eigenschaften eines Flows beim Export
   mitnehmen.
-- **Umleitung für interne Links:** (15) Ein Eintrag im Kontext-Menü von internen
+- **Umleitung für interne Links:** (10) Ein Eintrag im Kontext-Menü von internen
   Links, der es erlaubt, den Link in einem Flow anstatt in der eigentlich
   adressierten Notiz zu öffnen.
-- **Handgemachte Flows:** (15) Die Möglichkeit, eine beliebige Dateiliste als
+- **Handgemachte Flows:** (10) Die Möglichkeit, eine beliebige Dateiliste als
   Quelle für Flows einzugeben.
-- **Favoriten für das Switcher-Modal:** (20) Falls du eine metrische Tonne Flows
+- **Favoriten für das Switcher-Modal:** (10) Falls du eine metrische Tonne Flows
   hast, Hilfe brauchst, um nicht den Überblick zu verlieren, und
   Eigenschaften/Dataview dir unheimlich sind.
 - **Tags und Properties für Lesezeichen-Flows:** (50) Damit du sie einschränken

@@ -157,12 +157,12 @@
   "tagsExcludeInput.setDesc.1 choose tags to exclude": "EXclude by #TAG.",
 
   "propertiesIncludeInput.setDesc.1 choose properties to include": "INclude by PROPERTY",
-  "propertiesIncludeInput.setDesc.3 property = value is valid": "You can use property = \"value\"",
-  "propertiesIncludeInput.setPlaceholder": "CuddleScene, NarrativeThread = \"In the forest\"",
+  "propertiesIncludeInput.setDesc.3 property = value is valid": "You can use property = value",
+  "propertiesIncludeInput.setPlaceholder": "CuddleScene, NarrativeThread = In the forest",
 
   "propertiesExcludeInput.setDesc.1 choose properties to exclude": "EXclude by PROPERTY",
-  "propertiesExcludeInput.setDesc.3 property = value is valid": "You can use property = \"value\"",
-  "propertiesExcludeInput.setPlaceholder": "Date = 2125-08-11",
+  "propertiesExcludeInput.setDesc.3 property = value is valid": "You can use property = value",
+  "propertiesExcludeInput.setPlaceholder": "Date = 2025-08-11",
 
   "previewButton.setButtonText preview your flow structure": "Preview",
 

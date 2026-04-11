@@ -149,12 +149,12 @@
   "tagsExcludeInput.setPlaceholder": "#Entwurf, #unfertig",
 
   "propertiesIncludeInput.setDesc.1 choose properties to include": "Schließe per PROPERTY EIN.",
-  "propertiesIncludeInput.setDesc.3 property = value is valid": "Du kannst property = \"value\" verwenden",
-  "propertiesIncludeInput.setPlaceholder": "Kampfszenen, Erzählstrang = \"Im Wald\"",
+  "propertiesIncludeInput.setDesc.3 property = value is valid": "Du kannst Eigenschaft = Wert verwenden",
+  "propertiesIncludeInput.setPlaceholder": "Kampfszenen, Erzählstrang = Im Wald",
 
   "propertiesExcludeInput.setDesc.1 choose properties to exclude": "Schließe per PROPERTY AUS.",
-  "propertiesExcludeInput.setDesc.3 property = value is valid": "Du kannst property = \"value\" verwenden",
-  "propertiesExcludeInput.setPlaceholder": "Datum = 2125-08-11",
+  "propertiesExcludeInput.setDesc.3 property = value is valid": "Du kannst Eigenschaft = Wert verwenden",
+  "propertiesExcludeInput.setPlaceholder": "Datum = 2025-08-11",
 
   "previewButton.setButtonText preview your flow structure": "Vorschau",
 
