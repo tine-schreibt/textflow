@@ -104,6 +104,8 @@ export interface CursorData {
   };
 }
 
+export type definitionMode = "bookmarks" | "foldersTagsProps" | "dvQuery";
+
 // ------------------------------
 export interface FlowDef {
   flowFilePath: string;

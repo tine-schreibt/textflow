@@ -426,10 +426,12 @@ export class settingsTabFunctions {
   radioButtonManager(
     selectedButton: ButtonComponent,
     unselectedButton1: ButtonComponent,
+    unselectedButton2: ButtonComponent,
   ) {
     // Update all buttons
     selectedButton.buttonEl.addClass("settings-radio-button-active");
     unselectedButton1.buttonEl.removeClass("settings-radio-button-active");
+    unselectedButton2.buttonEl.removeClass("settings-radio-button-active");
   }
 
   //--------------------------------------------------
