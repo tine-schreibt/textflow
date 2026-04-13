@@ -89,7 +89,7 @@
   "qol.hidesystemFolder.setDesc.2 edits are still tracked": "Flows opened directly from the folder, will still be protected and tracked.",
 
   "-------- CREATE FLOWS": "Here the user can define flows-------------------------------------",
-  "createFlows.createEl.text define a new flow": "Define a new flow - 18:45",
+  "createFlows.createEl.text define a new flow": "Define a new flow",
   "createFlows.chooseFlowName.setName name your flow": "Name your flow",
   "createFlows.chooseFlowName.setDesc some characters can't be part of a flow name": "The following characters can't be part of a flow name:",
   "validFlowNameCheck.error.1 missing flow name": "Please give your flow a name.",
