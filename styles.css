@@ -101,6 +101,12 @@ button.setting-tab-button-spacing {
   margin-right: var(--size-4-2);
 }
 
+.dvQuery-text-input {
+  width: 400px;
+  height: 8em;
+  resize: vertical;
+}
+
 /* */
 /* Remove bottom borders except for last item */
 .setting-item.border-top-none {

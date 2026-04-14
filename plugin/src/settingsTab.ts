@@ -861,7 +861,9 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
         });
       }),
     );
-    chooseDvQuery.addText((setDvQueryGroup) => {
+
+    chooseDvQuery.addTextArea((setDvQueryGroup) => {
+      setDvQueryGroup.inputEl.addClass("dvQuery-text-input");
       setDvQueryGroup.setValue(
         this.plugin.settings.flowBuildBasket.flowDefinition.dvQuery ?? "",
       );
@@ -1457,11 +1459,12 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
 
       // SOURCE
       let source = "";
-      if (shownFlow.definitionMode === "bookmarks") {
+      if (shownFlow.definitionMode === "dvQuery") {
         source +=
-          this.plugin.t("flowDisplay.source.alt bookmark group") +
-          shownFlow.flowDefinition.bookmarks;
+          this.plugin.t("flowDisplay.flowShow. source dvQuery") +
+          `(${shownFlow.flowDefinition.dvQuery}`;
       }
+
       if (shownFlow.definitionMode === "foldersTagsProps") {
         source += this.plugin.t("flowDisplay.flowShow.setDesc.1 source");
 
@@ -1475,6 +1478,13 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
         }
       }
 
+      if (shownFlow.definitionMode === "bookmarks") {
+        source +=
+          this.plugin.t("flowDisplay.source.alt bookmark group") +
+          shownFlow.flowDefinition.bookmarks;
+      }
+
+      // string creation for foldersTagsProps
       // INCLUSION
       const included: string[] = [];
       if (shownFlow.flowDefinition.tagsIncluded?.trim()) {

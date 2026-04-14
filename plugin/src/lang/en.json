@@ -177,19 +177,20 @@
   "clearValues.setButtonText clear values": "Clear values",
 
   "-------- FLOW DISPLAY": "All the user's flows-------------------------------------",
-  "flowDisplay.createEl.text your flow definitions": "Your flow definitions",
-  "flowDisplay.source.alt bookmark group": "Source (bmg): ",
 
+  "flowDisplay.flowShow. source dvQuery": "dvQ:",
+
+  "flowDisplay.flowShow.setDesc.1 source": "fldr: ",
+  "flowDisplay.flowShow.setDesc.2 inclusion criteria": "Incl: ${inclusionString}",
+  "flowDisplay.flowShow.setDesc.3 exclusion criteria": "Excl: ${exclusionString}",
   "flowDisplay.included tags": "tags: ${shownFlow_flowDefinition_tagsIncluded}",
   "flowDisplay.included props": "props: ${shownFlow_flowDefinition_propsIncluded}",
-
   "flowDisplay.excluded folders": "folders: ${shownFlow_flowDefinition_folderExcluded}",
   "flowDisplay.excluded tags": "tags: ${shownFlow_flowDefinition_tagsExcluded}",
   "flowDisplay.excluded props": "props: ${shownFlow_flowDefinition_propsExcluded}",
 
-  "flowDisplay.flowShow.setDesc.1 source": "Source (fldr): ",
-  "flowDisplay.flowShow.setDesc.2 inclusion criteria": "Incl: ${inclusionString}",
-  "flowDisplay.flowShow.setDesc.3 exclusion criteria": "Excl: ${exclusionString}",
+  "flowDisplay.createEl.text your flow definitions": "Your flow definitions",
+  "flowDisplay.source.alt bookmark group": "bmg: ",
 
   "flowDisplay.rebuildButton.setButtonText (re)build": "Rebuild",
   "flowDisplay.editButton.setButtonText edit": "Edit",

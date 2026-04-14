@@ -735,26 +735,34 @@ export class RestoreFlowDefModal extends Modal {
         // --- DISPLAY PREPARATIONS ----------------------------------
         // Set up strings to display flow criteria
 
-        // SOURCE
-        let source = "";
-        if (shownFlow.definitionMode === "bookmarks") {
-          source +=
-            this.plugin.t("flowDisplay.source.alt bookmark group") +
-            shownFlow.flowDefinition.bookmarks;
-        }
-        if (shownFlow.definitionMode === "foldersTagsProps") {
-          source += this.plugin.t("flowDisplay.flowShow.setDesc.1 source");
+             // SOURCE
+      let source = "";
+      if (shownFlow.definitionMode === "dvQuery") {
+        source +=
+          this.plugin.t("flowDisplay.flowShow. source dvQuery") +
+          `(${shownFlow.flowDefinition.dvQuery}`;
+      }
 
-          if (
-            shownFlow.flowDefinition.folderIncluded === "" ||
-            shownFlow.flowDefinition.folderIncluded === "/"
-          ) {
-            source += "/";
-          } else {
-            source += `${shownFlow.flowDefinition.folderIncluded}`;
-          }
-        }
+      if (shownFlow.definitionMode === "foldersTagsProps") {
+        source += this.plugin.t("flowDisplay.flowShow.setDesc.1 source");
 
+        if (
+          shownFlow.flowDefinition.folderIncluded === "" ||
+          shownFlow.flowDefinition.folderIncluded === "/"
+        ) {
+          source += "/";
+        } else {
+          source += `${shownFlow.flowDefinition.folderIncluded}`;
+        }
+      }
+
+      if (shownFlow.definitionMode === "bookmarks") {
+        source +=
+          this.plugin.t("flowDisplay.source.alt bookmark group") +
+          shownFlow.flowDefinition.bookmarks;
+      }
+
+      // string creation for foldersTagsProps
         // INCLUSION
         const included: string[] = [];
         if (shownFlow.flowDefinition.tagsIncluded?.trim()) {
