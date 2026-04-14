@@ -222,7 +222,7 @@
   "------- CREATE FLOW FROM FOLDER MODAL": "LIKE IT SAYS ----------------",
   "CreateFlowFromFolderModal.headline": "Create a new flow from the selected folder.",
   "CreateFlowFromFolderModal.description refine def in settings": "You can refine the definition in the settings tab.",
-  "createFromFolder.notice": "textFlow: Your new flow ${flowName} has been defined.",
+  "createFromFolder.notice": "textFlow: Your new flow ${flowName} has been defined and built.",
   "CreateFlowFromFolderModal.close": "Dismiss",
 
   "----------- PREVIEW MODAL": "Modal that shows the users the structure of their flow---------",

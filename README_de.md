@@ -4,10 +4,10 @@
 
 textFlow erlaubt dir **Flows** zu erzeugen - dynamische Dokumente, die aus den
 Inhalten mehrerer Notizen bestehen (vergleichbar mit 'Scrivenings'). Flows
-können aus Lesezeichen-Gruppen oder aus Ordnern, Tags und Eigenschaften
-definiert, und Flows wie jede andere Notiz editiert werden. Alle Änderungen an
-Flows und ihren Quellnotizen werden dabei automatisch registriert und
-bidirektional gesynct.
+können aus Dataview-Queries, aus Ordnern, Tags und Eigenschaften, oder aus
+Lesezeichen-Gruppen definiert, und Flows wie jede andere Notiz editiert werden.
+Alle Änderungen an Flows und ihren Quellnotizen werden dabei automatisch
+registriert und bidirektional gesynct.
 
 textFlow ist vor allem für Autor:innen längerer Texte gedacht, kann aber von
 allen genutzt werden, die ihre Texte im größeren Zusammenhang sehen und/oder
@@ -64,9 +64,12 @@ stressfrei benutzen kannst?**
    für dich in einer neuen Notiz zusammen (einem Flow) und markiert sie mit
    unsichtbaren UUIDs, um Textänderungen zu verfolgen.
    - **Praktisch:**
-     - Flows, die aus Ordnern definiert sind, werden automatisch geprüft und
-       geflaggt/neugebaut, wenn du in ihrem Quellodner eine Notiz (oder einen
-       Ordner) verschiebst, hinzufügst oder löschst.
+     - Alle Flows, werden automatisch geprüft, wenn du in ihrem Quellodner,
+       einer ihnen zugehörigen Notiz oder einen zugehörigen Ordner verschiebst,
+       hinzufügst oder löschst, und bei Bedarf für den Neubau geflaggt. Für
+       Flows, die aus Dataview-Queries oder Lesezeichen definiert wurden,
+       funktioniert dies nur eingeschränkt; manuelles Neubauen ist aber
+       jederzeit möglich.
      - Rechts-Klick auf einen Ordner gibt die Option:
        `textFlow: Erzeuge neuen Flow aus diesem Ordner`. Das Ganze funktioniert
        auch für eine Mehrfachauswahl von Ordnern. Du kannst die Definition

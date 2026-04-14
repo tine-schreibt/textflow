@@ -213,7 +213,7 @@
   "------- CREATE FLOW FROM FOLDER MODAL": "LIKE IT SAYS ----------------",
   "CreateFlowFromFolderModal.headline": "Erzeuge neuen Flow aus dem gewählten Ordner.",
   "CreateFlowFromFolderModal.description refine def in settings": "Du kannst die Definition nachher in den Settings verfeinern.",
-  "createFromFolder.notice": "textFlow: Dein neuer Flow ${flowName} wurde definiert.",
+  "createFromFolder.notice": "textFlow: Dein neuer Flow ${flowName} wurde definiert und gebaut.",
   "CreateFlowFromFolderModal.close": "Verwerfen",
 
   "------- CREATE NEW ITEM": "CREATE NEW FILE OR FOLDER IN SELECTED FOLDER ----------------",

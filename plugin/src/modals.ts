@@ -230,7 +230,7 @@ export class CreateFlowFromFolder extends Modal {
         // It really helps to save stuff... -.-
         await this.plugin.saveSettings();
 
-        this.plugin.settingsTabFunctions.createSourceNotePathArray(
+        await this.plugin.settingsTabFunctions.createSourceNotePathArray(
           this.plugin.settings.flowBuildBasket,
         );
 
@@ -735,107 +735,106 @@ export class RestoreFlowDefModal extends Modal {
         // --- DISPLAY PREPARATIONS ----------------------------------
         // Set up strings to display flow criteria
 
-// SOURCE
-let source = "";
-if (shownFlow.definitionMode === "bookmarks") {
-  source +=
-    this.plugin.t("flowDisplay.source.alt bookmark group") +
-    shownFlow.flowDefinition.bookmarks;
-}
-if (shownFlow.definitionMode === "foldersTagsProps") {
-  source += this.plugin.t("flowDisplay.flowShow.setDesc.1 source");
+        // SOURCE
+        let source = "";
+        if (shownFlow.definitionMode === "bookmarks") {
+          source +=
+            this.plugin.t("flowDisplay.source.alt bookmark group") +
+            shownFlow.flowDefinition.bookmarks;
+        }
+        if (shownFlow.definitionMode === "foldersTagsProps") {
+          source += this.plugin.t("flowDisplay.flowShow.setDesc.1 source");
 
-  if (
-    shownFlow.flowDefinition.folderIncluded === "" ||
-    shownFlow.flowDefinition.folderIncluded === "/"
-  ) {
-    source += "/";
-  } else {
-    source += `${shownFlow.flowDefinition.folderIncluded}`;
-  }
-}
+          if (
+            shownFlow.flowDefinition.folderIncluded === "" ||
+            shownFlow.flowDefinition.folderIncluded === "/"
+          ) {
+            source += "/";
+          } else {
+            source += `${shownFlow.flowDefinition.folderIncluded}`;
+          }
+        }
 
-// INCLUSION
-const included: string[] = [];
-if (shownFlow.flowDefinition.tagsIncluded?.trim()) {
-  included.push(
-    this.plugin.t("flowDisplay.included tags", {
-      shownFlow_flowDefinition_tagsIncluded:
-        shownFlow.flowDefinition.tagsIncluded,
-    }),
-  );
-}
-if (shownFlow.flowDefinition.propsIncluded?.trim()) {
-  included.push(
-    this.plugin.t("flowDisplay.included props", {
-      shownFlow_flowDefinition_propsIncluded:
-        shownFlow.flowDefinition.propsIncluded,
-    }),
-  );
-}
-const inclusionString = included.length > 0 ? included.join(" | ") : "";
+        // INCLUSION
+        const included: string[] = [];
+        if (shownFlow.flowDefinition.tagsIncluded?.trim()) {
+          included.push(
+            this.plugin.t("flowDisplay.included tags", {
+              shownFlow_flowDefinition_tagsIncluded:
+                shownFlow.flowDefinition.tagsIncluded,
+            }),
+          );
+        }
+        if (shownFlow.flowDefinition.propsIncluded?.trim()) {
+          included.push(
+            this.plugin.t("flowDisplay.included props", {
+              shownFlow_flowDefinition_propsIncluded:
+                shownFlow.flowDefinition.propsIncluded,
+            }),
+          );
+        }
+        const inclusionString = included.length > 0 ? included.join(" | ") : "";
 
-// EXCLUSION
-const excluded: string[] = [];
-if (
-  !shownFlow.flowDefinition.bookmarks &&
-  shownFlow.flowDefinition.folderExcluded?.trim()
-) {
-  excluded.push(
-    this.plugin.t("flowDisplay.excluded folders", {
-      shownFlow_flowDefinition_folderExcluded:
-        shownFlow.flowDefinition.folderExcluded,
-    }),
-  );
-}
-if (shownFlow.flowDefinition.tagsExcluded?.trim()) {
-  excluded.push(
-    this.plugin.t("flowDisplay.excluded tags", {
-      shownFlow_flowDefinition_tagsExcluded:
-        shownFlow.flowDefinition.tagsExcluded,
-    }),
-  );
-}
-if (shownFlow.flowDefinition.propsExcluded?.trim()) {
-  excluded.push(
-    this.plugin.t("flowDisplay.excluded props", {
-      shownFlow_flowDefinition_propsExcluded:
-        shownFlow.flowDefinition.propsExcluded,
-    }),
-  );
-}
-const exclusionString = excluded.length > 0 ? excluded.join(" | ") : "";
+        // EXCLUSION
+        const excluded: string[] = [];
+        if (
+          !shownFlow.flowDefinition.bookmarks &&
+          shownFlow.flowDefinition.folderExcluded?.trim()
+        ) {
+          excluded.push(
+            this.plugin.t("flowDisplay.excluded folders", {
+              shownFlow_flowDefinition_folderExcluded:
+                shownFlow.flowDefinition.folderExcluded,
+            }),
+          );
+        }
+        if (shownFlow.flowDefinition.tagsExcluded?.trim()) {
+          excluded.push(
+            this.plugin.t("flowDisplay.excluded tags", {
+              shownFlow_flowDefinition_tagsExcluded:
+                shownFlow.flowDefinition.tagsExcluded,
+            }),
+          );
+        }
+        if (shownFlow.flowDefinition.propsExcluded?.trim()) {
+          excluded.push(
+            this.plugin.t("flowDisplay.excluded props", {
+              shownFlow_flowDefinition_propsExcluded:
+                shownFlow.flowDefinition.propsExcluded,
+            }),
+          );
+        }
+        const exclusionString = excluded.length > 0 ? excluded.join(" | ") : "";
 
-// --- THE DISPLAY ITSELF -------------------------------
-const flowShow = new Setting(flowDisplay);
-flowShow
-  .setName(`${flowName}`)
-  .setDesc(
-    createFragment((desc) => {
-      desc.createSpan({
-        text: source,
-      });
-      if (inclusionString != "" && inclusionString != undefined) {
-        desc.createEl("br");
-        desc.createSpan({
-          text: this.plugin.t(
-            "flowDisplay.flowShow.setDesc.2 inclusion criteria",
-            { inclusionString: inclusionString },
-          ),
-        });
-      }
-      if (exclusionString != "" && exclusionString != undefined) {
-        desc.createEl("br");
-        desc.createSpan({
-          text: this.plugin.t(
-            "flowDisplay.flowShow.setDesc.3 exclusion criteria",
-            { exclusionString: exclusionString },
-          ),
-        });
-      }
-    }),
-  )
-
+        // --- THE DISPLAY ITSELF -------------------------------
+        const flowShow = new Setting(flowDisplay);
+        flowShow
+          .setName(`${flowName}`)
+          .setDesc(
+            createFragment((desc) => {
+              desc.createSpan({
+                text: source,
+              });
+              if (inclusionString != "" && inclusionString != undefined) {
+                desc.createEl("br");
+                desc.createSpan({
+                  text: this.plugin.t(
+                    "flowDisplay.flowShow.setDesc.2 inclusion criteria",
+                    { inclusionString: inclusionString },
+                  ),
+                });
+              }
+              if (exclusionString != "" && exclusionString != undefined) {
+                desc.createEl("br");
+                desc.createSpan({
+                  text: this.plugin.t(
+                    "flowDisplay.flowShow.setDesc.3 exclusion criteria",
+                    { exclusionString: exclusionString },
+                  ),
+                });
+              }
+            }),
+          )
 
           //---------------------------------------------------------------------------
           .addButton((replaceButton) => {

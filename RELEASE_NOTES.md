@@ -1,2 +1,3 @@
-### 0.2.17
-- just testing if the new release.yml works
+### 0.3.0
+
+- New feature: Define flows from Dataview queries

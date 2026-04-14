@@ -13,7 +13,7 @@ import { EditorView } from "@codemirror/view";
 import TextFlow from "../main";
 import * as Types from "./types";
 import path from "path";
-import { getAPI } from "obsidian-dataview";
+import { getAPI, SMarkdownPage } from "obsidian-dataview";
 
 // Any code that was actually written by AI is labelled
 
@@ -436,9 +436,26 @@ export class settingsTabFunctions {
 
   //--------------------------------------------------
   // The function that turns the user's criteria into a sorted and filtered array of paths ---------
-  createSourceNotePathArray = (flowBuildBasket: Types.flowBuildBasket) => {
+  createSourceNotePathArray = async (
+    flowBuildBasket: Types.flowBuildBasket,
+  ) => {
     // -------- Putting the flowNotesPathArray together by fetching/filtering all paths
     try {
+      // ------ DVQuery FLOWS -----------------------
+      if (flowBuildBasket.definitionMode === "dvQuery") {
+        const dvQueryPathArray = await this.getPathsByDvQuery(flowBuildBasket);
+        flowBuildBasket.flowNotesPathArray = dvQueryPathArray;
+      }
+
+      // ------ FOLDERS/TAG/PROPERTY FLOWS -----------------------
+      else if (flowBuildBasket.definitionMode === "foldersTagsProps") {
+        this.ensureNoUndefined(flowBuildBasket);
+
+        const foldersTagsPropsPathArray =
+          await this.getPathsByFoldersTagsProps(flowBuildBasket);
+        flowBuildBasket.flowNotesPathArray = foldersTagsPropsPathArray;
+      }
+
       // ----------- BOOKMARK FLOWS ---------------------
       if (flowBuildBasket.definitionMode === "bookmarks") {
         if (
@@ -456,15 +473,8 @@ export class settingsTabFunctions {
             this.getBookmarkPathsByGroupName(flowBuildBasket);
           flowBuildBasket.flowNotesPathArray = bookmarkPathArray;
         }
-
-        // ------ PATH/TAG/PROPERTY FLOWS -----------------------
-      } else {
-        this.ensureNoUndefined(flowBuildBasket);
-
-        const foldersTagsPropsPathArray =
-          this.getPathsByFoldersTagsProps(flowBuildBasket);
-        flowBuildBasket.flowNotesPathArray = foldersTagsPropsPathArray;
       }
+
       // ---- Check for empty
       if (flowBuildBasket.flowNotesPathArray.length === 0) {
         new Notice(
@@ -473,6 +483,7 @@ export class settingsTabFunctions {
           ),
         );
         flowBuildBasket.success = false;
+        return;
       }
       // get overlap info
       flowBuildBasket.overlapObject = this.overlapCollector(flowBuildBasket);
@@ -490,239 +501,73 @@ export class settingsTabFunctions {
   // --- HELPER FUNCTIONS FOR FETCHING PATHS (AND CLEANING UP STUFF)
   // Also we're using the opportunity to get a clean definition (user input) for storage
 
-  // ---- GET PATHS IN BOOKMARK GROUP ----------------
-  getBookmarkPathsByGroupName = (flowBuildBasket: Types.flowBuildBasket) => {
-    let groupName = flowBuildBasket.flowDefinition.bookmarks;
-
-    // since groupName could be a path, prepare it for further processing:
-    const cleanPath = groupName.replace(/\/+/g, "/");
-    flowBuildBasket.flowDefinition.bookmarks = cleanPath;
-    const groupPathArray = cleanPath.split("/");
-
-    // if the user wants to exclude subgroups, flag and remove the trailing /
-    let includeSubgroups: boolean = true;
-    if (cleanPath.endsWith("/")) {
-      includeSubgroups = false;
-      groupPathArray.splice(groupPathArray.length - 1, 1);
-    }
-
-    // get the bookmarks via the API and prepare helper variables
-    const bookmarks = (this.app as Types.ObsidianApp).internalPlugins.plugins
-      .bookmarks.instance;
-    const bookmarkItems = bookmarks.items;
-    let bookmarkedNotePathsArray: string[] = [];
-
-    //-- Function to navigate to the group and dissect out its contents, written by Claude
-    const navigateToGroup = (
-      items: Types.BookmarkItem[],
-      pathParts: string[],
-    ): Types.BookmarkItem | null => {
-      let current = items;
-      let found: Types.BookmarkItem | null = null;
-
-      for (const part of pathParts) {
-        found =
-          current.find(
-            (item) => item.type === "group" && item.title === part,
-          ) || null;
-
-        if (!found || !found.items) return null;
-        current = found.items;
-      }
-      return found;
-    };
-
-    // Call to the function we just defined
-    const finalGroup = navigateToGroup(bookmarkItems, groupPathArray);
-
-    // -- the following collection triplet was birthed by Claude 3.5 Sonnet --------------------
-    // as the doula, I shed quite some sweat, though, and maybe even some tears
-    //-------------- Reflecting note order -------------------
-    const collectBookmarkPathsNoteOrder = (
-      items: Types.BookmarkItem[],
-      flowBuildBasket: Types.flowBuildBasket,
-      topLevelTitle: string, // Add parameter for top level title
-    ): string[] => {
-      const bookmarkedNotePathsArray: string[] = [];
-
-      const processGroup = (group: any) => {
-        // First, process any subgroups (going deep first)
-        if (group.items) {
-          // Process subgroups first
-          for (const item of group.items) {
-            if (item.type === "group") {
-              processGroup(item);
-            }
-          }
-
-          // After processing subgroups, add this group's title and direct files
-          if (flowBuildBasket.folderTitles) {
-            bookmarkedNotePathsArray.push(`# ${group.title}`);
-          }
-
-          // Add only direct file children (not those in subgroups)
-          const directFiles = group.items.filter(
-            (item: any) => item.type === "file",
-          );
-          directFiles.forEach((file: any) => {
-            bookmarkedNotePathsArray.push(file.path);
-          });
-        }
-      };
-
-      if (includeSubgroups) {
-        // Process each group in the items array
-        items.forEach((item) => {
-          if (item.type === "group") {
-            processGroup(item);
-          }
-        });
-      }
-
-      // After processing all groups, add the top level title and direct files
-      if (topLevelTitle && flowBuildBasket.folderTitles) {
-        bookmarkedNotePathsArray.push(`# ${topLevelTitle}`);
-      }
-
-      // Add top-level files
-      const topLevelFiles = items.filter((item) => item.type === "file");
-      topLevelFiles.forEach((file) => {
-        if (file && file.path) {
-          bookmarkedNotePathsArray.push(file.path);
-        }
-      });
-
-      return bookmarkedNotePathsArray;
-    };
-
-    // ---- Reflecting folder order ----------------------
-    const collectBookmarkPathsFolderOrder = (
-      items: Types.BookmarkItem[],
-      flowBuildBasket: Types.flowBuildBasket,
-      topLevelTitle: string,
-    ): string[] => {
-      const bookmarkedNotePathsArray: string[] = [];
-
-      // First handle top-level files
-      const topLevelFiles = items.filter((item) => item.type === "file");
-      if (topLevelTitle && flowBuildBasket.folderTitles) {
-        bookmarkedNotePathsArray.push(`# ${topLevelTitle}`);
-      }
-      topLevelFiles.forEach((file) => {
-        if (file.type === "file" && file.path) {
-          bookmarkedNotePathsArray.push(file.path);
-        }
-      });
-
-      // Then process groups
-      for (const item of items) {
-        if (item.type === "group" && item.items) {
-          // Add this group's name and its direct files
-          if (flowBuildBasket.folderTitles) {
-            bookmarkedNotePathsArray.push(`# ${item.title ?? "Unnamed Group"}`);
-          }
-          // Add direct files
-          item.items.forEach((file) => {
-            if (file.type === "file" && file.path) {
-              bookmarkedNotePathsArray.push(file.path);
-            }
-          });
-
-          // Then process subgroups if included
-          if (includeSubgroups) {
-            item.items.forEach((subItem) => {
-              if (subItem.type === "group") {
-                if (flowBuildBasket.folderTitles) {
-                  bookmarkedNotePathsArray.push(
-                    `# ${subItem.title ?? "Unnamed Group"}`,
-                  );
-                }
-                subItem.items?.forEach((file) => {
-                  if (file.type === "file" && file.path) {
-                    bookmarkedNotePathsArray.push(file.path);
-                  }
-                });
-              }
-            });
-          }
-        }
-      }
-      return bookmarkedNotePathsArray;
-    };
-
-    // ------------- Preserving custom order --------------------------------------
-    // iterator is needed so it doesn't add the main group's name before every level
-    let iterator = 0;
-    const collectBookmarkPathsManualOrder = (
-      items: Types.BookmarkItem[],
-      flowBuildBasket: Types.flowBuildBasket,
-    ): string[] => {
-      iterator++;
-      const bookmarkedNotePathsArray: string[] = [];
-
-      // Add the toplevel title, if titles are wanted
-      if (flowBuildBasket.folderTitles && iterator === 1) {
-        bookmarkedNotePathsArray.push(
-          `# ${groupPathArray[groupPathArray.length - 1]}`,
-        );
-      }
-
-      // Process each item in original order
-      for (const item of items) {
-        if (item.type === "file" && item.path) {
-          bookmarkedNotePathsArray.push(item.path);
-        } else if (includeSubgroups && item.type === "group" && item.items) {
-          if (flowBuildBasket.folderTitles) {
-            bookmarkedNotePathsArray.push(`# ${item.title ?? "Unnamed Group"}`);
-          }
-          // Recursively process group contents and add results to our array
-          const subGroupPaths = collectBookmarkPathsManualOrder(
-            item.items,
-            flowBuildBasket,
-          );
-          bookmarkedNotePathsArray.push(...subGroupPaths);
-        }
-      }
-
-      return bookmarkedNotePathsArray;
-    };
-
-    // Call to the functions we just defined ---------------------------------
-    if (finalGroup?.items) {
-      if (
-        flowBuildBasket.flowDefinition.bookmarksSortOrder === "noteOrder" ||
-        flowBuildBasket.flowDefinition.bookmarksSortOrder === undefined
-      ) {
-        bookmarkedNotePathsArray = collectBookmarkPathsNoteOrder(
-          finalGroup.items,
-          flowBuildBasket,
-          groupPathArray[groupPathArray.length - 1],
-        );
-        return bookmarkedNotePathsArray;
-      } else if (
-        flowBuildBasket.flowDefinition.bookmarksSortOrder === "folderOrder"
-      ) {
-        bookmarkedNotePathsArray = collectBookmarkPathsFolderOrder(
-          finalGroup.items,
-          flowBuildBasket,
-          groupPathArray[groupPathArray.length - 1],
-        );
-        return bookmarkedNotePathsArray;
-      } else {
-        bookmarkedNotePathsArray = collectBookmarkPathsManualOrder(
-          finalGroup.items,
-          flowBuildBasket,
-        );
-        return bookmarkedNotePathsArray;
-      }
-    } else {
+  // ---------------- GET DVQUERY PATHS ----------------------
+  getPathsByDvQuery = async (flowBuildBasket: Types.flowBuildBasket) => {
+    if (!this.plugin.settings.systemFolderPath) return [];
+    const dv = getAPI();
+    if (!dv) {
       new Notice(
         this.plugin.t(
-          "createSourceNotePathArray.notice bookmark group not found",
+          "getPathsByFoldersTagsProps.notice dataview not installed",
         ),
       );
       return [];
     }
+
+    console.log("dvQuery: ", flowBuildBasket.flowDefinition.dvQuery);
+    // check if the user messed up the query start and fix it
+    flowBuildBasket.flowDefinition.dvQuery =
+      flowBuildBasket.flowDefinition.dvQuery.replace(
+        /\b(TABLE|TASK|CALENDAR|CARDS?)\s+FROM\b/gi,
+        "LIST FROM",
+      );
+
+    // the path sorting suff again
+    let sortedFilePathArray: string[] = [];
+    const vault = this.app.vault;
+
+    flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder ===
+      "noteOrder" ||
+    flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder === undefined
+      ? (sortedFilePathArray = this.makeNoteOrderPathArray(
+          vault.getRoot(),
+          sortedFilePathArray,
+        ))
+      : (sortedFilePathArray = this.makeFolderOrderPathArray(
+          vault.getRoot(),
+          sortedFilePathArray,
+        ));
+
+    let finalPathArray: string[] = [];
+
+    let allNotes = await dv.query(`${flowBuildBasket.flowDefinition.dvQuery}`);
+
+    if (!allNotes.successful) {
+      return [];
+    }
+    // the following line is slop
+    const filteredPathObject: { [key: string]: boolean } = {};
+
+    for (let note of allNotes.value.values) {
+      filteredPathObject[note.path] = true;
+    }
+
+    for (let path of sortedFilePathArray) {
+      // remove entries that are in the systemFolder
+      if (path.startsWith(`${this.plugin.settings.systemFolderPath}`)) continue;
+      if (filteredPathObject[path] && !finalPathArray.includes(path)) {
+        finalPathArray.push(path);
+      }
+    }
+
+    if (flowBuildBasket.folderTitles) {
+      finalPathArray = this.findAndAddFolderTitles(
+        finalPathArray,
+        flowBuildBasket,
+      );
+    }
+
+    return finalPathArray;
   };
 
   // --- GET ALL PATHS FROM FOLDER TAG PROPERTY ---------------------------
@@ -748,10 +593,9 @@ export class settingsTabFunctions {
     }
   };
 
-  // --- FUNCTION TO GET THE PATHS -------
-  // Since this whole thing is strictly chronological and all its constituent functions are only ever used in here, I have left it as a behenmoth
-  // also I may be scared to break something again
-  getPathsByFoldersTagsProps = (flowBuildBasket: Types.flowBuildBasket) => {
+  getPathsByFoldersTagsProps = async (
+    flowBuildBasket: Types.flowBuildBasket,
+  ) => {
     const dv = getAPI();
     if (!dv) {
       new Notice(
@@ -909,64 +753,21 @@ export class settingsTabFunctions {
 
     // -------- cleanup done ---------------------------------------------------
 
-    // ----------------------------------------------------------
-    // --- FUNCTIONS TO MAKE SORTED PATH ARRAYS ---------------------
-    // ----------------------------------------------------------
-    // unsurprisingly, these are AI, too
-
-    // some globals for the whole path stuff
-    const sortedFilePathArray: string[] = [];
+    // Call for the path sorting stuff -------------------------
+    let sortedFilePathArray: string[] = [];
     const vault = this.app.vault;
 
-    // Make array following note order -----------------------------------
-    const makeNoteOrderPathArray = (folder: TFolder) => {
-      // Split and sort folders and files separately
-      const folders = folder.children
-        .filter((child): child is TFolder => child instanceof TFolder)
-        .sort((a, b) => a.name.localeCompare(b.name));
-
-      const files = folder.children
-        .filter((child): child is TFile => child instanceof TFile)
-        .sort((a, b) => a.name.localeCompare(b.name));
-
-      // then recurse into subfolders, if we don't exclude them
-      for (const subfolder of folders) {
-        makeNoteOrderPathArray(subfolder);
-      }
-
-      // Always process files in current folder
-      for (const file of files) {
-        sortedFilePathArray.push(file.path);
-      }
-    };
-
-    // Make array following folder order ------------------------------------
-    const makeFolderOrderPathArray = (folder: TFolder) => {
-      const children = folder.children.sort((a, b) =>
-        a.name.localeCompare(b.name),
-      );
-
-      // Get notes first
-      for (const child of children) {
-        if (child instanceof TFile) {
-          sortedFilePathArray.push(child.path);
-        }
-      }
-      // then recurse into subfolders, if we don't exclude them
-      for (const child of children) {
-        if (child instanceof TFolder) {
-          makeFolderOrderPathArray(child);
-        }
-      }
-    };
-
-    // Call for the array makers (puts stuff in filePathArray) -------------------------
-    this.plugin.settings.flowBuildBasket.flowDefinition
-      .pathsTagsPropertiesSortOrder === "noteOrder" ||
-    this.plugin.settings.flowBuildBasket.flowDefinition
-      .pathsTagsPropertiesSortOrder === undefined
-      ? makeNoteOrderPathArray(vault.getRoot())
-      : makeFolderOrderPathArray(vault.getRoot());
+    flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder ===
+      "noteOrder" ||
+    flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder === undefined
+      ? (sortedFilePathArray = this.makeNoteOrderPathArray(
+          vault.getRoot(),
+          sortedFilePathArray,
+        ))
+      : (sortedFilePathArray = this.makeFolderOrderPathArray(
+          vault.getRoot(),
+          sortedFilePathArray,
+        ));
 
     // ----------------------------------------------------------
     // ---- USE DATAVIEW API to get and filter notes
@@ -976,7 +777,7 @@ export class settingsTabFunctions {
 
     for (let dvInclusionTuple of flowBuildBasket.dataviewSearchArray) {
       const dvPath = dvInclusionTuple[0].trim();
-      let allNotes = dv.pages(dvPath);
+      let allNotes = await dv.pages(dvPath);
 
       // If inclusion path ends with slash, filter out subfolder stuff
       if (dvInclusionTuple[1] != "/" && dvInclusionTuple[1].endsWith("/")) {
@@ -1050,57 +851,355 @@ export class settingsTabFunctions {
       }
     }
 
-    // --------------------------------------------------------------------
-    // HELPER FUNCTIONS FOR INCLUDING FOLDER TITLES IN PATH DEFINED FLOWS
-    // --------------------------------------------------------------------
-    // Because I'm sure you could put this step into the original sorting function but at this point implementing that would likely make me lose my will to live, so...
-
-    const findAndAddFolderTitles = (
-      finalPathArray: string[],
-      flowBuildBasket: Types.flowBuildBasket,
-    ) => {
-      let arrayWithFolderTitles: string[] = [];
-      let lastParentFolder = "";
-
-      for (let currentPath of finalPathArray) {
-        // Split current and last path into segments
-        const currentPathSegments = currentPath.split("/");
-
-        // find the last parent folder
-        // if there is no parent
-        if (currentPathSegments.length === 1 && flowBuildBasket.folderTitles) {
-          if (lastParentFolder != this.app.vault.getName()) {
-            arrayWithFolderTitles.push(`# ${this.app.vault.getName()}`);
-            arrayWithFolderTitles.push(`${currentPath}`);
-          }
-          lastParentFolder = this.app.vault.getName();
-        }
-        // if there is a parent, check if it's a new one
-        if (currentPathSegments.length >= 2 && flowBuildBasket.folderTitles) {
-          let currentParentFolder =
-            currentPathSegments[currentPathSegments.length - 2];
-          if (lastParentFolder != currentParentFolder) {
-            // if it's a new parent, push it and replace
-            arrayWithFolderTitles.push(`# ${currentParentFolder}`);
-            lastParentFolder = currentParentFolder;
-          }
-        }
-        arrayWithFolderTitles.push(`${currentPath}`);
-      }
-
-      return arrayWithFolderTitles;
-    };
-
-    let pathArrayWithFolderTitles = findAndAddFolderTitles(
-      finalPathArray,
-      flowBuildBasket,
-    );
+    if (flowBuildBasket.folderTitles) {
+      finalPathArray = this.findAndAddFolderTitles(
+        finalPathArray,
+        flowBuildBasket,
+      );
+    }
 
     // pack the definition back into the basket
     flowBuildBasket.flowDefinition = shFlowDefinition;
 
     // presto; as a reminder: this is handed back all the way up in createSourceNotePathArray
-    return pathArrayWithFolderTitles;
+    return finalPathArray;
+  };
+
+  // ----------------------------------------------------------
+  // --- FUNCTIONS TO MAKE SORTED PATH ARRAYS ---------------------
+  // ----------------------------------------------------------
+  // unsurprisingly, these are AI
+
+  // Make array following note order -----------------------------------
+  makeNoteOrderPathArray = (folder: TFolder, pathCollector: string[]) => {
+    if (!this.plugin.settings.systemFolderPath) return [];
+    // Split and sort folders and files separately
+    const folders = folder.children
+      .filter((child): child is TFolder => child instanceof TFolder)
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    const files = folder.children
+      .filter((child): child is TFile => child instanceof TFile)
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    // then recurse into subfolders, if we don't exclude them
+    for (const subfolder of folders) {
+      this.makeNoteOrderPathArray(subfolder, pathCollector);
+    }
+
+    // Always process files in current folder
+    for (const file of files) {
+      if (file.path.startsWith(this.plugin.settings.systemFolderPath)) continue;
+      pathCollector.push(file.path);
+    }
+    return pathCollector;
+  };
+
+  // Make array following folder order ------------------------------------
+  makeFolderOrderPathArray = (folder: TFolder, pathCollector: string[]) => {
+    const children = folder.children.sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+
+    // Get notes first
+    for (const child of children) {
+      if (child instanceof TFile) {
+        if (child.path.startsWith(`${this.plugin.settings.systemFolderPath}`))
+          continue;
+        pathCollector.push(child.path);
+      }
+    }
+    // then recurse into subfolders, if we don't exclude them
+    for (const child of children) {
+      if (child instanceof TFolder) {
+        this.makeFolderOrderPathArray(child, pathCollector);
+      }
+    }
+    return pathCollector;
+  };
+
+  // --------------------------------------------------------------------
+  // HELPER FUNCTION FOR INCLUDING FOLDER TITLES IN PATH DEFINED FLOWS
+  // --------------------------------------------------------------------
+
+  findAndAddFolderTitles = (
+    finalPathArray: string[],
+    flowBuildBasket: Types.flowBuildBasket,
+  ) => {
+    let arrayWithFolderTitles: string[] = [];
+    let lastParentFolder = "";
+
+    for (let currentPath of finalPathArray) {
+      // Split current and last path into segments
+      const currentPathSegments = currentPath.split("/");
+
+      // find the last parent folder
+      // if there is no parent
+      if (currentPathSegments.length === 1 && flowBuildBasket.folderTitles) {
+        if (lastParentFolder != this.app.vault.getName()) {
+          arrayWithFolderTitles.push(`# ${this.app.vault.getName()}`);
+          arrayWithFolderTitles.push(`${currentPath}`);
+        }
+        lastParentFolder = this.app.vault.getName();
+      }
+      // if there is a parent, check if it's a new one
+      if (currentPathSegments.length >= 2 && flowBuildBasket.folderTitles) {
+        let currentParentFolder =
+          currentPathSegments[currentPathSegments.length - 2];
+        if (lastParentFolder != currentParentFolder) {
+          // if it's a new parent, push it and replace
+          arrayWithFolderTitles.push(`# ${currentParentFolder}`);
+          lastParentFolder = currentParentFolder;
+        }
+      }
+      arrayWithFolderTitles.push(`${currentPath}`);
+    }
+
+    return arrayWithFolderTitles;
+  };
+
+  // ---- GET PATHS IN BOOKMARK GROUP ----------------
+  getBookmarkPathsByGroupName = (flowBuildBasket: Types.flowBuildBasket) => {
+    let groupName = flowBuildBasket.flowDefinition.bookmarks;
+
+    // since groupName could be a path, prepare it for further processing:
+    const cleanPath = groupName.replace(/\/+/g, "/");
+    flowBuildBasket.flowDefinition.bookmarks = cleanPath;
+    const groupPathArray = cleanPath.split("/");
+
+    // if the user wants to exclude subgroups, flag and remove the trailing /
+    let includeSubgroups: boolean = true;
+    if (cleanPath.endsWith("/")) {
+      includeSubgroups = false;
+      groupPathArray.splice(groupPathArray.length - 1, 1);
+    }
+
+    // get the bookmarks via the API and prepare helper variables
+    const bookmarks = (this.app as Types.ObsidianApp).internalPlugins.plugins
+      .bookmarks.instance;
+    const bookmarkItems = bookmarks.items;
+    let bookmarkedNotePathsArray: string[] = [];
+
+    //-- Function to navigate to the group and dissect out its contents, written by Claude
+    const navigateToGroup = (
+      items: Types.BookmarkItem[],
+      pathParts: string[],
+    ): Types.BookmarkItem | null => {
+      let current = items;
+      let found: Types.BookmarkItem | null = null;
+
+      for (const part of pathParts) {
+        found =
+          current.find(
+            (item) => item.type === "group" && item.title === part,
+          ) || null;
+
+        if (!found || !found.items) return null;
+        current = found.items;
+      }
+      return found;
+    };
+
+    // Call to the function we just defined
+    const finalGroup = navigateToGroup(bookmarkItems, groupPathArray);
+
+    // -- the following collection triplet was birthed by Claude 3.5 Sonnet --------------------
+    // as the doula, I shed quite some sweat, though, and maybe even some tears
+    //-------------- Reflecting note order -------------------
+    const collectBookmarkPathsNoteOrder = (
+      items: Types.BookmarkItem[],
+      flowBuildBasket: Types.flowBuildBasket,
+      topLevelTitle: string, // Add parameter for top level title
+    ): string[] => {
+      if (!this.plugin.settings.systemFolderPath) return [];
+      const bookmarkedNotePathsArray: string[] = [];
+
+      const processGroup = (group: any) => {
+        // First, process any subgroups (going deep first)
+        if (group.items) {
+          // Process subgroups first
+          for (const item of group.items) {
+            if (item.type === "group") {
+              processGroup(item);
+            }
+          }
+
+          // After processing subgroups, add this group's title and direct files
+          if (flowBuildBasket.folderTitles) {
+            bookmarkedNotePathsArray.push(`# ${group.title}`);
+          }
+
+          // Add only direct file children (not those in subgroups)
+          const directFiles = group.items.filter(
+            (item: any) => item.type === "file",
+          );
+          directFiles.forEach((file: any) => {
+            bookmarkedNotePathsArray.push(file.path);
+          });
+        }
+      };
+
+      if (includeSubgroups) {
+        // Process each group in the items array
+        items.forEach((item) => {
+          if (item.type === "group") {
+            processGroup(item);
+          }
+        });
+      }
+
+      // After processing all groups, add the top level title and direct files
+      if (
+        topLevelTitle &&
+        flowBuildBasket.folderTitles &&
+        topLevelTitle != this.plugin.textFlowSystemFolderName
+      ) {
+        bookmarkedNotePathsArray.push(`# ${topLevelTitle}`);
+      }
+
+      // Add top-level files
+      const topLevelFiles = items.filter((item) => item.type === "file");
+      topLevelFiles.forEach((file) => {
+        if (
+          file &&
+          file.path &&
+          !file.path.startsWith(`${this.plugin.settings.systemFolderPath}`)
+        ) {
+          bookmarkedNotePathsArray.push(file.path);
+        }
+      });
+
+      return bookmarkedNotePathsArray;
+    };
+
+    // ---- Reflecting folder order ----------------------
+    const collectBookmarkPathsFolderOrder = (
+      items: Types.BookmarkItem[],
+      flowBuildBasket: Types.flowBuildBasket,
+      topLevelTitle: string,
+    ): string[] => {
+      const bookmarkedNotePathsArray: string[] = [];
+
+      // First handle top-level files
+      const topLevelFiles = items.filter((item) => item.type === "file");
+      if (topLevelTitle && flowBuildBasket.folderTitles) {
+        bookmarkedNotePathsArray.push(`# ${topLevelTitle}`);
+      }
+      topLevelFiles.forEach((file) => {
+        if (file.type === "file" && file.path) {
+          bookmarkedNotePathsArray.push(file.path);
+        }
+      });
+
+      // Then process groups
+      for (const item of items) {
+        if (item.type === "group" && item.items) {
+          // Add this group's name and its direct files
+          if (flowBuildBasket.folderTitles) {
+            bookmarkedNotePathsArray.push(`# ${item.title ?? "Unnamed Group"}`);
+          }
+          // Add direct files
+          item.items.forEach((file) => {
+            if (file.type === "file" && file.path) {
+              bookmarkedNotePathsArray.push(file.path);
+            }
+          });
+
+          // Then process subgroups if included
+          if (includeSubgroups) {
+            item.items.forEach((subItem) => {
+              if (subItem.type === "group") {
+                if (flowBuildBasket.folderTitles) {
+                  bookmarkedNotePathsArray.push(
+                    `# ${subItem.title ?? "Unnamed Group"}`,
+                  );
+                }
+                subItem.items?.forEach((file) => {
+                  if (file.type === "file" && file.path) {
+                    bookmarkedNotePathsArray.push(file.path);
+                  }
+                });
+              }
+            });
+          }
+        }
+      }
+      return bookmarkedNotePathsArray;
+    };
+
+    // ------------- Preserving custom order --------------------------------------
+    // iterator is needed so it doesn't add the main group's name before every level
+    let iterator = 0;
+    const collectBookmarkPathsManualOrder = (
+      items: Types.BookmarkItem[],
+      flowBuildBasket: Types.flowBuildBasket,
+    ): string[] => {
+      iterator++;
+      const bookmarkedNotePathsArray: string[] = [];
+
+      // Add the toplevel title, if titles are wanted
+      if (flowBuildBasket.folderTitles && iterator === 1) {
+        bookmarkedNotePathsArray.push(
+          `# ${groupPathArray[groupPathArray.length - 1]}`,
+        );
+      }
+
+      // Process each item in original order
+      for (const item of items) {
+        if (item.type === "file" && item.path) {
+          bookmarkedNotePathsArray.push(item.path);
+        } else if (includeSubgroups && item.type === "group" && item.items) {
+          if (flowBuildBasket.folderTitles) {
+            bookmarkedNotePathsArray.push(`# ${item.title ?? "Unnamed Group"}`);
+          }
+          // Recursively process group contents and add results to our array
+          const subGroupPaths = collectBookmarkPathsManualOrder(
+            item.items,
+            flowBuildBasket,
+          );
+          bookmarkedNotePathsArray.push(...subGroupPaths);
+        }
+      }
+
+      return bookmarkedNotePathsArray;
+    };
+
+    // Call to the functions we just defined ---------------------------------
+    if (finalGroup?.items) {
+      if (
+        flowBuildBasket.flowDefinition.bookmarksSortOrder === "noteOrder" ||
+        flowBuildBasket.flowDefinition.bookmarksSortOrder === undefined
+      ) {
+        bookmarkedNotePathsArray = collectBookmarkPathsNoteOrder(
+          finalGroup.items,
+          flowBuildBasket,
+          groupPathArray[groupPathArray.length - 1],
+        );
+        return bookmarkedNotePathsArray;
+      } else if (
+        flowBuildBasket.flowDefinition.bookmarksSortOrder === "folderOrder"
+      ) {
+        bookmarkedNotePathsArray = collectBookmarkPathsFolderOrder(
+          finalGroup.items,
+          flowBuildBasket,
+          groupPathArray[groupPathArray.length - 1],
+        );
+        return bookmarkedNotePathsArray;
+      } else {
+        bookmarkedNotePathsArray = collectBookmarkPathsManualOrder(
+          finalGroup.items,
+          flowBuildBasket,
+        );
+        return bookmarkedNotePathsArray;
+      }
+    } else {
+      new Notice(
+        this.plugin.t(
+          "createSourceNotePathArray.notice bookmark group not found",
+        ),
+      );
+      return [];
+    }
   };
 
   // ------ function that checks if flows overlap ------------
@@ -1231,7 +1330,7 @@ export class settingsTabFunctions {
     };
 
     // do the thing
-    this.createSourceNotePathArray(flowReBuildBasket);
+    await this.createSourceNotePathArray(flowReBuildBasket);
 
     // exit; error messages are sent by createSourceNotePathArray
     if (!flowReBuildBasket.success) {

@@ -1,6 +1,6 @@
 {
   "name": "textFlow",
-  "version": "0.2.17",
+  "version": "0.3.0",
   "description": "Compile multiple notes into a single editable flow - like Scrivenings. Define from paths/tags/props or bookmarks. Auto-sync flow <-> source notes.",
   "main": "main.js",
   "scripts": {

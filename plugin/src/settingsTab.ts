@@ -662,6 +662,13 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
     // Just creating and styling the buttons; the dependent UI and .onClick behaviour
     // are below the input element setup because I want to keep the hide/show with its elements
 
+    buttons.dvQuery = new ButtonComponent(radioButtonContainer)
+      .setButtonText(this.plugin.t("buttons.dvQuery.setButtonText by dvQuery"))
+      .setClass("settings-radio-button");
+    if (this.plugin.settings.flowBuildBasket.definitionMode === "dvQuery") {
+      buttons.dvQuery.buttonEl.addClass("settings-radio-button-active");
+    }
+
     buttons.foldersTagsProps = new ButtonComponent(radioButtonContainer)
       .setButtonText(
         this.plugin.t(
@@ -684,13 +691,6 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
       .setClass("settings-radio-button");
     if (this.plugin.settings.flowBuildBasket.definitionMode === "bookmarks") {
       buttons.bookmarks.buttonEl.addClass("settings-radio-button-active");
-    }
-
-    buttons.dvQuery = new ButtonComponent(radioButtonContainer)
-      .setButtonText(this.plugin.t("buttons.dvQuery.setButtonText by dvQuery"))
-      .setClass("settings-radio-button");
-    if (this.plugin.settings.flowBuildBasket.definitionMode === "dvQuery") {
-      buttons.dvQuery.buttonEl.addClass("settings-radio-button-active");
     }
 
     // ---------- FOLDERS, TAGS AND PROPERTIES INPUT ELEMENT -----------------------------------------
@@ -791,7 +791,88 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
       });
     });
 
-    //--------------------------------------------------------------------------------
+    // ------ dvQuery INPUT ELEMENT AND STUFF --------------------------------------
+    const dvQuerySortOrder = new Setting(createFlows);
+    dvQuerySortOrder.settingEl.hide(); // HIDE INITIALLY
+    dvQuerySortOrder
+      .setName(this.plugin.t("sortOrder.setName sort order"))
+      .setDesc(
+        createFragment((desc) => {
+          desc.createSpan({
+            text: this.plugin.t("sortOrder.setDesc.1 note order"),
+            cls: "text-emphasis",
+          });
+          desc.createSpan({
+            text: this.plugin.t(
+              "sortOrder.setDesc.2 description of note order",
+            ),
+          });
+          desc.createEl("br");
+          desc.createSpan({
+            text: this.plugin.t("sortOrder.setDesc.3 folder order"),
+            cls: "text-emphasis",
+          });
+          desc.createSpan({
+            text: this.plugin.t(
+              "sortOrder.setDesc.4 description of folder order",
+            ),
+          });
+          desc.createEl("br");
+          desc.createSpan({
+            text: this.plugin.t("sortOrder.setDesc.7 test them all out"),
+          });
+        }),
+      )
+      .addDropdown((dropdown) => {
+        dropdown
+          .addOption(
+            "noteOrder",
+            this.plugin.t("sortOrder.addDropdown.addOption.1 note order"),
+          )
+          .addOption(
+            "folderOrder",
+            this.plugin.t("sortOrder.addDropdown.addOption.2 folder order"),
+          );
+        dropdown.setValue(
+          this.plugin.settings.flowBuildBasket.flowDefinition
+            .dvQuerySortOrder ?? "noteOrder",
+        );
+        dropdown.onChange(async (value) => {
+          this.plugin.settings.flowBuildBasket.flowDefinition.dvQuerySortOrder =
+            value as Types.SortOrder;
+          await this.plugin.saveSettings();
+        });
+      });
+
+    //-----------------------------------------------------------------------------
+    const chooseDvQuery = new Setting(createFlows);
+    chooseDvQuery.settingEl.hide(); // HIDE INITIALLY
+    chooseDvQuery.settingEl.addClass("input-width-200");
+    chooseDvQuery.setDesc(
+      createFragment((desc) => {
+        desc.createSpan({
+          text: this.plugin.t("choosedvQuery.setDesc.1 input only query"),
+        });
+        desc.createEl("br");
+        desc.createSpan({
+          text: this.plugin.t(
+            "choosedvQuery.setDesc.2 systemFolder will be excluded",
+          ),
+        });
+      }),
+    );
+    chooseDvQuery.addText((setDvQueryGroup) => {
+      setDvQueryGroup.setValue(
+        this.plugin.settings.flowBuildBasket.flowDefinition.dvQuery ?? "",
+      );
+      setDvQueryGroup.onChange(async (value) => {
+        this.plugin.settings.flowBuildBasket.flowDefinition.dvQuery =
+          value.trim();
+        await this.plugin.settingsTabFunctions.debouncedSaveSettings();
+      });
+    });
+
+    //-------------COOSE PATHS / TAGS / PROPS ---------------------------------------------
     const headlineChoosePathsTagsProperties = new Setting(createFlows);
     headlineChoosePathsTagsProperties.settingEl.hide();
     headlineChoosePathsTagsProperties.setClass("input-width").setDesc(
@@ -1155,87 +1236,6 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
       });
     });
 
-    // ------ dvQuery INPUT ELEMENT AND STUFF --------------------------------------
-    const dvQuerySortOrder = new Setting(createFlows);
-    dvQuerySortOrder.settingEl.hide(); // HIDE INITIALLY
-    dvQuerySortOrder
-      .setName(this.plugin.t("sortOrder.setName sort order"))
-      .setDesc(
-        createFragment((desc) => {
-          desc.createSpan({
-            text: this.plugin.t("sortOrder.setDesc.1 note order"),
-            cls: "text-emphasis",
-          });
-          desc.createSpan({
-            text: this.plugin.t(
-              "sortOrder.setDesc.2 description of note order",
-            ),
-          });
-          desc.createEl("br");
-          desc.createSpan({
-            text: this.plugin.t("sortOrder.setDesc.3 folder order"),
-            cls: "text-emphasis",
-          });
-          desc.createSpan({
-            text: this.plugin.t(
-              "sortOrder.setDesc.4 description of folder order",
-            ),
-          });
-          desc.createEl("br");
-          desc.createSpan({
-            text: this.plugin.t("sortOrder.setDesc.7 test them all out"),
-          });
-        }),
-      )
-      .addDropdown((dropdown) => {
-        dropdown
-          .addOption(
-            "noteOrder",
-            this.plugin.t("sortOrder.addDropdown.addOption.1 note order"),
-          )
-          .addOption(
-            "folderOrder",
-            this.plugin.t("sortOrder.addDropdown.addOption.2 folder order"),
-          );
-        dropdown.setValue(
-          this.plugin.settings.flowBuildBasket.flowDefinition
-            .dvQuerySortOrder ?? "noteOrder",
-        );
-        dropdown.onChange(async (value) => {
-          this.plugin.settings.flowBuildBasket.flowDefinition.dvQuerySortOrder =
-            value as Types.SortOrder;
-          await this.plugin.saveSettings();
-        });
-      });
-
-    //-----------------------------------------------------------------------------
-    const chooseDvQuery = new Setting(createFlows);
-    chooseDvQuery.settingEl.hide(); // HIDE INITIALLY
-    chooseDvQuery.settingEl.addClass("input-width-200");
-    chooseDvQuery.setDesc(
-      createFragment((desc) => {
-        desc.createSpan({
-          text: this.plugin.t("choosedvQuery.setDesc.1 input only query"),
-        });
-        desc.createEl("br");
-        desc.createSpan({
-          text: this.plugin.t(
-            "choosedvQuery.setDesc.2 systemFolder will be excluded",
-          ),
-        });
-      }),
-    );
-    chooseDvQuery.addText((setDvQueryGroup) => {
-      setDvQueryGroup.setValue(
-        this.plugin.settings.flowBuildBasket.flowDefinition.dvQuery ?? "",
-      );
-      setDvQueryGroup.onChange(async (value) => {
-        this.plugin.settings.flowBuildBasket.flowDefinition.dvQuery =
-          value.trim();
-        await this.plugin.settingsTabFunctions.debouncedSaveSettings();
-      });
-    });
-
     // ---- RADIO BUTTON SETTINGS AND LOGIC ---------------------
 
     // ---- Presets for the foldersTagsProps button
@@ -1256,21 +1256,21 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
         buttons.dvQuery,
       );
 
-      bookmarksSortOrder.settingEl.hide();
-      chooseBookmarks.settingEl.hide();
-      showOrHideAlLFoldersTagsProps("show");
       dvQuerySortOrder.settingEl.hide();
       chooseDvQuery.settingEl.hide();
+      showOrHideAlLFoldersTagsProps("show");
+      bookmarksSortOrder.settingEl.hide();
+      chooseBookmarks.settingEl.hide();
       this.display();
     });
 
     // --- Presets for the BOOKMARKS button
     if (this.plugin.settings.flowBuildBasket.definitionMode === "bookmarks") {
+      dvQuerySortOrder.settingEl.hide();
+      chooseDvQuery.settingEl.hide();
       showOrHideAlLFoldersTagsProps("hide");
       bookmarksSortOrder.settingEl.show();
       chooseBookmarks.settingEl.show();
-      dvQuerySortOrder.settingEl.hide();
-      chooseDvQuery.settingEl.hide();
     }
 
     // onClick for the BOOKMARKS button
@@ -1285,20 +1285,20 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
       );
 
       // hide/show input elements
+      dvQuerySortOrder.settingEl.hide();
+      chooseDvQuery.settingEl.hide();
       showOrHideAlLFoldersTagsProps("hide");
       bookmarksSortOrder.settingEl.show();
       chooseBookmarks.settingEl.show();
-      dvQuerySortOrder.settingEl.hide();
-      chooseDvQuery.settingEl.hide();
       this.display();
     });
 
     if (this.plugin.settings.flowBuildBasket.definitionMode === "dvQuery") {
+      dvQuerySortOrder.settingEl.show();
+      chooseDvQuery.settingEl.show();
       showOrHideAlLFoldersTagsProps("hide");
       bookmarksSortOrder.settingEl.hide();
       chooseBookmarks.settingEl.hide();
-      dvQuerySortOrder.settingEl.show();
-      chooseDvQuery.settingEl.show();
     }
 
     // onClick for the DVQUERY button
@@ -1308,16 +1308,16 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
       // update button
       this.plugin.settingsTabFunctions.radioButtonManager(
         buttons.dvQuery,
-        buttons.bookmarks,
         buttons.foldersTagsProps,
+        buttons.bookmarks,
       );
 
       // hide/show input elements
+      dvQuerySortOrder.settingEl.show();
+      chooseDvQuery.settingEl.show();
       showOrHideAlLFoldersTagsProps("hide");
       bookmarksSortOrder.settingEl.hide();
       chooseBookmarks.settingEl.hide();
-      dvQuerySortOrder.settingEl.show();
-      chooseDvQuery.settingEl.show();
       this.display();
     });
 
@@ -1331,7 +1331,6 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
         ),
       )
       .onClick(async (buttonEl: MouseEvent) => {
-        console.log("previewButton clicked")
         // set up missing values
         this.plugin.settings.flowBuildBasket.dataviewSearchArray = [];
         this.plugin.settings.flowBuildBasket.success = false;
@@ -1345,7 +1344,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
           return;
         }
         // do the logic that leads to a list of note paths
-        this.plugin.settingsTabFunctions.createSourceNotePathArray(
+        await this.plugin.settingsTabFunctions.createSourceNotePathArray(
           this.plugin.settings.flowBuildBasket,
         );
 
@@ -1385,7 +1384,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
           return;
         }
 
-        this.plugin.settingsTabFunctions.createSourceNotePathArray(
+        await this.plugin.settingsTabFunctions.createSourceNotePathArray(
           this.plugin.settings.flowBuildBasket,
         );
         if (!this.plugin.settings.flowBuildBasket.success) {
@@ -1582,10 +1581,11 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
               }
 
               // gather all info for the flowDefinition
-              this.plugin.settingsTabFunctions.flowBuildingBundle(
+              await this.plugin.settingsTabFunctions.flowBuildingBundle(
                 flowName,
                 "settingsTab",
               );
+
               this.plugin.refreshMenuBars();
               await this.plugin.saveSettings();
               this.display();
