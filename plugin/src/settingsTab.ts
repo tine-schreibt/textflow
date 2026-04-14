@@ -804,17 +804,19 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
           });
           desc.createSpan({
             text: this.plugin.t(
-              "sortOrder.setDesc.2 description of note order",
+              "sortFlowPathsTagsProperties.setDesc.2 description of note order",
             ),
           });
           desc.createEl("br");
           desc.createSpan({
-            text: this.plugin.t("sortOrder.setDesc.3 folder order"),
+            text: this.plugin.t(
+              "sortFlowPathsTagsProperties.setDesc.3 folder order",
+            ),
             cls: "text-emphasis",
           });
           desc.createSpan({
             text: this.plugin.t(
-              "sortOrder.setDesc.4 description of folder order",
+              "sortFlowPathsTagsProperties.setDesc.4 description of folder order",
             ),
           });
           desc.createEl("br");

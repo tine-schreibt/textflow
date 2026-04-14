@@ -1,3 +1,3 @@
-### 0.3.0
+### 0.3.1
 
-- New feature: Define flows from Dataview queries
+- UI fix
