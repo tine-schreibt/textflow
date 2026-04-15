@@ -142,7 +142,8 @@ smoothly?**
 
 - **Export with properties:** The option to keep properties when exporting a
   flow.
-- **Select your own export location:** Set a folder other than root for exported flows.
+- **Select your own export location:** Set a folder other than root for exported
+  flows.
 - **Redirect for internal links:** An entry in the context menu for internal
   links that allows you to open the link in a flow instead of the originally
   addressed note.
@@ -319,7 +320,9 @@ recognised. I don't know why and I don't know how to fix it.
 #### The other stuff:
 
 1. **Necessary data duplication:** Flows are extra notes which repeat their
-   source notes' contents; it's the only way this works. So if data duplication
+   source notes' contents; it's the only way this works. Your flows are all
+   stored in a dedicated folder, though, the location of which you can choose in
+   the settings. This folder is hidden by default. But if data duplication still
    makes your blood boil, this isn't the plugin for you and you may want to look
    into
    [Continuous Mode](https://github.com/gasparschott/obsidian-continuous-mode)

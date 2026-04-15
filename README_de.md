@@ -347,12 +347,8 @@ das reparieren könnte.
 
 #### Der andere Kram:
 
-1. **Notwendige Duplikation von Daten:** Flows sind zusätzliche Notizen, die den
-   Inhalt ihrer Quellnotizen replizieren; nur so funktioniert das alles. Also
-   wenn Datenduplikation dein Blut zum Kochen bringt, ist dieses Plugin nicht
-   das richtige für dich, und du magst dir eher
-   [Continuous Mode](https://github.com/gasparschott/obsidian-continuous-mode)
-   oder [sync-embeds](https://github.com/uthvah/sync-embeds/) mal anschaun.
+1. **Notwendige Duplikation von Daten:** Flows sind zusätzliche Notizen, die den Inhalt ihrer Quellnotizen replizieren; nur so funktioniert das alles. Deine Flows werden allerdings in einem dedizierten, frei platzierbaren Ordner gespeichert, der standardmäßig versteckt ist. 
+	 Wenn Datenduplikation dein Blut trotzdem zum Kochen bringt, ist dieses Plugin nicht das richtige für dich, und du magst dir eher [Continuous Mode](https://github.com/gasparschott/obsidian-continuous-mode) oder [sync-embeds](https://github.com/uthvah/sync-embeds/) mal anschaun. 
 
 ##### Da kann mein Plugin nichts für
 
