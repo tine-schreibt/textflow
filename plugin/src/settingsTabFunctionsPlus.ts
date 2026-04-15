@@ -1343,11 +1343,7 @@ export class settingsTabFunctions {
 
   // ------ The function that manages everything surrounding the rebuilding of a flow
 
-  flowBuildingBundle = async (
-    flowName: string,
-    caller: string,
-    embedExport?: boolean,
-  ) => {
+  flowBuildingBundle = async (flowName: string, caller: string) => {
     this.plugin.isRebuilding = true;
     const flowReBuildBasket: Types.flowBuildBasket = {
       // rebuild specific properties
@@ -1421,7 +1417,6 @@ export class settingsTabFunctions {
       flowName,
       mapValueBasket,
       caller,
-      embedExport,
     );
 
     // null the value basket, just to be thorough
@@ -1453,7 +1448,6 @@ export class settingsTabFunctions {
     flowName: string,
     mapValueBasket: Types.mapValueBasket,
     caller: string,
-    embedExport?: boolean,
   ): Promise<void> => {
     // pre-flight check for SystemFolder
     let systemFolder = this.checkSystemFolder();
@@ -1647,7 +1641,7 @@ export class settingsTabFunctions {
             return;
           }
 
-          if (!this.plugin.settings.flows[flowName].embed && !embedExport) {
+          if (!this.plugin.settings.flows[flowName].embed) {
             // remove frontmatter
             mapValueBasket.singleFileContent = fileContent
               .replace(/^---\n[\s\S]*?\n---\n*/, "")
@@ -1667,7 +1661,7 @@ export class settingsTabFunctions {
             flowOrder: mapValueBasket.flowOrder,
           } as Types.SourceFileObject;
 
-          if (!this.plugin.settings.flows[flowName].embed && !embedExport) {
+          if (!this.plugin.settings.flows[flowName].embed) {
             // Add content with marker before divider
             mapValueBasket.concatenatedFileContents += `${mapValueBasket.singleFileContent}${mapValueBasket.idDivider}`;
           } else {
@@ -1682,9 +1676,6 @@ export class settingsTabFunctions {
     }
 
     if (systemFolder && systemFolder instanceof TFolder) {
-      if (!this.plugin.settings.flows[flowName].embed && !embedExport) {
-        flowName += "_embedExport";
-      }
       const flowFilePath = normalizePath(
         `${this.plugin.settings.systemFolderPath}/${flowName}.md`,
       );
@@ -2015,19 +2006,7 @@ export class settingsTabFunctions {
   // -------------------------------------------------
   // removes UUIDs and puts it in a new file in root with time stamped title
   exportFlow = async (flowName: string) => {
-    if (this.plugin.settings.flows[flowName].embed) {
-      this.plugin.settingsTabFunctions.flowBuildingBundle(
-        flowName,
-        "settingsTab",
-        true,
-      );
-    }
-
     let path = this.plugin.settings.flows[flowName].flowFilePath;
-
-    if (this.plugin.settings.flows[flowName].embed) {
-      path += "_embedExport";
-    }
 
     const file = this.app.vault.getAbstractFileByPath(path);
 
@@ -2056,14 +2035,6 @@ export class settingsTabFunctions {
           exportedFlowPath: exportedFlowPath,
         }),
       );
-    }
-    if (this.plugin.settings.flows[flowName].embed) {
-      // delete file if present; in two steps to make TypeScript happy
-      if (file) {
-        if (file instanceof TFile) {
-          await this.app.fileManager.trashFile(file);
-        }
-      }
     }
   };
 
