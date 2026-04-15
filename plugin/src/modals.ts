@@ -108,6 +108,18 @@ export class CreateFlowFromFolder extends Modal {
           });
       });
 
+    // --------- FOLDER TITLES ------------------
+    const toggleEmbed = new Setting(contentEl)
+      .setName(this.plugin.t("toggleEmbed name"))
+      .setDesc(this.plugin.t("toggleEmbed desc 1"))
+      .addToggle((sortToggle) => {
+        sortToggle
+          .setValue(this.plugin.settings.flowBuildBasket.embed)
+          .onChange(async (value) => {
+            this.plugin.settings.flowBuildBasket.embed = value;
+          });
+      });
+
     //--------------------------------------------------------------------------------
     // SORT ORDER TOGGLE
     const sortFlowPathsTagsProperties = new Setting(contentEl).setName(

@@ -1,2 +1,3 @@
-### 0.4.0
-- Flows can be built via embeds if you install Sync Embeds
+### 0.4.1
+
+- added embed toggle to context modal
