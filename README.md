@@ -7,7 +7,7 @@ textFlow is intended mainly for long form writers, but can be used by anyone who
 
 The UI has options for keyboard as well as mouse navigation. 
 
-UPDATE: As of version 0.4.0 you can build **Flows with embeds**; this means that these Flows don't create any data duplication. You just need to install and activate the plugin [Sync Embeds by uthvah](https://github.com/uthvah/sync-embeds) installieren (can only be installed manually at the moment).
+**UPDATE**: As of version 0.4.0 you can build **Flows with embeds**; this means that these Flows don't create any data duplication. You just need to install and activate the plugin [Sync Embeds by uthvah](https://github.com/uthvah/sync-embeds) installieren (can only be installed manually at the moment).
 
 Please be aware that I tested textFlow extensively, but you are still the first real users, so I can't guarantee you won't find some bug or other that I missed. Here's [a trouble shooting guide](#9-fixing-problems) you can look at before filing a [bug report](#12-report-a-bug--report-your-love). 
 
