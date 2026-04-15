@@ -12,7 +12,8 @@ import {
 import { EditorView } from "@codemirror/view";
 import TextFlow from "../main";
 import * as Types from "./types";
-import path from "path";
+import path, { basename } from "path";
+
 import { getAPI, SMarkdownPage } from "obsidian-dataview";
 
 // Any code that was actually written by AI is labelled
@@ -616,7 +617,11 @@ export class settingsTabFunctions {
 
     const cleanArrayCollection = this.cleanUp(flowBuildBasket);
 
-let finalPathArray = await this.dvFilter(sortedFilePathArray, cleanArrayCollection, flowBuildBasket)
+    let finalPathArray = await this.dvFilter(
+      sortedFilePathArray,
+      cleanArrayCollection,
+      flowBuildBasket,
+    );
 
     if (flowBuildBasket.folderTitles) {
       finalPathArray = this.findAndAddFolderTitles(
@@ -1276,6 +1281,7 @@ let finalPathArray = await this.dvFilter(sortedFilePathArray, cleanArrayCollecti
       definitionMode: flowBuildBasket.definitionMode,
       flowDefinition: flowBuildBasket.flowDefinition,
       folderTitles: flowBuildBasket.folderTitles,
+      embed: flowBuildBasket.embed,
       isFreshBuild: true,
       flowBuilt: false,
       flaggedForRebuild: true,
@@ -1337,7 +1343,11 @@ let finalPathArray = await this.dvFilter(sortedFilePathArray, cleanArrayCollecti
 
   // ------ The function that manages everything surrounding the rebuilding of a flow
 
-  flowBuildingBundle = async (flowName: string, caller: string) => {
+  flowBuildingBundle = async (
+    flowName: string,
+    caller: string,
+    embedExport?: boolean,
+  ) => {
     this.plugin.isRebuilding = true;
     const flowReBuildBasket: Types.flowBuildBasket = {
       // rebuild specific properties
@@ -1349,6 +1359,7 @@ let finalPathArray = await this.dvFilter(sortedFilePathArray, cleanArrayCollecti
       oldFlowName: flowName,
       definitionMode: this.plugin.settings.flows[flowName].definitionMode,
       folderTitles: this.plugin.settings.flows[flowName].folderTitles,
+      embed: this.plugin.settings.flows[flowName].embed,
       flowDefinition: this.plugin.settings.flows[flowName].flowDefinition,
       flowNotesPathArray: [],
       overlapObject: this.plugin.settings.flows[flowName].overlapObject,
@@ -1410,6 +1421,7 @@ let finalPathArray = await this.dvFilter(sortedFilePathArray, cleanArrayCollecti
       flowName,
       mapValueBasket,
       caller,
+      embedExport,
     );
 
     // null the value basket, just to be thorough
@@ -1441,6 +1453,7 @@ let finalPathArray = await this.dvFilter(sortedFilePathArray, cleanArrayCollecti
     flowName: string,
     mapValueBasket: Types.mapValueBasket,
     caller: string,
+    embedExport?: boolean,
   ): Promise<void> => {
     // pre-flight check for SystemFolder
     let systemFolder = this.checkSystemFolder();
@@ -1593,11 +1606,13 @@ let finalPathArray = await this.dvFilter(sortedFilePathArray, cleanArrayCollecti
         if (note instanceof TFile) {
           let fileContent: string = await this.app.vault.read(note);
 
-          // make a hash if we don't have one yet but need it
-          if (this.plugin.settings.checkExternalEdits != "no") {
-            if (!this.plugin.settings.hashes[path]) {
-              const hash = this.plugin.makeHash(fileContent);
-              this.plugin.settings.hashes[path] = hash;
+          if (!this.plugin.settings.flows[flowName].embed) {
+            // make a hash if we don't have one yet but need it
+            if (this.plugin.settings.checkExternalEdits != "no") {
+              if (!this.plugin.settings.hashes[path]) {
+                const hash = this.plugin.makeHash(fileContent);
+                this.plugin.settings.hashes[path] = hash;
+              }
             }
           }
 
@@ -1632,10 +1647,12 @@ let finalPathArray = await this.dvFilter(sortedFilePathArray, cleanArrayCollecti
             return;
           }
 
-          // remove frontmatter
-          mapValueBasket.singleFileContent = fileContent
-            .replace(/^---\n[\s\S]*?\n---\n*/, "")
-            .trim();
+          if (!this.plugin.settings.flows[flowName].embed && !embedExport) {
+            // remove frontmatter
+            mapValueBasket.singleFileContent = fileContent
+              .replace(/^---\n[\s\S]*?\n---\n*/, "")
+              .trim();
+          }
 
           // get mtime regardless of user settings because we gotta put something in the object
           const mtime = note.stat.mtime;
@@ -1650,14 +1667,24 @@ let finalPathArray = await this.dvFilter(sortedFilePathArray, cleanArrayCollecti
             flowOrder: mapValueBasket.flowOrder,
           } as Types.SourceFileObject;
 
-          // Add content with marker before divider
-          mapValueBasket.concatenatedFileContents += `${mapValueBasket.singleFileContent}${mapValueBasket.idDivider}`;
+          if (!this.plugin.settings.flows[flowName].embed && !embedExport) {
+            // Add content with marker before divider
+            mapValueBasket.concatenatedFileContents += `${mapValueBasket.singleFileContent}${mapValueBasket.idDivider}`;
+          } else {
+            const backticks = "```";
+            const fileName = basename(note.path).replace(".md", "");
+            mapValueBasket.concatenatedFileContents += `${backticks}sync \n![[${fileName}]]\n${backticks} ${mapValueBasket.idDivider}`;
+          }
         } else {
           console.error("Invalid file.");
         }
       }
     }
+
     if (systemFolder && systemFolder instanceof TFolder) {
+      if (!this.plugin.settings.flows[flowName].embed && !embedExport) {
+        flowName += "_embedExport";
+      }
       const flowFilePath = normalizePath(
         `${this.plugin.settings.systemFolderPath}/${flowName}.md`,
       );
@@ -1988,7 +2015,20 @@ let finalPathArray = await this.dvFilter(sortedFilePathArray, cleanArrayCollecti
   // -------------------------------------------------
   // removes UUIDs and puts it in a new file in root with time stamped title
   exportFlow = async (flowName: string) => {
-    const path = this.plugin.settings.flows[flowName].flowFilePath;
+    if (this.plugin.settings.flows[flowName].embed) {
+      this.plugin.settingsTabFunctions.flowBuildingBundle(
+        flowName,
+        "settingsTab",
+        true,
+      );
+    }
+
+    let path = this.plugin.settings.flows[flowName].flowFilePath;
+
+    if (this.plugin.settings.flows[flowName].embed) {
+      path += "_embedExport";
+    }
+
     const file = this.app.vault.getAbstractFileByPath(path);
 
     if (file instanceof TFile) {
@@ -2016,6 +2056,14 @@ let finalPathArray = await this.dvFilter(sortedFilePathArray, cleanArrayCollecti
           exportedFlowPath: exportedFlowPath,
         }),
       );
+    }
+    if (this.plugin.settings.flows[flowName].embed) {
+      // delete file if present; in two steps to make TypeScript happy
+      if (file) {
+        if (file instanceof TFile) {
+          await this.app.fileManager.trashFile(file);
+        }
+      }
     }
   };
 

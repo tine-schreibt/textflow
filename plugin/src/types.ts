@@ -84,6 +84,7 @@ export interface flowBuildBasket {
   oldFlowName: string;
   definitionMode: string;
   folderTitles: boolean;
+  embed: boolean;
   flowDefinition: { [key: string]: string };
   flowNotesPathArray: string[];
   overlapObject: OverlapObject;
@@ -112,6 +113,7 @@ export interface FlowDef {
   definitionMode: string;
   flowDefinition: { [key: string]: string }; // user input; is cleaned up when flow is built
   folderTitles: boolean;
+  embed: boolean;
   isFreshBuild: boolean;
   flowBuilt: boolean;
   flaggedForRebuild: boolean;
@@ -170,6 +172,7 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
     oldFlowName: "",
     definitionMode: "",
     folderTitles: true,
+    embed: false,
     flowDefinition: {},
     flowNotesPathArray: [],
     overlapObject: {},

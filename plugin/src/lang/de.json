@@ -91,10 +91,14 @@
   "textFlow: A flow name cannot start or end with a period": "textFlow: Ein Flowname kann nicht mit einem Punkt beginnen oder enden.",
 
   "toggleFolderTitles.setName include folder / bookmark group titles": "Füge Gruppen-/Ordnertitel in den Flow ein",
+  "toggleFolderTitles.setDesc will also turn off titles in nav dropdown": "Dieses Setting legt auch fest, ob die Titel im Navigations-Dropdown zu sehen sind.",
+
+  "toggleEmbed name": "Embed notes",
+  "toggleEmbed desc 1": "Notes will be embedded. Cursor positions will no longer be saved.",
+
   "modal_flowName": "Sammlung",
   "modal_toggleFolderTitles.setName include folder": "Füge Ordnertitel in Flow ein",
   "modal_toggleSubfolders.setName exclude subfolders": "Schließe Unterordner aus",
-  "toggleFolderTitles.setDesc will also turn off titles in nav dropdown": "Dieses Setting legt auch fest, ob die Titel im Navigations-Dropdown zu sehen sind.",
 
   "defineFlow.setName define your flow": "Definiere deinen Flow aus...",
   "defineFlow.setDesc.1 only active method will be used": "Nur die aktive Definitionsmethode wird für deinen Flow verwendet.",

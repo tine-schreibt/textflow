@@ -101,10 +101,14 @@
   "createFlows.chooseFlowName.setPlaceholder enter a unique name": "Enter a unique name",
 
   "toggleFolderTitles.setName include folder / bookmark group titles": "Include folder / bookmark group titles in flow",
+  "toggleFolderTitles.setDesc will also turn off titles in nav dropdown": "This also determines if the titles are visible in the flow navigation dropdown.",
+
+  "toggleEmbed name": "Embed notes",
+  "toggleEmbed desc 1": "Notes will be embedded. Cursor positions will no longer be saved.",
+
   "modal_flowName": "Collection",
   "modal_toggleFolderTitles.setName include folder": "Include folder titles in flow",
   "modal_toggleSubfolders.setName exclude subfolders": "Exclude subfolders",
-  "toggleFolderTitles.setDesc will also turn off titles in nav dropdown": "This also determines if the titles are visible in the flow navigation dropdown.",
 
   "defineFlow.setName define your flow": "Define your flow from...",
   "defineFlow.setDesc.1 only active method will be used": "Only the active definition method will be used for your flow.",

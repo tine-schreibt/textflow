@@ -1860,6 +1860,7 @@ ${pseudoElement}
           constructor(view: EditorView) {}
 
           update(update: ViewUpdate) {
+            if (plugin.settings.flows[flowName].embed) return;
             if (!update.docChanged) return;
 
             const changes = update.changes;

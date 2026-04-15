@@ -677,157 +677,169 @@ export class MenuBar {
         this.createNavDropdownEntry(path, dropdownEntries);
       }
 
-      // ------ The cursor stuff -----------------------------------
-      const cursorDropdown = menuBarEl.createDiv({
-        cls: "menu-bar-cursor-dropdown",
-      });
+      if (!this.plugin.settings.flows[this.flowName].embed) {
+        // ------ The cursor stuff -----------------------------------
+        const cursorDropdown = menuBarEl.createDiv({
+          cls: "menu-bar-cursor-dropdown",
+        });
 
-      const cursorHeadline = cursorDropdown.createDiv({
-        cls: "menu-bar-navigation-dropdown-headline",
-      });
+        const cursorHeadline = cursorDropdown.createDiv({
+          cls: "menu-bar-navigation-dropdown-headline",
+        });
 
-      // the span that holds the icon
-      // there used to be a text dropdown here, but I replaced it with just the button and so far I haven't hat the necessary patience to rewrite all of this as a button
-      const cursorIconSpan = cursorHeadline.createSpan();
-      cursorIconSpan.setAttr(
-        "aria-label",
-        this.plugin.t("menubar.cursor history stored cursors"),
-      );
-      setIcon(cursorIconSpan, "map-pin");
+        // the span that holds the icon
+        // there used to be a text dropdown here, but I replaced it with just the button and so far I haven't hat the necessary patience to rewrite all of this as a button
+        const cursorIconSpan = cursorHeadline.createSpan();
+        cursorIconSpan.setAttr(
+          "aria-label",
+          this.plugin.t("menubar.cursor history stored cursors"),
+        );
+        setIcon(cursorIconSpan, "map-pin");
 
-      // the listener to open the dropdown
-      this.addManagedListener(cursorHeadline, "click", (event) => {
-        if (this.getDropdownState("cursor") === "hide") {
-          this.setDropdownState("cursor", "show");
-          this.refresh(this.associatedView.contentEl);
-          // this is just in here because I can't figure out how to
-          // get the styling right otherwise -.-
-          const filterCriterion = this.element?.querySelector(
-            ".menu-bar-navigation-dropdown-search-input",
-          );
-          if (filterCriterion) {
-            (filterCriterion as HTMLInputElement).focus();
-          }
-
-          // Listener that will close dropdown if we click outside it
-          this.addManagedListener(document, "click", (event: Event) => {
-            const mouseEvent = event as MouseEvent;
-
-            const target = mouseEvent.target as HTMLElement;
-            // Check if click is outside the navigation dropdown
-            if (!cursorDropdown.contains(target)) {
-              this.filterList = [];
-              this.setDropdownState("cursor", "hide");
-              this.refresh(this.associatedView.contentEl);
+        // the listener to open the dropdown
+        this.addManagedListener(cursorHeadline, "click", (event) => {
+          if (this.getDropdownState("cursor") === "hide") {
+            this.setDropdownState("cursor", "show");
+            this.refresh(this.associatedView.contentEl);
+            // this is just in here because I can't figure out how to
+            // get the styling right otherwise -.-
+            const filterCriterion = this.element?.querySelector(
+              ".menu-bar-navigation-dropdown-search-input",
+            );
+            if (filterCriterion) {
+              (filterCriterion as HTMLInputElement).focus();
             }
-          });
-        } else {
-          this.setDropdownState("cursor", "hide");
-          this.refresh(this.associatedView.contentEl);
-        }
-      });
-      const cursorDropdownGeneral = cursorDropdown.createDiv({
-        cls: `menu-bar-navigation-dropdown-general ${this.getDropdownState(
-          "cursor",
-        )}`,
-      });
 
-      // make scrollable container for the entries
-      const cursorDropdownScrollable = cursorDropdownGeneral.createDiv({
-        cls: `menu-bar-navigation-dropdown-scrollable`,
-      });
+            // Listener that will close dropdown if we click outside it
+            this.addManagedListener(document, "click", (event: Event) => {
+              const mouseEvent = event as MouseEvent;
 
-      let inclusiveCursorArray: [string, number, number][] = [];
-      let exclusiveCursorArray: [string, number, number][] = [];
-      if (
-        Object.keys(this.plugin.settings.flows[this.flowName].persistentCursors)
-          .length > 0
-      ) {
-        // Find out if we have data for the active leaf so we can show it at the top
-        if (
-          this.plugin.settings.flows[this.flowName].persistentCursors[
-            this.leafID
-          ]
-        ) {
-          // create headline entry that's not clickable
-          const cursorDropdownEntryDate = cursorDropdownScrollable.createDiv({
-            cls: `text-emphasis align-off-center`,
-            text: this.plugin.t("menubar.cursor history this leaf"),
-          });
-
-          // get the sorted cursors for our leaf
-          inclusiveCursorArray = this.getAndSortPersistentCursors(true);
-
-          // create a div for each
-          for (const [index, data] of inclusiveCursorArray.entries()) {
-            const textTimestamp =
-              this.plugin.settings.flows[this.flowName].persistentCursors[
-                this.leafID
-              ].update;
-
-            const cursorDropdownEntryPos = cursorDropdownScrollable.createDiv({
-              cls: "blah",
-              text: `${this.makeNavPath(data[0])} (${
-                inclusiveCursorArray[index][1]
-              })`,
+              const target = mouseEvent.target as HTMLElement;
+              // Check if click is outside the navigation dropdown
+              if (!cursorDropdown.contains(target)) {
+                this.filterList = [];
+                this.setDropdownState("cursor", "hide");
+                this.refresh(this.associatedView.contentEl);
+              }
             });
-            const cursorPos = inclusiveCursorArray[index][1];
-            const editor = this.plugin.settingsTabFunctions.getEditor(
-              this.associatedView,
-            );
-            if (!editor) continue;
-            this.addManagedListener(
-              cursorDropdownEntryPos,
-              "click",
-              (event) => {
-                this.plugin.settingsTabFunctions.scrollToPos(editor, cursorPos);
-              },
-            );
+          } else {
+            this.setDropdownState("cursor", "hide");
+            this.refresh(this.associatedView.contentEl);
           }
-        }
+        });
+        const cursorDropdownGeneral = cursorDropdown.createDiv({
+          cls: `menu-bar-navigation-dropdown-general ${this.getDropdownState(
+            "cursor",
+          )}`,
+        });
 
-        // check if we have cursors for other leaves
+        // make scrollable container for the entries
+        const cursorDropdownScrollable = cursorDropdownGeneral.createDiv({
+          cls: `menu-bar-navigation-dropdown-scrollable`,
+        });
+
+        let inclusiveCursorArray: [string, number, number][] = [];
+        let exclusiveCursorArray: [string, number, number][] = [];
         if (
           Object.keys(
             this.plugin.settings.flows[this.flowName].persistentCursors,
-          ).length > 1
+          ).length > 0
         ) {
-          // create headline entry that's not clickable
-          const cursorDropdownEntryDate = cursorDropdownScrollable.createDiv({
-            cls: `text-emphasis align-off-center`,
-            text: this.plugin.t("menubar.cursor history other leaves"),
-          });
-
-          // get the cursor positions
-          exclusiveCursorArray = this.getAndSortPersistentCursors(false);
-
-          for (const [index, data] of exclusiveCursorArray.entries()) {
-            const cursorDropdownEntryPos = cursorDropdownScrollable.createDiv({
-              cls: `blah`,
-              text: `${this.makeNavPath(data[0])} (${
-                exclusiveCursorArray[index][1]
-              })`,
+          // Find out if we have data for the active leaf so we can show it at the top
+          if (
+            this.plugin.settings.flows[this.flowName].persistentCursors[
+              this.leafID
+            ]
+          ) {
+            // create headline entry that's not clickable
+            const cursorDropdownEntryDate = cursorDropdownScrollable.createDiv({
+              cls: `text-emphasis align-off-center`,
+              text: this.plugin.t("menubar.cursor history this leaf"),
             });
 
-            const cursorPos = exclusiveCursorArray[index][1];
+            // get the sorted cursors for our leaf
+            inclusiveCursorArray = this.getAndSortPersistentCursors(true);
 
-            this.addManagedListener(
-              cursorDropdownEntryPos,
-              "click",
-              (event) => {
-                const editor = this.plugin.settingsTabFunctions.getEditor(
-                  this.associatedView,
-                );
-                if (!editor) return;
-                this.plugin.settingsTabFunctions.scrollToPos(editor, cursorPos);
-              },
-            );
+            // create a div for each
+            for (const [index, data] of inclusiveCursorArray.entries()) {
+              const textTimestamp =
+                this.plugin.settings.flows[this.flowName].persistentCursors[
+                  this.leafID
+                ].update;
+
+              const cursorDropdownEntryPos = cursorDropdownScrollable.createDiv(
+                {
+                  cls: "blah",
+                  text: `${this.makeNavPath(data[0])} (${
+                    inclusiveCursorArray[index][1]
+                  })`,
+                },
+              );
+              const cursorPos = inclusiveCursorArray[index][1];
+              const editor = this.plugin.settingsTabFunctions.getEditor(
+                this.associatedView,
+              );
+              if (!editor) continue;
+              this.addManagedListener(
+                cursorDropdownEntryPos,
+                "click",
+                (event) => {
+                  this.plugin.settingsTabFunctions.scrollToPos(
+                    editor,
+                    cursorPos,
+                  );
+                },
+              );
+            }
           }
-        }
 
-        // CODE FOR A FAST TRAVEL BUTTON
-        // SEEMS SUPERFLUOUS BUT MAY REINSTATE IF USERS ASK FOR IT
-        /*        const collectedCursors = [
+          // check if we have cursors for other leaves
+          if (
+            Object.keys(
+              this.plugin.settings.flows[this.flowName].persistentCursors,
+            ).length > 1
+          ) {
+            // create headline entry that's not clickable
+            const cursorDropdownEntryDate = cursorDropdownScrollable.createDiv({
+              cls: `text-emphasis align-off-center`,
+              text: this.plugin.t("menubar.cursor history other leaves"),
+            });
+
+            // get the cursor positions
+            exclusiveCursorArray = this.getAndSortPersistentCursors(false);
+
+            for (const [index, data] of exclusiveCursorArray.entries()) {
+              const cursorDropdownEntryPos = cursorDropdownScrollable.createDiv(
+                {
+                  cls: `blah`,
+                  text: `${this.makeNavPath(data[0])} (${
+                    exclusiveCursorArray[index][1]
+                  })`,
+                },
+              );
+
+              const cursorPos = exclusiveCursorArray[index][1];
+
+              this.addManagedListener(
+                cursorDropdownEntryPos,
+                "click",
+                (event) => {
+                  const editor = this.plugin.settingsTabFunctions.getEditor(
+                    this.associatedView,
+                  );
+                  if (!editor) return;
+                  this.plugin.settingsTabFunctions.scrollToPos(
+                    editor,
+                    cursorPos,
+                  );
+                },
+              );
+            }
+          }
+
+          // CODE FOR A FAST TRAVEL BUTTON
+          // SEEMS SUPERFLUOUS BUT MAY REINSTATE IF USERS ASK FOR IT
+          /*        const collectedCursors = [
           ...inclusiveCursorArray,
           ...exclusiveCursorArray,
         ].sort((a, b) => b[2] - a[2]);
@@ -856,44 +868,47 @@ export class MenuBar {
               ? this.plugin.settingsTabFunctions.scrollToPos(editor, mostRecentCursor)
               : "";
           });*/
+        }
+
+        // -------------------------------------------------------
+        // the button with which you can select the active region
+        const selectButton = new ButtonComponent(menuBarEl);
+        selectButton
+          .setIcon("text-select")
+          .setClass("menu-bar-button-select-export")
+          .setClass("spacing")
+          .setClass("clickable-icon")
+          .setTooltip(
+            this.plugin.t(
+              "menuBar.selectButton.setTooltip select active region",
+            ),
+          )
+          .onClick(async () => {
+            if (activeRegion) {
+              this.plugin.settingsTabFunctions.selectActiveRegion(
+                this.flowName,
+                activeRegion,
+                this.associatedView.editor.getValue(),
+                this.associatedView.editor,
+              );
+            }
+          });
+
+        // -------------------------------------------------------
+        // a button to export the flow with UUIDs stripped
+        const exportButton = new ButtonComponent(menuBarEl);
+        exportButton
+          .setIcon("file-up")
+          .setClass("menu-bar-button-select-export")
+          .setClass("spacing")
+          .setClass("clickable-icon")
+          .setTooltip(
+            this.plugin.t("menuBar.selectButton.setTooltip export flow"),
+          )
+          .onClick(async () => {
+            this.plugin.settingsTabFunctions.exportFlow(this.flowName);
+          });
       }
-
-      // -------------------------------------------------------
-      // the button with which you can select the active region
-      const selectButton = new ButtonComponent(menuBarEl);
-      selectButton
-        .setIcon("text-select")
-        .setClass("menu-bar-button-select-export")
-        .setClass("spacing")
-        .setClass("clickable-icon")
-        .setTooltip(
-          this.plugin.t("menuBar.selectButton.setTooltip select active region"),
-        )
-        .onClick(async () => {
-          if (activeRegion) {
-            this.plugin.settingsTabFunctions.selectActiveRegion(
-              this.flowName,
-              activeRegion,
-              this.associatedView.editor.getValue(),
-              this.associatedView.editor,
-            );
-          }
-        });
-
-      // -------------------------------------------------------
-      // a button to export the flow with UUIDs stripped
-      const exportButton = new ButtonComponent(menuBarEl);
-      exportButton
-        .setIcon("file-up")
-        .setClass("menu-bar-button-select-export")
-        .setClass("spacing")
-        .setClass("clickable-icon")
-        .setTooltip(
-          this.plugin.t("menuBar.selectButton.setTooltip export flow"),
-        )
-        .onClick(async () => {
-          this.plugin.settingsTabFunctions.exportFlow(this.flowName);
-        });
 
       // -------------------------------------------------------
       // a chevron to minimise (or warning triangle)

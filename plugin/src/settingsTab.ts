@@ -639,6 +639,18 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
           });
       });
 
+    // --------- FOLDER TITLES ------------------
+    const toggleEmbed = new Setting(createFlows)
+      .setName(this.plugin.t("toggleEmbed name"))
+      .setDesc(this.plugin.t("toggleEmbed desc 1"))
+      .addToggle((sortToggle) => {
+        sortToggle
+          .setValue(this.plugin.settings.flowBuildBasket.embed)
+          .onChange(async (value) => {
+            this.plugin.settings.flowBuildBasket.embed = value;
+          });
+      });
+
     //------- DEFINE FLOW --------------------
     const defineFlow = new Setting(createFlows)
       .setName(this.plugin.t("defineFlow.setName define your flow"))
@@ -779,7 +791,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
     });
 
     //-------------COOSE PATHS / TAGS / PROPS ---------------------------------------------
-     // ---------- FOLDERS, TAGS AND PROPERTIES INPUT ELEMENT -----------------------------------------
+    // ---------- FOLDERS, TAGS AND PROPERTIES INPUT ELEMENT -----------------------------------------
     // This function used to be called IHateCSSAndHTML.
     // I just can't get the layout to work with containers and
     // I am NOT going to try again.
@@ -1619,6 +1631,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
                 oldFlowName: flowName,
                 definitionMode: shownFlow.definitionMode,
                 folderTitles: shownFlow.folderTitles,
+                embed: shownFlow.embed,
                 flowDefinition: shownFlow.flowDefinition,
                 flowNotesPathArray: [],
                 overlapObject: shownFlow.overlapObject,
