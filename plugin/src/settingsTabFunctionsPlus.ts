@@ -597,9 +597,42 @@ export class settingsTabFunctions {
       );
       return [];
     }
-    // unpack into shorthand for easier reading
-    const shFlowDefinition = flowBuildBasket.flowDefinition;
 
+    // Call for the path sorting stuff -------------------------
+    let sortedFilePathArray: string[] = [];
+    const vault = this.app.vault;
+
+    flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder ===
+      "noteOrder" ||
+    flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder === undefined
+      ? (sortedFilePathArray = this.makeNoteOrderPathArray(
+          vault.getRoot(),
+          sortedFilePathArray,
+        ))
+      : (sortedFilePathArray = this.makeFolderOrderPathArray(
+          vault.getRoot(),
+          sortedFilePathArray,
+        ));
+
+    const cleanArrayCollection = this.cleanUp(flowBuildBasket);
+
+let finalPathArray = await this.dvFilter(sortedFilePathArray, cleanArrayCollection, flowBuildBasket)
+
+    if (flowBuildBasket.folderTitles) {
+      finalPathArray = this.findAndAddFolderTitles(
+        finalPathArray,
+        flowBuildBasket,
+      );
+    }
+
+    // pack the definition back into the basket
+    flowBuildBasket.flowDefinition = flowBuildBasket.flowDefinition;
+
+    // presto; as a reminder: this is handed back all the way up in createSourceNotePathArray
+    return finalPathArray;
+  };
+
+  cleanUp = (flowBuildBasket: Types.flowBuildBasket) => {
     // -------------------------------------------------
     // ---- PRE FLIGHT CHECKS AND CLEANUP --------------
     // -------------------------------------------------
@@ -609,7 +642,8 @@ export class settingsTabFunctions {
     //--- INCLUDED FOLDERS ---------------------
     let cleanFolderInclusionArray: string[] = [];
 
-    const folderInclusionArray = shFlowDefinition.folderIncluded.split(",");
+    const folderInclusionArray =
+      flowBuildBasket.flowDefinition.folderIncluded.split(",");
     if (folderInclusionArray.length >= 1) {
       const nonEmptyFolderInclusionArray = folderInclusionArray.filter(
         (x) => x.length > 0,
@@ -660,7 +694,8 @@ export class settingsTabFunctions {
     //--- EXCLUDED FOLDERS -------------------------------------------------
     let cleanFolderExclusionArray: string[] = [];
 
-    const folderExclusionArray = shFlowDefinition.folderExcluded.split(",");
+    const folderExclusionArray =
+      flowBuildBasket.flowDefinition.folderExcluded.split(",");
     if (folderExclusionArray.length >= 1) {
       const nonEmptyFolderExclusionArray = folderExclusionArray
         .map((x) => x.trim())
@@ -699,10 +734,14 @@ export class settingsTabFunctions {
       return nonEmptyTagArray;
     };
 
-    const cleanTagInclusionArray = tagCleanup(shFlowDefinition.tagsIncluded);
+    const cleanTagInclusionArray = tagCleanup(
+      flowBuildBasket.flowDefinition.tagsIncluded,
+    );
     flowBuildBasket.flowDefinition.tagsIncluded =
       cleanTagInclusionArray.join(",");
-    const cleanTagExclusionArray = tagCleanup(shFlowDefinition.tagsExcluded);
+    const cleanTagExclusionArray = tagCleanup(
+      flowBuildBasket.flowDefinition.tagsExcluded,
+    );
     flowBuildBasket.flowDefinition.tagsExcluded =
       cleanTagExclusionArray.join(",");
 
@@ -732,10 +771,10 @@ export class settingsTabFunctions {
     };
 
     let cleanPropertiesInclusionArray = propertyCleanup(
-      shFlowDefinition.propsIncluded,
+      flowBuildBasket.flowDefinition.propsIncluded,
     );
     let cleanPropertiesExclusionArray = propertyCleanup(
-      shFlowDefinition.propsExcluded,
+      flowBuildBasket.flowDefinition.propsExcluded,
     );
     // !!! Do NOT save cleaned up proprties back to the recipe !!!
     // The formatting is not what's expected by the cleanup and it will break.
@@ -743,24 +782,32 @@ export class settingsTabFunctions {
     // add this to keep exports excluded (tag currently not being added on export)
     //  cleanPropertiesExclusionArray.push(["textFlowExport"]);
 
-    // -------- cleanup done ---------------------------------------------------
+    const cleanArrayCollection = {
+      cleanFolderInclusion: cleanFolderInclusionArray,
+      cleanFolderExclusion: cleanFolderExclusionArray,
+      cleanTagInclusion: cleanTagInclusionArray,
+      cleanTagExclusion: cleanTagExclusionArray,
+      cleanPropertiesInclusion: cleanPropertiesInclusionArray,
+      cleanPropertiesExclusion: cleanPropertiesExclusionArray,
+    };
 
-    // Call for the path sorting stuff -------------------------
-    let sortedFilePathArray: string[] = [];
-    const vault = this.app.vault;
+    return cleanArrayCollection;
+  };
 
-    flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder ===
-      "noteOrder" ||
-    flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder === undefined
-      ? (sortedFilePathArray = this.makeNoteOrderPathArray(
-          vault.getRoot(),
-          sortedFilePathArray,
-        ))
-      : (sortedFilePathArray = this.makeFolderOrderPathArray(
-          vault.getRoot(),
-          sortedFilePathArray,
-        ));
-
+  dvFilter = async (
+    sortedFilePathArray: string[],
+    cleanArrayCollection: Types.CleanArrayCollection,
+    flowBuildBasket: Types.flowBuildBasket,
+  ) => {
+    const dv = getAPI();
+    if (!dv) {
+      new Notice(
+        this.plugin.t(
+          "getPathsByFoldersTagsProps.notice dataview not installed",
+        ),
+      );
+      return [];
+    }
     // ----------------------------------------------------------
     // ---- USE DATAVIEW API to get and filter notes
     // ----------------------------------------------------------
@@ -783,21 +830,21 @@ export class settingsTabFunctions {
       const filteredNotes = allNotes.where((note: Types.DVNote) => {
         return (
           // exclude folders
-          !cleanFolderExclusionArray.some((path) =>
+          !cleanArrayCollection.cleanFolderExclusion.some((path) =>
             note.file.path.startsWith(path),
           ) &&
           // include tags
-          cleanTagInclusionArray.every((includedTag) => {
+          cleanArrayCollection.cleanTagInclusion.every((includedTag) => {
             const noteTags = Array.from(note.file.tags);
             return noteTags.includes(includedTag);
           }) &&
           // exclude tags
-          !cleanTagExclusionArray.some((excludedTag) => {
+          !cleanArrayCollection.cleanTagExclusion.some((excludedTag) => {
             const noteTags = Array.from(note.file.tags);
             return noteTags.includes(excludedTag);
           }) &&
           // include properties
-          cleanPropertiesInclusionArray.every((property) => {
+          cleanArrayCollection.cleanPropertiesInclusion.every((property) => {
             if (property.length === 1) {
               let extractedProperty = property[0];
               return !!note[extractedProperty]; // the first! turns the property into a (false) boolean, the second ! inverts to return true
@@ -812,7 +859,7 @@ export class settingsTabFunctions {
             return false;
           }) &&
           // exclude properties
-          !cleanPropertiesExclusionArray.some((property) => {
+          !cleanArrayCollection.cleanPropertiesExclusion.some((property) => {
             if (property.length === 1) {
               let extractedProperty = property[0];
               return note[extractedProperty];
@@ -842,18 +889,6 @@ export class settingsTabFunctions {
         }
       }
     }
-
-    if (flowBuildBasket.folderTitles) {
-      finalPathArray = this.findAndAddFolderTitles(
-        finalPathArray,
-        flowBuildBasket,
-      );
-    }
-
-    // pack the definition back into the basket
-    flowBuildBasket.flowDefinition = shFlowDefinition;
-
-    // presto; as a reminder: this is handed back all the way up in createSourceNotePathArray
     return finalPathArray;
   };
 

@@ -136,7 +136,7 @@
   "headlineChoosePathsTagsProperties.setDesc.1 inputs are optional, explanation of logic": "Alle Inputs sind optional und erwarten eine ",
   "headlineChoosePathsTagsProperties.setDesc.1 inputs are optional, explanation of logic emphasis": "komma-getrennte Liste",
   "headlineChoosePathsTagsProperties.setDesc.1 inputs are optional, explanation of logic ctd": "Bei der Inclusion müssen ALLE gegebenen Kriterien wahr sein; für Exclusion muss nur EIN Kriterium falsch sein.",
-  "headlineChoosePathsTagsProperties.setDesc.2 use dataview for complex logic": "Falls du komplexere Logik brauchst, kannst du deinen Flow mit einer Dataview/Bases-Abfrage definieren und die Ergebnisse taggen.",
+  "headlineChoosePathsTagsProperties.setDesc.2 use dataview for complex logic": "Falls du komplexere Logik brauchst, kannst du deinen Flow mit einer Dataview Query definieren.",
 
   "folderIncludeInput.setDesc.1 sources": "Schließe Ordner per PFAD EIN",
   "folderIncludeInput.setDesc.2 default is root": "Lasse das Feld leer, um alles einzuschließen.",

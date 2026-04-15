@@ -146,7 +146,7 @@
   "headlineChoosePathsTagsProperties.setDesc.1 inputs are optional, explanation of logic": "All inputs are optional and expect a ",
   "headlineChoosePathsTagsProperties.setDesc.1 inputs are optional, explanation of logic emphasis": "comma separated list",
   "headlineChoosePathsTagsProperties.setDesc.1 inputs are optional, explanation of logic ctd": "For inclusion, ALL given criteria must be true; for exclusion only ONE criterion must be true.",
-  "headlineChoosePathsTagsProperties.setDesc.2 use dataview for complex logic": "If you need more complex logic, consider defining your flow using a Dataview/Bases query and tagging the results.",
+  "headlineChoosePathsTagsProperties.setDesc.2 use dataview for complex logic": "If you need more complex logic, consider defining your flow using a Dataview query.",
 
   "folderIncludeInput.setDesc.1 sources": "Include by PATH",
   "folderIncludeInput.setDesc.2 default is root": "Leave empty to include everything.",

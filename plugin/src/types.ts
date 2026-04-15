@@ -295,3 +295,12 @@ export type SuggestionType =
   | "flow-name";
 
 export type XXHashAPI = Awaited<ReturnType<typeof xxhash>>;
+
+export type CleanArrayCollection = {
+  cleanFolderInclusion: string[];
+  cleanFolderExclusion: string[];
+  cleanTagInclusion: string[];
+  cleanTagExclusion: string[];
+  cleanPropertiesInclusion: string[][];
+  cleanPropertiesExclusion: string[][];
+};
