@@ -1,3 +1,4 @@
 ### 0.4.2
 
-- flagged our of some unnecessary checks for embed flows
+- implemented export for embed flows
+- flagged out of some unnecessary checks for embed flows
