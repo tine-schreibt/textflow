@@ -449,28 +449,30 @@ export class MenuBar {
         cls: `textflow-menu-bar`,
       });
 
-      // ----- SYNC BUTTON -----------
-      const syncButton = new ButtonComponent(menuBarEl);
-      syncButton
-        .setIcon("download")
-        .setClass(`menu-bar-button-sync-${goSync}`)
-        .setClass("spacing")
-        .setClass("clickable-icon")
-        .setTooltip(this.plugin.t("switcherModal.buttons sync"))
+      if (!this.plugin.settings.flows[this.flowName].embed) {
+        // ----- SYNC BUTTON -----------
+        const syncButton = new ButtonComponent(menuBarEl);
+        syncButton
+          .setIcon("download")
+          .setClass(`menu-bar-button-sync-${goSync}`)
+          .setClass("spacing")
+          .setClass("clickable-icon")
+          .setTooltip(this.plugin.t("switcherModal.buttons sync"))
 
-        .onClick(async () => {
-          if (goSync === "neutral" || goSync === "must") {
-            await this.plugin.syncBackToSource(
-              this.flowName,
-              this.associatedView.editor.getValue(),
-              this.leafID,
-            );
-            await this.plugin.saveSettings();
-            this.refresh(this.associatedView.contentEl);
-          } else {
-            return;
-          }
-        });
+          .onClick(async () => {
+            if (goSync === "neutral" || goSync === "must") {
+              await this.plugin.syncBackToSource(
+                this.flowName,
+                this.associatedView.editor.getValue(),
+                this.leafID,
+              );
+              await this.plugin.saveSettings();
+              this.refresh(this.associatedView.contentEl);
+            } else {
+              return;
+            }
+          });
+      }
 
       // ----------- REBUILD BUTTON ------------
       const rebuildButton = new ButtonComponent(menuBarEl)
