@@ -149,7 +149,7 @@ If I develop motivation on my own, they may show up all by themselves one day.
 - If the notes/folders in your file explorer are sorted manually, this can not be reflected in your flows. This is because textFlow uses Dataview, which accesses the alphanumeric file tree at the system level and not any sorting that happens at the UI level. 
 - If you absolutely don't want to number your folders and notes (it's so much more robust, though...), you can mirror your custom order in some bookmark groups and build your flows from there (I guess some of the manual sort plugins are based on bookmarks anyways). You can't use frontmatter to refine definitions based on bookmarks, though (at least not yet?). 
 
-**Properties aren't perfect:** Sometimes properties or values just aren't being recognised. I don't know why and I don't know how to fix it. 
+**Embedded Flows and cursor tracking:** Since the content of embeds are basically living inside their own, secondary editor, textFlow's cursor listener can no longer 'see' where the cursor is when it's inside an embed. So when you're just manually moving in between regions, in order for the navigation dropdown and file explorer to show the correct region, you have to click once outside of the embed. 
 
 **No automatic checks when editing bookmark groups:**
 - Obsidian doesn't give notice when you edit a bookmark group. Therefore you have to manually flag/rebuild all flows effected by the changes. This is quick though, since you can use the command to flag all flows or the flowSwitcher modal to rebuild select ones.

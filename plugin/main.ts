@@ -1792,7 +1792,6 @@ ${pseudoElement}
 
           update(update: ViewUpdate) {
             if (!update.selectionSet) return;
-            if (plugin.settings.flows[flowName].embed) return;
 
             const cursorOffset = update.state.selection.main.from;
 

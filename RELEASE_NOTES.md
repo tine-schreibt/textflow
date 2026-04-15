@@ -1,3 +1,3 @@
-### 0.4.4
+### 0.4.5
 
-- fixed always-on embed toggle
+- too much flagging. Reversed that. 

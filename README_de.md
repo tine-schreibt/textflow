@@ -148,9 +148,9 @@ Sofern ich von allein Motivation entwickle, könnten sie eines Tages auch einfac
 - Wenn du die Notizen/Ordner in deinem Datei-Explorer manuell sortiert hast, kann dies nicht in Flows reflektiert werden. Das kommt daher, dass textFlow Dataview benutzt, das wiederum auf den alphanumerischen Dateibaum auf Systemebene zugreift, und nicht auf Sortierungen, die auf UI-Ebene passieren. 
 - Falls du deine Ordner und Notizen absolut nicht durchnumerieren willst (dabei ist das so viel robuster...), kannst du deine manuelle Sortierung in einer Lesezeichengruppe spiegeln und deine Flows aus diesen heraus definieren (einige Plugins für manuelle Sortierung basieren eh auf Lesezeichen, also...). Du kannst allerdings (derzeit noch?) keine Eigenschaften benutzen, um eine auf Lesezeichen basierende Definition zu verfeinern.
 
-**Eigenschaften sind nicht perfekt:** Manchmal werden manche Eigenschaften oder Werte einfach nicht erkannt. Ich weiß nicht, warum, und ich weiß nicht, wie ich das reparieren könnte. 
+**Eingebettete Flows und das Cursor-Tracking:** Da der Inhalt von Einbettungen in ihrem eigenen, sekundären Editor leben, kann textFlows Cursor-Listener nicht mehr 'sehen', wo der Cursor ist, wenn er sich innerhalb einer Einbettung befindet. Damit das Navigations-Dropdown und der Datei-Explorer die korrekte Region anzeigen, wenn du manuell durch deinen Flow navigierst, musst du einmal außerhalb der Einbettung klicken. 
 
-**Kein automatischen Checks bei Bearbeitung von Lesezeichen-Gruppen:** 
+**Keine automatischen Checks bei Bearbeitung von Lesezeichen-Gruppen:** 
 - Obsidian sagt nicht bescheid, wenn du die Reihenfolge oder Zusammensetzung einer Lesezeichen-Gruppe änderst. Das heißt, du musst die betroffenen Flows von Hand markieren/neu bauen. Das geht aber schnell, denn du kannst den Befehl benutzen, um alle Flows zu markieren, oder per FlowSwitcher Modal ausgewählte Flows neu baust.
 
 **Zeug in der Gliederungsansicht umsortieren:** 
