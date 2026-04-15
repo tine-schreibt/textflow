@@ -456,6 +456,8 @@ export default class TextFlowPlugin extends Plugin {
             const changeArray: string[] = [];
             // since the function returns a promise, we need to wrap it in async:
             const asyncisiseCheckStatsForFlow = async (flowName: string) => {
+              if (this.settings.flows[flowName].embed) return false;
+
               const changes = await this.checkStatsForFlow(flowName);
               if (changes) {
                 changeArray.push(flowName);
@@ -1402,6 +1404,7 @@ ${pseudoElement}
               }
             }
             if (
+              !this.settings.flows[flowName].embed &&
               !this.settings.flows[flowName].flaggedForRebuild &&
               this.settings.flows[flowName].flowMap[file.path]
             ) {

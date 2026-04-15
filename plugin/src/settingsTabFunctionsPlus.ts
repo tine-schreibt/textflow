@@ -1667,7 +1667,7 @@ export class settingsTabFunctions {
           } else {
             const backticks = "```";
             const fileName = basename(note.path).replace(".md", "");
-            mapValueBasket.concatenatedFileContents += `${backticks}sync \n![[${fileName}]]\n${backticks} ${mapValueBasket.idDivider}`;
+            mapValueBasket.concatenatedFileContents += `${backticks}sync \n![[${fileName}]]\n${backticks}\n${mapValueBasket.idDivider}`;
           }
         } else {
           console.error("Invalid file.");
@@ -2005,8 +2005,8 @@ export class settingsTabFunctions {
 
   // -------------------------------------------------
   // removes UUIDs and puts it in a new file in root with time stamped title
-  exportFlow = async (flowName: string) => {
-    let path = this.plugin.settings.flows[flowName].flowFilePath;
+  exportFlow = async (flowName: string, altName?: string) => {
+    let path = this.plugin.settings.flows[altName ?? flowName].flowFilePath;
 
     const file = this.app.vault.getAbstractFileByPath(path);
 
@@ -2015,7 +2015,7 @@ export class settingsTabFunctions {
       const stripUUIDs = (text: string): string => {
         const uuidPattern =
           /[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46}/g;
-        const result = text.replace(uuidPattern, "\n");
+        const result = text.replace(uuidPattern, "\n\n");
         return result;
       };
 
@@ -2036,6 +2036,31 @@ export class settingsTabFunctions {
         }),
       );
     }
+  };
+
+  exportEmbed = async (flowName: string) => {
+    // make a clone of the settings
+    const cloneName = Date.now().toString();
+    this.plugin.settings.flows[cloneName] = structuredClone(
+      this.plugin.settings.flows[flowName],
+    );
+    this.plugin.settings.flows[cloneName].embed = false;
+
+    // build the clone and export it
+    await this.flowBuildingBundle(cloneName, "silent");
+    await this.exportFlow(flowName, cloneName);
+
+    // delete the cloned file
+    let clonePath = this.plugin.settings.flows[cloneName].flowFilePath;
+    const cloneFile = this.app.vault.getAbstractFileByPath(clonePath);
+    if (cloneFile) {
+      if (cloneFile instanceof TFile) {
+        await this.app.fileManager.trashFile(cloneFile);
+      }
+    }
+
+    // delete the cloned data
+    delete this.plugin.settings.flows[cloneName];
   };
 
   // ----------------------------------------

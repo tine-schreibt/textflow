@@ -1,4 +1,3 @@
-### 0.4.1
+### 0.4.2
 
-- added embed toggle to context modal
-- removed sync button from embed menu bar 
+- flagged our of some unnecessary checks for embed flows

@@ -895,22 +895,26 @@ export class MenuBar {
               );
             }
           });
-
-        // -------------------------------------------------------
-        // a button to export the flow with UUIDs stripped
-        const exportButton = new ButtonComponent(menuBarEl);
-        exportButton
-          .setIcon("file-up")
-          .setClass("menu-bar-button-select-export")
-          .setClass("spacing")
-          .setClass("clickable-icon")
-          .setTooltip(
-            this.plugin.t("menuBar.selectButton.setTooltip export flow"),
-          )
-          .onClick(async () => {
-            this.plugin.settingsTabFunctions.exportFlow(this.flowName);
-          });
       }
+
+      // -------------------------------------------------------
+      // a button to export the flow with UUIDs stripped
+      const exportButton = new ButtonComponent(menuBarEl);
+      exportButton
+        .setIcon("file-up")
+        .setClass("menu-bar-button-select-export")
+        .setClass("spacing")
+        .setClass("clickable-icon")
+        .setTooltip(
+          this.plugin.t("menuBar.selectButton.setTooltip export flow"),
+        )
+        .onClick(async () => {
+          if (this.plugin.settings.flows[this.flowName].embed) {
+            this.plugin.settingsTabFunctions.exportEmbed(this.flowName);
+          } else {
+            this.plugin.settingsTabFunctions.exportFlow(this.flowName);
+          }
+        });
 
       // -------------------------------------------------------
       // a chevron to minimise (or warning triangle)
