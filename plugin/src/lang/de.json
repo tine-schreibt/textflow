@@ -121,7 +121,7 @@
   "chooseBookmarks.setDesc.3 example path": "Hauptgruppe/Untergruppe/Unteruntergruppe",
   "chooseBookmarks.setDesc.4 how to exclude subgroup": "Um die Untergruppen einer Gruppe auszuschließen, beende ihren Pfad mit /",
 
-  "choosedvQuery.setDesc.1 input only query": "Gib deine query ein.",
+  "choosedvQuery.setDesc.1 input only query": "Gib deine Query ein, beginnend mit LIST",
   "choosedvQuery.setDesc.2 systemFolder will be excluded": "systemFolder wird automatisch ausgeschlossen",
 
   "sortFlowPathsTagsProperties.setName sort order": "Sortierreihenfolge",

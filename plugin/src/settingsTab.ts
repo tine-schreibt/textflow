@@ -867,7 +867,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
     chooseDvQuery.addTextArea((setDvQueryGroup) => {
       setDvQueryGroup.inputEl.addClass("dvQuery-text-input");
       setDvQueryGroup.setValue(
-        this.plugin.settings.flowBuildBasket.flowDefinition.dvQuery ?? "",
+        this.plugin.settings.flowBuildBasket.flowDefinition.dvQuery ?? "LIST",
       );
       setDvQueryGroup.onChange(async (value) => {
         this.plugin.settings.flowBuildBasket.flowDefinition.dvQuery =

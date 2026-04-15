@@ -514,14 +514,6 @@ export class settingsTabFunctions {
       return [];
     }
 
-    console.log("dvQuery: ", flowBuildBasket.flowDefinition.dvQuery);
-    // check if the user messed up the query start and fix it
-    flowBuildBasket.flowDefinition.dvQuery =
-      flowBuildBasket.flowDefinition.dvQuery.replace(
-        /\b(TABLE|TASK|CALENDAR|CARDS?)\s+FROM\b/gi,
-        "LIST FROM",
-      );
-
     // the path sorting suff again
     let sortedFilePathArray: string[] = [];
     const vault = this.app.vault;

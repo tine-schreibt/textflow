@@ -131,8 +131,8 @@
   "chooseBookmarks.setDesc.3 example path": "rootGroup/subGroupOfRoot/subGroupOfSubgroup",
   "chooseBookmarks.setDesc.4 how to exclude subgroup": "To exclude a group's subgroups end its name or path with /",
 
-  "choosedvQuery.setDesc.1 input only query": "Input your query.",
-  "choosedvQuery.setDesc.2 systemFolder will be excluded": "systemFolder will automatically be excluded",
+  "choosedvQuery.setDesc.1 input only query": "Input your query, beginning with LIST.",
+  "choosedvQuery.setDesc.2 systemFolder will be excluded": "systemFolder will automatically be excluded.",
 
   "sortFlowPathsTagsProperties.setName sort order": "Sort order",
   "sortFlowPathsTagsProperties.setDesc.1 note order": "Notes: ",

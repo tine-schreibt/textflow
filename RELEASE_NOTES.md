@@ -1,3 +1,3 @@
-### 0.3.1
+### 0.3.2
 
-- UI fix
+- Fixed bug where I was overly aggressively correcting for user not starting dvQuery with LIST
