@@ -114,7 +114,7 @@ export class CreateFlowFromFolder extends Modal {
       .setDesc(this.plugin.t("toggleEmbed desc 1"))
       .addToggle((sortToggle) => {
         sortToggle
-          .setValue(this.plugin.settings.flowBuildBasket.embed)
+          .setValue(this.plugin.settings.flowBuildBasket.embed ?? false)
           .onChange(async (value) => {
             const plugins = (this.app as any).plugins;
             const isInstalled = !!plugins.manifests["sync-embeds"];

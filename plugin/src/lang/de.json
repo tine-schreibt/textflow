@@ -94,7 +94,7 @@
   "toggleFolderTitles.setDesc will also turn off titles in nav dropdown": "Dieses Setting legt auch fest, ob die Titel im Navigations-Dropdown zu sehen sind.",
 
   "toggleEmbed name": "Bette Notizen ein",
-  "toggleEmbed desc 1": "Notizen werden eingebettet. Cursor-Positionen werden nicht gespeichert.",
+  "toggleEmbed desc 1": "Notizen werden eingebettet. Cursor-Positionen werden nicht getrackt.",
 
   "modal_flowName": "Sammlung",
   "modal_toggleFolderTitles.setName include folder": "Füge Ordnertitel in Flow ein",

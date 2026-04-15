@@ -104,7 +104,7 @@
   "toggleFolderTitles.setDesc will also turn off titles in nav dropdown": "This also determines if the titles are visible in the flow navigation dropdown.",
 
   "toggleEmbed name": "Embed notes",
-  "toggleEmbed desc 1": "Notes will be embedded. Cursor positions will not be saved.",
+  "toggleEmbed desc 1": "Notes will be embedded. Cursor positions will not be tracked.",
 
   "modal_flowName": "Collection",
   "modal_toggleFolderTitles.setName include folder": "Include folder titles in flow",
