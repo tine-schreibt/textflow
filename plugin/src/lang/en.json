@@ -343,6 +343,8 @@
   "createSourceNotePathArray.notice bookmark group not found": "textFlow: Please check the name of the bookmark group you submitted.",
   "getPathsByFoldersTagsProps.notice dataview not installed": "textFlow: Dataview API not available. Please make sure you have installed the Dataview plugin (Settings > Community plugins > Browse).",
 
+  "Please install sync embeds": "textFlow: Please install the plugin Sync Embeds - available on GitHub https://github.com/uthvah/sync-embeds - to fully use Flows with embeds.",
+
   "flowBuilder.notice system folder not found": "textFlow: ${textFlowSystemFolderName} not found.",
   "flowBuilder.notice path not found": "textFlow: The note at ${path} couldn't be found.",
   "flowBUilder.notice UUID found in source note": "textFlow: The note \n${path}\n of flow\n ${flowName}\n contains at least one UUID. \nThis can happen because of sync errors.\nHow to proceed safely: \n1. Export ${flowName} to prevent any loss of edits.\n2. Check the mentioned note for any additional regions that have been copied into it (search for '<hr>'), and cut them out.\n3. Check the source notes of these regions to make sure they are up to date. If they aren't, copy/paste the latest version from your exported flow.\nTo make all of this easier, turn off navigation via file explorer (in the settings tab or command palette).\nAfterwards try another rebuild.",

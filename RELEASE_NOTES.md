@@ -1,4 +1,2 @@
-### 0.4.2
-
-- implemented export for embed flows
-- flagged out of some unnecessary checks for embed flows
+### 0.4.3
+- added check for presence of Sync Embeds plugin when toggling embeds

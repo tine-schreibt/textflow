@@ -116,6 +116,11 @@ export class CreateFlowFromFolder extends Modal {
         sortToggle
           .setValue(this.plugin.settings.flowBuildBasket.embed)
           .onChange(async (value) => {
+            const plugins = (this.app as any).plugins;
+            const isInstalled = !!plugins.manifests["sync-embeds"];
+            if (!isInstalled) {
+              new Notice(this.plugin.t("Please install sync embeds"), 0);
+            }
             this.plugin.settings.flowBuildBasket.embed = value;
           });
       });
@@ -747,34 +752,34 @@ export class RestoreFlowDefModal extends Modal {
         // --- DISPLAY PREPARATIONS ----------------------------------
         // Set up strings to display flow criteria
 
-             // SOURCE
-      let source = "";
-      if (shownFlow.definitionMode === "dvQuery") {
-        source +=
-          this.plugin.t("flowDisplay.flowShow. source dvQuery") +
-          `(${shownFlow.flowDefinition.dvQuery}`;
-      }
-
-      if (shownFlow.definitionMode === "foldersTagsProps") {
-        source += this.plugin.t("flowDisplay.flowShow.setDesc.1 source");
-
-        if (
-          shownFlow.flowDefinition.folderIncluded === "" ||
-          shownFlow.flowDefinition.folderIncluded === "/"
-        ) {
-          source += "/";
-        } else {
-          source += `${shownFlow.flowDefinition.folderIncluded}`;
+        // SOURCE
+        let source = "";
+        if (shownFlow.definitionMode === "dvQuery") {
+          source +=
+            this.plugin.t("flowDisplay.flowShow. source dvQuery") +
+            `(${shownFlow.flowDefinition.dvQuery}`;
         }
-      }
 
-      if (shownFlow.definitionMode === "bookmarks") {
-        source +=
-          this.plugin.t("flowDisplay.source.alt bookmark group") +
-          shownFlow.flowDefinition.bookmarks;
-      }
+        if (shownFlow.definitionMode === "foldersTagsProps") {
+          source += this.plugin.t("flowDisplay.flowShow.setDesc.1 source");
 
-      // string creation for foldersTagsProps
+          if (
+            shownFlow.flowDefinition.folderIncluded === "" ||
+            shownFlow.flowDefinition.folderIncluded === "/"
+          ) {
+            source += "/";
+          } else {
+            source += `${shownFlow.flowDefinition.folderIncluded}`;
+          }
+        }
+
+        if (shownFlow.definitionMode === "bookmarks") {
+          source +=
+            this.plugin.t("flowDisplay.source.alt bookmark group") +
+            shownFlow.flowDefinition.bookmarks;
+        }
+
+        // string creation for foldersTagsProps
         // INCLUSION
         const included: string[] = [];
         if (shownFlow.flowDefinition.tagsIncluded?.trim()) {

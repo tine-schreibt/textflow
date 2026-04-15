@@ -1334,6 +1334,7 @@ export class settingsTabFunctions {
     resetFlowBuildBasket.oldFlowName = "";
     resetFlowBuildBasket.definitionMode = "";
     resetFlowBuildBasket.folderTitles = true;
+    resetFlowBuildBasket.embed = false;
     resetFlowBuildBasket.flowDefinition = {};
     resetFlowBuildBasket.flowNotesPathArray = [];
     resetFlowBuildBasket.overlapObject = {};
