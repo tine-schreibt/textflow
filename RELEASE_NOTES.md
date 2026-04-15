@@ -1,3 +1,4 @@
-### 0.4.2
+### 0.4.1
 
-- removed sync button from embed menu bar
+- added embed toggle to context modal
+- removed sync button from embed menu bar 
