@@ -578,6 +578,34 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
           });
       });
 
+    // --------- MAIN TOGGLE EMBEDS ------------------
+    const toggleEmbed = new Setting(qol)
+      .setName(this.plugin.t("toggleEmbed main toggle name"))
+      .setDesc(
+        createFragment((desc) => {
+          desc.createSpan({
+            text: this.plugin.t("toggleEmbed main toggle desc 1"),
+          });
+          desc.createEl("br");
+          desc.createSpan({
+            text: this.plugin.t("toggleEmbed main toggle desc 2"),
+          });
+        }),
+      )
+      .addToggle((sortToggle) => {
+        sortToggle
+          .setValue(this.plugin.settings.embeds ?? false)
+          .onChange(async (value) => {
+            const plugins = (this.app as any).plugins;
+            const isInstalled = !!plugins.manifests["sync-embeds"];
+            if (!isInstalled) {
+              new Notice(this.plugin.t("Please install sync embeds"), 0);
+            }
+            this.plugin.settings.embeds = value;
+            this.plugin.saveSettings();
+          });
+      });
+
     // -------- CREATE / EDIT FLOWS ----------------
     const createFlows = containerEl.createDiv({
       cls: "headline-container",
@@ -639,22 +667,19 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
           });
       });
 
-    // --------- FOLDER TITLES ------------------
-    const toggleEmbed = new Setting(createFlows)
-      .setName(this.plugin.t("toggleEmbed name"))
-      .setDesc(this.plugin.t("toggleEmbed desc 1"))
-      .addToggle((sortToggle) => {
-        sortToggle
-          .setValue(this.plugin.settings.flowBuildBasket.embed ?? false)
-          .onChange(async (value) => {
-            const plugins = (this.app as any).plugins;
-            const isInstalled = !!plugins.manifests["sync-embeds"];
-            if (!isInstalled) {
-              new Notice(this.plugin.t("Please install sync embeds"), 0);
-            }
-            this.plugin.settings.flowBuildBasket.embed = value;
-          });
-      });
+    // --------- TOGGLE EMBEDS ------------------
+    if (this.plugin.settings.embeds) {
+      const toggleEmbed = new Setting(createFlows)
+        .setName(this.plugin.t("toggleEmbed name"))
+        .addToggle((sortToggle) => {
+          sortToggle
+            .setValue(this.plugin.settings.flowBuildBasket.embed ?? false)
+            .onChange(async (value) => {
+              this.plugin.settings.flowBuildBasket.embed = value;
+              this.plugin.saveSettings();
+            });
+        });
+    }
 
     //------- DEFINE FLOW --------------------
     const defineFlow = new Setting(createFlows)

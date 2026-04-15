@@ -93,8 +93,10 @@
   "toggleFolderTitles.setName include folder / bookmark group titles": "Füge Gruppen-/Ordnertitel in den Flow ein",
   "toggleFolderTitles.setDesc will also turn off titles in nav dropdown": "Dieses Setting legt auch fest, ob die Titel im Navigations-Dropdown zu sehen sind.",
 
-  "toggleEmbed name": "Bette Notizen ein",
-  "toggleEmbed desc 1": "Notizen werden eingebettet. Cursor-Positionen werden nicht getrackt.",
+  "toggleEmbed main toggle name": "Zeige Option zur Einbettung an",
+  "toggleEmbed main toggle desc 1": "Soll bei der Flow-Definition die Option angezeigt werden, den Flow aus Einbettungen anstatt aus Text aufzubauen?",
+  "toggleEmbed main toggle desc 2": "Flows mit Einbettungen are fundamental verschieden von originalen Flows. textFlow funktioniert anders mit ihnen und ich kann nicht garantieren, dass es reibungslos und sicher funktioniert, da Sync Embeds nicht mein Plugin ist.",
+  "toggleEmbed name": "Bette Notizen für diesen Flow ein",
 
   "modal_flowName": "Sammlung",
   "modal_toggleFolderTitles.setName include folder": "Füge Ordnertitel in Flow ein",

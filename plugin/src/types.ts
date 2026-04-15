@@ -55,6 +55,7 @@ export interface TextFlowSettings {
   menuBarTopMargin: string;
   switcherPos: string;
   hideScrollbar: string;
+  embeds: boolean;
   flowBuildBasket: flowBuildBasket;
   activeRegions: { [key: string]: { [key: string]: ActiveRegion } }; // flowName[leafID] = ActiveRegion
   flows: { [key: string]: FlowDef };
@@ -180,6 +181,7 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
     persistentCursors: {},
   },
   hideScrollbar: "none",
+  embeds: false,
   activeRegions: {},
   flows: {},
 };

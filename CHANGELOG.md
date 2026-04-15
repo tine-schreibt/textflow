@@ -1,3 +1,8 @@
+### 0.4.6
+
+- added main toggle for embedding in order to put an inescapable disclaimer into
+  the UI
+
 ### 0.4.5
 
 - too much flagging. Reversed that.

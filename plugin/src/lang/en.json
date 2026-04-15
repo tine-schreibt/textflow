@@ -103,8 +103,11 @@
   "toggleFolderTitles.setName include folder / bookmark group titles": "Include folder / bookmark group titles in flow",
   "toggleFolderTitles.setDesc will also turn off titles in nav dropdown": "This also determines if the titles are visible in the flow navigation dropdown.",
 
-  "toggleEmbed name": "Embed notes",
-  "toggleEmbed desc 1": "Notes will be embedded. Cursor positions will not be tracked.",
+  "toggleEmbed main toggle name": "Show option to embed",
+  "toggleEmbed main toggle desc 1": "Do you want Flow definitions to show the option to build your Flow with embedded notes instead of actual note text?",
+  "toggleEmbed main toggle desc 2": "Flows with embeds are fundamentally different from original Flows. textFlow will work differently for them and I can not guarantee smooth or safe functionality, since Sync Embeds is not my plugin.",
+  "toggleEmbed name": "Embed notes for this flow",
+
 
   "modal_flowName": "Collection",
   "modal_toggleFolderTitles.setName include folder": "Include folder titles in flow",
