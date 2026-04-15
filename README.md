@@ -7,7 +7,7 @@ textFlow is intended mainly for long form writers, but can be used by anyone who
 
 The UI has options for keyboard as well as mouse navigation. 
 
-**UPDATE**: As of version 0.4.0 you can build **Flows with embeds**; this means that these Flows don't create any data duplication. You just need to install and activate the plugin [Sync Embeds by uthvah](https://github.com/uthvah/sync-embeds) (can only be installed manually at the moment).
+**UPDATE:** As of version 0.4.0 you can build **Flows with embeds**; this means that these Flows don't create any data duplication. You just need to install and activate the plugin [Sync Embeds by uthvah](https://github.com/uthvah/sync-embeds) (can only be installed manually at the moment).
 
 Please be aware that I tested textFlow extensively, but you are still the first real users, so I can't guarantee you won't find some bug or other that I missed. Here's [a trouble shooting guide](#9-fixing-problems) you can look at before filing a [bug report](#12-report-a-bug--report-your-love). 
 
@@ -33,6 +33,7 @@ Please also run Obsidian's own data recovery plugin, ['Edit history' by Antonio 
 10. [Cheat sheet](#10-cheat-sheet)
 11. [Comparing textFlow and Outline](#11-comparing-textflow-and-outline)
 12. [Report a bug / report your love](#12-report-a-bug--report-your-love)
+
 
 <hr>
 
@@ -64,8 +65,8 @@ Please also run Obsidian's own data recovery plugin, ['Edit history' by Antonio 
 	1. It has buttons for **syncing** and **rebuilding**.
 	2. **A navigation menu**: This dropdown makes it easy to navigate disjointed flows, or if the fickle focus thing is too frustrating for you. The menu also sports a fuzzy search to help you get around huge flows faster. The search term persists in-session, so you don't have to retype it.
 	3. **Your cursor history:** Whenever you sync, textFlow saves the last cursor position (for the last few regions of the last few leaves), so you can more easily jump around your document. textFlow remembers the cursor positions across reloads and scrolls there automatically. There's also a command to restore the last known cursor position for the active leaf. 
-	4. **A button to select the active region:** In case you want to do some copy/paste surgery. There's a command for this, too. 
-	5. **An export button:** This button creates a copy of your flow with all the UUIDs stripped out. It will be put in your root folder and named with the flow name and a time stamp.
+	4. **A button to select the active region:** Only for non-embed Flows. In case you want to do some copy/paste surgery. There's a command for this, too. 
+	5. **An export button:** This button creates a copy of your flow with all the UUIDs stripped out. It will be put in your root folder and named with the flow name and a time stamp. For embed Flows it replaces the embeds with copies of the embedded note's content.
 	6. **A min/max toggle:** There's a button to minimise/maximise the menu bar. There's also a command to toggle the menu. 
 		In its minimised state the menu bar is just a small grey chevron in the upper left corner of your editor- or a warning triangle, while the flow isn't setup yet. (Hover over the triangle if it doesn't disappear on its own.)
 10. **Do stuff via the switcher modal:** In the flow switcher you've got buttons to: 
@@ -90,6 +91,7 @@ If I develop motivation on my own, they may show up all by themselves one day.
 
 **Also:**
 - **More languages:** So far the plugin has an English and German language file. If you'd like to contribute: [https://github.com/tine-schreibt/textFlow/tree/main/plugin/src/lang](https://github.com/tine-schreibt/textFlow/tree/main/plugin/src/lang)
+
 
 <hr>
 
@@ -136,6 +138,7 @@ If I develop motivation on my own, they may show up all by themselves one day.
 9. **Manually mark for rebuild:** If you deactivate automatic checks, you can right-click on a note in file explorer and choose to have all flows containing that note marked for rebuild. 
 10. **Definition backup:** If you ever have to un/reinstall the plugin, you can create a backup of all your flow definitions. It will be stored as a .json file in textFlow's system folder.
 
+
 <hr>
 
 ### 3. Limitations and known inconveniences
@@ -175,6 +178,7 @@ If I develop motivation on my own, they may show up all by themselves one day.
 4. **textFlow's menu bar sometimes overlaps Editing Toolbar or the search bar or is being overlapped by the search bar:** Due to certain quirks of CSS and Obsidian, it isn't easy to have those elements coexist peacefully. The current state is the optimum of what I can achieve with my knowledge. You can always solve conflicts by min/maxing the menu bar, though. 
 	- The only exception: The minimised textFlow menu bar will always cover up bars that lie below it. But it's tiny and shouldn't interfere with functionality.
 
+
 <hr>
 
 ### 4. Use cases
@@ -183,6 +187,7 @@ If I develop motivation on my own, they may show up all by themselves one day.
 - You want to be able to easily curate multiple contexts to focus on specific aspects of your work 
 - You want to turn the whole or specific excerpts of your work into a single file in order to share it with others 
 - You want to basically have Scrivenings in Obsidian
+
 
 <hr>
 
@@ -203,6 +208,7 @@ If I develop motivation on my own, they may show up all by themselves one day.
 - **Install via marketplace:** Once textFlow is released to the market place: 
 	- Go to Obsidian `Settings > Community plugins > Browse`.
 	- Search for textFlow, click`Install`, click `Activate`, then click `Options` (all the same button, just give it a second).
+
 
 <hr>
 
@@ -241,6 +247,7 @@ If I develop motivation on my own, they may show up all by themselves one day.
 - **Delete:** This will delete the flow definition, flow note (if it exists) and any trace of them in the data structure (except for backups, which will deleted based on time stamp age).
 - **Restore old flow definitions:** Here you can create a backup of your flow definitions and restore old definitions. The backup will be saved as .json file in textFlowSystemFolder. So it won't be visible in Obsidian.
 
+
 <hr>
 
 ### 7. Commands
@@ -262,6 +269,7 @@ All commands can be tied to keyboard shortcuts (hotkeys) in Obsidian's settings.
 
 - **Toggle scroll bar visibility:** So you can quickly switch it off when it's twitchy and back on when you need it.
 - **Toggle explorer navigation:** If you need multi-select to work right, this command is your friend and ally.
+
 
 <hr>
 
@@ -311,6 +319,7 @@ If you want to know why: [Safety features](#2-safety-features) / [Limitations](#
 - Results for the flow in the active leaf always target the active leaf. 
 - Results for other flows try to target the last active leaf for the flow; if there's none, they open a new one. 
 - Results for flow names always open a new leaf.
+
 
 <hr>
 
@@ -465,6 +474,7 @@ If that didn't help and you also can't find your problem on this list, [let me k
 - **Problem:** Something else is going on and rebuilding/reloading doesn't help.
 	- **Solution:** [Send-me-a-bug-report](#12-report-a-bug--report-your-love)
 
+
 <hr>
 
 ### 10.  Cheat sheet
@@ -481,6 +491,7 @@ If that didn't help and you also can't find your problem on this list, [let me k
 	2. An update listener for the document in the editor, so textFlow notices when you edit a region. This listener calls a function that saves to `/.obsidian/plugins/textFlow/data.json`  which region was edited. 
 	3. A transaction filter which continually checks the 60 characters before and after the cursor for UUIDs - using a regEx - to see if the cursor is touching a UUID. If the test returns true, all transactions are blocked, thus protecting the UUID. 
 	**This tracking does *not* send any data to any servers!** textFlow doesn't even know the internet exists.
+
 
 <hr>
 
@@ -507,6 +518,7 @@ And when should you use both together?
 
 **Together they shine:**
 - But why choose when you can just use both for their greatest strengths - textFlow to create flexible documents and Outline to granularly navigate them.
+
 
 <hr>
 
