@@ -22,7 +22,7 @@ haven't yet been completed._
 
 Right now I'm puttering about putting reigns on the overlap detection for embed
 flows. After that I'll implement a toggle with which to conveniently change a
-Flow from classic to embed and back.
+Flow from classic to embed and back. 
 
 Please be aware that (outside of the functions I am currently implementing) I
 tested textFlow extensively, but you are still the first real users, so I can't

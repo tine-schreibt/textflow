@@ -20,18 +20,18 @@ bedeutet, diese Flows haben keine Datenduplikation mehr. Ihr müsst dazu nur das
 Plugin [Sync Embeds von uthvah](https://github.com/uthvah/sync-embeds)
 installieren und aktivieren (kann derzeit nur manuell installiert werden).
 _Diesbezügliche Updates für dieses Readme sind noch nicht vollständig
-ausgearbeitet._ 
+ausgearbeitet._
 
-Gerade rödle ich daran, die Überlappungsdetektion für
-Embed-Flows einzuhegen, danach werde ich einen Schalter einbauen, mit dem man
-bei Bedarf bequem einen Flow zwischen klassik und embed hin und her schalten
-kann.
+Gerade rödle ich daran, die Überlappungsdetektion für Embed-Flows einzuhegen,
+danach werde ich einen Schalter einbauen, mit dem man bei Bedarf bequem einen
+Flow zwischen klassik und embed hin und her schalten kann.
 
-Bitte beachtet, dass ich (außerhalb der Funktionen, die ich gerade erst implementiere) textFlow nach bestem Wissen und Gewissen durchgetestet
-habe, aber ihr seid die ersten echten User. Daher kann ich nicht garantieren,
-dass ihr nicht doch noch den einen oder anderen Bug findet, den ich übersehen
-habe. Hier ist eine [Anleitung zur Fehlerbehebung](#9-probleme-beheben), in die
-ihr reinschauen könnt, bevor ihr einen
+Bitte beachtet, dass ich (außerhalb der Funktionen, die ich gerade erst
+implementiere) textFlow nach bestem Wissen und Gewissen durchgetestet habe, aber
+ihr seid die ersten echten User. Daher kann ich nicht garantieren, dass ihr
+nicht doch noch den einen oder anderen Bug findet, den ich übersehen habe. Hier
+ist eine [Anleitung zur Fehlerbehebung](#9-probleme-beheben), in die ihr
+reinschauen könnt, bevor ihr einen
 [Bug Report ](#12-melde-einen-bug--zeig-deine-liebe) einreicht.
 
 Bitte lasst außerdem Obsidians Datenwiederherstellungs-Plugin,
