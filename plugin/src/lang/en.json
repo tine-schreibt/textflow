@@ -104,10 +104,9 @@
   "toggleFolderTitles.setDesc will also turn off titles in nav dropdown": "This also determines if the titles are visible in the flow navigation dropdown.",
 
   "toggleEmbed main toggle name": "Show option to embed",
-  "toggleEmbed main toggle desc 1": "Do you want Flow definitions to show the option to build your Flow with embedded notes instead of actual note text?",
-  "toggleEmbed main toggle desc 2": "Flows with embeds are fundamentally different from original Flows. textFlow will work differently for them and I can not guarantee smooth or safe functionality, since Sync Embeds is not my plugin.",
+  "toggleEmbed main toggle desc 1": "In Flow definitions show the option to embed source notes for the Flow.",
+  "toggleEmbed main toggle desc 2": "Flows with embeds have advantages and disadvantages compared to classic Flows. Learn what that means in the Readme at github.com/tine-schreibt/textflow.",
   "toggleEmbed name": "Embed notes for this flow",
-
 
   "modal_flowName": "Collection",
   "modal_toggleFolderTitles.setName include folder": "Include folder titles in flow",
@@ -330,7 +329,10 @@
 
   "checkActiveRegion.notice region tracking error": "textFlow: Region tracking error for ${flowName}.\nYou most likely undid (ctrl/cmd+z) your way into the state before a rebuild. \nKeep undoing until you reach the change you wish to return to, copy it. Then redo (ctrl/cmd+shift+z) until you get notified that you're back in the safe zone. You can also just rebuild ${flowName}. Finally, paste the copied content back into the flow.",
   "checkActiveRegion.notice region tracking error resolved": "textFlow: The tracking error for ${flowName} has been resolved.",
-  "checkActiveRegion.notice overlap detected": "The current region ${regionName} is overlapping with the following flow(s): ${overlapString}\nPlease close the overlapping flows before you edit this region.",
+  "checkActiveRegion.notice overlap detected": "textFlow: The active Flow \"${activeFlow}\" overlaps at the active region \"${regionName}\" with:\n${overlapString}.\nPlease close ${flowsGrammar}, before editing this region.",
+
+  "singular flow": "the overlapping Flow",
+  "plural flow": "the overlapping Flows",
 
   "endOfFlow.notice don't type here": "textFlow: You have sailed over the edge of the world.\nEverything you type here will be eaten by dragons when you rebuild your flow.\nPlease create a new note in this flow's source folder in order to expand it.\nIf the flow is defined by tags or properties, don't forget to add them to the new note.",
 

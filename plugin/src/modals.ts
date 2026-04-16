@@ -108,22 +108,24 @@ export class CreateFlowFromFolder extends Modal {
           });
       });
 
-    // --------- FOLDER TITLES ------------------
-    const toggleEmbed = new Setting(contentEl)
-      .setName(this.plugin.t("toggleEmbed name"))
-      .setDesc(this.plugin.t("toggleEmbed desc 1"))
-      .addToggle((sortToggle) => {
-        sortToggle
-          .setValue(this.plugin.settings.flowBuildBasket.embed ?? false)
-          .onChange(async (value) => {
-            const plugins = (this.app as any).plugins;
-            const isInstalled = !!plugins.manifests["sync-embeds"];
-            if (!isInstalled) {
-              new Notice(this.plugin.t("Please install sync embeds"), 0);
-            }
-            this.plugin.settings.flowBuildBasket.embed = value;
-          });
-      });
+    if (this.plugin.settings.embeds) {
+      // --------- TOGGLE EMBEDS ------------------
+      const toggleEmbed = new Setting(contentEl)
+        .setName(this.plugin.t("toggleEmbed name"))
+        .setDesc(this.plugin.t("toggleEmbed desc 1"))
+        .addToggle((sortToggle) => {
+          sortToggle
+            .setValue(this.plugin.settings.flowBuildBasket.embed ?? false)
+            .onChange(async (value) => {
+              const plugins = (this.app as any).plugins;
+              const isInstalled = !!plugins.manifests["sync-embeds"];
+              if (!isInstalled) {
+                new Notice(this.plugin.t("Please install sync embeds"), 0);
+              }
+              this.plugin.settings.flowBuildBasket.embed = value;
+            });
+        });
+    }
 
     //--------------------------------------------------------------------------------
     // SORT ORDER TOGGLE
@@ -360,24 +362,18 @@ export class CreateNewFile extends Modal {
     );
 
     let elementTitle: string = "";
-    chooseTitle
-      .addText((chooseTitleInput) =>
-        chooseTitleInput.onChange(async (value) => {
-          elementTitle = value;
-        }),
-      )
-      .addButton((createElementButton) => {
-        createElementButton
-          .setButtonText(this.plugin.t("CreateNewFilerModal.createButton"))
-          .onClick(() => {});
-      });
+    chooseTitle.addText((chooseTitleInput) =>
+      chooseTitleInput.onChange(async (value) => {
+        elementTitle = value;
+      }),
+    );
 
     //--------------------------------------------------------------------------------
     const saveButton = new ButtonComponent(contentEl);
     saveButton
       .setButtonText(this.plugin.t("CreateNewFilerModal.createButton"))
       .onClick(async (buttonEl: MouseEvent) => {
-        this.plugin.getUniqueFileName(this.parentFolder);
+        const newFileName = this.plugin.getUniqueFileName(this.parentFolder);
         this.close();
       });
 
@@ -1375,6 +1371,7 @@ export class FlowSwitcherModal extends Modal {
         // region name
         // first the logic to find and display overlap
         let overlap = "";
+
         const overlapArray: string[] = [];
         Object.keys(activeFlowInfoObject).forEach((flowName) => {
           if (flowName != activeFlow) {
@@ -1393,7 +1390,7 @@ export class FlowSwitcherModal extends Modal {
                     !leafID.startsWith("#") &&
                     path.endsWith(activeFlowInfoObject[activeFlow][leafID])
                   ) {
-                    if (!overlapArray.contains(flowName)) {
+                    if (!overlapArray[0].contains(flowName)) {
                       overlapArray.push(flowName);
                       overlap = "⚭";
                     }

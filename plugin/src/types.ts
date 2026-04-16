@@ -95,7 +95,7 @@ export interface flowBuildBasket {
 
 // ---- subtypes of flowBuildBasket and FlowDef ------------
 export interface OverlapObject {
-  [key: string]: { [key: string]: boolean };
+  [key: string]: boolean;
 }
 
 export interface CursorData {

@@ -94,9 +94,9 @@
   "toggleFolderTitles.setDesc will also turn off titles in nav dropdown": "Dieses Setting legt auch fest, ob die Titel im Navigations-Dropdown zu sehen sind.",
 
   "toggleEmbed main toggle name": "Zeige Option zur Einbettung an",
-  "toggleEmbed main toggle desc 1": "Soll bei der Flow-Definition die Option angezeigt werden, den Flow aus Einbettungen anstatt aus Text aufzubauen?",
-  "toggleEmbed main toggle desc 2": "Flows mit Einbettungen are fundamental verschieden von originalen Flows. textFlow funktioniert anders mit ihnen und ich kann nicht garantieren, dass es reibungslos und sicher funktioniert, da Sync Embeds nicht mein Plugin ist.",
-  "toggleEmbed name": "Bette Notizen für diesen Flow ein",
+  "toggleEmbed main toggle desc 1": "Zeige bei der Flow-Definition die Option an, die Quellnotizen für den Flow einzubetten.",
+  "toggleEmbed main toggle desc 2": "Flows mit Einbettungen (Embeds) haben Vor- und Nachteile gegenüber klassischen Flows. Ihr könnt im Readme unter github.com/tine-schreibt/textflow/blob/main/README_de.md nachlesen, was genau das bedeutet.",
+  "toggleEmbed name": "Notizen für diesen Flow einbetten.",
 
   "modal_flowName": "Sammlung",
   "modal_toggleFolderTitles.setName include folder": "Füge Ordnertitel in Flow ein",
@@ -207,7 +207,7 @@
   "menubar Expand warn": "Maximieren\nCompartments nicht gefunden. Um dies zu beheben:\n- Warte einen Moment \n- Min/max die Menüleiste \n- Klicke in ein anderes Leaf und wieder zurück \n- Lade Obsidian neu",
   "menubar Collapse": "Minimieren",
   "menubar Collapse warn": "Minimieren\nCompartments nicht gefunden. Um dies zu beheben:\n- Warte einen Moment \n- Min/max die Menüleiste \n- Klicke in ein anderes Leaf und wieder zurück \n- Lade Obsidian neu",
-  "menuBar flow overlap": "Überlappt sich mit",
+  "menuBar flow overlap": "Überschneidet sich mit",
   "menubar.cursor history no stored cursors": "Keine Cursor gefunden",
   "menubar.cursor history stored cursors": "Gespeicherte Cursor",
   "menubar.cursor history this leaf": "--- Dieses Leaf ---",
@@ -335,7 +335,10 @@
 
   "checkActiveRegion.notice region tracking error": "textFlow: Fehler beim Tracken der aktiven Region von ${flowName}. \nDu bist wahrscheinlich durch 'Rückgängig machen' (strg/cmd+z) in den Zustand vor einem Neubau zurückgesprungen. \nSetze das Rückgängigmachen fort, bis du den Zustand erreichst, den du haben willst, kopiere ihn, dann drücke 'Wiederholen' (strg/cmd+Umschalt+z), bis du wieder im Zustand nach dem Neubau angekommen bist, oder nimm einen Neubau an ${flowName} vor. Danach kannst du den kopierten Inhalt in deinen Flow einfügen",
   "checkActiveRegion.notice region tracking error resolved": "textFlow: Der Trackingfehler für ${flowName} wurde behoben.",
-  "checkActiveRegion.notice overlap detected": "Die aktuelle Region \"${regionName}\" überschneidet sich mit den folgenden Flows:\n${overlapString}.\nBitte schließe die überlappenden Flows, bevor du diese Region bearbeitest.",
+  "checkActiveRegion.notice overlap detected": "textFlow: Der aktive Flow \"${activeFlow}\" überschneidet sich an der aktiven Region \"${regionName}\" mit:\n${overlapString}.\nBitte schließe ${flowsGrammar}, bevor du diese Region bearbeitest.",
+
+  "singular flow": "den überschneidenden Flow",
+  "plural flow": "die überschneidenden Flows",
 
   "endOfFlow.notice don't type here": "textFlow: Du bist über den Rand der Welt gesegelt.\nAlles, was du hier tippst, wird von Drachen verschlungen, wenn du den Flow neu baust.\nBitte erzeuge eine neue Notiz, im Quellordner des Flows, so dass sie hinzugefügt werden.\nFalls du den Flow mit Tags und Properties definierst, vergiss nicht, sie der neuen Notiz hinzuzufügen.",
 

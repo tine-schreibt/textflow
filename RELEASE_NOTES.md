@@ -1,3 +1,4 @@
-### 0.4.6
+### 0.4.7
 
-- added main toggle for embedding in order to put an inescapable disclaimer into the UI
+- fixed overlap detection
+- fixed overlap warnings to only warn when receiving flow is classic

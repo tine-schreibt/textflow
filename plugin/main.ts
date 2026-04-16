@@ -424,6 +424,12 @@ export default class TextFlowPlugin extends Plugin {
         if (!checkExternalEdits) {
           if (!checking) {
             for (let flowName of Object.keys(this.settings.flows)) {
+              console.log(
+                "flagAll flagging: ",
+                flowName,
+                this.settings.flows[flowName].embed,
+              );
+
               this.settings.flows[flowName].flaggedForRebuild = true;
             }
             this.saveSettings();
@@ -1203,6 +1209,12 @@ ${pseudoElement}
                       !this.settings.flows[flowName].flaggedForRebuild &&
                       this.settings.flows[flowName].flowMap[normalisedPath]
                     ) {
+                      console.log(
+                        "file-menu flagging: ",
+                        flowName,
+                        this.settings.flows[flowName].embed,
+                      );
+
                       this.settings.flows[flowName].flaggedForRebuild = true;
                       await this.saveSettings();
                     }
@@ -1261,13 +1273,6 @@ ${pseudoElement}
               if (file instanceof TFile) {
                 parentFolder = dirname(normalisedPath);
               }
-
-              const itemCreationModal = new Modals.CreateNewFile(
-                this.app,
-                this,
-                parentFolder,
-              );
-              itemCreationModal.open();
 
               const newFileName = this.getUniqueFileName(parentFolder);
               const newFilePath = normalizePath(
@@ -1403,13 +1408,19 @@ ${pseudoElement}
                 }
               }
             }
-            if (
-              !this.settings.flows[flowName].embed &&
-              !this.settings.flows[flowName].flaggedForRebuild &&
-              this.settings.flows[flowName].flowMap[file.path]
-            ) {
-              this.settings.flows[flowName].flaggedForRebuild = true;
-              await this.saveSettings();
+            if (!this.settings.flows[flowName].embed) {
+              if (
+                !this.settings.flows[flowName].flaggedForRebuild &&
+                this.settings.flows[flowName].flowMap[file.path]
+              ) {
+                console.log(
+                  "modify flagging: ",
+                  flowName,
+                  this.settings.flows[flowName].embed,
+                );
+                this.settings.flows[flowName].flaggedForRebuild = true;
+                await this.saveSettings();
+              }
             }
           }
         }
@@ -1511,6 +1522,11 @@ ${pseudoElement}
               file instanceof TFile &&
               this.settings.flows[flowName].flowMap[oldPath]
             ) {
+              console.log(
+                "rename1 flagging: ",
+                flowName,
+                this.settings.flows[flowName].embed,
+              );
               this.settings.flows[flowName].flaggedForRebuild = true;
               // await this.saveSettings();
               continue;
@@ -1522,6 +1538,12 @@ ${pseudoElement}
                 this.settings.flows[flowName],
               )) {
                 if (dirname(regionPath) === oldPath) {
+                  console.log(
+                    "rename2 flagging: ",
+                    flowName,
+                    this.settings.flows[flowName].embed,
+                  );
+
                   this.settings.flows[flowName].flaggedForRebuild = true;
                   // await this.saveSettings();
                   continue;
@@ -1538,6 +1560,12 @@ ${pseudoElement}
               newParentFolder ===
               this.settings.flows[flowName].flowDefinition.folderIncluded
             ) {
+              console.log(
+                "rename3 flagging: ",
+                flowName,
+                this.settings.flows[flowName].embed,
+              );
+
               this.settings.flows[flowName].flaggedForRebuild = true;
               // await this.saveSettings();
               continue;
@@ -1563,6 +1591,12 @@ ${pseudoElement}
                 );
                 if (isExcluded) continue;
               }
+              console.log(
+                "rename4 flagging: ",
+                flowName,
+                this.settings.flows[flowName].embed,
+              );
+
               this.settings.flows[flowName].flaggedForRebuild = true;
               // await this.saveSettings();
               continue;
@@ -1625,6 +1659,12 @@ ${pseudoElement}
 
         // actual checks for flagging
         for (let flowName of Object.keys(this.settings.flows)) {
+          console.log(
+            "create1 flagging: ",
+            flowName,
+            this.settings.flows[flowName].embed,
+          );
+
           if (this.settings.flows[flowName].flaggedForRebuild) continue;
           // if the flow is made from bookmarks, move on
           if (this.settings.flows[flowName].definitionMode === "bookmarks")
@@ -1651,6 +1691,12 @@ ${pseudoElement}
               );
               if (isExcluded) continue;
             }
+            console.log(
+              "create2 flagging: ",
+              flowName,
+              this.settings.flows[flowName].embed,
+            );
+
             this.settings.flows[flowName].flaggedForRebuild = true;
             await this.saveSettings();
           }
@@ -1679,6 +1725,7 @@ ${pseudoElement}
             // check if the user deleted a flow file and flag it for rebuild
             if (basename(parentFolder) === flowName) {
               if (!this.settings.flows[flowName].flaggedForRebuild) {
+
                 this.settings.flows[flowName].flaggedForRebuild = true;
                 await this.saveSettings();
                 continue;
@@ -1701,6 +1748,8 @@ ${pseudoElement}
               }
               // now check if we need to flag
               if (!this.settings.flows[flowName].flaggedForRebuild) {
+                console.log("delete2 flagging: ", flowName, this.settings.flows[flowName].embed)
+
                 this.settings.flows[flowName].flaggedForRebuild = true;
                 await this.saveSettings();
                 continue;
@@ -3111,11 +3160,13 @@ ${pseudoElement}
     for (let flowName of Object.keys(flowLeaves)) {
       // before we get to actually modifying, let's flag other flows
       for (let otherFlowName of Object.keys(this.settings.flows)) {
+        if (this.settings.flows[otherFlowName].embed) continue;
         if (flowName != otherFlowName) {
           if (!this.settings.flows[otherFlowName].flaggedForRebuild) {
             for (let path of this.settings.flows[flowName]
               .unsyncedRegionsArray) {
               if (this.settings.flows[otherFlowName].flowMap[path])
+
                 this.settings.flows[otherFlowName].flaggedForRebuild = true;
               // saving is done by syncBackToSource
             }
@@ -3323,6 +3374,7 @@ ${pseudoElement}
         }
       } else {
         // if it's inactive, just flag for rebuild
+        console.log("checkstats1 flagging: ", flowName, this.settings.flows[flowName].embed)
         this.settings.flows[flowName].flaggedForRebuild = true;
         await this.saveSettings();
       }
@@ -3367,6 +3419,7 @@ ${pseudoElement}
     }
 
     if (changed) {
+      console.log("checkstats fornote1 flagging: ", flowName, this.settings.flows[flowName].embed)
       this.settings.flows[flowName].flaggedForRebuild = true;
       Object.keys(this.settings.flows).forEach((iteratorFlowName) => {
         if (
@@ -3375,6 +3428,7 @@ ${pseudoElement}
         ) {
           // rebuild of active leaf is taken care of by the caller
           if (this.settings.flows[iteratorFlowName].flowMap[path]) {
+            console.log("checkstats fornote2 flagging: ", flowName, this.settings.flows[flowName].embed)
             this.settings.flows[iteratorFlowName].flaggedForRebuild = true;
           }
         }
@@ -3540,7 +3594,10 @@ ${pseudoElement}
   notifyOfOverlap = (path: string, activeFlow: string, leafID: string) => {
     let overlappingFlows: string[] = [];
     for (let flowName of Object.keys(this.settings.activeRegions)) {
-      if (flowName != activeFlow) {
+      if (
+        flowName != activeFlow &&
+        this.settings.flows[activeFlow].overlapObject[flowName] && !this.settings.flows[flowName].embed
+      ) {
         if (this.settings.flows[flowName].flowMap) {
           if (
             Object.keys(this.settings.flows[flowName].flowMap).includes(path)
@@ -3552,13 +3609,20 @@ ${pseudoElement}
       }
     }
     if (overlappingFlows.length > 0) {
-      const overlapString = Object.keys(this.settings.activeRegions).join(", ");
+      const overlapString = overlappingFlows.join(", ");
       const regionName = basename(path);
+      const flowsGrammar =
+        overlappingFlows.length === 1
+          ? this.t("singular flow")
+          : this.t("plural flow");
       new Notice(
         this.t("checkActiveRegion.notice overlap detected", {
+          activeFlow: activeFlow,
           regionName: regionName,
+          flowsGrammar: flowsGrammar,
           overlapString: overlapString,
         }),
+        0,
       );
     }
   };

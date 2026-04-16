@@ -1,3 +1,9 @@
+### 0.4.7
+
+- fixed overlap detection
+- fixed overlap warnings to only warn when receiving flow is classic
+- fixed rebuild flagging for embed flows
+
 ### 0.4.6
 
 - added main toggle for embedding in order to put an inescapable disclaimer into

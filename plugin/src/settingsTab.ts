@@ -596,13 +596,16 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
         sortToggle
           .setValue(this.plugin.settings.embeds ?? false)
           .onChange(async (value) => {
-            const plugins = (this.app as any).plugins;
-            const isInstalled = !!plugins.manifests["sync-embeds"];
-            if (!isInstalled) {
-              new Notice(this.plugin.t("Please install sync embeds"), 0);
+            if (value === true) {
+              const plugins = (this.app as any).plugins;
+              const isInstalled = !!plugins.manifests["sync-embeds"];
+              if (!isInstalled) {
+                new Notice(this.plugin.t("Please install sync embeds"), 0);
+              }
             }
             this.plugin.settings.embeds = value;
             this.plugin.saveSettings();
+            this.display();
           });
       });
 
