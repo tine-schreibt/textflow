@@ -13,7 +13,7 @@ textFlow ist vor allem für Autor:innen längerer Texte gedacht, kann aber von
 allen genutzt werden, die ihre Texte im größeren Zusammenhang sehen und/oder
 editieren wollen.
 
-Die UI hat Optionen sowohl für Tastatur-, als auch für Maus-Navigation.
+Die UI hat Optionen sowohl für Tastatur-, als auch für Maus-Navigation. 
 
 **UPDATE:** Seit Version 0.4.0 könnt ihr **Flows aus Einbettungen** bauen; das
 bedeutet, diese Flows haben keine Datenduplikation mehr. Um Text direkt in euren

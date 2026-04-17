@@ -17,7 +17,7 @@ The UI has options for keyboard as well as mouse navigation.
 means that these Flows don't create any data duplication. To edit text directly
 within your embeds you just need to install and activate the plugin
 [Sync Embeds by uthvah](https://github.com/uthvah/sync-embeds) (can only be
-installed manually at the moment).
+installed manually at the moment). 
 
 _Smaller fixes and some new features relating to this are still coming. Every release is stable, though, and can be used without major problems._
 
