@@ -13,16 +13,15 @@ wants to see and/or work on multiple notes in context.
 
 The UI has options for keyboard as well as mouse navigation.
 
-**UPDATE:** As of version 0.4.0 you can build **Flows with embeds**; this means
-that these Flows don't create any data duplication. You just need to install and
-activate the plugin
+**UPDATE:** As of version 0.4.0 you can also build **Flows with embeds**; this
+means that these Flows don't create any data duplication. To edit text directly
+within your embeds you just need to install and activate the plugin
 [Sync Embeds by uthvah](https://github.com/uthvah/sync-embeds) (can only be
-installed manually at the moment). _Updates to this readme relating to this
-haven't yet been completed._
+installed manually at the moment).
 
-Right now I'm puttering about putting reigns on the overlap detection for embed
-flows. After that I'll implement a toggle with which to conveniently change a
-Flow from classic to embed and back. 
+_Smaller fixes and some new features relating to this are still coming. Every release is stable, though, and can be used without major problems._
+
+_Updates to the readme relating to this haven't yet been completed._
 
 Please be aware that (outside of the functions I am currently implementing) I
 tested textFlow extensively, but you are still the first real users, so I can't

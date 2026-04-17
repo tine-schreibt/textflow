@@ -16,15 +16,16 @@ editieren wollen.
 Die UI hat Optionen sowohl für Tastatur-, als auch für Maus-Navigation.
 
 **UPDATE:** Seit Version 0.4.0 könnt ihr **Flows aus Einbettungen** bauen; das
-bedeutet, diese Flows haben keine Datenduplikation mehr. Ihr müsst dazu nur das
-Plugin [Sync Embeds von uthvah](https://github.com/uthvah/sync-embeds)
-installieren und aktivieren (kann derzeit nur manuell installiert werden).
-_Diesbezügliche Updates für dieses Readme sind noch nicht vollständig
-ausgearbeitet._
+bedeutet, diese Flows haben keine Datenduplikation mehr. Um Text direkt in euren
+Embeds bearbeiten zu können, müsst ihr nur das Plugin
+[Sync Embeds von uthvah](https://github.com/uthvah/sync-embeds) installieren und
+aktivieren (kann derzeit nur manuell installiert werden).
 
-Gerade rödle ich daran, die Überlappungsdetektion für Embed-Flows einzuhegen,
-danach werde ich einen Schalter einbauen, mit dem man bei Bedarf bequem einen
-Flow zwischen klassik und embed hin und her schalten kann.
+_Kleine Fixes und einige neue Features mit Bezug auf diese Neuerung kommen über
+die nächsten Tage. Jedes Release ist aber stabil und kann ohne große Probleme genutzt werden._
+
+_ Updates für dieses Readme sind ebenfalls noch nicht vollständig
+ausgearbeitet._
 
 Bitte beachtet, dass ich (außerhalb der Funktionen, die ich gerade erst
 implementiere) textFlow nach bestem Wissen und Gewissen durchgetestet habe, aber
