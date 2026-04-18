@@ -5,15 +5,15 @@
 textFlow erlaubt dir **Flows** zu erzeugen - dynamische Dokumente, die aus den
 Inhalten mehrerer Notizen bestehen (vergleichbar mit 'Scrivenings'). Flows
 können aus Dataview-Queries, aus Ordnern, Tags und Eigenschaften, oder aus
-Lesezeichen-Gruppen definiert, und Flows wie jede andere Notiz editiert werden.
-Alle Änderungen an Flows und ihren Quellnotizen werden dabei automatisch
+Lesezeichen-Gruppen definiert werden. Sie können wie jede andere Notiz editiert
+werden. Alle Änderungen an Flows und ihren Quellnotizen werden dabei automatisch
 registriert und bidirektional gesynct.
 
 textFlow ist vor allem für Autor:innen längerer Texte gedacht, kann aber von
 allen genutzt werden, die ihre Texte im größeren Zusammenhang sehen und/oder
 editieren wollen.
 
-Die UI hat Optionen sowohl für Tastatur-, als auch für Maus-Navigation. 
+Die UI hat Optionen sowohl für Tastatur-, als auch für Maus-Navigation.
 
 **UPDATE:** Seit Version 0.4.0 könnt ihr **Flows aus Einbettungen** bauen; das
 bedeutet, diese Flows haben keine Datenduplikation mehr. Um Text direkt in euren
@@ -22,7 +22,8 @@ Embeds bearbeiten zu können, müsst ihr nur das Plugin
 aktivieren (kann derzeit nur manuell installiert werden).
 
 _Kleine Fixes und einige neue Features mit Bezug auf diese Neuerung kommen über
-die nächsten Tage. Jedes Release ist aber stabil und kann ohne große Probleme genutzt werden._
+die nächsten Tage. Jedes Release ist aber stabil und kann ohne große Probleme
+genutzt werden._
 
 _ Updates für dieses Readme sind ebenfalls noch nicht vollständig
 ausgearbeitet._
