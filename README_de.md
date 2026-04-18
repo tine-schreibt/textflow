@@ -25,7 +25,7 @@ _Kleine Fixes und einige neue Features mit Bezug auf diese Neuerung kommen über
 die nächsten Tage. Jedes Release ist aber stabil und kann ohne Probleme genutzt
 werden._
 
-_Updates für dieses Readme sind ebenfalls noch nicht vollständig ausgearbeitet._
+_Updates für dieses Readme sind noch nicht vollständig ausgearbeitet._
 
 Bitte beachtet, dass ich (außerhalb der Funktionen, die ich gerade erst
 implementiere) textFlow nach bestem Wissen und Gewissen durchgetestet habe, aber
