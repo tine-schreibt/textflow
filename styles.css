@@ -558,7 +558,7 @@ button.setting-tab-button-spacing {
   margin-right: var(--size-4-4);
   justify-content: start;
   display: grid;
-  grid-template-columns: repeat(7, auto);
+  grid-template-columns: repeat(8, auto);
   gap: var(--size-4-2);
   background: var(--background-primary);
   border-radius: var(--size-2-2);

@@ -5,9 +5,9 @@
 textFlow erlaubt dir **Flows** zu erzeugen - dynamische Dokumente, die aus den
 Inhalten mehrerer Notizen bestehen (vergleichbar mit 'Scrivenings'). Flows
 können aus Dataview-Queries, aus Ordnern, Tags und Eigenschaften, oder aus
-Lesezeichen-Gruppen definiert werden. Sie können wie jede andere Notiz editiert
-werden. Alle Änderungen an Flows und ihren Quellnotizen werden dabei automatisch
-registriert und bidirektional gesynct.
+Lesezeichen-Gruppen definiert, und wie jede andere Notiz editiert werden. Alle
+Änderungen an Flows und ihren Quellnotizen werden dabei automatisch registriert
+und bidirektional gesynct.
 
 textFlow ist vor allem für Autor:innen längerer Texte gedacht, kann aber von
 allen genutzt werden, die ihre Texte im größeren Zusammenhang sehen und/oder
@@ -16,23 +16,15 @@ editieren wollen.
 Die UI hat Optionen sowohl für Tastatur-, als auch für Maus-Navigation.
 
 **UPDATE:** Seit Version 0.4.0 könnt ihr **Flows aus Einbettungen** bauen; das
-bedeutet, diese Flows haben keine Datenduplikation mehr. Um Text direkt in euren
-Embeds bearbeiten zu können, müsst ihr nur das Plugin
-[Sync Embeds von uthvah](https://github.com/uthvah/sync-embeds) installieren und
-aktivieren (kann derzeit nur manuell installiert werden).
+bedeutet, diese Flows haben keine Datenduplikation mehr. Ihr müsst dazu nur das
+Plugin [Sync Embeds von uthvah](https://github.com/uthvah/sync-embeds)
+installieren und aktivieren (kann derzeit nur manuell installiert werden).
 
-_Kleine Fixes und einige neue Features mit Bezug auf diese Neuerung kommen über
-die nächsten Tage. Jedes Release ist aber stabil und kann ohne Probleme genutzt
-werden._
-
-_Updates für dieses Readme sind noch nicht vollständig ausgearbeitet._
-
-Bitte beachtet, dass ich (außerhalb der Funktionen, die ich gerade erst
-implementiere) textFlow nach bestem Wissen und Gewissen durchgetestet habe, aber
-ihr seid die ersten echten User. Daher kann ich nicht garantieren, dass ihr
-nicht doch noch den einen oder anderen Bug findet, den ich übersehen habe. Hier
-ist eine [Anleitung zur Fehlerbehebung](#9-probleme-beheben), in die ihr
-reinschauen könnt, bevor ihr einen
+Bitte beachtet, dass ich textFlow nach bestem Wissen und Gewissen durchgetestet
+habe, aber ihr seid die ersten echten User. Daher kann ich nicht garantieren,
+dass ihr nicht doch noch den einen oder anderen Bug findet, den ich übersehen
+habe. Hier ist eine [Anleitung zur Fehlerbehebung](#10-probleme-beheben), in die
+ihr reinschauen könnt, bevor ihr einen
 [Bug Report ](#12-melde-einen-bug--zeig-deine-liebe) einreicht.
 
 Bitte lasst außerdem Obsidians Datenwiederherstellungs-Plugin,
@@ -45,9 +37,9 @@ mitlaufen lassen, egal was ihr tut. Immer. Bitte macht Backups! o.o)
 
 **Du willst gleich loslegen?**
 
-- [Voraussetzungen und Einrichtung](#5-voraussetzungen-und-einrichtung)
-- [Los gehts](#8-los-gehts)
-- [Probleme beheben](#9-probleme-beheben)
+- [Voraussetzungen und Einrichtung](#6-voraussetzungen-und-einrichtung)
+- [Los gehts](#9-los-gehts)
+- [Probleme beheben](#10-probleme-beheben)
 
 **Du willst erstmal wissen, was du eigentlich bekommst und wie du textFlow
 stressfrei benutzen kannst?**
@@ -55,15 +47,16 @@ stressfrei benutzen kannst?**
 1. [Funktionalität](#1-funktionalität)
 2. [Sicherheitsfeatures](#2-sicherheitsfeatures)
 3. [Einschränkungen und bekannte Unannehmlichkeiten](#3-einschränkungen-und-bekannte-unannehmlichkeiten)
-4. [Use cases](#4-use-cases)
-5. [Voraussetzungen und Einrichtung](#5-voraussetzungen-und-einrichtung)
-6. [Einstellungen](#6-Einstellungen)
-7. [Befehle](#7-befehle)
-8. [Los gehts](#8-los-gehts)
-9. [Probleme beheben](#9-probleme-beheben)
-10. [Spickzettel](#10-spickzettel)
-11. [textFlow und Gliederung im Vergleich](#11-textflow-und-gliederung-im-vergleich)
-12. [Melde einen Bug / Zeig deine Liebe](#12-melde-einen-bug--zeig-deine-liebe)
+4. [Alles über Embed-Flows/Einbettungen](#4-alles-über-embed-flows-einbettungen)
+5. [Use cases](#5-use-cases)
+6. [Voraussetzungen und Einrichtung](#6-voraussetzungen-und-einrichtung)
+7. [Einstellungen](#7-Einstellungen)
+8. [Befehle](#8-befehle)
+9. [Los gehts](#9-los-gehts)
+10. [Probleme beheben](#10-probleme-beheben)
+11. [Spickzettel](#11-spickzettel)
+12. [textFlow und Gliederung im Vergleich](#12-textflow-und-gliederung-im-vergleich)
+13. [Melde einen Bug / Zeig deine Liebe](#13-melde-einen-bug--zeig-deine-liebe)
 
 <hr>
 
@@ -100,16 +93,22 @@ stressfrei benutzen kannst?**
      Ordner sind. Benutze die Reihenfolge, die sich für dich intuitiver/weniger
      verwirrend anfühlt, oder besser zum jeweiligen Flow passt. Manche
      Reihenfolgen funktionieren außerdem besser ohne Ordner-/Gruppen-Titel.
-3. **Embeds**: Wenn du das Plugin
-   [sync-embeds von uthvah](https://github.com/uthvah/sync-embeds) installierst,
-   wird dein Flow aus editierbaren Einbettungen gebaut, die automatisch mit den
-   Quellnotizen gesynct werden.
-4. **Bearbeite Flows wie jede andere Notiz:** Wenn du deinen Flow nicht aus
-   embeds baust, beobachtet textFlow, in welcher Region eines Flows eine
-   Änderung stattfindet, und synchronisiert sie automatisch in die richtige
-   Quellnotiz zurück, sobald du in eine andere Notiz klickst. Du kannst auch
-   jederzeit manuell syncen (es gibt einen Befehl dafür, den du mit einem
-   Tastenkürzel verbinden kannst).
+3. **Bearbeite Flows wie jede andere Notiz:** textFlow beobachtet, in welcher
+   Region eines Flows eine Änderung stattfindet, und synchronisiert sie
+   automatisch in die richtige Quellnotiz zurück, sobald du in eine andere Notiz
+   klickst. Du kannst auch jederzeit manuell syncen (es gibt einen Befehl dafür,
+   den du mit einem Tastenkürzel verbinden kannst).
+4. **Einbettungen, aka Embeds**: Ihr könnt in den Settings die Option
+   aktivieren, eure Notizen als Einbettungen anstatt als einfachen Text in einen
+   Flow einzufügen. Wenn ihr nun noch das Plugin
+   [Sync Embeds von uthvah](https://github.com/uthvah/sync-embeds) installiert,
+   könnt ihr den so eingebetteten Text direkt bearbeiten.
+   - Embed-Flows haben einige Vorteile - der größte ist wohl, dass bei ihnen
+     keine Datenduplikation nötig ist. Sie bringen aber auch eine Liste an
+     Einschränkungen mit sich. Beides wird im Abschnitt
+     [über Embeds](#4-alles-über-embed-flows-einbettungen) erklärt.
+   - Im Rest dieser Liste sind Features, die nur für klassische verfügbar sind,
+     mit Sternchen\* markiert.
 5. **Füge deinen Flows Eigenschaften hinzu:** Benutze dazu einfach wie gewohnt
    das Eigenschaften-Plugin. Eigenschaften bleiben erhalten, wenn du deinen Flow
    neu baust, und sie sind nützlich, wenn du über die Ansicht in den
@@ -137,25 +136,28 @@ stressfrei benutzen kannst?**
      Navigationsregeln des Modals findest du hier:
      [Wie funktioniert das Fuzzy-Navigation Modal](#-wie-geht-fuzzy-navigation)
 9. **Mach Zeug mit der Menüleiste:**
-   1. Sie hat Buttons zum **syncen** und **neubauen**.
+   1. Sie hat Buttons zum **syncen**\* und **neubauen**.
    2. **Ein Navigationsmenü:** Dieses Dropdown macht es leicht,
       unzusammenhängende Flows zu navigieren - oder falls dir die
       Explorer-Navigation zu fickelig ist. Das Menü hat auch eine Fuzzy Search,
       damit du schneller findest, wo du hin willst. Der Suchbegriff persistiert
       innerhalb einer Session, damit du ihn nicht ständig neu eintippen muss.
-   3. **Deinen Cursor-Verlauf:** Wenn du syncst, speichert textFlow die aktuelle
-      Cursor-Position (für die letzten paar Regionen und Leaves eines Flows), so
-      dass du schnell hin und her springen kannst. textFlow merkt sich außerdem
-      die Cursor-Position über Reloads hinweg, und es gibt einen Befehl, um
-      automatisch zur letzten bekannten Position des aktiven Leafs zu springen.
-   4. **Einen Auswahl-Button für die aktive Region:** Nur für non-embed Flows.
-      Falls du eine Copy/Paste-Operation brauchst. Auch hierfür gibt es einen
-      Befehl.
+   3. **Deinen Cursor-Verlauf\*:** Wenn du syncst, speichert textFlow die
+      aktuelle Cursor-Position (für die letzten paar Regionen und Leaves eines
+      Flows), so dass du schnell hin und her springen kannst. textFlow merkt
+      sich außerdem die Cursor-Position über Reloads hinweg, und es gibt einen
+      Befehl, um automatisch zur letzten bekannten Position des aktiven Leafs zu
+      springen.
+   4. **Einen Auswahl-Button für die aktive Region\*:** Falls du eine
+      Copy/Paste-Operation brauchst. Auch hierfür gibt es einen Befehl.
    5. **Einen Export-Button:** Dieser Button erzeugt eine Kopie deines Flows -
       ohne UUIDs. Sie wird in deinem Root-Ordner abgelegt und mit Flow-Namen und
       Zeitstempel betitelt. Wenn du einen embed Flow exportierst, werden die
       Embeds durch tatsächlichen Notizeninhalt ersetzt.
-   6. **Ein Min/Max-Button:** Damit du die Menüleiste bei Bedarf minimieren
+   6. **Einen Button für den Neubau als klassik/embed Flow:** Dieser Button ist
+      nur zu sehen, wenn du in den Einstellungen die Option für Flows mit
+      Einbettungen aktivert hast.
+   7. **Ein Min/Max-Button:** Damit du die Menüleiste bei Bedarf minimieren
       kannst. Es gibt auch einen Befehl, um sie zu togglen. Minimiert ist die
       Menüleiste nur ein kleines graues Chevron oben links im Editor - oder ein
       Warndreieck, solange der Flow noch nicht fertig eingerichtet ist. (Geh mit
@@ -237,15 +239,16 @@ so auftauchen.
         1. ... wenn du Notizen oder Ordner, umbenennst, verschiebst, erzeugst
            oder löschst, die Teil eines Flows sind oder es wahrscheinlich sein
            werden.
-        2. ... wenn du zwei überlappende Flows geöffnet hast und die
-           überlappende Regionen bearbeitest. **WICHTIG:** _Das ist wirklich
-           **nur eine Sicherheitsvorkehrung** für versehentliche Edits, und
-           nicht dazu gedacht, ausgenutzt zu werden, um routinemäßig in
-           Überlappungen zu arbeiten; **der Mechanismus wird sogar instabil**,
-           wenn ein Flow neu gebaut wird, während er in mehr als einem Leaf
-           geöffnet ist._ Also wenn dir textFlow mitteilt, dass sich dein Cursor
-           in einer Überlappungsregion befindet, schließe den überlappenden
-           Flow, ehe du sie editierst.
+        2. ... wenn du zwei sich überlappende Flows geöffnet hast und die
+           überlappenden Regionen bearbeitest (das trifft nur für klassische
+           Flows zu). **WICHTIG:** _Das ist wirklich **nur eine
+           Sicherheitsvorkehrung** für versehentliche Edits, und nicht dazu
+           gedacht, ausgenutzt zu werden, um routinemäßig in Überlappungen zu
+           arbeiten; **der Mechanismus wird sogar instabil**, wenn ein Flow neu
+           gebaut wird, während er in mehr als einem Leaf geöffnet ist._ Also
+           wenn dir textFlow mitteilt, dass sich dein Cursor in einer
+           Überlappungsregion befindet, schließe den überlappenden Flow, ehe du
+           sie editierst.
         3. ... wenn du eine Quellnotiz direkt editierst (auch wenn du nur
            irrelevante Eigenschaften bearbeitest, sorry)
       - **Alle Neubauten sind vollständige Neubauten:** Die gesamte
@@ -275,9 +278,9 @@ so auftauchen.
    was du in diesem Ordner anstellen darfst, und es wird Änderungen, die es
    nicht mag, lautstark rückgängig machen.
 8. **Automatische Prüfung auf externe Bearbeitung von Quellnotizen:** Falls du
-   öfter mal Quellnotizen auf Geräten bearbeitest, auf denen textFlow nicht
-   läuft (z.B. deinem Handy oder Tablet), kann textFlow für dich Folgendes
-   prüfen:
+   öfter mal Quellnotizen von klassischen Flows auf Geräten bearbeitest, auf
+   denen textFlow nicht läuft (z.B. deinem Handy oder Tablet), kann textFlow für
+   dich Folgendes prüfen:
    - **Zeitstempel der letzten Bearbeitung** - das reicht für die meisten Use
      Cases aus und ist die Standardeinstellung
    - **Zeitstempel und Hash** - das kannst du aktivieren, wenn zu viele unnötige
@@ -327,13 +330,6 @@ so auftauchen.
   Du kannst allerdings (derzeit noch?) keine Eigenschaften benutzen, um eine auf
   Lesezeichen basierende Definition zu verfeinern.
 
-**Eingebettete Flows und das Cursor-Tracking:** Da der Inhalt von Einbettungen
-in ihrem eigenen, sekundären Editor leben, kann textFlows Cursor-Listener nicht
-mehr 'sehen', wo der Cursor ist, wenn er sich innerhalb einer Einbettung
-befindet. Damit das Navigations-Dropdown und der Datei-Explorer die korrekte
-Region anzeigen, wenn du manuell durch deinen Flow navigierst, musst du einmal
-außerhalb der Einbettung klicken.
-
 **Keine automatischen Checks bei Bearbeitung von Lesezeichen-Gruppen:**
 
 - Obsidian sagt nicht bescheid, wenn du die Reihenfolge oder Zusammensetzung
@@ -370,24 +366,25 @@ außerhalb der Einbettung klicken.
 
 #### Der andere Kram:
 
-1. **Notwendige Duplikation von Daten:** Sofern ihr eure Flows nicht mit
-   Einbettungen baut, sind Flows zusätzliche Notizen, die den Inhalt ihrer
-   Quellnotizen replizieren; nur so funktioniert das alles. Deine Flows werden
-   allerdings in einem dedizierten, frei platzierbaren Ordner gespeichert, der
-   standardmäßig versteckt ist. Wenn Datenduplikation dein Blut trotzdem zum
-   Kochen bringt, ist dieses Plugin nicht das richtige für dich, und du magst
-   dir eher
-   [Continuous Mode](https://github.com/gasparschott/obsidian-continuous-mode)
-   oder [sync-embeds](https://github.com/uthvah/sync-embeds/) mal anschaun.
+1. **Notwendige Duplikation von Daten:** Klassische Flows sind zusätzliche
+   Notizen, die den Inhalt ihrer Quellnotizen replizieren; nur so funktioniert
+   textFlow vollumfänglich. Deine Flows werden allerdings in einem dedizierten,
+   frei platzierbaren Ordner gespeichert, der standardmäßig versteckt ist. Wenn
+   Datenduplikation dein Blut trotzdem zum Kochen bringt, sind Embed-Flows
+   zusammen mit dem Plugin
+   [Sync Embeds von uthvah](https://github.com/uthvah/sync-embeds/) vielleicht
+   die Lösung für dich. Was sich für Embed-Flows an textFlows Funktionsumfang
+   ändert, könnt ihr [hier](#12-alles-über-embed-flows-einbettungen) nachlesen
 
 ##### Da kann mein Plugin nichts für
 
-1. **Implizite Größenbeschränkung für Flows:** Obsidian handhabt offene Notizen
-   im RAM. Wenn du also dein Viertelmillion Worte langes Epos offen hast - sei
-   es in einem einzigen Flow oder auf mehrere verteilt - kann die UI langsam
-   werden. Da hilft nur, deine Flows eher klein zu halten und nur zu öffnen, was
-   du tatsächlich grad brauchst. Zum Vergleich: Dein unfertiger 50.000-Wort
-   Roman hat unter 400kB, während dein 250.000-Wort Epos die 2MB knacken dürfte.
+1. **Implizite Größenbeschränkung für klassische Flows:** Obsidian handhabt
+   offene Notizen im RAM. Wenn du also dein Viertelmillion Worte langes Epos
+   offen hast - sei es in einem einzigen Flow oder auf mehrere verteilt - kann
+   die UI langsam werden. Da hilft nur, deine Flows eher klein zu halten und nur
+   zu öffnen, was du tatsächlich grad brauchst. Zum Vergleich: Dein unfertiger
+   50.000-Wort Roman hat unter 400kB, während dein 250.000-Wort Epos die 2MB
+   knacken dürfte.
 2. **Alphanumerisch ist relativ:** Falls du deine Notizen so benamst:
    'basisname', 'basisname 1', 'basiname 2' usw. erscheinen sie zwar im
    Datei-Explorer, wie man es erwarten würde, aber JavaScript ist der Ansicht,
@@ -411,7 +408,88 @@ außerhalb der Einbettung klicken.
 
 <hr>
 
-### 4. Use Cases
+### 4. Alles über Embed-Flows/Einbettungen
+
+##### 1. Was sind Einbettungen?
+
+In Obsidian ist es möglich, eine Notiz, ein Bild, ein .pdf usw. in eine anderen
+Notiz einzubetten, indem man dies hier macht:
+`![[titel-der-eingebetteten-notiz]]` Wenn man dazu das Plugin
+[Sync Embeds von uthvah](https://github.com/uthvah/sync-embeds) installiert,
+kann man das hier machen:
+
+````
+```sync
+![[titel-der-eingebetteten-notiz]]
+````
+
+Und schon wird aus der Einbettung ein eigenständiger Editor, in dem man die
+eingebettete Notiz direkt editieren kann.
+
+##### 2. Was sind Flows mit Einbettungen / Embed-Flows?
+
+Wie man sich denken kann, sind Flows mit Einbettungen genau das. Anstatt den
+Text der Quellnotizen in den Flow zu kopieren, wird für jede Notiz ein
+Einbettungs-Codeblock wie der oben gezeigte generiert. Und die könnt ihr dann
+mit Sync Embeds editierbar machen.
+
+##### 3. Die Vorteile von Embed-Flows
+
+1. **Keine Datenduplikation:** Wie erwähnt ist der Hauptvorteil von
+   Einbettungen, dass sie keine zusätzlichen Daten erzeugen, sondern nur bereits
+   bestehende Notizen direkt innerhalb deines zugänglich machen.
+2. **Keine implizite Größenbeschränkung:** Embeds werden sukzessive geladen,
+   d.h. die Menge des im RAM abzubildenden Textes bleibt klein. Somit trifft die
+   implizite Größenbeschränkung, die durch Notizen RAM-Beschränkung auferlegt
+   wird, auf Embed-Flows nicht zu. Das bedeutet, dass ihr eure Flows so
+   gigantisch machen könnt, wie ihr wollt, ohne dass Obsidian träge wird, wenn
+   ihr sie öffnet.
+3. **Direkter Zugriff auf Eigenschaften:** Wenn du in Obsidian eingestellt hast,
+   dass Eigenschaften im Dokument sichtbar sein sollen, werden sie als Kopfzeile
+   deiner Embeds anzeigt. Klick auf die komischen Zeichen - â¶ - um die
+   Eigenschaften auszuklappen, und du kannst sie direkt in der Einbettung
+   bearbeiten.
+   - Falls diese Bearbeitung dazu führt, dass die betroffene Notiz nicht mehr
+     Teil des Flows ist, musst du ihn manuell neu bauen.
+4. **Externe Edits werden sofort abgebildet:** Eine Prüfung ist also
+   überflüssig, und hier kann schon aus Prinzip nichts schiefgehen.
+5. **Überlappungen sind kein Problem:** Aus dem gleichen Grund. Überlappungen
+   sind keine Inhalts-Dopplungen, sondern nur eine doppelte Darstellung des
+   Inhalts ein un derselben Notiz; daher kommt es hier eben so wenig zu einem
+   Konflikt wie wenn man die selbe Notiz in zwei verschiedenen Tabs geöffnet
+   hat.
+
+##### 4. Was mit Embeds weiterhin funktioniert
+
+1. **Die Navigation:** Funktioniert weiterhin, sowohl per Datei-Explorer, als
+   auch per Nav-Dropdown, Nav-Modal und flowSwitcher funktioniert wie gewohnt.
+2. **Exports:** Auch die funktionieren noch; sie erzeugen eine Volltext-Version
+   des Flows.
+
+##### 5. Was mit Embeds nicht/nur eingeschränkt funktioniert
+
+1. **Die Gliederungsansicht:** Die funktioniert nur so halb, da es nicht in die
+   Inhalte der Einbettungen 'hinein sehen' und entsprechend deren Überschriften
+   nicht anzeigen kann.
+2. **Cursor-Tracking/Wiederherstellung:** Deine Cursor-Position kann nur
+   eingeschränkt getrackt werden, da für textFlows Cursor-Listener das gleiche
+   gilt wie für die Gliederung: Er kann nicht in die Einbettungen hinein sehen
+   und entsprechend
+   - nicht ablesen, wo sich der Cursor innerhalb eines Embeds befindet
+   - die Cursor-Position innerhalb des Embeds nicht speichern
+   - die Cursor-Position innerhalb des Embeds nicht wiederherstellen Ich könnte
+     in der Zukunft mal nachsehen, ob sie das beheben lässt, aber ich zweifle,
+     dass es geht.
+3. **Positionsanzeige:** Das hat außerdem zur Folge, dass der Datei-Explorer und
+   das Navigations-Dropdown nur wissen, in welcher Region eines Flows du dich
+   befindest, wenn du mindestens einmal außerhalb der Einbettung geklickt hast.
+4. **Suche:** Auch die Suchfunktion kann nicht in Einbettungen hineinsehen. Wenn
+   du also einen Flow durchsuchen willst, geht das nur indirekt durch eine
+   globale Suche in allen Notizen.
+
+<hr>
+
+### 5. Use Cases
 
 - Du bist eine Autor:in und möchtest deine Notizen/Kapitel/Szenen in diversen
   Kontexten sehen/bearbeiten
@@ -423,12 +501,16 @@ außerhalb der Einbettung klicken.
 
 <hr>
 
-### 5. Voraussetzungen und Einrichtung
+### 6. Voraussetzungen und Einrichtung
 
-- **Voraussetzungen:** Das Plugin 'Dataview' muss installiert sein, damit
-  textFlow funktioniert. Öffne Obsidians
-  `Einstellungen > Externe Plugins > Durchsuchen`, dann suche nach `dataview`,
-  klicke `Installieren`, dann `Aktivieren` (beides der selbe Button).
+- **Voraussetzungen:**
+  - Das Plugin 'Dataview' muss installiert sein, damit textFlow funktioniert.
+    Öffne Obsidians `Einstellungen > Externe Plugins > Durchsuchen`, dann suche
+    nach `dataview`, klicke `Installieren`, dann `Aktivieren` (beides der selbe
+    Button).
+  - Wenn du Embed-Flows nutzen willst, musst du das Plugin
+    [Sync Embeds von uthvah](https://github.com/uthvah/sync-embeds) installieren
+    und aktivieren. ([Mehr dazu](#12-alles-über-embed-flows-einbettungen)
 - **Minimale Obsidian-Version:** 1.4.0 (die erste mit
   [Eigenschaften](#wie-gehen-eigenschaften))
   - Es gibt möglicherweise einen Bug in mindestens einer Version, die älter als
@@ -436,8 +518,9 @@ außerhalb der Einbettung klicken.
     vorangestellt wird. Falls du dieses Problem in deinen Flows feststellst, sag
     mir bescheid, welche Version du benutzt, damit ich diese Info hier einfügen
     kann.
-- **Installation ohne Marktplatz:** Während das Plugin noch nicht auf dem
-  Marktplatz verfügbar ist, kannst du es manuell oder mit BRAT installieren.
+- **Installation ohne Obsidians Plugin-Repository:** Während das Plugin noch
+  nicht auf dem Marktplatz verfügbar ist, kannst du es manuell oder mit BRAT
+  installieren.
   - **BRAT-Anleitung**: https://tfthacker.com/brat-quick-guide
   - **Manuelle Installation:**
     - Lade `main.js`, `manifest.json`and `styles.css` aus dem Release herunter.
@@ -449,15 +532,15 @@ außerhalb der Einbettung klicken.
     - Gehe zu Obsidians `Einstellungen > Externe Plugins` und suche nach
       textFlow.
     - Aktiviere es und klicke das Zahnrad, um zu den Einstellungen zu gelangen.
-- **Installation per Marktplatz:** Sobald textFlow auf dem Marktplatz verfügbar
-  ist:
+- **Installation per Obsidians Plugin-Repository:** Sobald textFlow auf dem
+  Marktplatz verfügbar ist:
   - Gehe zu Obsidians `Einstellungen > Externe Plugins > Durchsuchen`.
   - Suche nach textFlow, klicke `Installieren`, dann `Aktivieren` (beides der
     selbe Button).
 
 <hr>
 
-### 6. Einstellungen
+### 7. Einstellungen
 
 - **Speicherort für textFlowSystemFolder:** Wähle einen bestehenden Ordner, in
   dem textFlows Systemordner - textFlowSystemFolder - erzeugt werden soll.
@@ -482,6 +565,13 @@ außerhalb der Einbettung klicken.
     Bearbeitungen suchen und Flows entsprechend neu bauen.
   - **textFlowSystemFolder anzeigen:** Es wird empfohlen, ihn versteckt zu
     halten, damit du nicht versehentlich was dran kaputt machst.
+  - **Zeige Option zur Einbettung an:** Wenn ihr dies aktiviert, wird euch für
+    eure Flow-Definitionen die Option angezeigt, Quellnotizen als Einbettungen
+    in euren Flow zu integrieren, anstatt ihren Text direkt in den Flow zu
+    kopieren. Wenn ihr das Plugin
+    [Sync Embeds von uthvah](https://github.com/uthvah/sync-embeds)installiert,
+    könnt ihr direkt in den Einbettungen editieren. Embeds bringen aber auch
+    [Nachteile](#12-alles-über-embed-flows-einbettungen) mit sich.
 
 **Definiere einen neuen Flow**
 
@@ -490,6 +580,8 @@ außerhalb der Einbettung klicken.
   taugen müssen.
 - **Schließe Gruppen-/Ordnertitel ein:** Manche Sortier-Optionen funktionieren
   besser oder schlechter mit Titeln.
+- **Bette Notizen für diesen Flow ein:** Optionales Setting, das ihr in den
+  allgemeinen Settings ein/ausschalten könnt.
 - **Definiere deinen Flow per...**
   - **Dataview Query:** Vanilla Queries ohne JS.
   - **Ordner, Tag, [Property](#wie-gehen-eigenschaften):** Du kannst
@@ -529,7 +621,7 @@ außerhalb der Einbettung klicken.
 
 <hr>
 
-### 7 Befehle
+### 8. Befehle
 
 Alle Befehle können in Obsidians Einstellungen mit Tastenkürzeln verknüpft
 werden.
@@ -542,6 +634,7 @@ werden.
   Flows aus.
 - **Flow im aktiven Leaf exportieren:** Falls du die Menüleiste nicht aktiviert
   hast.
+- **Flow im aktiven Leaf als anderen Typ neu bauen:** Falls du embedding aktiviert hast, kannst du mit diesem Befehl den Flow im aktiven Leaf als den anderen Typ neubauen lassen. 
 
 - **Fuzzy-Navigation öffnen:** Für die Navigation per Tastatur
 - **Flow-Switcher öffnen:** Falls du das Modal nicht mit Buttons öffnen willst,
@@ -560,7 +653,7 @@ werden.
 
 <hr>
 
-### 8. Los gehts
+### 9. Los gehts
 
 #### Gute Angewohnheiten
 
@@ -635,7 +728,7 @@ Wenn du wissen willst, warum: [Sicherheitsfeatures](#2-safetyfeatures) /
 
 <hr>
 
-### 9. Probleme beheben
+### 10. Probleme beheben
 
 Hast du schon versucht, es aus- und wieder anzuschalten?
 
@@ -738,11 +831,30 @@ findest, [sag bescheid](#12-melde-einen-bug--zeig-deine-liebe).
 
 #### Menüleiste
 
-- **Problem:** Die Menüleiste wird für einen deiner Flows nur halb gerendert
-  (optional: und der Sync-Button bleibt aktiviert)
+- **Problem:** Die Menüleiste wird für einen deiner Flows gar nicht gerendert
+  - **Erklärung:**
+    - Manchmal gibt es v.a. bei Embed-Flows Probleme mit dem Setup des Editors.
+    - Oder vielleicht hast du einen Export geöffnet? Exports sind keine Flows
+      mehr und haben keine Menüleiste.
   - **Lösung:**
-    - Schließe den Flow und baue ihn neu. Wenn der Button dafür ausgegraut ist,
-      mach den Neubau über die Einstellungen.
+    - Klicke in den Flow (außerhalb einer Einbettung).
+    - Schließe den Flow und öffne ihn neu.
+    - Wenn das Problem weiterhin besteht, starte Obsidian neu.
+    - Auch das hat nicht geholfen? Installiere textFlow neu.
+
+- **Problem:** Die Menüleiste wird für einen deiner Flows nur halb gerendert.
+  - **Erklärung:**
+    - Ist der betroffene Flow ein Embed-Flow?
+    - Für Flows mit Einbettungen stehen einige Funktionen der Menüleiste nicht
+      zur Verfügung und werden deshalb nicht angezeigt.
+    - Wenn du die fehlenden Funktionen nutzen möchtest:
+      1.  gehe in die Settings,
+      2.  klicke bei dem betroffenen Flow auf 'Bearbeiten'
+      3.  deaktiviere 'Notizen für diesen Flow einbetten'
+  - **Lösung:**
+    - Falls der Flow ein klassischer Flow ist: Schließe den Flow und baue ihn
+      neu. Wenn der Button dafür ausgegraut ist, mach den Neubau über die
+      Einstellungen.
 
 - **Problem:** textFlows Menüleiste verdeckt die Editing Toolbar von
   Cuman/verdeckt die Sucheingabe/wird von der Sucheingabe verdeckt.
@@ -850,7 +962,7 @@ findest, [sag bescheid](#12-melde-einen-bug--zeig-deine-liebe).
 
 <hr>
 
-### 10. Spickzettel
+### 11. Spickzettel
 
 **Lingo und Konzepte, die textFlow benutzt**
 
@@ -898,7 +1010,7 @@ findest, [sag bescheid](#12-melde-einen-bug--zeig-deine-liebe).
 
 <hr>
 
-### 11. textFlow und Gliederung im Vergleich
+### 12. textFlow und Gliederung im Vergleich
 
 Obsidian hat schon einen Weg, um einzelne, große Dokumente zu browsen, und zwar
 in Form des Kern-Plugins 'Gliederung' - also wann ist textFlow einen Blick wert?
@@ -954,7 +1066,7 @@ nachvollziehen kannst:**
 
 <hr>
 
-### 12. Melde einen Bug / Zeig deine Liebe
+### 13. Melde einen Bug / Zeig deine Liebe
 
 Falls dir irgendwelche Bugs oder komisches Verhalten begegnen, die in diesem
 Readme nicht erwähnt werden, melde dich auf github:

@@ -917,6 +917,41 @@ export class MenuBar {
         });
 
       // -------------------------------------------------------
+      // Rebuild flow as opposite type if embedding is generally activated
+      if (this.plugin.settings.embeds) {
+        const switchTypeButton = new ButtonComponent(menuBarEl);
+        switchTypeButton
+          .setIcon(
+            this.plugin.settings.flows[this.flowName].embed
+              ? "pilcrow"
+              : "square-pilcrow",
+          )
+          .setClass("menu-bar-button-select-export")
+          .setClass("spacing")
+          .setClass("clickable-icon")
+          .setTooltip(
+            this.plugin.settings.flows[this.flowName].embed
+              ? this.plugin.t(
+                  "menuBar.switchTypeButton.setTooltip rebuild as classic",
+                )
+              : this.plugin.t(
+                  "menuBar.switchTypeButton.setTooltip rebuild as embed",
+                ),
+          )
+          .onClick(async () => {
+            const toggledValue = this.plugin.settings.flows[this.flowName].embed
+              ? false
+              : true;
+
+            this.plugin.settings.flows[this.flowName].embed = toggledValue;
+            this.plugin.saveSettings();
+            this.plugin.settingsTabFunctions.flowBuildingBundle(
+              this.flowName,
+              "switcher",
+            );
+          });
+      }
+      // -------------------------------------------------------
       // a chevron to minimise (or warning triangle)
       const minimiseButton = new ButtonComponent(menuBarEl);
       minimiseButton

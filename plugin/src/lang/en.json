@@ -224,6 +224,8 @@
   "menuBar.selectButton.setTooltip select active region": "Select active region",
   "menuBar.selectActiveRegion tracking error": "textFlow: Active region can not be selected because of a tracking error. Please select the text manually, then rebuild the flow to fix the tracking error.",
   "menuBar.selectButton.setTooltip export flow": "Export flow",
+  "menuBar.switchTypeButton.setTooltip rebuild as classic": "Rebuild as classic flow",
+  "menuBar.switchTypeButton.setTooltip rebuild as embed": "Rebuild as embed flow",
   "menubar.selectButton.notice successful export": "textFlow: Your flow has been exported to ${exportedFlowPath}.",
 
   "------- CREATE FLOW FROM FOLDER MODAL": "LIKE IT SAYS ----------------",
@@ -268,6 +270,7 @@
   "main.registerCommand sync all leaves": "Sync all leaves",
   "main.registerCommand check stats": "Check vault for external edits",
   "main.registerCommand export active flow": "Export flow in active leaf",
+  "main.registerCommand rebuild as opposite type": "Rebuild flow in active leaf as opposite type",
   "main.registerCommand flag all for rebuild": "Flag all flows for rebuild",
   "main.registerCommand rebuild active leaf": "Rebuild flow in active leaf",
   "main.registerCommand open fuzzy navigation": "Open fuzzy navigation modal",

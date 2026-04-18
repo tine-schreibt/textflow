@@ -13,21 +13,16 @@ wants to see and/or work on multiple notes in context.
 
 The UI has options for keyboard as well as mouse navigation.
 
-**UPDATE:** As of version 0.4.0 you can also build **Flows with embeds**; this
-means that these Flows don't create any data duplication. To edit text directly
-within your embeds you just need to install and activate the plugin
+**UPDATE:** As of version 0.4.0 you can build **Flows with embeds**; this means
+that these Flows don't create any data duplication. You just need to install and
+activate the plugin
 [Sync Embeds by uthvah](https://github.com/uthvah/sync-embeds) (can only be
-installed manually at the moment). 
+installed manually at the moment).
 
-_Small fixes and some new features with regards to this update will be released over the next few days. Every release is still stable, though, and can be used without problems._
-
-_Updates to the readme relating to this haven't yet been completed._
-
-Please be aware that (outside of the functions I am currently implementing) I
-tested textFlow extensively, but you are still the first real users, so I can't
-guarantee you won't find some bug or other that I missed. Here's
-[a trouble shooting guide](#9-fixing-problems) you can look at before filing a
-[bug report](#12-report-a-bug--report-your-love).
+Please be aware that I tested textFlow extensively, but you are still the first
+real users, so I can't guarantee you won't find some bug or other that I missed.
+Here's [a trouble shooting guide](#10-fixing-problems) you can look at before
+filing a [bug report](#13-report-a-bug--report-your-love).
 
 Please also run Obsidian's own data recovery plugin,
 ['Edit history' by Antonio Tejada](https://github.com/antoniotejada/obsidian-edit-history)
@@ -39,9 +34,9 @@ doing. Always. Please run backups! o.o)
 
 **Want to jump right in?**
 
-- [Requirements and setup](#5-requirements-and-setup)
-- [Getting started](#8-getting-started)
-- [Fixing problems](#9-fixing-problems)
+- [Requirements and setup](#6-requirements-and-setup)
+- [Getting started](#9-getting-started)
+- [Fixing problems](#10-fixing-problems)
 
 **Want to know what you're getting first and understand how to use textFlow
 smoothly?**
@@ -49,15 +44,16 @@ smoothly?**
 1. [Functionality](#1-functionality)
 2. [Safety features](#2-safety-features)
 3. [Limitations and known inconveniences](#3-limitations-and-known-inconveniences)
-4. [Use cases](#4-use-cases)
-5. [Requirements and setup](#5-requirements-and-setup)
-6. [Settings](#6-settings)
-7. [Commands](#7-commands)
-8. [Getting started](#8-getting-started)
-9. [Fixing problems](#9-fixing-problems)
-10. [Cheat sheet](#10-cheat-sheet)
-11. [Comparing textFlow and Outline](#11-comparing-textflow-and-outline)
-12. [Report a bug / report your love](#12-report-a-bug--report-your-love)
+4. [All about embed flows](#4-all-about-embed-flows)
+5. [Use cases](#5-use-cases)
+6. [Requirements and setup](#6-requirements-and-setup)
+7. [Settings](#7-settings)
+8. [Commands](#8-commands)
+9. [Getting started](#9-getting-started)
+10. [Fixing problems](#10-fixing-problems)
+11. [Cheat sheet](#11-cheat-sheet)
+12. [Comparing textFlow and Outline](#12-comparing-textflow-and-outline)
+13. [Report a bug / report your love](#13-report-a-bug--report-your-love)
 
 <hr>
 
@@ -90,30 +86,45 @@ smoothly?**
      groups. Use whatever order feels more intuitive/less confusing to you or
      better fits the respective flow. Some sort orders also work better with
      folder/group title deactivated.
-3. **Embeds:** If you install the plugin
-   [Sync Embeds by uthvah](https://github.com/uthvah/sync-embeds), your Flow
-   will be made of editable embeddings, which are automatically synced with the
-   source notes.
-4. **Edit flows like any other note:** If your Flow is not build with embeds,
-   textFlow keeps track of which region of a flow an edit happens in. It
-   automatically syncs it all back to the correct source note whenever you click
-   into a different note. You can also sync manually anytime you like (there's a
-   command you can bind to a shortcut).
-5. **Add frontmatter to your flows:** Just use the properties plugin as usual.
+3. **Embeds:** In the settings you can choose to have the Flow definition show
+   an option to include notes as embeddings instead of direct text in your Flow.
+   If you then also install the plugin
+   [Sync Embeds by uthvah](https://github.com/uthvah/sync-embeds), you can edit
+   the embedded text directly.
+   - Embed Flows come with the advantage that they don't duplicate your data.
+     They also come with their own limitations which you can read about in the
+     section [on embeds](#4-all-about-embed-flows).
+   - Thus the following features - general as well as security related - are
+     only guaranteed to be available and fully functional for classic Flows.
+4. **Embeddings:** In the settings you can activate the option to have your
+   source notes embedded in your flows instead of being pasted in as plain text.
+   If you then install the plugin
+   [Sync Embeds by uthvah](https://github.com/uthvah/sync-embeds), you can edit
+   your embedded notes directly inside your flow.
+   - Flows with embeddings have some advantages - namely that they get rid of
+     data duplication. They bring their own set of limitations, though. All are
+     explained in the section [on embeds](#4-all-about-embed-flows).
+   - In the rest of this list, features which are only available for classic
+     flows are marked with an asterisk\*.
+5. **Edit flows like any other note:** textFlow keeps track of which region of a
+   flow an edit happens in. It automatically syncs it all back to the correct
+   source note whenever you click into a different note. You can also sync
+   manually anytime you like (there's a command you can bind to a shortcut).
+6. **Add frontmatter to your flows:** Just use the properties plugin as usual.
    Properties will be preserved across rebuilds and are useful if you want to
    keep track of your flows beyond the settings tab/flowSwitcher
    modal/textFlow's (hidden) folder.
-6. **A flow is really just an ordinary note with some API bling attached:** So
+7. **A flow is really just an ordinary note with some API bling attached:** So
    _everything will still work within your flows_: Your themes still work.
    Inline-styles still work. Dataview tables will still be displayed as usual.
    Outline still works (well, [99%](#3-limitations-and-known-inconveniences)).
    In-note search still works. Callouts, lists, code blocks, tables, tabs, it
    all still works. Because, again, a flow is just a normal note with some API
    bling stuck on.
-7. **Navigate within flows via the file explorer:** Yup. I know! textFlow can
+8. **Navigate within flows via the file explorer:** Yup. I know! textFlow can
    even highlight the active region's source note in one of four styles!
    [It's not perfect, though...](#3-limitations-and-known-inconveniences)
-8. **Navigate via fuzzy navigation modal:** If you're used to working with
+9. **Navigate via fuzzy navigation modal:** If you're used to working with
    Obsidian's Quick switcher modal, you'll be right at home here - with some
    handy tricks included:
    - prefix `?` to limit your search to the flow in the active leaf
@@ -122,36 +133,36 @@ smoothly?**
    - use no prefix at all if you want to just search everything Details on how
      to navigate using the modal:
      [How to Fuzzy navigation modal](#How-to-Fuzzy-navigation-modal)
-9. **Do lots of stuff via the menu bar:**
-   1. It has buttons for **syncing** and **rebuilding**.
-   2. **A navigation menu**: This dropdown makes it easy to navigate disjointed
-      flows, or if the fickle focus thing is too frustrating for you. The menu
-      also sports a fuzzy search to help you get around huge flows faster. The
-      search term persists in-session, so you don't have to retype it.
-   3. **Your cursor history:** Whenever you sync, textFlow saves the last cursor
-      position (for the last few regions of the last few leaves), so you can
-      more easily jump around your document. textFlow remembers the cursor
-      positions across reloads and scrolls there automatically. There's also a
-      command to restore the last known cursor position for the active leaf.
-   4. **A button to select the active region:** Only for non-embed Flows. In
-      case you want to do some copy/paste surgery. There's a command for this,
-      too.
-   5. **An export button:** This button creates a copy of your flow with all the
-      UUIDs stripped out. It will be put in your root folder and named with the
-      flow name and a time stamp. For embed Flows it replaces the embeds with
-      copies of the embedded note's content.
-   6. **A min/max toggle:** There's a button to minimise/maximise the menu bar.
-      There's also a command to toggle the menu. In its minimised state the menu
-      bar is just a small grey chevron in the upper left corner of your editor-
-      or a warning triangle, while the flow isn't setup yet. (Hover over the
-      triangle if it doesn't disappear on its own.)
-10. **Do stuff via the switcher modal:** In the flow switcher you've got buttons
+10. **Do lots of stuff via the menu bar:**
+    1. It has buttons for **syncing**\* and **rebuilding**.
+    2. **A navigation menu**: This dropdown makes it easy to navigate disjointed
+       flows, or if the fickle focus thing is too frustrating for you. The menu
+       also sports a fuzzy search to help you get around huge flows faster. The
+       search term persists in-session, so you don't have to retype it.
+    3. **Your cursor history\*:** Whenever you sync, textFlow saves the last
+       cursor position (for the last few regions of the last few leaves), so you
+       can more easily jump around your document. textFlow remembers the cursor
+       positions across reloads and scrolls there automatically. There's also a
+       command to restore the last known cursor position for the active leaf.
+    4. **A button to select the active region\*:** In case you want to do some
+       copy/paste surgery. There's a command for this, too.
+    5. **An export button:** This button creates a copy of your flow with all
+       the UUIDs stripped out. It will be put in your root folder and named with
+       the flow name and a time stamp.
+    6. **A button to rebuild as classic/embed flow:** This button only shows up
+       when you have activated the option for flows with embeds in the settings.
+    7. **A min/max toggle:** There's a button to minimise/maximise the menu bar.
+       There's also a command to toggle the menu. In its minimised state the
+       menu bar is just a small grey chevron in the upper left corner of your
+       editor- or a warning triangle, while the flow isn't setup yet. (Hover
+       over the triangle if it doesn't disappear on its own.)
+11. **Do stuff via the switcher modal:** In the flow switcher you've got buttons
     to:
     - open flows in a new tab or split
     - switch between a flow's tabs
     - quickly close multiple flow tabs
     - rebuild inactive flows
-11. **Little things:**
+12. **Little things:**
     - You can hide scroll bars
     - Right-clicking into file explorer gives the option to create a new file in
       the current folder (this is basically just for me -.-)
@@ -218,11 +229,12 @@ If I develop motivation on my own, they may show up all by themselves one day.
         1. ... you rename, move, create or delete notes or folders that have
            been or likely will be part of that flow.
         2. ... you have opened two overlapping flows and made changes within the
-           overlapping regions. **\*IMPORTANT:** This really is **just a safety
-           precaution** for accidental edits. It is not intended to be exploited
-           in order to routinely work on overlap; **the mechanism will even
-           become unstable** if a flow is being rebuilt while open in more than
-           one leaf.\* So when textFlow tells you that your cursor is within an
+           overlapping regions (this only applies to classic flows).
+           **\*IMPORTANT:** This really is **just a safety precaution** for
+           accidental edits. It is not intended to be exploited in order to
+           routinely work on overlap; **the mechanism will even become
+           unstable** if a flow is being rebuilt while open in more than one
+           leaf.\* So when textFlow tells you that your cursor is within an
            overlapping region, close the overlapping flows before you start
            editing.
         3. ... you edit a flow's source note directly (this includes edits where
@@ -254,8 +266,8 @@ If I develop motivation on my own, they may show up all by themselves one day.
    allowed to do in that folder and it will loudly revert changes it doesn't
    like.
 8. **Checks for external edits of source notes:** If you regularly edit source
-   notes on devices that can't run textflow (like your phone or tablet), you can
-   have textFlow check
+   notes of you classic flows on devices that can't run textflow (like your
+   phone or tablet), you can have textFlow check
    - **time stamp of last modification** - this is fine for most use cases and
      the default setting
    - **time stamp and hash** - activate this if you get too many unnecessary
@@ -301,13 +313,6 @@ If I develop motivation on my own, they may show up all by themselves one day.
   plugins are based on bookmarks anyways). You can't use frontmatter to refine
   definitions based on bookmarks, though (at least not yet?).
 
-**Embedded Flows and cursor tracking:** Since the content of embeds are
-basically living inside their own, secondary editor, textFlow's cursor listener
-can no longer 'see' where the cursor is when it's inside an embed. So when
-you're just manually moving in between regions, in order for the navigation
-dropdown and file explorer to show the correct region, you have to click once
-outside of the embed.
-
 **No automatic checks when editing bookmark groups:**
 
 - Obsidian doesn't give notice when you edit a bookmark group. Therefore you
@@ -341,23 +346,23 @@ outside of the embed.
 
 #### The other stuff:
 
-1. **Necessary data duplication:** If you don't build your Flows from embeds,
-   they are extra notes which repeat their source notes' contents; it's the only
-   way this works. Your flows are all stored in a dedicated folder, though, the
-   location of which you can choose in the settings. This folder is hidden by
-   default. But if data duplication still makes your blood boil, this isn't the
-   plugin for you and you may want to look into
+1. **Necessary data duplication:** Classic Flows are extra notes which repeat
+   their source notes' contents; it's the only way this works. Your flows are
+   all stored in a dedicated folder, though, the location of which you can
+   choose in the settings. This folder is hidden by default. But if data
+   duplication still makes your blood boil, this isn't the plugin for you and
+   you may want to look into
    [Continuous Mode](https://github.com/gasparschott/obsidian-continuous-mode)
    or [sync-embeds](https://github.com/uthvah/sync-embeds/) instead.
 
 #### Not my plugin's fault
 
-1. **Implicit size limit for flows:** Obsidian handles open notes in memory, so
-   having your entire quarter-million word epic open - wether in one flow or
-   spread over several - will make the UI sluggish. So maybe keep the flows on
-   the smaller side and only open what you actually need. For reference: Your
-   unfinished 50.000 word novel is under 400kB, while a 250.000 word epos may
-   crack 2MB.
+1. **Implicit size limit for classic flows:** Obsidian handles open notes in
+   memory, so having your entire quarter-million word epic open - wether in one
+   flow or spread over several - will make the UI sluggish. So maybe keep the
+   flows on the smaller side and only open what you actually need. For
+   reference: Your unfinished 50.000 word novel is under 400kB, while a 250.000
+   word epos may crack 2MB.
 2. **Alphabetical order is relative:** If you name files like 'basename',
    'basename 1', 'basename 2', they may be sorted like you'd expect in
    fileExplorer, but JavaScript considers 'basename' to come _after_ 'basename
@@ -378,7 +383,77 @@ outside of the embed.
 
 <hr>
 
-### 4. Use cases
+### 4. All about embed flows
+
+##### 1. What are embeddings?
+
+In Obsidian, you can embed a note, an image, a .pdf and so on into a note by
+doing this: `![[title-of-the-embedded-note]]` If you then install
+[Sync Embeds by uthvah](https://github.com/uthvah/sync-embeds), you can do this:
+
+````
+```sync
+![[title-of-the-embedded-note]]
+````
+
+And just like that your embedding turns into a full blown editor instance
+through which you can directly edit the embedded note.
+
+##### 2. What are embed flows?
+
+As you might have thought, embed flows are just that. Instead of copying the
+source note's text into the flow, textFlow generates an embedding block for
+every note, just like the one shown above. And with Sync Embeds you can make
+them editable.
+
+##### 3. The advantages of embed flows
+
+1. **No data duplication:** As mentioned, the main advantage of embeds is that
+   they don't create additional data and just make already existing notes
+   directly accessible within your flow.
+2. **No implicit size limit:** Embeds are being loaded successively, this means
+   that the amount of text that has been held in RAM stays relatively small.
+   Thus the implicit size limit which is imposed upon notes by RAM capacity
+   doesn't apply to embed flows. Meaning you can make your flows positively
+   ginormous without Obsidian getting sluggish when you open them.
+3. **Direct access to properties:** If you set up Obsidian to show properties in
+   your documents, they will be shown as a headline in embeds. Klick the weird
+   symbols - â¶ - to expand the properties area, and there you can edit them.
+   - If this edit leads to the note no longer being part of the flow, you're
+     going to have to manually rebuild the flow.
+4. **External edits are available immediately:** Checks for this are therefore
+   unnecessary and out of principle, nothing can go wrong here.
+5. **Overlaps are no problem:** For the same reason overlaps aren't content
+   duplications but just duplications of presentation of the content of one and
+   the same note. Thus, here won't be a conflict the same way there isn't one
+   when you have a note open in two tabs.
+
+##### 4. What still works with embeds
+
+1. **Navigation:** Via file explorer as well as via drop-down, nav modal and
+   flowSwitcher work as usual.
+2. **Exports:** Those still work, too; they create a full text version of the
+   flow.
+
+##### 5. What doesn't work (so well) with embeds
+
+1. **Outline view:** This works so-so, since it can't 'see' inside of embeds and
+   thus can't show headings from inside your notes.
+2. **Cursor tracking/restoration:** Your cursor position can only be tracked in
+   a limited fashion since what is true for outline is also true for textFlow's
+   cursor listener. It can't
+   - see where the cursor is inside of an embed
+   - save the cursor position inside of an embed
+   - restore the cursor position inside of an embed I may potentially look into
+     remedying this, but I am doubtful that it's possible.
+3. **Cursor display:** For the same reasons, file explorer and nav dropdown can
+   only know which region your cursor is in if you place it outside of an embed.
+4. **Search:** Same here. Search can't look inside embeds. So if you need to
+   search your flow, you'll have to do a global search in all of your notes.
+
+<hr>
+
+### 5. Use cases
 
 - You're an author and want to see/work on your various notes/chapters/scenes in
   context
@@ -390,12 +465,15 @@ outside of the embed.
 
 <hr>
 
-### 5. Requirements and setup
+### 6. Requirements and setup
 
-- **Prerequisites:** The Dataview plugin needs to be installed in order for
-  textFlow to work. Just open Obsidian's
-  `Settings > Community plugins > Browse`, then search for `dataview`, click
-  `Install`, then click `Activate` (both the same button).
+- **Prerequisites:**
+  - -The Dataview plugin needs to be installed in order for textFlow to work.
+    Just open Obsidian's `Settings > Community plugins > Browse`, then search
+    for `dataview`, click `Install`, then click `Activate` (both the same
+    button).
+  - If you want to use Flows with embeds, you'll have to install
+    [Sync Embeds by uthvah](https://github.com/uthvah/sync-embeds).
 - **Minimum Obsidian Version:** 1.4.0 (the first version with
   [properties](#how-to-properties))
   - There may be bug in at least one version older than 1.8.10 that prepends the
@@ -421,7 +499,7 @@ outside of the embed.
 
 <hr>
 
-### 6. Settings
+### 7. Settings
 
 - **textFlowSystemFolder location:** TextFlow needs a place for its (hidden by
   default) TextFlow_SystemFolder to store your flows. You can place this folder
@@ -444,6 +522,11 @@ outside of the embed.
     accordingly.
   - **Show textFlowSystemFolder:** It's recommended to keep it hidden so you
     don't accidentally mess with it.
+  - **Show option to embed source notes:** If you activate this, your flow
+    definition area will show the option to embed notes. If you install the
+    flugin [Sync Embeds by uthvah](https://github.com/uthvah/sync-embeds) you
+    can edit notes right inside your embeds. Embeds have their own set of
+    downsides, tough, which you can read about [here](#4-all-about-embed-flows).
 
 **Create a new flow**
 
@@ -488,7 +571,7 @@ outside of the embed.
 
 <hr>
 
-### 7. Commands
+### 8. Commands
 
 All commands can be tied to keyboard shortcuts (hotkeys) in Obsidian's settings.
 
@@ -518,7 +601,7 @@ All commands can be tied to keyboard shortcuts (hotkeys) in Obsidian's settings.
 
 <hr>
 
-### 8. Getting started
+### 9. Getting started
 
 #### Best practice
 
@@ -533,7 +616,7 @@ If you want to know why: [Safety features](#2-safety-features) /
 
 #### Quick tutorial
 
-1. Install textFlow (see [Requirements and setup](#5-requirements-and-setup))
+1. Install textFlow (see [Requirements and setup](#6-requirements-and-setup))
 2. Open the settings and set up a system folder.
 3. Read through the other settings if you like, but the default is the
    recommended setup for new users.
@@ -586,7 +669,7 @@ If you want to know why: [Safety features](#2-safety-features) /
 
 <hr>
 
-### 9. Fixing problems
+### 10. Fixing problems
 
 Have you tried turning it off and on again?
 
@@ -595,7 +678,7 @@ Have you tried turning it off and on again?
 - **reload your vault**
 
 If that didn't help and you also can't find your problem on this list,
-[let me know](#12-report-a-bug--report-your-love).
+[let me know](#13-report-a-bug--report-your-love).
 
 **Table of Contents**
 
@@ -682,8 +765,19 @@ If that didn't help and you also can't find your problem on this list,
 
 #### Menu bar
 
-- **Problem:** The menu bar for one of your flows is only half rendered
-  (optional: and the sync button is staying activated)
+- **Problem:** The menu bar isn't being rendered for one of your flows.
+  - **Explanation:**
+    - For embed flows, there are sometimes problems with the setup of the
+      editor.
+    - Or maybe you are looking at an export? Exports aren't flows anymore and
+      don't get a menu bar.
+  - **Solution:**
+    - Click into the flow (outside of an embed).
+    - Close the flow and reopen it.
+    - If the problem persists, restart Obsidian.
+    - Still nothing? Reinstall textFlow
+
+- **Problem:** The menu bar for one of your flows is only half rendered.
   - **Solution:**
     - Close the flow and rebuild it. If the rebuild button is greyed out, do it
       through the settings tab.
@@ -778,7 +872,7 @@ If that didn't help and you also can't find your problem on this list,
       Obsidian.
     - If the error still occurs, disable all your plugins and reenable them one
       by one while doing rebuilds to test which one is the culprit
-      ([let me know who it was](#12-report-a-bug--report-your-love)).
+      ([let me know who it was](#13-report-a-bug--report-your-love)).
 
 - **Problem:** Navigation via file explorer doesn't work even though it's
   definitely toggled on.
@@ -794,11 +888,11 @@ If that didn't help and you also can't find your problem on this list,
     then redefine the flow to be smaller.
 
 - **Problem:** Something else is going on and rebuilding/reloading doesn't help.
-  - **Solution:** [Send-me-a-bug-report](#12-report-a-bug--report-your-love)
+  - **Solution:** [Send-me-a-bug-report](#13-report-a-bug--report-your-love)
 
 <hr>
 
-### 10. Cheat sheet
+### 11. Cheat sheet
 
 **Lingo and concepts used by textFlow**
 
@@ -842,7 +936,7 @@ If that didn't help and you also can't find your problem on this list,
 
 <hr>
 
-### 11 Comparing textFlow and Outline
+### 12. Comparing textFlow and Outline
 
 Obsidian already offers a way of browsing through a single, large document in
 the form of the core plugin 'Outline' - so when is textFlow worth a try? And
@@ -892,10 +986,10 @@ order):**
 
 <hr>
 
-### 12. Report a bug / Report your love
+### 13. Report a bug / Report your love
 
 If you encounter any bugs or weird behaviour that the chapter on
-[fixing problems](#9-fixing-problems) doesn't cover, hit me up on github:
+[fixing problems](#10-fixing-problems) doesn't cover, hit me up on github:
 https://github.com/tine-schreibt/textFlow/issues You can also send the report
 via email: tine at tine-schreibt dot de.
 

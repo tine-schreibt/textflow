@@ -215,6 +215,8 @@
   "menuBar.selectButton.setTooltip select active region": "Aktive Region auswählen",
   "menuBar.selectActiveRegion tracking error": "textFlow: Die aktive Region von ${flowName} kann aufgrund eine Tracking-Fehlers nicht ausgewählt werden. Bitte wähle den Text eigenhändig aus und baue den Flow neu, um den Fehler zu beheben.",
   "menuBar.selectButton.setTooltip export flow": "Flow exportieren",
+  "menuBar.switchTypeButton.setTooltip rebuild as classic": "Neubau als klassik Flow",
+  "menuBar.switchTypeButton.setTooltip rebuild as embed": "Neubau als embed Flow",
   "menubar.selectButton.notice successful export": "textFlow: Dein Flow wurde nach ${exportedFlowPath} exportiert.",
 
   "------- CREATE FLOW FROM FOLDER MODAL": "LIKE IT SAYS ----------------",
@@ -234,9 +236,9 @@
 
   "----------- PREVIEW MODAL": "Modal that shows the users the structure of their flow---------",
   "PreviewModal.modalTitle preview for flow": "Vorschau für Flow ${this_flowBuildBasket_flowName}.",
-  "PreviewModal.modalTitle overlap for flow": "Die folgenden Flows überschneiden sich mit ${this_flowBuildBasket_flowName}:",
+  "PreviewModal.modalTitle overlap for flow": "Die folgenden Flows überlappen sich mit ${this_flowBuildBasket_flowName}:",
   "PreviewModal.modalTitle hover for details": "Mit der Maus darüber fahren, um Details zu sehen.",
-  "PreviewModal.modalTitle overlapping notes": "Überschneidende Notizen:\n ${overlapList}",
+  "PreviewModal.modalTitle overlapping notes": "Überlappende Notizen:\n ${overlapList}",
   "PreviewModal.modalTitle.info your criteria yielded an empty list": "Deine Kriterien führten zu einer leeren Liste. Bitte überprüfe sie auf Tippfehler und/oder gestalte sie weniger restriktiv.",
   "PreviewModal.modalTitle.info what happens after closing the modal": "Wenn du diese Vorschau geschlossen hast, kannst du deine Flow-Definition entweder bearbeiten oder speichern.",
   "PreviewModal.text when does flow creation happen": "Das Bauen des Flows erfolgt im nächsten Schritt.",
@@ -276,7 +278,8 @@
   "--------- MAIN": "Die Hauptdatei, die Funktionen für das Flow-Handling enthält",
 
   "main.registerCommand check stats": "Prüfe Vault auf externe Edits",
-  "main.registerCommand export active flow": "Exportiere den Flow im aktiven leaf",
+  "main.registerCommand export active flow": "Exportiere den Flow im aktiven Leaf",
+  "main.registerCommand rebuild as opposite type": "Baue den Flow im aktiven Leaf als anderen Typ neu",
   "main.registerCommand flag all for rebuild": "Alle Flows für Neubau markieren",
   "main.registerCommand rebuild active leaf": "Baue den Flow im aktiven Leaf neu",
   "main.registerCommand restore most recent cursor": "Letzte Cursor-Position wiederherstellen",
@@ -337,8 +340,8 @@
   "checkActiveRegion.notice region tracking error resolved": "textFlow: Der Trackingfehler für ${flowName} wurde behoben.",
   "checkActiveRegion.notice overlap detected": "textFlow: Der aktive Flow \"${activeFlow}\" überschneidet sich an der aktiven Region \"${regionName}\" mit:\n${overlapString}.\nBitte schließe ${flowsGrammar}, bevor du diese Region bearbeitest.",
 
-  "singular flow": "den überschneidenden Flow",
-  "plural flow": "die überschneidenden Flows",
+  "singular flow": "den überlappenden Flow",
+  "plural flow": "die überlappenden Flows",
 
   "endOfFlow.notice don't type here": "textFlow: Du bist über den Rand der Welt gesegelt.\nAlles, was du hier tippst, wird von Drachen verschlungen, wenn du den Flow neu baust.\nBitte erzeuge eine neue Notiz, im Quellordner des Flows, so dass sie hinzugefügt werden.\nFalls du den Flow mit Tags und Properties definierst, vergiss nicht, sie der neuen Notiz hinzuzufügen.",
 

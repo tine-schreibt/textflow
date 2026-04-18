@@ -639,6 +639,37 @@ export default class TextFlowPlugin extends Plugin {
     });
 
     // ---------------------------------------------------------------
+    // switch type of flow in active note
+    this.addCommand({
+      id: "text-flow-export-flow",
+      name: this.t("main.registerCommand rebuild as opposite type"),
+      editorCheckCallback: (
+        checking: boolean,
+        editor: Editor,
+        ctx: MarkdownView | MarkdownFileInfo,
+      ) => {
+        if (!(ctx instanceof MarkdownView)) return false;
+        if (!ctx.file) return false;
+        if (!this.settings.embeds) return false;
+
+        const flowName = this.isFlowFile(ctx.file.path);
+        if (flowName) {
+          if (!checking) {
+            const toggledValue = this.settings.flows[flowName].embed
+              ? false
+              : true;
+
+            this.settings.flows[flowName].embed = toggledValue;
+            this.saveSettings();
+            this.settingsTabFunctions.flowBuildingBundle(flowName, "switcher");
+          }
+          return true;
+        }
+        return false;
+      },
+    });
+
+    // ---------------------------------------------------------------
     // select active region, provided active leaf is flow
     this.addCommand({
       id: "text-flow-select-active-region",
@@ -1725,7 +1756,6 @@ ${pseudoElement}
             // check if the user deleted a flow file and flag it for rebuild
             if (basename(parentFolder) === flowName) {
               if (!this.settings.flows[flowName].flaggedForRebuild) {
-
                 this.settings.flows[flowName].flaggedForRebuild = true;
                 await this.saveSettings();
                 continue;
@@ -1748,7 +1778,11 @@ ${pseudoElement}
               }
               // now check if we need to flag
               if (!this.settings.flows[flowName].flaggedForRebuild) {
-                console.log("delete2 flagging: ", flowName, this.settings.flows[flowName].embed)
+                console.log(
+                  "delete2 flagging: ",
+                  flowName,
+                  this.settings.flows[flowName].embed,
+                );
 
                 this.settings.flows[flowName].flaggedForRebuild = true;
                 await this.saveSettings();
@@ -3166,7 +3200,6 @@ ${pseudoElement}
             for (let path of this.settings.flows[flowName]
               .unsyncedRegionsArray) {
               if (this.settings.flows[otherFlowName].flowMap[path])
-
                 this.settings.flows[otherFlowName].flaggedForRebuild = true;
               // saving is done by syncBackToSource
             }
@@ -3338,6 +3371,7 @@ ${pseudoElement}
   checkStatsForFlow = async (flowName: string) => {
     if (this.settings.checkExternalEdits === "no") return;
     if (this.settings.flows[flowName].flaggedForRebuild) return;
+    if (this.settings.flows[flowName].embed) return;
 
     let key = this.settings.flows[flowName].definitionMode
       ? "bookmarks"
@@ -3374,7 +3408,11 @@ ${pseudoElement}
         }
       } else {
         // if it's inactive, just flag for rebuild
-        console.log("checkstats1 flagging: ", flowName, this.settings.flows[flowName].embed)
+        console.log(
+          "checkstats1 flagging: ",
+          flowName,
+          this.settings.flows[flowName].embed,
+        );
         this.settings.flows[flowName].flaggedForRebuild = true;
         await this.saveSettings();
       }
@@ -3419,16 +3457,17 @@ ${pseudoElement}
     }
 
     if (changed) {
-      console.log("checkstats fornote1 flagging: ", flowName, this.settings.flows[flowName].embed)
-      this.settings.flows[flowName].flaggedForRebuild = true;
+      if (!this.settings.flows[flowName].embed) {
+        this.settings.flows[flowName].flaggedForRebuild = true;
+      }
       Object.keys(this.settings.flows).forEach((iteratorFlowName) => {
         if (
           !this.settings.flows[iteratorFlowName].flaggedForRebuild &&
-          iteratorFlowName != flowName
+          iteratorFlowName != flowName &&
+          !this.settings.flows[iteratorFlowName].embed
         ) {
           // rebuild of active leaf is taken care of by the caller
           if (this.settings.flows[iteratorFlowName].flowMap[path]) {
-            console.log("checkstats fornote2 flagging: ", flowName, this.settings.flows[flowName].embed)
             this.settings.flows[iteratorFlowName].flaggedForRebuild = true;
           }
         }
@@ -3596,7 +3635,8 @@ ${pseudoElement}
     for (let flowName of Object.keys(this.settings.activeRegions)) {
       if (
         flowName != activeFlow &&
-        this.settings.flows[activeFlow].overlapObject[flowName] && !this.settings.flows[flowName].embed
+        this.settings.flows[activeFlow].overlapObject[flowName] &&
+        !this.settings.flows[flowName].embed
       ) {
         if (this.settings.flows[flowName].flowMap) {
           if (

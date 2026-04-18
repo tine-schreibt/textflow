@@ -1,4 +1,4 @@
-### 0.4.7
+### 0.4.8
 
-- fixed overlap detection
-- fixed overlap warnings to only warn when receiving flow is classic
+- updated Readmes
+- added menu bar button to toggle classic/embed flow when embedding is active

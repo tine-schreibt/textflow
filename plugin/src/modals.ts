@@ -112,7 +112,6 @@ export class CreateFlowFromFolder extends Modal {
       // --------- TOGGLE EMBEDS ------------------
       const toggleEmbed = new Setting(contentEl)
         .setName(this.plugin.t("toggleEmbed name"))
-        .setDesc(this.plugin.t("toggleEmbed desc 1"))
         .addToggle((sortToggle) => {
           sortToggle
             .setValue(this.plugin.settings.flowBuildBasket.embed ?? false)
