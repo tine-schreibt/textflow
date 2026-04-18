@@ -19,7 +19,7 @@ within your embeds you just need to install and activate the plugin
 [Sync Embeds by uthvah](https://github.com/uthvah/sync-embeds) (can only be
 installed manually at the moment). 
 
-_Smaller fixes and some new features relating to this are still coming. Every release is stable, though, and can be used without major problems._
+_Small fixes and some new features with regards to this update will be released over the next few days. Every release is still stable, though, and can be used without problems._
 
 _Updates to the readme relating to this haven't yet been completed._
 
