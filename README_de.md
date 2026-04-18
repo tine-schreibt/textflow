@@ -22,11 +22,10 @@ Embeds bearbeiten zu können, müsst ihr nur das Plugin
 aktivieren (kann derzeit nur manuell installiert werden).
 
 _Kleine Fixes und einige neue Features mit Bezug auf diese Neuerung kommen über
-die nächsten Tage. Jedes Release ist aber stabil und kann ohne große Probleme
-genutzt werden._
+die nächsten Tage. Jedes Release ist aber stabil und kann ohne Probleme genutzt
+werden._
 
-_ Updates für dieses Readme sind ebenfalls noch nicht vollständig
-ausgearbeitet._
+_Updates für dieses Readme sind ebenfalls noch nicht vollständig ausgearbeitet._
 
 Bitte beachtet, dass ich (außerhalb der Funktionen, die ich gerade erst
 implementiere) textFlow nach bestem Wissen und Gewissen durchgetestet habe, aber
