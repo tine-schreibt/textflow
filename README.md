@@ -14,9 +14,10 @@ The UI has options for keyboard as well as mouse navigation.
 
 **UPDATE:** As of version 0.4.0 you can build
 **[Flows with embeds](#4-all-about-embed-flows)**; this means that these Flows
-don't create any data duplication. You just need to install and activate the
-plugin [Sync Embeds by uthvah](https://github.com/uthvah/sync-embeds) (can only
-be installed manually at the moment).
+don't create any data duplication.  
+Then you just need to install and activate the plugin
+[Sync Embeds by uthvah](https://github.com/uthvah/sync-embeds) (only manually at
+the moment) and voilà, you can edit right there in your embeds.
 
 Please be aware that I tested textFlow extensively, but you are still the first
 real users, so I can't guarantee you won't find some bug or other that I missed.
@@ -85,10 +86,17 @@ smoothly?**
      groups. Use whatever order feels more intuitive/less confusing to you or
      better fits the respective flow. Some sort orders also work better with
      folder/group title deactivated.
-3. **Embeddings aka embed flows:** In the settings you can activate the option to have your source notes embedded in your flows instead of being pasted in as plain text. If you then install the plugin [Sync Embeds by uthvah](https://github.com/uthvah/sync-embeds), you can edit your embedded notes directly inside your flow. 
-	- Embed flows have some advantages - namely that they get rid of data duplication. They bring their own set of limitations, too, though. All are explained in the section [on embeds](#4-all-about-embed-flows).
-	- It's always possible to rebuild a flow as the opposite type. 
-	- In the rest of this list, features which are only available for classic flows are marked with an asterisk\*.
+3. **Embeddings aka embed flows:** In the settings you can activate the option
+   to have your source notes embedded in your flows instead of being pasted in
+   as plain text. If you then install the plugin
+   [Sync Embeds by uthvah](https://github.com/uthvah/sync-embeds), you can edit
+   your embedded notes directly inside your flow.
+   - Embed flows have some advantages - namely that they get rid of data
+     duplication. They bring their own set of limitations, too, though. All are
+     explained in the section [on embeds](#4-all-about-embed-flows).
+   - It's always possible to rebuild a flow as the opposite type.
+   - In the rest of this list, features which are only available for classic
+     flows are marked with an asterisk\*.
 4. **Edit flows like any other note:** textFlow keeps track of which region of a
    flow an edit happens in. It automatically syncs it all back to the correct
    source note whenever you click into a different note. You can also sync

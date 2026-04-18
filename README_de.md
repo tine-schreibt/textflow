@@ -16,9 +16,11 @@ Die UI hat Optionen sowohl für Tastatur-, als auch für Maus-Navigation.
 
 **UPDATE:** Seit Version 0.4.0 könnt ihr
 **[Flows aus Einbettungen](#4-alles-über-embed-flows-einbettungen)** bauen; das
-bedeutet, diese Flows haben keine Datenduplikation mehr. Ihr müsst dazu nur das
-Plugin [Sync Embeds von uthvah](https://github.com/uthvah/sync-embeds)
-installieren und aktivieren (kann derzeit nur manuell installiert werden).
+bedeutet, diese Flows haben keine Datenduplikation mehr.  
+Dann müsst ihr nur noch das Plugin
+[Sync Embeds von uthvah](https://github.com/uthvah/sync-embeds) installieren
+(geht derzeit nur manuell), und schon könnt ihr direkt in euren Einbettungen
+editieren.
 
 Bitte beachtet, dass ich textFlow nach bestem Wissen und Gewissen durchgetestet
 habe, aber ihr seid die ersten echten User. Daher kann ich nicht garantieren,
