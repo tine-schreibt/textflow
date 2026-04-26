@@ -392,12 +392,8 @@ through which you can directly edit the embedded note.
 
 ##### 2. What are embed flows?
 
-As you might have figured, embed flows are just that. Instead of copying the
-source note's text into the flow, textFlow generates an embedding block for
-every note, just like the one shown above. And with Sync Embeds you can make
-them editable.  
-You can rebuild your flow as the opposite type whenever you want; there's a
-button in the menu bar as well as a command for that.
+As you might have figured, embed flows are just that. Instead of copying the source note's text into the flow, textFlow generates an embedding block for every note, just like the one shown above. And with Sync Embeds you can make them editable.  
+If you have embeds activated in the settings, you can rebuild your flow as the opposite type whenever you want. There's a button in the menu bar, as well as a command for that.
 
 ##### 3. The advantages of embed flows
 

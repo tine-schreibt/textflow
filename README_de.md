@@ -435,8 +435,9 @@ Wie man sich denken kann, sind Flows mit Einbettungen genau das. Anstatt den
 Text der Quellnotizen in den Flow zu kopieren, wird für jede Notiz ein
 Einbettungs-Codeblock wie der oben gezeigte generiert. Und die könnt ihr dann
 mit Sync Embeds editierbar machen.  
-Ihr könnt eure Flows jederzeit als anderen Type neubauen. Es gibt dafür einen
-Button in der Menüleiste, und einen Befehl.
+Wenn ihr Embeds in den Einstellungen aktiviert habt, könnt ihr eure Flows
+jederzeit als anderen Type neubauen. Es gibt dafür einen Button in der
+Menüleiste, und einen Befehl.
 
 ##### 3. Die Vorteile von Embed-Flows
 
