@@ -424,12 +424,6 @@ export default class TextFlowPlugin extends Plugin {
         if (!checkExternalEdits) {
           if (!checking) {
             for (let flowName of Object.keys(this.settings.flows)) {
-              console.log(
-                "flagAll flagging: ",
-                flowName,
-                this.settings.flows[flowName].embed,
-              );
-
               this.settings.flows[flowName].flaggedForRebuild = true;
             }
             this.saveSettings();
@@ -790,7 +784,6 @@ export default class TextFlowPlugin extends Plugin {
   // ----- DECORATE SOURCE NOTES IN FILE EXPLORER -----------
   decorateSourceNotes = async (mode: Types.CalculationMode) => {
     this.settingsTabFunctions.callStack("decorateSourceNotes");
-    console.log("mode is: ", mode);
     let path = "";
     let handledPathsArray: string[] = [];
     const unsyncedPathsArray: string[] = [];
@@ -1074,7 +1067,6 @@ ${pseudoElement}
     }
 
     for (let flowName of flowArray) {
-      console.log("flowName: ", flowName);
       // get the file list
       for (path of Object.keys(this.settings.flows[flowName].flowMap)) {
         // exclude folder titles
@@ -1084,13 +1076,11 @@ ${pseudoElement}
         if (mode === "redo") {
           // if we're handling a flow that is active, track the path
           if (this.settings.activeRegions[flowName]) {
-            console.log("path is of active flow: ", flowName);
             handledPaths[path] = true;
           }
           // if we're handling a non-active flow, protect the known active paths
           if (!this.settings.activeRegions[flowName]) {
             if (handledPaths[path]) continue;
-            console.log("nulling deco style for: ", path);
             decoStyle = "none";
             handlePath(path, decoStyle as Types.DecoStyle);
             continue;
@@ -1248,12 +1238,6 @@ ${pseudoElement}
                       !this.settings.flows[flowName].flaggedForRebuild &&
                       this.settings.flows[flowName].flowMap[normalisedPath]
                     ) {
-                      console.log(
-                        "file-menu flagging: ",
-                        flowName,
-                        this.settings.flows[flowName].embed,
-                      );
-
                       this.settings.flows[flowName].flaggedForRebuild = true;
                       await this.saveSettings();
                     }
@@ -1452,11 +1436,6 @@ ${pseudoElement}
                 !this.settings.flows[flowName].flaggedForRebuild &&
                 this.settings.flows[flowName].flowMap[file.path]
               ) {
-                console.log(
-                  "modify flagging: ",
-                  flowName,
-                  this.settings.flows[flowName].embed,
-                );
                 this.settings.flows[flowName].flaggedForRebuild = true;
                 await this.saveSettings();
               }
@@ -1561,11 +1540,6 @@ ${pseudoElement}
               file instanceof TFile &&
               this.settings.flows[flowName].flowMap[oldPath]
             ) {
-              console.log(
-                "rename1 flagging: ",
-                flowName,
-                this.settings.flows[flowName].embed,
-              );
               this.settings.flows[flowName].flaggedForRebuild = true;
               // await this.saveSettings();
               continue;
@@ -1577,12 +1551,6 @@ ${pseudoElement}
                 this.settings.flows[flowName],
               )) {
                 if (dirname(regionPath) === oldPath) {
-                  console.log(
-                    "rename2 flagging: ",
-                    flowName,
-                    this.settings.flows[flowName].embed,
-                  );
-
                   this.settings.flows[flowName].flaggedForRebuild = true;
                   // await this.saveSettings();
                   continue;
@@ -1599,12 +1567,6 @@ ${pseudoElement}
               newParentFolder ===
               this.settings.flows[flowName].flowDefinition.folderIncluded
             ) {
-              console.log(
-                "rename3 flagging: ",
-                flowName,
-                this.settings.flows[flowName].embed,
-              );
-
               this.settings.flows[flowName].flaggedForRebuild = true;
               // await this.saveSettings();
               continue;
@@ -1630,11 +1592,6 @@ ${pseudoElement}
                 );
                 if (isExcluded) continue;
               }
-              console.log(
-                "rename4 flagging: ",
-                flowName,
-                this.settings.flows[flowName].embed,
-              );
 
               this.settings.flows[flowName].flaggedForRebuild = true;
               // await this.saveSettings();
@@ -1698,11 +1655,7 @@ ${pseudoElement}
 
         // actual checks for flagging
         for (let flowName of Object.keys(this.settings.flows)) {
-          console.log(
-            "create1 flagging: ",
-            flowName,
-            this.settings.flows[flowName].embed,
-          );
+
 
           if (this.settings.flows[flowName].flaggedForRebuild) continue;
           // if the flow is made from bookmarks, move on
@@ -1730,11 +1683,7 @@ ${pseudoElement}
               );
               if (isExcluded) continue;
             }
-            console.log(
-              "create2 flagging: ",
-              flowName,
-              this.settings.flows[flowName].embed,
-            );
+
 
             this.settings.flows[flowName].flaggedForRebuild = true;
             await this.saveSettings();
@@ -1786,11 +1735,7 @@ ${pseudoElement}
               }
               // now check if we need to flag
               if (!this.settings.flows[flowName].flaggedForRebuild) {
-                console.log(
-                  "delete2 flagging: ",
-                  flowName,
-                  this.settings.flows[flowName].embed,
-                );
+
 
                 this.settings.flows[flowName].flaggedForRebuild = true;
                 await this.saveSettings();
@@ -3399,11 +3344,7 @@ ${pseudoElement}
         }
       } else {
         // if it's inactive, just flag for rebuild
-        console.log(
-          "checkstats1 flagging: ",
-          flowName,
-          this.settings.flows[flowName].embed,
-        );
+
         this.settings.flows[flowName].flaggedForRebuild = true;
         await this.saveSettings();
       }
