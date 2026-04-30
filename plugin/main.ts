@@ -789,6 +789,8 @@ export default class TextFlowPlugin extends Plugin {
 
   // ----- DECORATE SOURCE NOTES IN FILE EXPLORER -----------
   decorateSourceNotes = async (mode: Types.CalculationMode) => {
+    this.settingsTabFunctions.callStack("decorateSourceNotes");
+    console.log("mode is: ", mode);
     let path = "";
     let handledPathsArray: string[] = [];
     const unsyncedPathsArray: string[] = [];
@@ -796,19 +798,20 @@ export default class TextFlowPlugin extends Plugin {
 
     // find the active region path
     let activeRegionPath: string | undefined = "";
+
     const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-    if (!activeView) return;
-    if (!activeView.file) return;
-    const activeLeafPath = activeView.file.path;
-    if (!activeLeafPath) return;
+    if (activeView) {
+      if (activeView.file) {
+        const activeLeafPath = activeView.file.path;
 
-    const flowName = this.isFlowFile(activeLeafPath);
-    if (!flowName) return;
-    const leafID = this.settingsTabFunctions.getLeafID(activeView.leaf);
+        const leafID = this.settingsTabFunctions.getLeafID(activeView.leaf);
 
-    for (let flowName of Object.keys(this.settings.activeRegions)) {
-      if (this.settings.activeRegions[flowName][leafID]) {
-        activeRegionPath = this.settings.activeRegions[flowName][leafID].path;
+        for (let flowName of Object.keys(this.settings.activeRegions)) {
+          if (this.settings.activeRegions[flowName][leafID]) {
+            activeRegionPath =
+              this.settings.activeRegions[flowName][leafID].path;
+          }
+        }
       }
     }
 
@@ -873,6 +876,7 @@ export default class TextFlowPlugin extends Plugin {
       let activeColour = "";
       let opacity = "";
 
+      // ---- Active Region Highlighting ------
       if (
         activeRegionPath === path &&
         this.settings.activeRegionHighlight != "off"
@@ -959,6 +963,7 @@ export default class TextFlowPlugin extends Plugin {
         }
       }
 
+      // ---- General Highlighting ------
       let styleContent = "";
 
       // style for neutral stuff
@@ -1069,6 +1074,7 @@ ${pseudoElement}
     }
 
     for (let flowName of flowArray) {
+      console.log("flowName: ", flowName);
       // get the file list
       for (path of Object.keys(this.settings.flows[flowName].flowMap)) {
         // exclude folder titles
@@ -1078,11 +1084,13 @@ ${pseudoElement}
         if (mode === "redo") {
           // if we're handling a flow that is active, track the path
           if (this.settings.activeRegions[flowName]) {
+            console.log("path is of active flow: ", flowName);
             handledPaths[path] = true;
           }
           // if we're handling a non-active flow, protect the known active paths
           if (!this.settings.activeRegions[flowName]) {
             if (handledPaths[path]) continue;
+            console.log("nulling deco style for: ", path);
             decoStyle = "none";
             handlePath(path, decoStyle as Types.DecoStyle);
             continue;
@@ -2994,14 +3002,6 @@ ${pseudoElement}
           if (!this.settings.activeRegions[flowName][leafID]) {
             this.addRegionTracking(flowName, leafID);
           }
-
-          // Then add region tracking for newly opened leaves
-          if (!this.settings.activeRegions[flowName]) {
-            this.settings.activeRegions[flowName] = {};
-          }
-          if (!this.settings.activeRegions[flowName][leafID]) {
-            this.addRegionTracking(flowName, leafID);
-          }
         }
       }
     });
@@ -3057,18 +3057,9 @@ ${pseudoElement}
     // write that shit down
     await this.saveSettings();
 
-    // And finally redraw the decoration and refresh the menu bars
+    // And finally redraw the decoration
+    this.unDecorateSourceNotes();
     this.decorateSourceNotes("redo");
-    const allLeaves = this.app.workspace.getLeavesOfType("markdown");
-    for (const leaf of allLeaves) {
-      const view = this.settingsTabFunctions.getMarkdownView(leaf);
-      if (!view) continue;
-      const filePath = view.file?.path;
-      if (!filePath) continue;
-
-      const flowName = this.isFlowFile(filePath);
-      if (!flowName) continue;
-    }
   };
 
   // ---------------------------------------------------------------

@@ -1,4 +1,3 @@
-### 0.4.8
+### 0.4.9
 
-- updated Readmes
-- added menu bar button to toggle classic/embed flow when embedding is active
+- fixed bug that caused symbols to persist even after flow was closed
