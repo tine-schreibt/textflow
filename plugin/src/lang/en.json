@@ -283,7 +283,7 @@
   "main.registerCommand toggle scroll bar": "Toggle scroll bar",
 
   "main.fileMenuListener.context flag flows for rebuild": "textFlow: Flag flows including \"${baseName}\" for rebuild",
-  "main.fileMenuListener.context create new file": "textFlow: Create a new note in this folder",
+  "main.fileMenuListener.context create new file": "New note",
   "main.fileMenuListener.context make flow from folder": "textFlow: Define flow from selected folder",
   "main.fileMenuListener.context make flow from folderS": "textFlow: Define flow from selected folders",
 

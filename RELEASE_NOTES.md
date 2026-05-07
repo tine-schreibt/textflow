@@ -1,4 +1,3 @@
-### 0.4.9
+### 0.4.10
 
-- fixed bug that caused symbols to persist even after flow was closed
-- also, forgot to remove my console.logs -.-
+- fixed the mess that was the getUniqueFileName function; it no longer crashes and burns when trying to iterate

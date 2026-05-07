@@ -783,7 +783,7 @@ export default class TextFlowPlugin extends Plugin {
 
   // ----- DECORATE SOURCE NOTES IN FILE EXPLORER -----------
   decorateSourceNotes = async (mode: Types.CalculationMode) => {
-    this.settingsTabFunctions.callStack("decorateSourceNotes");
+    // this.settingsTabFunctions.callStack("decorateSourceNotes");
     let path = "";
     let handledPathsArray: string[] = [];
     const unsyncedPathsArray: string[] = [];
@@ -841,13 +841,6 @@ export default class TextFlowPlugin extends Plugin {
           style.remove();
         }
       });
-
-      const fileElement = document.querySelector(
-        `div[data-path='${this.escapeSelector(cleanPath)}']`,
-      );
-      const folderElement = document.querySelector(
-        `div[data-path='${this.escapeSelector(cleanPath)}'] .nav-folder-title`,
-      );
 
       let style = document.createElement("style");
 
@@ -1178,38 +1171,42 @@ ${pseudoElement}
   // ---------------- Functions: Listener helper functions -------------------------
 
   // this little thing was written by Claude and painstakingly fixed by me
-  getUniqueFileName = (
-    basePath: string,
-    inputName: string = "_untitled.md",
-  ) => {
+  getUniqueFileName = (basePath: string, inputName: string = "_untitled") => {
     let number = 0;
     let fullPath = "";
-    let nakedName = inputName;
+    let nakedName = "";
+
     if (inputName.endsWith(".md")) {
       // if it has a suffix, remove it, so we can append numbers
       nakedName = inputName.slice(0, inputName.length - 3);
-      fullPath = normalizePath(`${basePath}/${nakedName}.md`);
     } else {
-      fullPath = normalizePath(`${basePath}/${nakedName}`);
+      nakedName = inputName;
     }
 
-    if (!this.app.vault.getAbstractFileByPath(fullPath)) {
-      if (inputName.endsWith(".md")) return `${nakedName}.md`;
+    fullPath = normalizePath(`${basePath}/${nakedName}.md`);
+
+    // check if the path does exist and return name if it doesn't
+    if (!this.app.vault.getAbstractFileByPath(`${fullPath}`)) {
       return `${nakedName}`;
     }
 
-    // If the file/folder does exist
-    while (this.app.vault.getAbstractFileByPath(fullPath)) {
-      const item = this.app.vault.getAbstractFileByPath(fullPath);
-      number++;
-      if (inputName.endsWith(".md")) {
-        fullPath = normalizePath(`${basePath}/${nakedName} ${number}.md`);
-      } else if (item instanceof TFolder) {
-        fullPath = normalizePath(`${basePath}/${nakedName} ${number}`);
+    let countedUpName = `${nakedName} ${number}`;
+
+    // Otherwise we iterate until we hit a name that's not taken yet
+    const iteratePaths = (fullPath: string) => {
+      number += 1;
+      countedUpName = `${nakedName} ${number}`;
+
+      fullPath = normalizePath(`${basePath}/${countedUpName}.md`);
+
+      if (!this.app.vault.getAbstractFileByPath(`${fullPath}`)) {
+        return `${countedUpName}`;
+      } else {
+        iteratePaths(fullPath);
       }
-    }
-    if (inputName.endsWith(".md")) return `${nakedName} ${number}.md`;
-    return `${nakedName} ${number}`;
+    };
+    iteratePaths(fullPath);
+    return `${countedUpName}`
   };
 
   // ---------------- Functions: Listeners: Global -----------------
@@ -1285,6 +1282,8 @@ ${pseudoElement}
     // the thing to create a new file in the current folder
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file) => {
+        if (!this.settings.systemFolderPath) return;
+        if (file.name.startsWith(this.settings.systemFolderPath)) return;
         menu.addItem((item) => {
           item
             .setTitle(this.t("main.fileMenuListener.context create new file"))
@@ -1303,6 +1302,11 @@ ${pseudoElement}
               );
 
               await this.app.vault.create(newFilePath, "");
+              const leaf = this.app.workspace.getLeaf("tab");
+              const newFile = this.app.vault.getAbstractFileByPath(newFilePath);
+              if (newFile instanceof TFile) {
+                await leaf.openFile(newFile);
+              }
             });
         });
       }),
@@ -1655,8 +1659,6 @@ ${pseudoElement}
 
         // actual checks for flagging
         for (let flowName of Object.keys(this.settings.flows)) {
-
-
           if (this.settings.flows[flowName].flaggedForRebuild) continue;
           // if the flow is made from bookmarks, move on
           if (this.settings.flows[flowName].definitionMode === "bookmarks")
@@ -1683,7 +1685,6 @@ ${pseudoElement}
               );
               if (isExcluded) continue;
             }
-
 
             this.settings.flows[flowName].flaggedForRebuild = true;
             await this.saveSettings();
@@ -1735,8 +1736,6 @@ ${pseudoElement}
               }
               // now check if we need to flag
               if (!this.settings.flows[flowName].flaggedForRebuild) {
-
-
                 this.settings.flows[flowName].flaggedForRebuild = true;
                 await this.saveSettings();
                 continue;

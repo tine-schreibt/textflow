@@ -1,3 +1,7 @@
+### 0.4.10
+
+- fixed the mess that was the getUniqueFileName function; it no longer crashes and burns when trying to iterate
+
 ### 0.4.9
 
 - fixed bug that caused symbols to persist even after flow was closed

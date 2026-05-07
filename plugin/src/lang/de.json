@@ -293,7 +293,7 @@
   "main.registerCommand toggle scroll bar": "Scrollbar umschalten",
 
   "main.fileMenuListener.context flag flows for rebuild": "textFlow: Flagge alle Flows, die \"${baseName}\" enthalten, für Neubau.",
-  "main.fileMenuListener.context create new file": "textFlow: Erstelle eine neue Notiz in diesem Ordner",
+  "main.fileMenuListener.context create new file": "Neue Notiz",
   "main.fileMenuListener.context make flow from folder": "textFlow: Definiere Flow aus diesem Ordner",
   "main.fileMenuListener.context make flow from folderS": "textFlow: Definiere Flow aus diesen Ordnern",
 
