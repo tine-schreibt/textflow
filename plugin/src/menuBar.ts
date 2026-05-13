@@ -2,7 +2,6 @@ import { App, ButtonComponent, MarkdownView, setIcon } from "obsidian";
 import Fuse, { FuseResult } from "fuse.js";
 import type TextFlowPlugin from "../main";
 import { basename } from "path";
-import * as Types from "./types";
 
 export class MenuBar {
   private app: App;
