@@ -43,6 +43,13 @@
   display: none;
 }
 
+
+.textflow-hidden {
+    display: none !important;
+}
+
+
+
 /* import and export link*/
 
 .import-export-wrapper {

@@ -60,6 +60,10 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           desc.createSpan({
             text: this.plugin.t("setSystemFolder.setDesc.2 how to enter root"),
           });
+          desc.createEl("br");
+          desc.createSpan({
+            text: "20:25",
+          });
         }),
       );
 
