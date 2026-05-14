@@ -14,7 +14,7 @@ import TextFlow from "../main";
 import * as Types from "./types";
 import path, { basename } from "path";
 
-import { getAPI, SMarkdownPage } from "obsidian-dataview";
+import { getAPI } from "obsidian-dataview";
 
 // Any code that was actually written by AI is labelled
 
@@ -127,7 +127,6 @@ class LoadingOverlay {
   constructor(
     leaf: WorkspaceLeaf,
     flowName: string,
-    app: App,
     plugin: TextFlow,
     translate: (key: string, variables?: Record<string, string>) => string,
   ) {
@@ -144,7 +143,6 @@ class LoadingOverlay {
       cls: "textflow-loading-container",
     });
 
-    const symbol = this.plugin.settingsTabFunctions.explorerDecoArray[0][0];
     this.progressText = this.container.createDiv({
       cls: "textflow-loading-text",
       text: this.t(
@@ -1239,7 +1237,6 @@ export class settingsTabFunctions {
 
   overlapCollector = (flowBuildBasket: Types.flowBuildBasket) => {
     const overlapObject: Types.OverlapObject = {};
-    const key = Object.keys(flowBuildBasket.flowNotesPathArray)[0];
     if (Object.keys(this.plugin.settings.flows).length >= 1) {
       flowLoop: for (let referenceFlow in this.plugin.settings.flows) {
         if (
@@ -1395,11 +1392,6 @@ export class settingsTabFunctions {
       idDivider: "",
     };
 
-    let key = "";
-    updatedFlow.definitionMode
-      ? (key = "bookmarks")
-      : (key = "foldersTagsProps");
-
     let pathArray: string[] = [];
     Object.keys(this.plugin.settings.flows[flowName].flowMap).forEach(
       (note) => {
@@ -1483,7 +1475,6 @@ export class settingsTabFunctions {
             progressOverlays[leafID] = new LoadingOverlay(
               leaf,
               flowName,
-              this.app,
               this.plugin,
               this.plugin.t,
             );

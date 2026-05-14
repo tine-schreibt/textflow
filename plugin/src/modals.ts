@@ -51,17 +51,21 @@ export class CreateFlowFromFolder extends Modal {
     const { contentEl } = this;
     contentEl.empty();
 
-    const modalTitle = contentEl.createEl("h2", {
+    // modalTitle =
+    contentEl.createEl("h2", {
       text: this.plugin.t("CreateFlowFromFolderModal.headline"),
     });
-    const description = contentEl.createSpan({
+
+    // description
+    contentEl.createSpan({
       text: this.plugin.t(
         "CreateFlowFromFolderModal.description refine def in settings",
       ),
     });
 
     //--------------------------------------------------------------------------------
-    const chooseFlowName = new Setting(contentEl)
+    const chooseFlowName = new Setting(contentEl);
+    chooseFlowName
       .setName(
         this.plugin.t("createFlows.chooseFlowName.setName name your flow"),
       )
@@ -92,7 +96,8 @@ export class CreateFlowFromFolder extends Modal {
 
     //--------------------------------------------------------------------------------
     // FOLDER TITLES TOGGLE
-    const toggleFolderTitles = new Setting(contentEl)
+    const toggleFolderTitles = new Setting(contentEl);
+    toggleFolderTitles
       .setName(this.plugin.t("modal_toggleFolderTitles.setName include folder"))
       .setDesc(
         this.plugin.t(
@@ -110,7 +115,8 @@ export class CreateFlowFromFolder extends Modal {
 
     if (this.plugin.settings.embeds) {
       // --------- TOGGLE EMBEDS ------------------
-      const toggleEmbed = new Setting(contentEl)
+      const toggleEmbed = new Setting(contentEl);
+      toggleEmbed
         .setName(this.plugin.t("toggleEmbed name"))
         .addToggle((sortToggle) => {
           sortToggle
@@ -197,7 +203,8 @@ export class CreateFlowFromFolder extends Modal {
 
     //--------------------------------------------------------------------------------
     let subfoldersExcluded = false;
-    const excludeSubfolders = new Setting(contentEl)
+    const excludeSubfolders = new Setting(contentEl);
+    excludeSubfolders
       .setName(
         this.plugin.t("modal_toggleSubfolders.setName exclude subfolders"),
       )
@@ -289,7 +296,8 @@ export class CreateFlowFromFolder extends Modal {
       });
 
     //--------------------------------------------------------------------------------
-    const closeButton = new ButtonComponent(contentEl)
+    const closeButton = new ButtonComponent(contentEl);
+    closeButton
       .setButtonText(this.plugin.t("CreateFlowFromFolderModal.close"))
       .onClick(async () => {
         this.plugin.settingsTabFunctions.resetFlowBuildBasket(
@@ -377,7 +385,8 @@ export class CreateNewFile extends Modal {
       });
 
     //--------------------------------------------------------------------------------
-    const closeButton = new ButtonComponent(contentEl)
+    const closeButton = new ButtonComponent(contentEl);
+    closeButton
       .setButtonText(this.plugin.t("CreateFlowFromFolderModal.close"))
       .onClick(async () => {
         this.plugin.settingsTabFunctions.resetFlowBuildBasket(
@@ -414,7 +423,7 @@ export class PreviewModal extends Modal {
   onOpen() {
     const { contentEl } = this;
 
-    const modalTitle = contentEl.createEl("h2", {
+    const _modalTitle = contentEl.createEl("h2", {
       text: this.plugin.t("PreviewModal.modalTitle preview for flow", {
         this_flowBuildBasket_flowName: this.flowBuildBasket.flowName,
       }),
@@ -467,8 +476,6 @@ export class PreviewModal extends Modal {
     const previewContainer = contentEl.createDiv({
       cls: "preview-container",
     });
-
-    const key = this.flowBuildBasket.definitionMode;
 
     const recipeItems = this.flowBuildBasket.flowNotesPathArray ?? [];
     if (recipeItems.length === 0) {
@@ -524,7 +531,8 @@ export class PreviewModal extends Modal {
     );
 
     //--------------------------------------------------------------------------------
-    const closeButton = new ButtonComponent(closeModal.controlEl)
+    const closeButton = new ButtonComponent(closeModal.controlEl);
+    closeButton
       .setButtonText(this.plugin.t("PreviewModal.button close preview"))
       .onClick(() => {
         this.close();
@@ -1218,7 +1226,8 @@ export class FlowSwitcherModal extends Modal {
 
       // ------------ All the buttons for the active flowses headers --------
       // Button that opens in a new tab
-      const openActiveTabButton = new ButtonComponent(flowHeader)
+      const openActiveTabButton = new ButtonComponent(flowHeader);
+      openActiveTabButton
         .setIcon("play")
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
         .setClass("clickable-icon")
@@ -1241,7 +1250,8 @@ export class FlowSwitcherModal extends Modal {
 
       //------------------------------------------------------------------------------
       // Button that opens in split to the right
-      const openActiveRightButton = new ButtonComponent(flowHeader)
+      const openActiveRightButton = new ButtonComponent(flowHeader);
+      openActiveRightButton
         .setIcon("step-forward")
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
         .setClass("clickable-icon")
@@ -1262,7 +1272,8 @@ export class FlowSwitcherModal extends Modal {
 
       //-----------------------------------------------------------------------------
       // Button that opens in a split down
-      const openActiveDownButton = new ButtonComponent(flowHeader)
+      const openActiveDownButton = new ButtonComponent(flowHeader);
+      openActiveDownButton
         .setIcon("step-forward")
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
         .setClass("flow-switch-modal-header-button-down")
@@ -1283,8 +1294,8 @@ export class FlowSwitcherModal extends Modal {
         });
 
       //-----------------------------------------------------------------------------
-      // Button to sync
-      const syncButton = new ButtonComponent(flowHeader)
+      // SyncButton
+      new ButtonComponent(flowHeader)
         .setIcon("download")
         .setClass(`flow-switch-modal-header-button-${goSync}`)
         .setClass("clickable-icon")
@@ -1300,7 +1311,7 @@ export class FlowSwitcherModal extends Modal {
 
       //----------------------------------------------------------------------------
       // Button to rebuild
-      const rebuildButton = new ButtonComponent(flowHeader)
+      new ButtonComponent(flowHeader)
         .setIcon("rotate-cw")
         .setClass(`flow-switch-modal-header-button-rebuild-${goRebuild}`)
         .setClass("clickable-icon")
@@ -1332,7 +1343,7 @@ export class FlowSwitcherModal extends Modal {
 
       //---------------------------------------------------------------------------
       // Button to close all active leaves that contain this flow
-      const closeButton = new ButtonComponent(flowHeader)
+      new ButtonComponent(flowHeader)
         .setIcon("x")
         .setClass(`flow-switcher-modal-neutral`)
         .setClass("clickable-icon")
@@ -1417,12 +1428,13 @@ export class FlowSwitcherModal extends Modal {
           },
         });
 
-        this.addManagedListener(regionName, "click", (event) => {
+        this.addManagedListener(regionName, "click", (_event) => {
           this.focusLeaf(leafID);
         });
 
         // ----------- GOTO BUTTON ------------
-        const navGotoButton = new ButtonComponent(flowRegion)
+        const navGotoButton = new ButtonComponent(flowRegion);
+        navGotoButton
           .setIcon("arrow-big-right")
           .setClass(`flow-switch-modal-header-button-neutral`)
           .setClass("clickable-icon")
@@ -1431,7 +1443,8 @@ export class FlowSwitcherModal extends Modal {
           });
 
         // ----------- CLOSE BUTTON ------------
-        const navCloseButton = new ButtonComponent(flowRegion)
+        const navCloseButton = new ButtonComponent(flowRegion);
+        navCloseButton
           .setIcon("x")
           .setClass(`flow-switch-modal-header-button-neutral`)
           .setClass("clickable-icon")
@@ -1512,7 +1525,8 @@ export class FlowSwitcherModal extends Modal {
       }
 
       // ----------- OPEN BUTTON ------------
-      const openInactiveTabButton = new ButtonComponent(inactiveFlowHeader)
+      const openInactiveTabButton = new ButtonComponent(inactiveFlowHeader);
+      openInactiveTabButton
         .setIcon("play")
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
         .setClass("clickable-icon")
@@ -1533,7 +1547,8 @@ export class FlowSwitcherModal extends Modal {
         });
 
       //----------------------------------------------------------------------------
-      const openInactiveRightButton = new ButtonComponent(inactiveFlowHeader)
+      const openInactiveRightButton = new ButtonComponent(inactiveFlowHeader);
+      openInactiveRightButton
         .setIcon("step-forward")
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
         .setClass("clickable-icon")
@@ -1553,7 +1568,8 @@ export class FlowSwitcherModal extends Modal {
         });
 
       //--------------------------------------------------------------------------
-      const openInactiveDownButton = new ButtonComponent(inactiveFlowHeader)
+      const openInactiveDownButton = new ButtonComponent(inactiveFlowHeader);
+      openInactiveDownButton
         .setIcon("step-forward")
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
         .setClass("flow-switch-modal-header-button-down")
@@ -1574,7 +1590,8 @@ export class FlowSwitcherModal extends Modal {
         });
 
       // ----------- REBUILD BUTTON --------------------------------------
-      const rebuildButton = new ButtonComponent(inactiveFlowHeader)
+      const rebuildButton = new ButtonComponent(inactiveFlowHeader);
+      rebuildButton
         .setIcon("rotate-cw")
         .setClass(`flow-switch-modal-header-button-${goRebuild}`)
         .setClass("clickable-icon")
@@ -1762,7 +1779,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
   }
 
   //--------------------------------------------------------------------------------
-  onChooseItem(item: Types.SuggestionItem, evt: MouseEvent | KeyboardEvent) {
+  onChooseItem(item: Types.SuggestionItem, _evt: MouseEvent | KeyboardEvent) {
     interface ObsidianEditor extends Editor {
       cm?: EditorView;
     }

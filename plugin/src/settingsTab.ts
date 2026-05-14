@@ -155,7 +155,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
     // --------------------- UI settings
 
-    const menuBarDefault = new Setting(setUpTextFlow)
+    const menuBarDefault = new Setting(setUpTextFlow);
+    menuBarDefault
       .setName(this.plugin.t("menuBarDefault.setName default menu bar setting"))
       .setDesc(
         createFragment((desc) => {
@@ -183,7 +184,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       });
 
     // ----------- flowSwitcherModal ---------------
-    const switcherModalPosition = new Setting(setUpTextFlow)
+    const switcherModalPosition = new Setting(setUpTextFlow);
+    switcherModalPosition
       .setName(
         this.plugin.t("switcherModalPosition.setName access flow switcher via"),
       )
@@ -220,7 +222,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       });
 
     // ------------ explorer Deco
-    const explorerDeco = new Setting(setUpTextFlow)
+    const explorerDeco = new Setting(setUpTextFlow);
+    explorerDeco
       .setName(this.plugin.t("explorerDeco.setName.1 choose deco"))
       .setDesc(
         createFragment((desc) => {
@@ -322,7 +325,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     });
 
     //--------------------------------------------------------------------------------
-    const sourceHighlight = new Setting(setUpTextFlow)
+    const sourceHighlight = new Setting(setUpTextFlow);
+    sourceHighlight
       .setName(
         this.plugin.t(
           "activeRegionDeco.setName choose highlight type for active region",
@@ -583,7 +587,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
       });
 
     // --------- MAIN TOGGLE EMBEDS ------------------
-    const toggleEmbed = new Setting(qol)
+    const _toggleEmbed = new Setting(qol)
       .setName(this.plugin.t("toggleEmbed main toggle name"))
       .setDesc(
         createFragment((desc) => {
@@ -655,7 +659,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
     });
 
     // --------- FOLDER TITLES ------------------
-    const toggleFolderTitles = new Setting(createFlows)
+    const _toggleFolderTitles = new Setting(createFlows)
       .setName(
         this.plugin.t(
           "toggleFolderTitles.setName include folder / bookmark group titles",
@@ -676,7 +680,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
 
     // --------- TOGGLE EMBEDS ------------------
     if (this.plugin.settings.embeds) {
-      const toggleEmbed = new Setting(createFlows)
+      const _toggleEmbed = new Setting(createFlows)
         .setName(this.plugin.t("toggleEmbed name"))
         .addToggle((sortToggle) => {
           sortToggle
