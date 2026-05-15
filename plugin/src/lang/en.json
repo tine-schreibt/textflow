@@ -4,8 +4,6 @@
     "prefixes": "numbers for when text is a fragment of a setDesc, 'alt+number' for when it is conditional"
   },
 
-  "Ribbon Icon Open flowSwitcher": "Open flowSwitcher",
-
   "-------- SETTINGS TAB": "This is the class in which the user chooses their settings for the plugin.-------------",
 
   "basicSettings.headline": "Basic",

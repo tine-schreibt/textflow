@@ -20,7 +20,7 @@
   dependencies:
     "@marijn/find-cluster-break" "^1.0.0"
 
-"@codemirror/view@^6.0.1", "@codemirror/view@^6.23.0", "@codemirror/view@^6.38.6", "@codemirror/view@6.38.6":
+"@codemirror/view@^6.0.1", "@codemirror/view@^6.23.0", "@codemirror/view@6.38.6":
   version "6.38.6"
   resolved "https://registry.npmjs.org/@codemirror/view/-/view-6.38.6.tgz"
   integrity sha512-qiS0z1bKs5WOvHIAC0Cybmv4AJSkAXgX5aD6Mqd2epSLlVJsQl8NG23jCVouIgkh4All/mrbdsf2UOLFnJw0tw==
@@ -284,7 +284,7 @@
   resolved "https://registry.npmjs.org/@types/json5/-/json5-0.0.29.tgz"
   integrity sha512-dRLjCWHYg4oaA77cxO64oO+7JwCwnIzkZPdrrC71jQmQtlhM556pwKo5bUzqvZndkVbeFLIIi+9TC40JNF5hNQ==
 
-"@types/node@^25.7.0":
+"@types/node@^25.6.0":
   version "25.7.0"
   resolved "https://registry.npmjs.org/@types/node/-/node-25.7.0.tgz"
   integrity sha512-z+pdZyxE+RTQE9AcboAZCb4otwcrvgHD+GlBpPgn0emDVt0ohrTMhAwlr2Wd9nZ+nihhYFxO2pThz3C5qSu2Eg==
@@ -609,6 +609,11 @@ braces@^3.0.3, braces@~3.0.2:
   integrity sha512-yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA==
   dependencies:
     fill-range "^7.1.1"
+
+builtin-modules@^5.0.0:
+  version "5.2.0"
+  resolved "https://registry.npmjs.org/builtin-modules/-/builtin-modules-5.2.0.tgz"
+  integrity sha512-02yxLeyxF4dNl6SlY6/5HfRSrSdZ/sCPoxy2kZNP5dZZX8LSAD9aE2gtJIUgWrsQTiMPl3mxESyrobSwvRGisQ==
 
 call-bind-apply-helpers@^1.0.1, call-bind-apply-helpers@^1.0.2:
   version "1.0.2"
@@ -2719,7 +2724,7 @@ typed-array-length@^1.0.7:
     possible-typed-array-names "^1.0.0"
     reflect.getprototypeof "^1.0.6"
 
-typescript-eslint@^8.35.1, typescript-eslint@^8.59.3:
+typescript-eslint@^8.35.1:
   version "8.59.3"
   resolved "https://registry.npmjs.org/typescript-eslint/-/typescript-eslint-8.59.3.tgz"
   integrity sha512-KgusgyDgG4LI8Ih/sWaCtZ06tckLAS5CvT5A4D1Q7bYVoAAyzwiZvE4BmwDHkhRVkvhRBepKeASoFzQetha7Fg==

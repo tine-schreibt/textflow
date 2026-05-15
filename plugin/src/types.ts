@@ -214,7 +214,6 @@ interface InternalPlugins {
   };
 }
 
-
 export interface BookmarkItem {
   type: "file" | "group";
   ctime?: number;
@@ -222,29 +221,6 @@ export interface BookmarkItem {
   items?: BookmarkItem[];
   title?: string;
 }
-
-export interface BookmarksData {
-  items: BookmarkItem[];
-}
-
-/*
-export type BookmarkItem = BookmarkFile | BookmarkGroup;
-
-export interface BookmarkFile {
-  type: "file";
-  path: string;
-  ctime?: number;
-}
-
-export interface BookmarkGroup {
-  type: "group";
-  title: string;
-  items: BookmarkItem[];
-}
-
-export function isBookmarkGroup(item: BookmarkItem): item is BookmarkGroup {
-  return item.type === "group";
-}*/
 
 export interface BookmarksData {
   items: BookmarkItem[];
@@ -267,7 +243,7 @@ export type DVNote = {
     path: string;
     tags: string[];
   };
-  [key: string]: unknown;
+  [key: string]: any;
 };
 
 // ---- other assorted types and interfaces
@@ -333,9 +309,3 @@ export type CleanArrayCollection = {
   cleanPropertiesInclusion: string[][];
   cleanPropertiesExclusion: string[][];
 };
-
-declare module "obsidian" {
-  interface WorkspaceLeaf {
-    id: string;
-  }
-}

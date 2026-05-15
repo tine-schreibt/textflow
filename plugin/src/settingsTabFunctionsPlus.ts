@@ -9,11 +9,12 @@ import {
   TFile,
   WorkspaceLeaf,
 } from "obsidian";
-import TextFlow from "../main";
-import path, { basename } from "path";
-import { getAPI } from "obsidian-dataview";
-import * as Types from "./types";
 import { EditorView } from "@codemirror/view";
+import TextFlow from "../main";
+import * as Types from "./types";
+import path, { basename } from "path";
+
+import { getAPI } from "obsidian-dataview";
 
 // Any code that was actually written by AI is labelled
 
@@ -208,7 +209,7 @@ export class settingsTabFunctions {
   createSystemFolder = async (newSystemFolderPath: string) => {
     try {
       // Ensure the folder exists, create it if necessary
-      const newSystemFolder =
+      let newSystemFolder =
         this.app.vault.getAbstractFileByPath(newSystemFolderPath);
       if (!newSystemFolder) {
         await this.app.vault.createFolder(newSystemFolderPath);
@@ -232,25 +233,23 @@ export class settingsTabFunctions {
       } else if (!(newSystemFolder instanceof TFolder)) {
         throw new Error(`"${newSystemFolderPath}" exists but is not a folder.`);
       }
-    } catch {
+    } catch (e) {
       console.error(
-        `textFlow: Something went wrong when trying to create ${newSystemFolderPath}`,
+        `textFlow: Something went wrong when trying to create ${newSystemFolderPath}: ${e}`,
       );
     }
   };
 
   //--------------------------------------------------
   // ----- To slow down saving on input fields
-  private debouncedSaveTimer: number | undefined;
+  private debouncedSaveTimer: NodeJS.Timeout | undefined;
 
-  debouncedSaveSettings = () => {
+  debouncedSaveSettings = async () => {
     if (this.debouncedSaveTimer) {
-      window.clearTimeout(this.debouncedSaveTimer);
+      clearTimeout(this.debouncedSaveTimer);
     }
-    this.debouncedSaveTimer = window.setTimeout(() => {
-      void this.plugin
-        .saveSettings()
-        .catch((err) => console.error("Saving settings failed:", err));
+    this.debouncedSaveTimer = setTimeout(async () => {
+      await this.plugin.saveSettings();
       this.debouncedSaveTimer = undefined;
     }, 200); // .2 second delay
   };
@@ -314,7 +313,7 @@ export class settingsTabFunctions {
     }
 
     // Check for invalid characters - added backtick
-    const invalidChars = /[<>:"/\\|?*#^[\]`]/;
+    const invalidChars = /[<>:"/\\|?*#^[\]`\x00-\x1F]/;
     if (invalidChars.test(name)) {
       return {
         valid: false,
@@ -351,13 +350,13 @@ export class settingsTabFunctions {
       const newFlowName = this.plugin.settings.flowBuildBasket.flowName;
       const oldFlowName = this.plugin.settings.flowBuildBasket.oldFlowName;
 
-      await this.plugin.syncAllLeaves();
+      this.plugin.syncAllLeaves();
 
       // reset all active leaves of the flow
       Object.keys(this.plugin.settings.activeRegions).forEach((activeFlow) => {
         if (activeFlow === oldFlowName) {
           Object.keys(this.plugin.settings.activeRegions[activeFlow]).forEach(
-            (leafID) => {
+            async (leafID) => {
               const targetLeaf = this.app.workspace.getLeafById(leafID);
               if (targetLeaf) {
                 targetLeaf.detach();
@@ -488,7 +487,7 @@ export class settingsTabFunctions {
       // get overlap info
       flowBuildBasket.overlapObject = this.overlapCollector(flowBuildBasket);
       flowBuildBasket.success = true;
-    } catch {
+    } catch (error) {
       new Notice(
         this.plugin.t(
           "createSourceNotePathArray.notice random error, please check console",
@@ -504,18 +503,6 @@ export class settingsTabFunctions {
   // ---------------- GET DVQUERY PATHS ----------------------
   getPathsByDvQuery = async (flowBuildBasket: Types.flowBuildBasket) => {
     if (!this.plugin.settings.systemFolderPath) return [];
-
-    /* Reason for disabling the rule: 
-     I could not find a way to fix it. 
-     I tried 
-     const dv: DataviewApi | undefined = getAPI();
-     and 
-     const dv = getAPI() as DataviewApi | undefined;
-     both kept giving 'DataviewApi is an error type and blah 
-     and that's the final suggestion the bot gave
-     */
-
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const dv = getAPI();
     if (!dv) {
       new Notice(
@@ -530,38 +517,21 @@ export class settingsTabFunctions {
     let sortedFilePathArray: string[] = [];
     const vault = this.app.vault;
 
-    if (
-      flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder ===
-        "noteOrder" ||
-      flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder === undefined
-    ) {
-      sortedFilePathArray = this.makeNoteOrderPathArray(
-        vault.getRoot(),
-        sortedFilePathArray,
-      );
-    } else {
-      sortedFilePathArray = this.makeFolderOrderPathArray(
-        vault.getRoot(),
-        sortedFilePathArray,
-      );
-    }
+    flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder ===
+      "noteOrder" ||
+    flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder === undefined
+      ? (sortedFilePathArray = this.makeNoteOrderPathArray(
+          vault.getRoot(),
+          sortedFilePathArray,
+        ))
+      : (sortedFilePathArray = this.makeFolderOrderPathArray(
+          vault.getRoot(),
+          sortedFilePathArray,
+        ));
 
     let finalPathArray: string[] = [];
 
-    /* Reason for disabling the rule on the next line: 
-     I could not find a way to fix it. 
-     I tried 
-     const dv: DataviewApi | undefined = getAPI();
-     and 
-     const dv = getAPI() as DataviewApi | undefined;
-     both kept giving 'DataviewApi is an error type and blah 
-     and that's the final suggestion the bot gave
-     */
-
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const allNotes = await dv.query(
-      `${flowBuildBasket.flowDefinition.dvQuery}`,
-    );
+    let allNotes = await dv.query(`${flowBuildBasket.flowDefinition.dvQuery}`);
 
     if (!allNotes.successful) {
       return [];
@@ -569,11 +539,11 @@ export class settingsTabFunctions {
     // the following line is slop
     const filteredPathObject: { [key: string]: boolean } = {};
 
-    for (const note of allNotes.value.values) {
+    for (let note of allNotes.value.values) {
       filteredPathObject[note.path] = true;
     }
 
-    for (const path of sortedFilePathArray) {
+    for (let path of sortedFilePathArray) {
       // remove entries that are in the systemFolder
       if (path.startsWith(`${this.plugin.settings.systemFolderPath}`)) continue;
       if (filteredPathObject[path] && !finalPathArray.includes(path)) {
@@ -593,7 +563,7 @@ export class settingsTabFunctions {
 
   // --- GET ALL PATHS FROM FOLDER TAG PROPERTY ---------------------------
   // But first we ensure we don't have undefineds and make the ! type assertion later on safe to use
-  ensureNoUndefined = (flowBuildBasket: Types.flowBuildBasket) => {
+  ensureNoUndefined = async (flowBuildBasket: Types.flowBuildBasket) => {
     if (flowBuildBasket.flowDefinition.folderIncluded === undefined) {
       flowBuildBasket.flowDefinition.folderIncluded = "";
     }
@@ -617,17 +587,6 @@ export class settingsTabFunctions {
   getPathsByFoldersTagsProps = async (
     flowBuildBasket: Types.flowBuildBasket,
   ) => {
-    /* Reason for disabling the rule: 
-     I could not find a way to fix it. 
-     I tried 
-     const dv: DataviewApi | undefined = getAPI();
-     and 
-     const dv = getAPI() as DataviewApi | undefined;
-     both kept giving 'DataviewApi is an error type and blah 
-     and that's the final suggestion the bot gave
-     */
-
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const dv = getAPI();
     if (!dv) {
       new Notice(
@@ -642,21 +601,17 @@ export class settingsTabFunctions {
     let sortedFilePathArray: string[] = [];
     const vault = this.app.vault;
 
-    if (
-      flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder ===
-        "noteOrder" ||
-      flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder === undefined
-    ) {
-      sortedFilePathArray = this.makeNoteOrderPathArray(
-        vault.getRoot(),
-        sortedFilePathArray,
-      );
-    } else {
-      sortedFilePathArray = this.makeFolderOrderPathArray(
-        vault.getRoot(),
-        sortedFilePathArray,
-      );
-    }
+    flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder ===
+      "noteOrder" ||
+    flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder === undefined
+      ? (sortedFilePathArray = this.makeNoteOrderPathArray(
+          vault.getRoot(),
+          sortedFilePathArray,
+        ))
+      : (sortedFilePathArray = this.makeFolderOrderPathArray(
+          vault.getRoot(),
+          sortedFilePathArray,
+        ));
 
     const cleanArrayCollection = this.cleanUp(flowBuildBasket);
 
@@ -672,6 +627,9 @@ export class settingsTabFunctions {
         flowBuildBasket,
       );
     }
+
+    // pack the definition back into the basket
+    flowBuildBasket.flowDefinition = flowBuildBasket.flowDefinition;
 
     // presto; as a reminder: this is handed back all the way up in createSourceNotePathArray
     return finalPathArray;
@@ -690,12 +648,12 @@ export class settingsTabFunctions {
     const folderInclusionArray =
       flowBuildBasket.flowDefinition.folderIncluded.split(",");
     if (folderInclusionArray.length >= 1) {
-      cleanFolderInclusionArray = folderInclusionArray.filter(
+      const nonEmptyFolderInclusionArray = folderInclusionArray.filter(
         (x) => x.length > 0,
       );
     }
 
-    for (let includedFolder of cleanFolderInclusionArray) {
+    for (let includedFolder of folderInclusionArray) {
       let excludeSubfolders = false;
 
       // check for trailing slash, because normalizePath will eat it
@@ -720,7 +678,7 @@ export class settingsTabFunctions {
         includedFolder === "/" ||
         includedFolder === "root"
           ? "" // Empty string in Dataview queries means "search everywhere"
-          : `"${includedFolder}"`; // For specific paths, we need to wrap in quotes
+          : `\"${includedFolder}\"`; // For specific paths, we need to wrap in quotes
 
       // save cleaned path with trailing slash if we exclude subfolders
       if (excludeSubfolders) {
@@ -737,7 +695,7 @@ export class settingsTabFunctions {
       cleanFolderInclusionArray.join(",");
 
     //--- EXCLUDED FOLDERS -------------------------------------------------
-    const cleanFolderExclusionArray: string[] = [];
+    let cleanFolderExclusionArray: string[] = [];
 
     const folderExclusionArray =
       flowBuildBasket.flowDefinition.folderExcluded.split(",");
@@ -745,8 +703,8 @@ export class settingsTabFunctions {
       const nonEmptyFolderExclusionArray = folderExclusionArray
         .map((x) => x.trim())
         .filter((x) => x.length > 0);
-      for (const excludedFolder of nonEmptyFolderExclusionArray) {
-        const cleanExcludedPath = normalizePath(excludedFolder.trim());
+      for (let excludedFolder of nonEmptyFolderExclusionArray) {
+        let cleanExcludedPath = normalizePath(excludedFolder.trim());
         cleanFolderExclusionArray.push(cleanExcludedPath);
       }
       // save cleaned values
@@ -792,7 +750,7 @@ export class settingsTabFunctions {
 
     //--- INCLUDED and  EXCLUDED PROPERTIES - clean up and split at = -------------------
     const propertyCleanup = (propertyString: string) => {
-      const cleanPropertyArray = [];
+      let cleanPropertyArray = [];
       const propertyArray = propertyString.split(",");
       const nonEmptyPropertyArray = propertyArray
         .map((x) => x.trim())
@@ -800,27 +758,25 @@ export class settingsTabFunctions {
       for (let i = 0; i < nonEmptyPropertyArray.length; i++) {
         if (nonEmptyPropertyArray[i].indexOf("=") !== -1) {
           // if there's a = in the mix
-          const equalsIndex = nonEmptyPropertyArray[i].indexOf("=");
-          const property = nonEmptyPropertyArray[i]
-            .slice(0, equalsIndex)
-            .trim();
-          const value = nonEmptyPropertyArray[i]
+          let equalsIndex = nonEmptyPropertyArray[i].indexOf("=");
+          let property = nonEmptyPropertyArray[i].slice(0, equalsIndex).trim();
+          let value = nonEmptyPropertyArray[i]
             .slice(equalsIndex + 1, nonEmptyPropertyArray[i].length)
             .trim();
           cleanPropertyArray.push([property, value]);
         } else {
           // if it's just a property
-          const cleanPropertyString = propertyArray[i].trim();
+          let cleanPropertyString = propertyArray[i].trim();
           cleanPropertyArray.push([cleanPropertyString]);
         }
       }
       return cleanPropertyArray;
     };
 
-    const cleanPropertiesInclusionArray = propertyCleanup(
+    let cleanPropertiesInclusionArray = propertyCleanup(
       flowBuildBasket.flowDefinition.propsIncluded,
     );
-    const cleanPropertiesExclusionArray = propertyCleanup(
+    let cleanPropertiesExclusionArray = propertyCleanup(
       flowBuildBasket.flowDefinition.propsExcluded,
     );
     // !!! Do NOT save cleaned up proprties back to the recipe !!!
@@ -859,22 +815,10 @@ export class settingsTabFunctions {
     // ---- USE DATAVIEW API to get and filter notes
     // ----------------------------------------------------------
     // a global to ship stuff between functions
-    const finalPathArray: string[] = [];
+    let finalPathArray: string[] = [];
 
-    for (const dvInclusionTuple of flowBuildBasket.dataviewSearchArray) {
+    for (let dvInclusionTuple of flowBuildBasket.dataviewSearchArray) {
       const dvPath = dvInclusionTuple[0].trim();
-
-      /* Reason for disabling the rule: 
-     I could not find a way to fix it. 
-     I tried 
-     const dv: DataviewApi | undefined = getAPI();
-     and 
-     const dv = getAPI() as DataviewApi | undefined;
-     both kept giving 'DataviewApi is an error type and blah 
-     and that's the final suggestion the bot gave
-     */
-
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       let allNotes = await dv.pages(dvPath);
 
       // If inclusion path ends with slash, filter out subfolder stuff
@@ -905,7 +849,7 @@ export class settingsTabFunctions {
           // include properties
           cleanArrayCollection.cleanPropertiesInclusion.every((property) => {
             if (property.length === 1) {
-              const extractedProperty = property[0];
+              let extractedProperty = property[0];
               return !!note[extractedProperty]; // the first! turns the property into a (false) boolean, the second ! inverts to return true
             } else if (Array.isArray(property) && property.length === 2) {
               const [key, value] = property;
@@ -920,7 +864,7 @@ export class settingsTabFunctions {
           // exclude properties
           !cleanArrayCollection.cleanPropertiesExclusion.some((property) => {
             if (property.length === 1) {
-              const extractedProperty = property[0];
+              let extractedProperty = property[0];
               return note[extractedProperty];
             } else if (property.length === 2) {
               const [key, value] = property;
@@ -938,11 +882,11 @@ export class settingsTabFunctions {
       // USE FILTERED LIST TO NARROW DOWN SORTED LIST --------------------------
       // put the paths into an object to speed up things
       const filteredPathObject: { [key: string]: boolean } = {};
-      for (const note of filteredNotes) {
+      for (let note of filteredNotes) {
         filteredPathObject[(note as Types.DVNote).file.path] = true;
       }
       // now filter
-      for (const path of sortedFilePathArray) {
+      for (let path of sortedFilePathArray) {
         if (filteredPathObject[path] && !finalPathArray.includes(path)) {
           finalPathArray.push(path);
         }
@@ -1012,10 +956,10 @@ export class settingsTabFunctions {
     finalPathArray: string[],
     flowBuildBasket: Types.flowBuildBasket,
   ) => {
-    const arrayWithFolderTitles: string[] = [];
+    let arrayWithFolderTitles: string[] = [];
     let lastParentFolder = "";
 
-    for (const currentPath of finalPathArray) {
+    for (let currentPath of finalPathArray) {
       // Split current and last path into segments
       const currentPathSegments = currentPath.split("/");
 
@@ -1030,7 +974,7 @@ export class settingsTabFunctions {
       }
       // if there is a parent, check if it's a new one
       if (currentPathSegments.length >= 2 && flowBuildBasket.folderTitles) {
-        const currentParentFolder =
+        let currentParentFolder =
           currentPathSegments[currentPathSegments.length - 2];
         if (lastParentFolder != currentParentFolder) {
           // if it's a new parent, push it and replace
@@ -1046,7 +990,7 @@ export class settingsTabFunctions {
 
   // ---- GET PATHS IN BOOKMARK GROUP ----------------
   getBookmarkPathsByGroupName = (flowBuildBasket: Types.flowBuildBasket) => {
-    const groupName = flowBuildBasket.flowDefinition.bookmarks;
+    let groupName = flowBuildBasket.flowDefinition.bookmarks;
 
     // since groupName could be a path, prepare it for further processing:
     const cleanPath = groupName.replace(/\/+/g, "/");
@@ -1102,7 +1046,7 @@ export class settingsTabFunctions {
 
       const processGroup = (group: any) => {
         // First, process any subgroups (going deep first)
-        if (group.item) {
+        if (group.items) {
           // Process subgroups first
           for (const item of group.items) {
             if (item.type === "group") {
@@ -1117,7 +1061,7 @@ export class settingsTabFunctions {
 
           // Add only direct file children (not those in subgroups)
           const directFiles = group.items.filter(
-            (item: Types.BookmarkItem) => item.type === "file",
+            (item: any) => item.type === "file",
           );
           directFiles.forEach((file: any) => {
             bookmarkedNotePathsArray.push(file.path);
@@ -1294,7 +1238,7 @@ export class settingsTabFunctions {
   overlapCollector = (flowBuildBasket: Types.flowBuildBasket) => {
     const overlapObject: Types.OverlapObject = {};
     if (Object.keys(this.plugin.settings.flows).length >= 1) {
-      for (const referenceFlow in this.plugin.settings.flows) {
+      flowLoop: for (let referenceFlow in this.plugin.settings.flows) {
         if (
           referenceFlow != flowBuildBasket.oldFlowName &&
           referenceFlow != flowBuildBasket.flowName &&
@@ -1347,7 +1291,7 @@ export class settingsTabFunctions {
   // ----------------- sync overlap info across flows -----------------------
 
   syncOverlaps = (referenceFlow: Types.flowBuildBasket) => {
-    const refFlowName = referenceFlow.flowName;
+    let refFlowName = referenceFlow.flowName;
 
     Object.keys(this.plugin.settings.flows).forEach((syncFlowName) => {
       // Case 1: Flow is in reference overlaps
@@ -1448,7 +1392,7 @@ export class settingsTabFunctions {
       idDivider: "",
     };
 
-    const pathArray: string[] = [];
+    let pathArray: string[] = [];
     Object.keys(this.plugin.settings.flows[flowName].flowMap).forEach(
       (note) => {
         pathArray.push(this.plugin.settings.flows[flowName].flowMap[note].path);
@@ -1478,9 +1422,9 @@ export class settingsTabFunctions {
 
     this.resetFlowBuildBasket(flowReBuildBasket);
     // reset the out of sync array
-    const filteredArray = this.plugin.flowOutOfSync.filter(
-      (filterFlowname) => filterFlowname != flowName,
-    );
+    const filteredArray = this.plugin.flowOutOfSync.filter((filterFlowname) => {
+      filterFlowname != flowName;
+    });
     this.plugin.flowOutOfSync = filteredArray;
     this.plugin.isRebuilding = false;
     await this.plugin.saveSettings();
@@ -1496,7 +1440,7 @@ export class settingsTabFunctions {
     caller: string,
   ): Promise<void> => {
     // pre-flight check for SystemFolder
-    const systemFolder = this.checkSystemFolder();
+    let systemFolder = this.checkSystemFolder();
     if (!systemFolder) {
       new Notice(
         this.plugin.t("flowBuilder.notice system folder not found", {
@@ -1517,17 +1461,15 @@ export class settingsTabFunctions {
     }
 
     // Get an object started for the rest of cases
-    const progressOverlays: { [key: string]: LoadingOverlay } = {};
+    let progressOverlays: { [key: string]: LoadingOverlay } = {};
     const leafIDAndEditorObject: { [key: string]: WorkspaceLeaf } = {};
     if (this.plugin.settings.activeRegions[flowName]) {
       Object.keys(this.plugin.settings.activeRegions[flowName]).forEach(
-        (leafID) => {
+        async (leafID) => {
           const leaf = this.app.workspace.getLeafById(leafID);
           if (leaf) {
             // make sure the leaf has ben properly initialised
-            void leaf
-              .loadIfDeferred()
-              .catch((err) => console.error("Loading deferred failed:", err));
+            await leaf.loadIfDeferred();
 
             leafIDAndEditorObject[leafID] = leaf;
             progressOverlays[leafID] = new LoadingOverlay(
@@ -1543,7 +1485,7 @@ export class settingsTabFunctions {
 
     // the part that persists flow frontmatter
     // fetch frontmatter if there is any
-    const flowFilePath = this.plugin.settings.flows[flowName].flowFilePath;
+    let flowFilePath = this.plugin.settings.flows[flowName].flowFilePath;
     const flowFile = this.app.vault.getAbstractFileByPath(flowFilePath);
     if (flowFile instanceof TFile) {
       const cache = this.app.metadataCache.getFileCache(flowFile);
@@ -1562,7 +1504,7 @@ export class settingsTabFunctions {
     // Info exange with the progress bar for toast and overlay
     let counter = 0;
     const total = flowNotesPathArray.length;
-    for (const path of flowNotesPathArray) {
+    for (let path of flowNotesPathArray) {
       // create update the progress bar
       counter++;
       if (caller === "settingsTab") {
@@ -1645,7 +1587,7 @@ export class settingsTabFunctions {
 
         // type check
         if (note instanceof TFile) {
-          const fileContent: string = await this.app.vault.read(note);
+          let fileContent: string = await this.app.vault.read(note);
 
           if (!this.plugin.settings.flows[flowName].embed) {
             // make a hash if we don't have one yet but need it
@@ -1658,11 +1600,11 @@ export class settingsTabFunctions {
           }
 
           // check if there are UUIDs in there due to a sync fuckup
-          // The order of the chars is shuffled because otherwise the linter will cry about it.
+          let match;
           const regex =
-            /[\u200B\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0\u200C\u200D]{46}/;
+            /[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46}/;
 
-          if (regex.exec(fileContent) !== null) {
+          if ((match = regex.exec(fileContent) !== null)) {
             // remove any progress stuff so the user isn't stuck with the overlay/has to click away the toast
             if (caller === "settingsTab" || caller === "switcher") {
               if (progressToast) {
@@ -1706,7 +1648,7 @@ export class settingsTabFunctions {
             basicUUID: mapValueBasket.basicUUID,
             invisibleUUID: mapValueBasket.invisibleUUID,
             flowOrder: mapValueBasket.flowOrder,
-          };
+          } as Types.SourceFileObject;
 
           if (!this.plugin.settings.flows[flowName].embed) {
             // Add content with marker before divider
@@ -1803,14 +1745,14 @@ export class settingsTabFunctions {
     */
 
     // get the initial UUID
-    const UUID = crypto.randomUUID();
+    let UUID = crypto.randomUUID();
 
     // turn it into base9 piecemeal (to avoid bigint), then join and pad so the regEx is easier and faster
     const base9Transform = (identifier: string) => {
       const initialIdentifierArray = identifier.split("-");
       const base9IdentifierArray: string[] = [];
       // this transformer is all AI
-      for (const hexNumber of initialIdentifierArray) {
+      for (let hexNumber of initialIdentifierArray) {
         const numberIdentifier = parseInt(hexNumber, 16);
         const base9 = numberIdentifier.toString(9);
         const transformedIdentifier = [...base9]
@@ -1837,9 +1779,9 @@ export class settingsTabFunctions {
 
   // puts copy of all flow defs in a .json into textFlowSystemFolder in the user's vault
   backupFlowDefs = async () => {
-    const datedFlows: { [key: string]: Types.FlowDef } = {};
+    let datedFlows: { [key: string]: Types.FlowDef } = {};
 
-    for (const flowName of Object.keys(this.plugin.settings.flows)) {
+    for (let flowName of Object.keys(this.plugin.settings.flows)) {
       const currentDate = this.plugin.settingsTabFunctions.getTimestamp();
       const backupName = `${flowName}*${currentDate}`;
       datedFlows[backupName] = structuredClone(
@@ -1885,7 +1827,7 @@ export class settingsTabFunctions {
   //--------------------------------------------------
   // To encapsulate this apparently unavoidable 'as any' type casting; a robot said this is how you do it
   getLeafID = (leaf: WorkspaceLeaf): Types.LeafID => {
-    return leaf.id as Types.LeafID;
+    return (leaf as any).id as Types.LeafID;
   };
 
   // I have no idea if this even does anything, but I actually feel more comfortable like this, so...
@@ -1894,9 +1836,9 @@ export class settingsTabFunctions {
     return editor ?? null;
   };
 
-  getEditorCM = (editor: Editor) => {
+  getEditorCM = (editor: Editor): EditorView | null => {
     const cm = (editor as Types.EditorWithCM).cm;
-    return cm;
+    return cm instanceof EditorView ? cm : null;
   };
 
   getMarkdownView = (leaf: WorkspaceLeaf): MarkdownView | null => {
@@ -1908,6 +1850,7 @@ export class settingsTabFunctions {
   callStack = (recipient: string) => {
     const stack = new Error().stack;
     if (!stack) return;
+    console.log(recipient, stack, Date.now());
   };
 
   // -------- Restore cursorPos for known and unknown leafIDs
@@ -1963,9 +1906,7 @@ export class settingsTabFunctions {
 
         const editor = this.plugin.settingsTabFunctions.getEditor(view);
         if (!editor) return;
-        if (mostRecentCursor) {
-          this.scrollToPos(editor, mostRecentCursor);
-        }
+        mostRecentCursor ? this.scrollToPos(editor, mostRecentCursor) : "";
       }
     }
   };
@@ -1984,6 +1925,9 @@ export class settingsTabFunctions {
     if (cursorPos !== undefined && cursorPos >= 0) {
       const line = cmEditor.state.doc.lineAt(Math.max(0, cursorPos));
       const targetPos = line.from;
+
+      // Get current viewport info
+      const viewport = cmEditor.viewport;
 
       // Calculate the target scroll position
       const targetLine = line.number;
@@ -2051,18 +1995,15 @@ export class settingsTabFunctions {
   // -------------------------------------------------
   // removes UUIDs and puts it in a new file in root with time stamped title
   exportFlow = async (flowName: string, altName?: string) => {
-    const path = this.plugin.settings.flows[altName ?? flowName].flowFilePath;
+    let path = this.plugin.settings.flows[altName ?? flowName].flowFilePath;
 
     const file = this.app.vault.getAbstractFileByPath(path);
 
     if (file instanceof TFile) {
       const fileContent: string = await this.app.vault.read(file);
       const stripUUIDs = (text: string): string => {
-        /*Reason for disabling:
-        Bot showed me some alternatives, but 
-        */
         const uuidPattern =
-          /[\u200B\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0\u200C\u200D]{46}/g;
+          /[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46}/g;
         const result = text.replace(uuidPattern, "\n\n");
         return result;
       };
@@ -2099,7 +2040,7 @@ export class settingsTabFunctions {
     await this.exportFlow(flowName, cloneName);
 
     // delete the cloned file
-    const clonePath = this.plugin.settings.flows[cloneName].flowFilePath;
+    let clonePath = this.plugin.settings.flows[cloneName].flowFilePath;
     const cloneFile = this.app.vault.getAbstractFileByPath(clonePath);
     if (cloneFile) {
       if (cloneFile instanceof TFile) {
@@ -2168,7 +2109,7 @@ export class settingsTabFunctions {
 
       // then check for container classes
       const allLeaves = this.app.workspace.getLeavesOfType("markdown");
-      for (const leaf of allLeaves) {
+      for (let leaf of allLeaves) {
         await leaf.loadIfDeferred();
         if (leaf.view instanceof MarkdownView && leaf.view.file) {
           // check if it's a flow

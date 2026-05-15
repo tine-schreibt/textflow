@@ -79,7 +79,7 @@ export class MenuBar {
             this.plugin.settings.flows[this.flowName].persistentCursors[leafID]
               .cursors
           ) {
-            for (const cursor of this.plugin.settings.flows[this.flowName]
+            for (let cursor of this.plugin.settings.flows[this.flowName]
               .persistentCursors[leafID].cursors) {
               if (cursor[1] === 0 && zeroCursor) continue;
               cursorArray.push(cursor);
@@ -159,7 +159,10 @@ export class MenuBar {
   }
 
   // -------------------------------------------------------
-  private setDropdownState = (dropdown: string, state: "show" | "hide") => {
+  private setDropdownState = async (
+    dropdown: string,
+    state: "show" | "hide",
+  ) => {
     if (
       dropdown === "nav" &&
       this.plugin.settings.activeRegions[this.flowName][this.leafID]
@@ -227,7 +230,7 @@ export class MenuBar {
   private createNavDropdownEntry(path: string, dropdownEntries: HTMLElement) {
     // get flowOrder (also to search for start of region)
     if (path === "No results") {
-      dropdownEntries.createDiv({
+      const dropdownEntry = dropdownEntries.createDiv({
         cls: "menu-bar-navigation-dropdown-entries",
         text: "No results",
       });
@@ -337,7 +340,7 @@ export class MenuBar {
 
   // -------------------------------------------------------
   private getPathArray = () => {
-    const pathArray: string[] = [];
+    let pathArray: string[] = [];
     Object.keys(this.plugin.settings.flows[this.flowName].flowMap).forEach(
       (note) => {
         const path =
@@ -405,12 +408,12 @@ export class MenuBar {
             ? this.plugin.t("menubar Expand")
             : this.plugin.t("menubar Expand warn"),
         )
-        .onClick(async () => {
+        .onClick(() => {
           this.plugin.settings.activeRegions[this.flowName][
             this.leafID
           ].leafMenuBarSettings.menuBarDisplayState = "max";
-          await this.plugin.saveSettings();
-          await this.plugin.refreshMenuBars();
+          this.plugin.saveSettings();
+          this.plugin.refreshMenuBars();
         });
       return menuBarEl;
     } else {
@@ -671,7 +674,7 @@ export class MenuBar {
         cls: "menu-bar-navigation-dropdown-entries",
       });
 
-      for (const path of pathArray) {
+      for (let path of pathArray) {
         this.createNavDropdownEntry(path, dropdownEntries);
       }
 
@@ -876,7 +879,7 @@ export class MenuBar {
               "menuBar.selectButton.setTooltip select active region",
             ),
           )
-          .onClick(() => {
+          .onClick(async () => {
             if (activeRegion) {
               this.plugin.settingsTabFunctions.selectActiveRegion(
                 this.flowName,
@@ -901,9 +904,9 @@ export class MenuBar {
         )
         .onClick(async () => {
           if (this.plugin.settings.flows[this.flowName].embed) {
-            await this.plugin.settingsTabFunctions.exportEmbed(this.flowName);
+            this.plugin.settingsTabFunctions.exportEmbed(this.flowName);
           } else {
-            await this.plugin.settingsTabFunctions.exportFlow(this.flowName);
+            this.plugin.settingsTabFunctions.exportFlow(this.flowName);
           }
         });
 
@@ -935,8 +938,8 @@ export class MenuBar {
               : true;
 
             this.plugin.settings.flows[this.flowName].embed = toggledValue;
-            await this.plugin.saveSettings();
-            await this.plugin.settingsTabFunctions.flowBuildingBundle(
+            this.plugin.saveSettings();
+            this.plugin.settingsTabFunctions.flowBuildingBundle(
               this.flowName,
               "switcher",
             );
@@ -955,12 +958,12 @@ export class MenuBar {
             ? this.plugin.t("menubar Collapse")
             : this.plugin.t("menubar Collapse warn"),
         )
-        .onClick(async () => {
+        .onClick(() => {
           this.plugin.settings.activeRegions[this.flowName][
             this.leafID
           ].leafMenuBarSettings.menuBarDisplayState = "min";
-          await this.plugin.saveSettings();
-          await this.plugin.refreshMenuBars();
+          this.plugin.saveSettings();
+          this.plugin.refreshMenuBars();
         });
 
       // there we go.
