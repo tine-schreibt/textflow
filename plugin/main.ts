@@ -748,6 +748,7 @@ export default class TextFlowPlugin extends Plugin {
   };
 
   // ----- this is called onload and sets the visibility of textFlowSystemFolderName
+  // rewritten by Claude to do the styles.css thing
   discernAndSetSystemFolderState = (): void => {
     const systemFolderPath = this.settings.systemFolderPath;
     const systemFolderHidden = this.settings.systemFolderHidden;
@@ -1168,37 +1169,42 @@ ${pseudoElement}
   // ---------------- Functions: Listener helper functions -------------------------
 
   // this little thing was written by Claude and painstakingly fixed by me
-  getUniqueFileName = (
-    basePath: string,
-    inputName: string = "_untitled",
-  ): string => {
-    // Strip .md suffix if present so we can control it ourselves
-    const nakedName = inputName.endsWith(".md")
-      ? inputName.slice(0, -3)
-      : inputName;
+  getUniqueFileName = (basePath: string, inputName: string = "_untitled") => {
+    let number = 0;
+    let fullPath = "";
+    let nakedName = "";
 
-    if (basePath === ".") {
-      basePath = "";
+    if (inputName.endsWith(".md")) {
+      // if it has a suffix, remove it, so we can append numbers
+      nakedName = inputName.slice(0, inputName.length - 3);
+    } else {
+      nakedName = inputName;
     }
 
-    // Check base name first
-    const baseCandidatePath = normalizePath(`${basePath}/${nakedName}.md`);
-    if (!this.app.vault.getAbstractFileByPath(baseCandidatePath)) {
-      return baseCandidatePath;
+    fullPath = normalizePath(`${basePath}/${nakedName}.md`);
+
+    // check if the path does exist and return name if it doesn't
+    if (!this.app.vault.getAbstractFileByPath(`${fullPath}`)) {
+      return `${nakedName}`;
     }
 
-    // Increment until we find a free slot
-    let number = 1;
-    while (true) {
-      const candidatePath = normalizePath(
-        `${basePath}/${nakedName} ${number}.md`,
-      );
-      if (!this.app.vault.getAbstractFileByPath(candidatePath)) {
-        console.log("candidatePath:", candidatePath);
-        return candidatePath;
+    let countedUpName = `${nakedName} ${number}`;
+
+    // Otherwise we iterate until we hit a name that's not taken yet
+    const iteratePaths = (fullPath: string) => {
+      number += 1;
+      countedUpName = `${nakedName} ${number}`;
+
+      fullPath = normalizePath(`${basePath}/${countedUpName}.md`);
+
+      if (!this.app.vault.getAbstractFileByPath(`${fullPath}`)) {
+        return `${countedUpName}`;
+      } else {
+        iteratePaths(fullPath);
       }
-      number++;
-    }
+    };
+    iteratePaths(fullPath);
+    return `${countedUpName}`
   };
 
   // ---------------- Functions: Listeners: Global -----------------
@@ -1288,7 +1294,10 @@ ${pseudoElement}
                 parentFolder = dirname(normalisedPath);
               }
 
-              const newFilePath = this.getUniqueFileName(parentFolder);
+              const newFileName = this.getUniqueFileName(parentFolder);
+              const newFilePath = normalizePath(
+                `/${parentFolder}/${newFileName}.md`,
+              );
 
               await this.app.vault.create(newFilePath, "");
               const leaf = this.app.workspace.getLeaf("tab");
