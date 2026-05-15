@@ -27,7 +27,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     this.plugin = plugin;
   }
 
-  display = async () => {
+  display = () => {
     const { containerEl } = this;
     containerEl.empty();
 
@@ -43,7 +43,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       this.plugin.settings.systemFolderPath = systemFolder.path;
     }
     let newSystemFolderParent = "";
-    const setSystemFolder = new Setting(setUpTextFlow)
+    const setSystemFolder = new Setting(setUpTextFlow);
+    setSystemFolder
       .setName(
         this.plugin.t("setSystemFolder.setName choose existing folder", {
           textFlowSystemFolderName: this.plugin.textFlowSystemFolderName,
@@ -75,7 +76,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               ? normalizePath(dirname(this.plugin.settings.systemFolderPath))
               : "/",
           )
-          .onChange(async (value) => {
+          .onChange((value) => {
             newSystemFolderParent = normalizePath(value);
           }),
       )
@@ -96,7 +97,9 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             );
             this.plugin.settings.systemFolderPath = newPath;
 
-            this.plugin.saveSettings();
+            await this.plugin
+              .saveSettings()
+              
 
             // Create SystemFolder
             if (!systemFolder) {
@@ -179,7 +182,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         dropdown.onChange(async (value) => {
           this.plugin.settings.menuBarDefault =
             value as Types.MenuBarDisplayState;
-          this.plugin.saveSettings();
+          await this.plugin.saveSettings();
         });
       });
 
@@ -217,7 +220,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         dropdown.setValue(this.plugin.settings.switcherPos);
         dropdown.onChange(async (value) => {
           this.plugin.settings.switcherPos = value;
-          this.plugin.saveSettings();
+          await this.plugin.saveSettings();
         });
       });
 
@@ -271,12 +274,15 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     updateHeadlineDisplay(this.plugin.settings.explorerDecoStyle);
 
     // Handle dropdown toggle
-    const toggleDropdown = async (event: MouseEvent) => {
+    const toggleDropdown = (event: MouseEvent) => {
       event.preventDefault();
       event.stopPropagation();
       const isOpen = flowModeExplorerDecoContainer.classList.contains("show");
       flowModeExplorerDecoContainer.classList.toggle("show");
       this.plugin.settings.explorerDecoDropdownOpen = !isOpen;
+      void this.plugin
+        .saveSettings()
+        .catch((err) => console.error("Saving settings failed:", err));
     };
 
     flowModeExplorerDecoHeadline.addEventListener("click", toggleDropdown);
@@ -296,7 +302,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         cls: entry[3],
       });
 
-      explorerDecoEntry.addEventListener("click", async (event: MouseEvent) => {
+      explorerDecoEntry.addEventListener("click", (event: MouseEvent) => {
         event.preventDefault();
         event.stopPropagation();
         this.plugin.settings.explorerDecoStyle = entry;
@@ -304,12 +310,14 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         flowModeExplorerDecoContainer.classList.remove("show");
         updateHeadlineDisplay(entry);
         this.plugin.decorateSourceNotes("redo");
-        this.plugin.saveSettings();
+        void this.plugin
+          .saveSettings()
+          .catch((err) => console.error("Saving settings failed:", err));
       });
     });
 
     // Handle outside clicks
-    const handleOutsideClick = async (event: MouseEvent) => {
+    const handleOutsideClick = (event: MouseEvent) => {
       if (!dropdownContainer.contains(event.target as HTMLElement)) {
         flowModeExplorerDecoContainer.classList.remove("show");
         this.plugin.settings.explorerDecoDropdownOpen = false;
@@ -372,7 +380,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.settings.activeRegionHighlight = value;
             this.plugin.decorateSourceNotes("update");
-            this.plugin.saveSettings();
+            await this.plugin.saveSettings();
           });
       });
 
@@ -392,7 +400,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     const qolSettings = qol.createDiv();
 
     // -------------- Navigation listener -----------------
-    const navListener = new Setting(qol)
+    const navListener = new Setting(qol);
+    navListener
       .setName(this.plugin.t("qol.navListener.setName enable explorer nav"))
       .setDesc(
         createFragment((desc) => {
@@ -408,7 +417,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .setValue(this.plugin.settings.explorerListener)
           .onChange(async (value) => {
             this.plugin.settings.explorerListener = value;
-            this.plugin.saveSettings();
+            await this.plugin.saveSettings();
           });
       });
 
@@ -437,7 +446,8 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
 });*/
 
     // ------------- scrollbar ------------
-    const scrollbar = new Setting(qol)
+    const scrollbar = new Setting(qol);
+    scrollbar
       .setName(this.plugin.t("qol.scrollbar.setName hide scroll bar"))
       .setDesc(
         createFragment((desc) => {
@@ -475,13 +485,16 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
           .setValue(this.plugin.settings.hideScrollbar)
           .onChange(async (value) => {
             this.plugin.settings.hideScrollbar = value;
-            this.plugin.settingsTabFunctions.updateScrollbarVisibility();
-            this.plugin.saveSettings();
+            await this.plugin.settingsTabFunctions
+              .updateScrollbarVisibility()
+             
+            await this.plugin.saveSettings();
           });
       });
 
     // ----------- hash ---------------
-    const checkForExternalEdits = new Setting(qol)
+    const checkForExternalEdits = new Setting(qol);
+    checkForExternalEdits
       .setName(this.plugin.t("qol.hash.setName hash?"))
       .setDesc(
         createFragment((desc) => {
@@ -520,9 +533,9 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
             "no",
             this.plugin.t("qol.hash.addDropdown.addOption.1 don't check"),
           )
-          .addOption("mtime", "mtime")
-          .addOption("mtime+hash", "mitme + hash")
-          .addOption("always hash", "hash")
+          .addOption("mtime", "Mtime")
+          .addOption("mtime+hash", "Mitme + hash")
+          .addOption("always hash", "Hash")
           .setValue(this.plugin.settings.checkExternalEdits)
           .onChange(async (value) => {
             if (
@@ -530,9 +543,9 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
               !this.plugin.settings.checkExternalEdits.includes("hash") &&
               value.includes("hash")
             ) {
-              Object.keys(this.plugin.settings.flows).forEach((flowName) => {
-                this.plugin.initialHashing(flowName);
-              });
+              for (const flowName of Object.keys(this.plugin.settings.flows)) {
+                await this.plugin.initialHashing(flowName);
+              }
             } else if (
               // if they stop using hashes, delete the record to prevent stale data
               this.plugin.settings.checkExternalEdits.includes("hash") &&
@@ -546,12 +559,15 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
             this.plugin.settings.checkExternalEdits =
               value as Types.ExternalEditsType;
 
-            this.plugin.saveSettings();
+            await this.plugin
+              .saveSettings()
+             
           });
       });
 
     // ----------- hide system folder ---------------
-    const hidesystemFolder = new Setting(qol)
+    const hidesystemFolder = new Setting(qol);
+    hidesystemFolder
       .setName(
         this.plugin.t("qol.showsystemFolder.setName show system folder", {
           textFlowSystemFolderName: this.plugin.textFlowSystemFolderName,
@@ -578,7 +594,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
           .onChange(async (value) => {
             this.plugin.settings.systemFolderHidden = !value;
 
-            this.plugin.saveSettings();
+            await this.plugin.saveSettings();
 
             if (this.plugin.settings.systemFolderPath) {
               this.plugin.discernAndSetSystemFolderState();
@@ -587,7 +603,8 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
       });
 
     // --------- MAIN TOGGLE EMBEDS ------------------
-    const _toggleEmbed = new Setting(qol)
+    const toggleEmbed = new Setting(qol);
+    toggleEmbed
       .setName(this.plugin.t("toggleEmbed main toggle name"))
       .setDesc(
         createFragment((desc) => {
@@ -612,22 +629,22 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
               }
             }
             this.plugin.settings.embeds = value;
-            this.plugin.saveSettings();
+            await this.plugin.saveSettings();
             this.display();
           });
       });
 
     // -------- CREATE / EDIT FLOWS ----------------
-    const createFlows = containerEl.createDiv({
-      cls: "headline-container",
-    });
-    createFlows.createEl("h3", {
-      text: this.plugin.t("createFlows.createEl.text define a new flow"),
-      cls: "headline-text",
-    });
+    const createFlows = containerEl.createDiv({});
+
+    const createFlowsHeadline = new Setting(createFlows);
+    createFlowsHeadline
+      .setName(this.plugin.t("createFlows.createEl.text define a new flow"))
+      .setHeading();
 
     //--------- FLOW NAME -----------------
-    const chooseFlowName = new Setting(createFlows)
+    const chooseFlowName = new Setting(createFlows);
+    chooseFlowName
       .setName(
         this.plugin.t("createFlows.chooseFlowName.setName name your flow"),
       )
@@ -659,7 +676,8 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
     });
 
     // --------- FOLDER TITLES ------------------
-    const _toggleFolderTitles = new Setting(createFlows)
+    const toggleFolderTitles = new Setting(createFlows);
+    toggleFolderTitles
       .setName(
         this.plugin.t(
           "toggleFolderTitles.setName include folder / bookmark group titles",
@@ -675,25 +693,28 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
           .setValue(this.plugin.settings.flowBuildBasket.folderTitles)
           .onChange(async (value) => {
             this.plugin.settings.flowBuildBasket.folderTitles = value;
+            await this.plugin.saveSettings();
           });
       });
 
     // --------- TOGGLE EMBEDS ------------------
     if (this.plugin.settings.embeds) {
-      const _toggleEmbed = new Setting(createFlows)
+      const toggleEmbed = new Setting(createFlows);
+      toggleEmbed
         .setName(this.plugin.t("toggleEmbed name"))
         .addToggle((sortToggle) => {
           sortToggle
             .setValue(this.plugin.settings.flowBuildBasket.embed ?? false)
             .onChange(async (value) => {
               this.plugin.settings.flowBuildBasket.embed = value;
-              this.plugin.saveSettings();
+              await this.plugin.saveSettings();
             });
         });
     }
 
     //------- DEFINE FLOW --------------------
-    const defineFlow = new Setting(createFlows)
+    const defineFlow = new Setting(createFlows);
+    defineFlow
       .setName(this.plugin.t("defineFlow.setName define your flow"))
       .setDesc(
         createFragment((desc) => {
@@ -715,14 +736,16 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
     // Just creating and styling the buttons; the dependent UI and .onClick behaviour
     // are below the input element setup because I want to keep the hide/show with its elements
 
-    buttons.dvQuery = new ButtonComponent(radioButtonContainer)
+    buttons.dvQuery = new ButtonComponent(radioButtonContainer);
+    buttons.dvQuery
       .setButtonText(this.plugin.t("buttons.dvQuery.setButtonText by dvQuery"))
       .setClass("settings-radio-button");
     if (this.plugin.settings.flowBuildBasket.definitionMode === "dvQuery") {
       buttons.dvQuery.buttonEl.addClass("settings-radio-button-active");
     }
 
-    buttons.foldersTagsProps = new ButtonComponent(radioButtonContainer)
+    buttons.foldersTagsProps = new ButtonComponent(radioButtonContainer);
+    buttons.foldersTagsProps
       .setButtonText(
         this.plugin.t(
           "buttons.foldersTagsProps.setButtonText by folders, tags, props",
@@ -737,7 +760,8 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
       );
     }
 
-    buttons.bookmarks = new ButtonComponent(radioButtonContainer)
+    buttons.bookmarks = new ButtonComponent(radioButtonContainer);
+    buttons.bookmarks
       .setButtonText(
         this.plugin.t("buttons.bookmarks.setButtonText by bookmark group"),
       )
@@ -1288,7 +1312,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
       setBookmarksGroup.onChange(async (value) => {
         this.plugin.settings.flowBuildBasket.flowDefinition.bookmarks =
           value.trim();
-        await this.plugin.settingsTabFunctions.debouncedSaveSettings();
+        this.plugin.settingsTabFunctions.debouncedSaveSettings();
       });
     });
 
@@ -1306,6 +1330,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
     // onClick for the foldersTagsProps button
     buttons.foldersTagsProps.onClick(async () => {
       this.plugin.settings.flowBuildBasket.definitionMode = "foldersTagsProps";
+      await this.plugin.saveSettings();
       this.plugin.settingsTabFunctions.radioButtonManager(
         buttons.foldersTagsProps,
         buttons.bookmarks,
@@ -1333,6 +1358,8 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
     buttons.bookmarks.onClick(async () => {
       // set correct definition mode and show/hide correct elements
       this.plugin.settings.flowBuildBasket.definitionMode = "bookmarks";
+      await this.plugin.saveSettings();
+
       // update button
       this.plugin.settingsTabFunctions.radioButtonManager(
         buttons.bookmarks,
@@ -1361,6 +1388,8 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
     buttons.dvQuery.onClick(async () => {
       // set correct definition mode and show/hide correct elements
       this.plugin.settings.flowBuildBasket.definitionMode = "dvQuery";
+      await this.plugin.saveSettings();
+
       // update button
       this.plugin.settingsTabFunctions.radioButtonManager(
         buttons.dvQuery,
@@ -1429,7 +1458,10 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
         }
 
         // check if the user is renaming a flow
-        this.plugin.settingsTabFunctions.renameFlow();
+        await this.plugin.settingsTabFunctions
+          .renameFlow()
+         
+          
 
         // checks and flow creation
         const validation = this.plugin.settingsTabFunctions.isValidFlowName(
@@ -1453,11 +1485,15 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
         );
 
         // (re)build
-        this.plugin.settingsTabFunctions.flowBuildingBundle(
-          this.plugin.settings.flowBuildBasket.flowName,
-          "settingsTab",
-        );
-        this.plugin.refreshMenuBars();
+        await this.plugin.settingsTabFunctions
+          .flowBuildingBundle(
+            this.plugin.settings.flowBuildBasket.flowName,
+            "settingsTab",
+          )
+          
+        await this.plugin
+          .refreshMenuBars()
+         
 
         // update overlaps,
         this.plugin.settingsTabFunctions.syncOverlaps(
@@ -1499,13 +1535,13 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
       cls: "headline-text",
     });
 
-    let flowsSorted: string[] = [];
+    const flowsSorted: string[] = [];
     Object.keys(this.plugin.settings.flows).forEach((flowName) => {
       flowsSorted.push(flowName);
     });
     flowsSorted.sort((a, b) => a.localeCompare(b));
 
-    for (let flowName of flowsSorted) {
+    for (const flowName of flowsSorted) {
       const shownFlow = this.plugin.settings.flows[flowName];
 
       // --- DISPLAY PREPARATIONS ----------------------------------
@@ -1650,7 +1686,9 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
                 "settingsTab",
               );
 
-              this.plugin.refreshMenuBars();
+              await this.plugin
+                .refreshMenuBars()
+                
               await this.plugin.saveSettings();
               this.display();
             });
@@ -1696,7 +1734,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
                 "flowDisplay.deleteButton.setButtonText delete definition",
               ),
             )
-            .onClick(async () => {
+            .onClick(() => {
               const DeleteFlowDefModal = new Modals.DeleteFlowDefModal(
                 this.app,
                 this.plugin,
@@ -1709,7 +1747,8 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
     }
 
     //------------------------------
-    const restoreSettings = new Setting(flowDisplay)
+    const restoreSettings = new Setting(flowDisplay);
+    restoreSettings
       .setName(this.plugin.t("restoreSettings.setName restore definitions"))
       .setDesc(
         createFragment((desc) => {
@@ -1730,7 +1769,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
             this.plugin.t("restoreSettings.setButtonText copy to vault"),
           )
           .onClick(async () => {
-            this.plugin.settingsTabFunctions.backupFlowDefs();
+            await this.plugin.settingsTabFunctions.backupFlowDefs();
             new Notice(
               this.plugin.t("restoreSettings.notice .json has been copied"),
             );
@@ -1743,7 +1782,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
           .setButtonText(
             this.plugin.t("restoreSettings.setButtonText restore definitions"),
           )
-          .onClick(async () => {
+          .onClick(() => {
             new Modals.RestoreFlowDefModal(this.app, this.plugin, this).open();
           });
       });

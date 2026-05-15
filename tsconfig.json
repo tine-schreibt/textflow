@@ -16,9 +16,15 @@
     "rootDir": "plugin",
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "typeRoots": ["./node_modules/@types", "./types"],
-    "types": ["node"],
+    "typeRoots": ["./node_modules/@types", "./types", "./node_modules"],
+    "types": ["node", "obsidian-dataview"],
     "resolveJsonModule": true
   },
-  "include": ["plugin/**/*", "tsconfig.json", "plugin/main.ts", "plugin/src"]
+  "include": [
+    "plugin/src/**/*",
+    "plugin/**/*",
+    "tsconfig.json",
+    "plugin/main.ts",
+    "plugin/src"
+  ]
 }

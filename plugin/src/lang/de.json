@@ -4,6 +4,8 @@
     "prefixes": "Zahlen für fragments, alt für conditionals"
   },
 
+  "Ribbon Icon Open flowSwitcher": "FlowSwitcher öffnen",
+
   "-------- SETTINGS TAB": "Die class für die settings.-------------",
 
   "basicSettings.headline": "Basic",
