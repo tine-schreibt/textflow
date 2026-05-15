@@ -149,6 +149,7 @@ class StatsOverlay {
       cls: "textflow-loading-container",
     });
 
+    const symbol = this.plugin.settingsTabFunctions.explorerDecoArray[0][0];
     this.progressText = this.container.createDiv({
       cls: "textflow-loading-text",
       text: this.t("main.statsOverlay initial notice", {
@@ -325,6 +326,7 @@ export default class TextFlowPlugin extends Plugin {
       ) {
         // defer to reality and update settings
         if (!this.settings.systemFolderPath) return;
+        const oldPath = this.settings.systemFolderPath;
         this.settings.systemFolderPath = systemFolder.path;
 
         if (this.settings.flows) {
@@ -498,7 +500,7 @@ export default class TextFlowPlugin extends Plugin {
       name: this.t("main.registerCommand rebuild active leaf"),
       editorCheckCallback: (
         checking: boolean,
-        _editor: Editor,
+        editor: Editor,
         ctx: MarkdownView | MarkdownFileInfo,
       ) => {
         if (!(ctx instanceof MarkdownView)) return false;
@@ -576,7 +578,7 @@ export default class TextFlowPlugin extends Plugin {
       name: this.t("main.registerCommand toggle menu bar"),
       editorCheckCallback: (
         checking: boolean,
-        _editor: Editor,
+        editor: Editor,
         ctx: MarkdownView | MarkdownFileInfo,
       ) => {
         if (!(ctx instanceof MarkdownView)) return false;
@@ -613,7 +615,7 @@ export default class TextFlowPlugin extends Plugin {
       name: this.t("main.registerCommand export active flow"),
       editorCheckCallback: (
         checking: boolean,
-        _editor: Editor,
+        editor: Editor,
         ctx: MarkdownView | MarkdownFileInfo,
       ) => {
         if (!(ctx instanceof MarkdownView)) return false;
@@ -637,7 +639,7 @@ export default class TextFlowPlugin extends Plugin {
       name: this.t("main.registerCommand rebuild as opposite type"),
       editorCheckCallback: (
         checking: boolean,
-        _editor: Editor,
+        editor: Editor,
         ctx: MarkdownView | MarkdownFileInfo,
       ) => {
         if (!(ctx instanceof MarkdownView)) return false;
@@ -668,7 +670,7 @@ export default class TextFlowPlugin extends Plugin {
       name: this.t("main.registerCommand select active region"),
       editorCheckCallback: (
         checking: boolean,
-        _editor: Editor,
+        editor: Editor,
         ctx: MarkdownView | MarkdownFileInfo,
       ) => {
         if (!(ctx instanceof MarkdownView)) return false;
@@ -708,7 +710,7 @@ export default class TextFlowPlugin extends Plugin {
       name: this.t("main.registerCommand restore most recent cursor"),
       editorCheckCallback: (
         checking: boolean,
-        _editor: Editor,
+        editor: Editor,
         ctx: MarkdownView | MarkdownFileInfo,
       ) => {
         if (!(ctx instanceof MarkdownView)) return false;
@@ -790,6 +792,8 @@ export default class TextFlowPlugin extends Plugin {
     const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (activeView) {
       if (activeView.file) {
+        const activeLeafPath = activeView.file.path;
+
         const leafID = this.settingsTabFunctions.getLeafID(activeView.leaf);
 
         for (let flowName of Object.keys(this.settings.activeRegions)) {
@@ -849,6 +853,7 @@ export default class TextFlowPlugin extends Plugin {
         unsyncedSymbol = this.settings.explorerDecoStyle[1];
       }
       const neutralStyle = this.settings.explorerDecoStyle[2];
+      const unsyncedStyle = this.settings.explorerDecoStyle[3];
 
       let pseudoElement = "";
       let activeColour = "";
@@ -1099,6 +1104,7 @@ ${pseudoElement}
     let path = "";
     let handledPathsArray: string[] = [];
 
+    type DecoStyle = "neutral" | "unsynced" | "none";
     // ------ all the helper functions used -------
     const handlePath = (path: string) => {
       let successivePath = "";
@@ -1135,6 +1141,7 @@ ${pseudoElement}
     };
 
     // -------- THE LOGIC -----------------
+    const handledPaths: { [key: string]: boolean } = {};
     Object.keys(this.settings.flows).forEach((flowName) => {
       for (path of Object.keys(this.settings.flows[flowName].flowMap)) {
         // exclude folder titles
@@ -1229,16 +1236,20 @@ ${pseudoElement}
                   flowNameLoop: for (let flowName of Object.keys(
                     this.settings.flows,
                   )) {
-                    if (!this.settings.flows[flowName].flaggedForRebuild) {
-                      for (let path of Object.keys(
-                        this.settings.flows[flowName].flowMap,
-                      )) {
-                        if (path.startsWith(normalisedPath)) {
-                          this.settings.flows[flowName].flaggedForRebuild =
-                            true;
-                          await this.saveSettings();
-                          // we just need one path, so let's move on to the next flow
-                          continue flowNameLoop;
+                    pathLoop: for (let path of Object.keys(
+                      this.settings.flows[flowName].flowMap,
+                    )) {
+                      if (!this.settings.flows[flowName].flaggedForRebuild) {
+                        for (let path of Object.keys(
+                          this.settings.flows[flowName].flowMap,
+                        )) {
+                          if (path.startsWith(normalisedPath)) {
+                            this.settings.flows[flowName].flaggedForRebuild =
+                              true;
+                            await this.saveSettings();
+                            // we just need one path, so let's move on to the next flow
+                            continue flowNameLoop;
+                          }
                         }
                       }
                     }
@@ -1749,7 +1760,7 @@ ${pseudoElement}
     // ---------------------------------------------------------------
     // Opening/closing/switching of leaves
     this.registerEvent(
-      this.app.workspace.on("active-leaf-change", async (_leaf) => {
+      this.app.workspace.on("active-leaf-change", async (leaf) => {
         // so we skip if the explorerClickListener is already taking care of stuff
         await this.syncAllLeaves();
 
@@ -1801,6 +1812,8 @@ ${pseudoElement}
 
       const cursorListener = ViewPlugin.fromClass(
         class {
+          constructor(view: EditorView) {}
+
           update(update: ViewUpdate) {
             if (!update.selectionSet) return;
 
@@ -1871,6 +1884,8 @@ ${pseudoElement}
 
       const textChangeListener = ViewPlugin.fromClass(
         class {
+          constructor(view: EditorView) {}
+
           update(update: ViewUpdate) {
             if (plugin.settings.flows[flowName].embed) return;
             if (!update.docChanged) return;
@@ -1989,7 +2004,7 @@ ${pseudoElement}
           if (!tr.changes.empty) {
             let shouldReject = false;
 
-            tr.changes.iterChanges((fromA, toA, _fromB, _toB, _inserted) => {
+            tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
               const windowStart = Math.max(0, fromA - 60);
               const windowEnd = Math.min(tr.startState.doc.length, toA + 60);
               const windowText = tr.startState.sliceDoc(windowStart, windowEnd);
@@ -2426,7 +2441,7 @@ ${pseudoElement}
         if (activeRegionObject.path) {
           this.lastActiveRegion = activeRegionObject.path;
           this.decorateSourceNotes("update");
-          this.notifyOfOverlap(activeRegionObject.path, flowName);
+          this.notifyOfOverlap(activeRegionObject.path, flowName, leafID);
         }
 
         await this.saveSettings();
@@ -2522,7 +2537,7 @@ ${pseudoElement}
             view.menuBar.refresh(view.contentEl);
           }
           if (activeRegion.path) {
-            this.notifyOfOverlap(activeRegion.path, flowName);
+            this.notifyOfOverlap(activeRegion.path, flowName, leafID);
           }
         } else {
           // if the compass just cirles, set flag to prevent saves and notify the user
@@ -2553,6 +2568,7 @@ ${pseudoElement}
     if (targetObject) {
       if (!this.settings.activeRegions[flowName])
         this.settings.activeRegions[flowName] = {};
+      const { type, invisibleUUID, flowOrder } = targetObject;
       this.settings.activeRegions[flowName][leafID] = {
         currentCursorPos: 0,
         path: path ? path : "",
@@ -2649,7 +2665,7 @@ ${pseudoElement}
       if (!foundRegion) {
       }
       if (foundRegion) {
-        const [foundRegionPath, _foundRegionMap] = foundRegion;
+        const [foundRegionPath, foundRegionMap] = foundRegion;
 
         // put the object together
         const activeRegionObject: Types.ActiveRegion = {
@@ -2690,12 +2706,12 @@ ${pseudoElement}
   ) => {
     // this is just math
     const previousRegion = Object.entries(flow.flowMap).find(
-      ([_previousRegion, previousRegionFlowMapEntry]) =>
+      ([previousRegion, previousRegionFlowMapEntry]) =>
         previousRegionFlowMapEntry.flowOrder === flowOrder - 1,
     );
 
     if (previousRegion) {
-      const [_previousRegionPath, previousRegionMap] = previousRegion;
+      const [previousRegionPath, previousRegionMap] = previousRegion;
       const invisibleUID = previousRegionMap.invisibleUUID;
       const index = text.indexOf(invisibleUID);
       const startPos = index + (invisibleUID + "<hr>").length + 1;
@@ -2727,6 +2743,8 @@ ${pseudoElement}
     if (!view.file) return;
     const leaf = view.leaf;
 
+    const activeLeafPath = view.file.path;
+
     if (leaf?.view instanceof MarkdownView) {
       const view = leaf.view;
       const activeLeafPath = leaf.view.file?.path;
@@ -2735,6 +2753,8 @@ ${pseudoElement}
         const isFlow = this.isFlowFile(activeLeafPath);
         if (isFlow) {
           await this.setUpFlow(isFlow, leaf.view);
+
+          const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
 
           this.mostRecentActiveFlowLeaf = leaf;
           return;
@@ -3277,6 +3297,10 @@ ${pseudoElement}
     if (this.settings.flows[flowName].flaggedForRebuild) return;
     if (this.settings.flows[flowName].embed) return;
 
+    let key = this.settings.flows[flowName].definitionMode
+      ? "bookmarks"
+      : "foldersTagsProps";
+
     // iterating over the paths
     // Use Promise.all for parallel execution:
 
@@ -3526,7 +3550,7 @@ ${pseudoElement}
   };
 
   // ---------------------------------------------------------------
-  notifyOfOverlap = (path: string, activeFlow: string) => {
+  notifyOfOverlap = (path: string, activeFlow: string, leafID: string) => {
     let overlappingFlows: string[] = [];
     for (let flowName of Object.keys(this.settings.activeRegions)) {
       if (
@@ -3615,7 +3639,7 @@ ${pseudoElement}
         this.addRibbonIcon(
           "scroll-text",
           "Open flowSwitcher",
-          (_evt: MouseEvent) => {
+          (evt: MouseEvent) => {
             new Modals.FlowSwitcherModal(this.app, this).open();
           },
         );
@@ -3659,11 +3683,13 @@ ${pseudoElement}
       const targetLeaf = leaves.find(
         (leaf) => this.settingsTabFunctions.getLeafID(leaf) === leafID,
       );
-      if (targetLeaf?.view instanceof MarkdownView) {
-        const cmView = this.settingsTabFunctions.getEditorCM(
-          targetLeaf.view.editor,
-        );
-        if (cmView) this.resetCompartments(leafID, cmView);
+      for (const leaf of leaves) {
+        if (targetLeaf?.view instanceof MarkdownView) {
+          const cmView = this.settingsTabFunctions.getEditorCM(
+            targetLeaf.view.editor,
+          );
+          if (cmView) this.resetCompartments(leafID, cmView);
+        }
       }
     }
 

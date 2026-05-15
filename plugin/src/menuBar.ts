@@ -287,7 +287,7 @@ export class MenuBar {
           },
         });
 
-        this.addManagedListener(dropdownEntry, "click", (_event) => {
+        this.addManagedListener(dropdownEntry, "click", (event) => {
           // scroll into view
           const editor = this.plugin.settingsTabFunctions.getEditor(
             this.associatedView,
@@ -474,8 +474,7 @@ export class MenuBar {
       }
 
       // ----------- REBUILD BUTTON ------------
-      const rebuildButton = new ButtonComponent(menuBarEl);
-      rebuildButton
+      const rebuildButton = new ButtonComponent(menuBarEl)
         .setIcon("rotate-cw")
         .setClass(`menu-bar-button-rebuild-${goRebuild}`)
         .setClass("spacing")
@@ -512,6 +511,7 @@ export class MenuBar {
       }
 
       // If we don't have an active region - we always do, but still - be ready to use the first region
+      const key = this.plugin.settings.flows[this.flowName].definitionMode;
 
       const pathArray = this.getPathArray();
       const firstThingNoteName = this.makeNavPath(pathArray[0]);
@@ -613,7 +613,7 @@ export class MenuBar {
           displayName: `${this.makeNavPath(path)}`,
         }));
 
-        //const iconSpan = navHeadline.createSpan();
+        const iconSpan = navHeadline.createSpan();
         //setIcon(iconSpan, "chevrons-down-up");
 
         const fuse = new Fuse(searchItems, {
@@ -698,7 +698,7 @@ export class MenuBar {
         setIcon(cursorIconSpan, "map-pin");
 
         // the listener to open the dropdown
-        this.addManagedListener(cursorHeadline, "click", (_event) => {
+        this.addManagedListener(cursorHeadline, "click", (event) => {
           if (this.getDropdownState("cursor") === "hide") {
             this.setDropdownState("cursor", "show");
             this.refresh(this.associatedView.contentEl);
@@ -753,16 +753,21 @@ export class MenuBar {
             ]
           ) {
             // create headline entry that's not clickable
-            /*   const cursorDropdownEntryDate = cursorDropdownScrollable.createDiv({
+            const cursorDropdownEntryDate = cursorDropdownScrollable.createDiv({
               cls: `text-emphasis align-off-center`,
               text: this.plugin.t("menubar.cursor history this leaf"),
-            });*/
+            });
 
             // get the sorted cursors for our leaf
             inclusiveCursorArray = this.getAndSortPersistentCursors(true);
 
             // create a div for each
             for (const [index, data] of inclusiveCursorArray.entries()) {
+              const textTimestamp =
+                this.plugin.settings.flows[this.flowName].persistentCursors[
+                  this.leafID
+                ].update;
+
               const cursorDropdownEntryPos = cursorDropdownScrollable.createDiv(
                 {
                   cls: "blah",
@@ -779,7 +784,7 @@ export class MenuBar {
               this.addManagedListener(
                 cursorDropdownEntryPos,
                 "click",
-                (_event) => {
+                (event) => {
                   this.plugin.settingsTabFunctions.scrollToPos(
                     editor,
                     cursorPos,
@@ -796,10 +801,10 @@ export class MenuBar {
             ).length > 1
           ) {
             // create headline entry that's not clickable
-            /* const cursorDropdownEntryDate = cursorDropdownScrollable.createDiv({
+            const cursorDropdownEntryDate = cursorDropdownScrollable.createDiv({
               cls: `text-emphasis align-off-center`,
               text: this.plugin.t("menubar.cursor history other leaves"),
-            });*/
+            });
 
             // get the cursor positions
             exclusiveCursorArray = this.getAndSortPersistentCursors(false);
@@ -819,7 +824,7 @@ export class MenuBar {
               this.addManagedListener(
                 cursorDropdownEntryPos,
                 "click",
-                (_event) => {
+                (event) => {
                   const editor = this.plugin.settingsTabFunctions.getEditor(
                     this.associatedView,
                   );
