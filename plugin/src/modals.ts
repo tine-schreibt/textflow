@@ -238,7 +238,7 @@ export class CreateFlowFromFolder extends Modal {
               ",",
             );
           const excludedArray = [];
-          for (let folder of folderArray) {
+          for (const folder of folderArray) {
             excludedArray.push(`${folder}/`);
           }
           this.plugin.settings.flowBuildBasket.flowDefinition.folderIncluded =
@@ -490,7 +490,8 @@ export class PreviewModal extends Modal {
           if (this.flowBuildBasket.definitionMode === "foldersTagsProps") {
             // if we are not working with bookmarks
             let dashes = "";
-            for (let i = 0; i < ingredientArray.length - 1; i++) dashes += "-";
+            for (let i = 0; i < ingredientArray.length - 1; i++)
+              dashes += "-";
             ingredient = `${dashes} ${
               ingredientArray[ingredientArray.length - 1]
             }`;
@@ -741,7 +742,7 @@ export class RestoreFlowDefModal extends Modal {
 
       flowsSorted.sort((a, b) => a.localeCompare(b));
 
-      for (let flowName of flowsSorted) {
+      for (const flowName of flowsSorted) {
         const shownFlow = parsedJson[flowName];
 
         // --- DISPLAY PREPARATIONS ----------------------------------
@@ -1167,7 +1168,7 @@ export class FlowSwitcherModal extends Modal {
     });
 
     // container for each flow's two parts: header with its buttons and the regions with their buttons
-    for (let activeFlow of sortActiveRegionsArray) {
+    for (const activeFlow of sortActiveRegionsArray) {
       const activeFlowEntry = activeFlowContainer.createDiv({
         cls: "flow-switch-modal-active-entry",
       });
@@ -1455,7 +1456,7 @@ export class FlowSwitcherModal extends Modal {
 
     let inactiveRegionBorderColorCounter = 0;
     // container for each flow's two parts: header and regions
-    for (let inactiveFlow of sortedInactiveFlowArray) {
+    for (const inactiveFlow of sortedInactiveFlowArray) {
       inactiveRegionBorderColorCounter += 1;
       let inactiveRegionBorderColorCalculator =
         inactiveRegionBorderColorCounter % 2;

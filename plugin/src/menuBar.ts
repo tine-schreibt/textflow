@@ -80,7 +80,7 @@ export class MenuBar {
             this.plugin.settings.flows[this.flowName].persistentCursors[leafID]
               .cursors
           ) {
-            for (let cursor of this.plugin.settings.flows[this.flowName]
+            for (const cursor of this.plugin.settings.flows[this.flowName]
               .persistentCursors[leafID].cursors) {
               if (cursor[1] === 0 && zeroCursor) continue;
               cursorArray.push(cursor);
@@ -685,7 +685,7 @@ export class MenuBar {
         cls: "menu-bar-navigation-dropdown-entries",
       });
 
-      for (let path of pathArray) {
+      for (const path of pathArray) {
         this.createNavDropdownEntry(path, dropdownEntries);
       }
 

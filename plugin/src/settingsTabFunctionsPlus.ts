@@ -541,11 +541,11 @@ export class settingsTabFunctions {
     // the following line is slop
     const filteredPathObject: { [key: string]: boolean } = {};
 
-    for (let note of allNotes.value.values) {
+    for (const note of allNotes.value.values) {
       filteredPathObject[note.path] = true;
     }
 
-    for (let path of sortedFilePathArray) {
+    for (const path of sortedFilePathArray) {
       // remove entries that are in the systemFolder
       if (path.startsWith(`${this.plugin.settings.systemFolderPath}`)) continue;
       if (filteredPathObject[path] && !finalPathArray.includes(path)) {
@@ -705,7 +705,7 @@ export class settingsTabFunctions {
       const nonEmptyFolderExclusionArray = folderExclusionArray
         .map((x) => x.trim())
         .filter((x) => x.length > 0);
-      for (let excludedFolder of nonEmptyFolderExclusionArray) {
+      for (const excludedFolder of nonEmptyFolderExclusionArray) {
         let cleanExcludedPath = normalizePath(excludedFolder.trim());
         cleanFolderExclusionArray.push(cleanExcludedPath);
       }
@@ -819,7 +819,7 @@ export class settingsTabFunctions {
     // a global to ship stuff between functions
     let finalPathArray: string[] = [];
 
-    for (let dvInclusionTuple of flowBuildBasket.dataviewSearchArray) {
+    for (const dvInclusionTuple of flowBuildBasket.dataviewSearchArray) {
       const dvPath = dvInclusionTuple[0].trim();
       let allNotes = await dv.pages(dvPath);
 
@@ -884,11 +884,11 @@ export class settingsTabFunctions {
       // USE FILTERED LIST TO NARROW DOWN SORTED LIST --------------------------
       // put the paths into an object to speed up things
       const filteredPathObject: { [key: string]: boolean } = {};
-      for (let note of filteredNotes) {
+      for (const note of filteredNotes) {
         filteredPathObject[(note as Types.DVNote).file.path] = true;
       }
       // now filter
-      for (let path of sortedFilePathArray) {
+      for (const path of sortedFilePathArray) {
         if (filteredPathObject[path] && !finalPathArray.includes(path)) {
           finalPathArray.push(path);
         }
@@ -961,7 +961,7 @@ export class settingsTabFunctions {
     let arrayWithFolderTitles: string[] = [];
     let lastParentFolder = "";
 
-    for (let currentPath of finalPathArray) {
+    for (const currentPath of finalPathArray) {
       // Split current and last path into segments
       const currentPathSegments = currentPath.split("/");
 
@@ -1241,7 +1241,7 @@ export class settingsTabFunctions {
     const overlapObject: Types.OverlapObject = {};
     const key = Object.keys(flowBuildBasket.flowNotesPathArray)[0];
     if (Object.keys(this.plugin.settings.flows).length >= 1) {
-      flowLoop: for (let referenceFlow in this.plugin.settings.flows) {
+      flowLoop: for (const referenceFlow in this.plugin.settings.flows) {
         if (
           referenceFlow != flowBuildBasket.oldFlowName &&
           referenceFlow != flowBuildBasket.flowName &&
@@ -1513,7 +1513,7 @@ export class settingsTabFunctions {
     // Info exange with the progress bar for toast and overlay
     let counter = 0;
     const total = flowNotesPathArray.length;
-    for (let path of flowNotesPathArray) {
+    for (const path of flowNotesPathArray) {
       // create update the progress bar
       counter++;
       if (caller === "settingsTab") {
@@ -1761,7 +1761,7 @@ export class settingsTabFunctions {
       const initialIdentifierArray = identifier.split("-");
       const base9IdentifierArray: string[] = [];
       // this transformer is all AI
-      for (let hexNumber of initialIdentifierArray) {
+      for (const hexNumber of initialIdentifierArray) {
         const numberIdentifier = parseInt(hexNumber, 16);
         const base9 = numberIdentifier.toString(9);
         const transformedIdentifier = [...base9]
@@ -1790,7 +1790,7 @@ export class settingsTabFunctions {
   backupFlowDefs = async () => {
     let datedFlows: { [key: string]: Types.FlowDef } = {};
 
-    for (let flowName of Object.keys(this.plugin.settings.flows)) {
+    for (const flowName of Object.keys(this.plugin.settings.flows)) {
       const currentDate = this.plugin.settingsTabFunctions.getTimestamp();
       const backupName = `${flowName}*${currentDate}`;
       datedFlows[backupName] = structuredClone(
@@ -2118,7 +2118,7 @@ export class settingsTabFunctions {
 
       // then check for container classes
       const allLeaves = this.app.workspace.getLeavesOfType("markdown");
-      for (let leaf of allLeaves) {
+      for (const leaf of allLeaves) {
         await leaf.loadIfDeferred();
         if (leaf.view instanceof MarkdownView && leaf.view.file) {
           // check if it's a flow

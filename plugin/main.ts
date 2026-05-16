@@ -307,7 +307,14 @@ export default class TextFlowPlugin extends Plugin {
   // ---------------------------------------------------------------
   // see also: discernAndSetSystemFolderState for UI
   ensureSystemFolder = async () => {
-    if (this.settings.firstLaunch) return;
+    console.log(
+      "ensuring system folder while hidden = ",
+      this.settings.systemFolderHidden,
+    );
+    if (this.settings.firstLaunch) {
+      this.settings.firstLaunch = false;
+      return;
+    }
 
     const systemFolder = this.app.vault
       .getAllLoadedFiles()
@@ -318,8 +325,9 @@ export default class TextFlowPlugin extends Plugin {
       );
 
     if (systemFolder) {
+      console.log("found system folder");
       // if there is a systemFolder
-      this.discernAndSetSystemFolderState();
+      await this.discernAndSetSystemFolderState();
       if (
         // but expected path doesn't agree with actual place/path
         this.settings.systemFolderPath != systemFolder.path
@@ -338,11 +346,12 @@ export default class TextFlowPlugin extends Plugin {
         }
       }
     } else {
+      console.log("No system folder found");
       if (this.settings.systemFolderPath) {
         await this.settingsTabFunctions.createSystemFolder(
           this.settings.systemFolderPath,
         );
-        this.discernAndSetSystemFolderState();
+        await this.discernAndSetSystemFolderState();
       } else {
         new Notice(this.t("sysFolder please setup"));
       }
@@ -425,7 +434,7 @@ export default class TextFlowPlugin extends Plugin {
 
         if (!checkExternalEdits) {
           if (!checking) {
-            for (let flowName of Object.keys(this.settings.flows)) {
+            for (const flowName of Object.keys(this.settings.flows)) {
               this.settings.flows[flowName].flaggedForRebuild = true;
             }
             void this.saveSettings().catch((err) =>
@@ -460,7 +469,7 @@ export default class TextFlowPlugin extends Plugin {
             const changeArray: string[] = [];
             // since the function returns a promise, we need to wrap it in async:
 
-            for (let flowName of Object.keys(this.settings.flows)) {
+            for (const flowName of Object.keys(this.settings.flows)) {
               if (this.settings.flows[flowName].embed) continue;
 
               const changes = void this.checkStatsForFlow(flowName).catch(
@@ -777,7 +786,11 @@ export default class TextFlowPlugin extends Plugin {
   // ----- this is called onload and sets the visibility of textFlowSystemFolderName
   // rewritten by Claude to do the styles.css thing
   // ----- this is called onload and sets the visibility of textFlowSystemFolderName
-  discernAndSetSystemFolderState = (): void => {
+  discernAndSetSystemFolderState = async () => {
+    console.log(
+      "discerning and setting system folder state to: ",
+      this.settings.systemFolderHidden,
+    );
     const systemFolderPath = this.settings.systemFolderPath;
     const systemFolderHidden = this.settings.systemFolderHidden;
 
@@ -848,7 +861,7 @@ export default class TextFlowPlugin extends Plugin {
 
         const leafID = this.settingsTabFunctions.getLeafID(activeView.leaf);
 
-        for (let flowName of Object.keys(this.settings.activeRegions)) {
+        for (const flowName of Object.keys(this.settings.activeRegions)) {
           if (this.settings.activeRegions[flowName][leafID]) {
             activeRegionPath =
               this.settings.activeRegions[flowName][leafID].path;
@@ -860,7 +873,7 @@ export default class TextFlowPlugin extends Plugin {
     // ------ all the helper functions used -------
     const handlePath = (path: string, decoStyle: Types.DecoStyle) => {
       let successivePath = "";
-      for (let fragment of path.split("/")) {
+      for (const fragment of path.split("/")) {
         if (!fragment.endsWith(".md")) {
           successivePath += `${fragment}/`;
         } else {
@@ -1108,7 +1121,7 @@ ${pseudoElement}
       flowArray = Object.keys(this.settings.activeRegions);
     }
 
-    for (let flowName of flowArray) {
+    for (const flowName of flowArray) {
       // get the file list
       for (path of Object.keys(this.settings.flows[flowName].flowMap)) {
         // exclude folder titles
@@ -1160,7 +1173,7 @@ ${pseudoElement}
     // ------ all the helper functions used -------
     const handlePath = (path: string) => {
       let successivePath = "";
-      for (let fragment of path.split("/")) {
+      for (const fragment of path.split("/")) {
         if (!fragment.endsWith(".md")) {
           successivePath += `${fragment}/`;
         } else {
@@ -1279,7 +1292,7 @@ ${pseudoElement}
 
                 if (file instanceof TFile) {
                   // if it's a file, search for the path
-                  for (let flowName of Object.keys(this.settings.flows)) {
+                  for (const flowName of Object.keys(this.settings.flows)) {
                     if (
                       !this.settings.flows[flowName].flaggedForRebuild &&
                       this.settings.flows[flowName].flowMap[normalisedPath]
@@ -1290,14 +1303,14 @@ ${pseudoElement}
                   }
                 } else {
                   // if it's a folder
-                  flowNameLoop: for (let flowName of Object.keys(
+                  flowNameLoop: for (const flowName of Object.keys(
                     this.settings.flows,
                   )) {
-                    pathLoop: for (let path of Object.keys(
+                    pathLoop: for (const path of Object.keys(
                       this.settings.flows[flowName].flowMap,
                     )) {
                       if (!this.settings.flows[flowName].flaggedForRebuild) {
-                        for (let path of Object.keys(
+                        for (const path of Object.keys(
                           this.settings.flows[flowName].flowMap,
                         )) {
                           if (path.startsWith(normalisedPath)) {
@@ -1412,7 +1425,7 @@ ${pseudoElement}
     this.registerEvent(
       this.app.workspace.on("files-menu", (menu, files) => {
         let folders: number = 0;
-        for (let file of files) {
+        for (const file of files) {
           if (file instanceof TFolder) ++folders;
         }
         if (folders === 0) return;
@@ -1429,7 +1442,7 @@ ${pseudoElement}
           }
           item.onClick(async () => {
             const inclusionPathArray = [];
-            for (let file of files) {
+            for (const file of files) {
               if (file instanceof TFolder) {
                 inclusionPathArray.push(file.path);
               }
@@ -1472,7 +1485,7 @@ ${pseudoElement}
         if (this.textFlowOperation) return;
 
         if (file instanceof TFile) {
-          for (let flowName of Object.keys(this.settings.flows)) {
+          for (const flowName of Object.keys(this.settings.flows)) {
             // check if it's the active leaf and a flow, so mtime-checking can handle it
             const view = this.app.workspace.getActiveViewOfType(MarkdownView);
             if (view) {
@@ -1585,7 +1598,7 @@ ${pseudoElement}
           }
 
           // CHECK EVERYTHING ELSE
-          for (let flowName of Object.keys(this.settings.flows)) {
+          for (const flowName of Object.keys(this.settings.flows)) {
             if (this.settings.flows[flowName].flaggedForRebuild) continue;
 
             // if we got a file and it's part of the flow
@@ -1600,7 +1613,7 @@ ${pseudoElement}
 
             // if we got a folder and it provides parts of the flow
             if (file instanceof TFolder) {
-              for (let regionPath of Object.keys(
+              for (const regionPath of Object.keys(
                 this.settings.flows[flowName],
               )) {
                 if (dirname(regionPath) === oldPath) {
@@ -1708,7 +1721,7 @@ ${pseudoElement}
         }
 
         // actual checks for flagging
-        for (let flowName of Object.keys(this.settings.flows)) {
+        for (const flowName of Object.keys(this.settings.flows)) {
           if (this.settings.flows[flowName].flaggedForRebuild) continue;
           // if the flow is made from bookmarks, move on
           if (this.settings.flows[flowName].definitionMode === "bookmarks")
@@ -1760,7 +1773,7 @@ ${pseudoElement}
 
         //
         if (file instanceof TFile) {
-          for (let flowName of Object.keys(this.settings.flows)) {
+          for (const flowName of Object.keys(this.settings.flows)) {
             // check if the user deleted a flow file and flag it for rebuild
             if (basename(parentFolder) === flowName) {
               if (!this.settings.flows[flowName].flaggedForRebuild) {
@@ -1799,7 +1812,7 @@ ${pseudoElement}
     // ---------- Window/Editor events
     // ----------------- Auto-sync and checks on focus  -------------------------------
     this.registerDomEvent(window, "focus", async () => {
-      for (let flowName of Object.keys(this.settings.activeRegions)) {
+      for (const flowName of Object.keys(this.settings.activeRegions)) {
         await this.checkStatsForFlow(flowName);
       }
     });
@@ -2127,7 +2140,7 @@ ${pseudoElement}
   dispatchCompartments = (leafID: string, cmView: EditorView) => {
     const typesArray = ["cursor", "textChange", "divider"];
 
-    for (let type of typesArray) {
+    for (const type of typesArray) {
       if (!this.listenerBasket[leafID][type].compartment.get(cmView.state)) {
         // if compartment is not present in this editor
         cmView.dispatch({
@@ -2161,7 +2174,7 @@ ${pseudoElement}
   resetCompartments = (leafID: string, cmView: EditorView) => {
     const typesArray = ["cursor", "textChange", "divider"];
 
-    for (let type of typesArray) {
+    for (const type of typesArray) {
       if (!this.listenerBasket[leafID]) return;
       if (!this.listenerBasket[leafID][type]) continue;
       if (!this.listenerBasket[leafID][type].compartment.get(cmView.state))
@@ -2187,7 +2200,7 @@ ${pseudoElement}
   // ---------------------------------------------------------------
   checkCompartments = (leafID: string, cmView: EditorView) => {
     const typesArray = ["cursor", "textChange", "divider"];
-    for (let type of typesArray) {
+    for (const type of typesArray) {
       if (!this.listenerBasket[leafID]) return false;
       if (!this.listenerBasket[leafID][type]) return false;
       if (!this.listenerBasket[leafID][type].compartment.get(cmView.state))
@@ -3144,7 +3157,7 @@ ${pseudoElement}
     if (this.isRebuilding) return;
 
     const leaves = this.app.workspace.getLeavesOfType("markdown");
-    for (let leaf of leaves) {
+    for (const leaf of leaves) {
       const view = this.settingsTabFunctions.getMarkdownView(leaf);
       if (!view) continue;
       const filePath = view.file?.path;
@@ -3195,13 +3208,13 @@ ${pseudoElement}
       }
     }
     // Perform syncs
-    for (let flowName of Object.keys(flowLeaves)) {
+    for (const flowName of Object.keys(flowLeaves)) {
       // before we get to actually modifying, let's flag other flows
-      for (let otherFlowName of Object.keys(this.settings.flows)) {
+      for (const otherFlowName of Object.keys(this.settings.flows)) {
         if (this.settings.flows[otherFlowName].embed) continue;
         if (flowName != otherFlowName) {
           if (!this.settings.flows[otherFlowName].flaggedForRebuild) {
-            for (let path of this.settings.flows[flowName]
+            for (const path of this.settings.flows[flowName]
               .unsyncedRegionsArray) {
               if (this.settings.flows[otherFlowName].flowMap[path])
                 this.settings.flows[otherFlowName].flaggedForRebuild = true;
@@ -3210,7 +3223,7 @@ ${pseudoElement}
           }
         }
       }
-      for (let view of flowLeaves[flowName]) {
+      for (const view of flowLeaves[flowName]) {
         const text = view.editor.getValue();
         const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
 
@@ -3344,7 +3357,7 @@ ${pseudoElement}
       Object.keys(this.settings.flows[flowName].flowMap).length
     ) {
       const brokenRegionsArray = [];
-      for (let regionName of Object.keys(
+      for (const regionName of Object.keys(
         this.settings.flows[flowName].flowMap,
       )) {
         if (
@@ -3613,7 +3626,7 @@ ${pseudoElement}
     if (
       this.settings.flows[flowName].persistentCursors[leafID].cursors.length > 2
     ) {
-      for (let leafID of Object.keys(
+      for (const leafID of Object.keys(
         this.settings.flows[flowName].persistentCursors,
       )) {
         if (
@@ -3632,7 +3645,7 @@ ${pseudoElement}
   // ---------------------------------------------------------------
   notifyOfOverlap = (path: string, activeFlow: string, leafID: string) => {
     let overlappingFlows: string[] = [];
-    for (let flowName of Object.keys(this.settings.activeRegions)) {
+    for (const flowName of Object.keys(this.settings.activeRegions)) {
       if (
         flowName != activeFlow &&
         this.settings.flows[activeFlow].overlapObject[flowName] &&
@@ -3690,9 +3703,6 @@ ${pseudoElement}
     // -------------------------------------------------------------------
 
     this.app.workspace.onLayoutReady(async () => {
-      // make sure we know where our stuff is
-      await this.ensureSystemFolder(); // also calls state discernment to hide
-
       // get settings ready
       this.addSettingTab(new TextFlowSettingsTab(this.app, this));
 
@@ -3725,6 +3735,9 @@ ${pseudoElement}
         );
       }
 
+      // make sure we know where our stuff is
+      await this.ensureSystemFolder(); // also calls state discernment to hide
+
       // ---------------------------------------------------------------
       // and finally, Listeners and commands
       this.fileExplorerOpenClickListener();
@@ -3756,7 +3769,7 @@ ${pseudoElement}
     }
 
     // ------------ RESET compartments to []
-    for (let leafID of Object.keys(this.listenerBasket)) {
+    for (const leafID of Object.keys(this.listenerBasket)) {
       // skip the text change entries (we're removing both listeners anyway)
       if (leafID.endsWith("-changes")) continue;
       const leaves = this.app.workspace.getLeavesOfType("markdown");

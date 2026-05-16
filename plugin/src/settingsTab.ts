@@ -73,6 +73,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           )
           .onChange(async (value) => {
             newSystemFolderParent = normalizePath(value);
+            await this.plugin.settingsTabFunctions.debouncedSaveSettings();
           }),
       )
       .addButton((systemFolderCreateOrMoveButton) => {
@@ -103,7 +104,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               this.plugin.textFlowOperation = false;
 
               // set the folder hidden if appropriate
-              this.plugin.discernAndSetSystemFolderState();
+              await this.plugin.discernAndSetSystemFolderState();
             } else {
               // Move SystemFolder
               try {
@@ -112,7 +113,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
                 this.plugin.textFlowOperation = false;
 
                 // hide if appropriate
-                this.plugin.discernAndSetSystemFolderState();
+                await this.plugin.discernAndSetSystemFolderState();
 
                 // Update the flowFilePaths
                 if (this.plugin.settings.flows) {
@@ -579,7 +580,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
             await this.plugin.saveSettings();
 
             if (this.plugin.settings.systemFolderPath) {
-              this.plugin.discernAndSetSystemFolderState();
+              await this.plugin.discernAndSetSystemFolderState();
             }
           });
       });
@@ -1503,7 +1504,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
     });
     flowsSorted.sort((a, b) => a.localeCompare(b));
 
-    for (let flowName of flowsSorted) {
+    for (const flowName of flowsSorted) {
       const shownFlow = this.plugin.settings.flows[flowName];
 
       // --- DISPLAY PREPARATIONS ----------------------------------
