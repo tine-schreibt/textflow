@@ -45,28 +45,27 @@ jobs:
       - name: Install
         run: |
           set -x
-          yarn --version
-          yarn --frozen-lockfile
+          npm --version
+          npm ci
 
       - name: Build
         run: |
           set -x
-          yarn build
+          npm run build
 
       - name: Generate artifact attestation
         uses: actions/attest@v4
         with:
           subject-path: |
-           main.js
-           manifest.json
-           styles.css
+            main.js
+            manifest.json
+            styles.css
 
       - name: Verify version equals tag
         run: |
           set -x
           node -e "const fs=require('fs');const v=JSON.parse(fs.readFileSync('manifest.json','utf8')).version;const t=process.env.GITHUB_REF_NAME; if(v!==t){console.error(`Tag (${t}) does not match manifest.json version (${v})`);process.exit(1)}"
 
-      
       - name: Package
         run: |
           set -x
