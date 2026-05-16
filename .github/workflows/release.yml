@@ -28,13 +28,13 @@ jobs:
           set -x
           echo "Ref: $GITHUB_REF  Name: $GITHUB_REF_NAME"
           ls -la
-          test -f yarn.lock && echo "yarn.lock found" || echo "yarn.lock MISSING"
+          test -f package-lock.json && echo "package-lock.json found" || echo "package-lock.json MISSING"
 
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
           node-version: "22"
-          cache: "yarn"
+          cache: "npm"
 
       - name: Set up SSH
         uses: webfactory/ssh-agent@v0.10.0
