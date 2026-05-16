@@ -188,7 +188,7 @@ export default class TextFlowPlugin extends Plugin {
 
   // ------------- global stuff ----------------------
   textFlowSystemFolderName = "textFlowSystemFolder";
-  private i18n: Record<string, any> = {}; // localisation
+  private i18n: Record<string, unknown> = {}; // localisation
 
   //--- some variables to keep track of things
   private mostRecentActiveFlowLeaf: WorkspaceLeaf | null = null;
@@ -218,7 +218,7 @@ export default class TextFlowPlugin extends Plugin {
   // ----- Stuff to avoid save race conditions and broken saves
   private isUnloading: boolean = false;
   private isSavingSettings: boolean = false;
-  private pendingSettingsSave: {} | null = null;
+  private pendingSettingsSave: object | null = null;
   private morePendingSettingsSave: boolean = false;
 
   private xxh!: Types.XXHashAPI;
@@ -405,7 +405,9 @@ export default class TextFlowPlugin extends Plugin {
 
         if (flowIsOpen) {
           if (!checking) {
-            this.syncAllLeaves();
+            void this.syncAllLeaves().catch((err) =>
+              console.error("syncAllLeaves from command failed:", err),
+            );
           }
           return true;
         }
@@ -426,7 +428,9 @@ export default class TextFlowPlugin extends Plugin {
             for (let flowName of Object.keys(this.settings.flows)) {
               this.settings.flows[flowName].flaggedForRebuild = true;
             }
-            this.saveSettings();
+            void this.saveSettings().catch((err) =>
+              console.error("saveSettings failed:", err),
+            );
 
             // refresh menu bars
             const allLeaves = this.app.workspace.getLeavesOfType("markdown");
@@ -455,17 +459,16 @@ export default class TextFlowPlugin extends Plugin {
           if (!checking) {
             const changeArray: string[] = [];
             // since the function returns a promise, we need to wrap it in async:
-            const asyncisiseCheckStatsForFlow = async (flowName: string) => {
-              if (this.settings.flows[flowName].embed) return false;
 
-              const changes = await this.checkStatsForFlow(flowName);
+            for (let flowName of Object.keys(this.settings.flows)) {
+              if (this.settings.flows[flowName].embed) continue;
+
+              const changes = void this.checkStatsForFlow(flowName).catch(
+                (err) => console.error("checkStatsForFlow failed:", err),
+              );
               if (changes) {
                 changeArray.push(flowName);
               }
-            };
-
-            for (let flowName of Object.keys(this.settings.flows)) {
-              asyncisiseCheckStatsForFlow(flowName);
             }
 
             if (changeArray.length === 0) {
@@ -509,7 +512,9 @@ export default class TextFlowPlugin extends Plugin {
         const flowName = this.isFlowFile(ctx.file.path);
         if (flowName) {
           if (!checking) {
-            this.settingsTabFunctions.flowBuildingBundle(flowName, "switcher");
+            void this.settingsTabFunctions
+              .flowBuildingBundle(flowName, "switcher")
+              .catch((err) => console.error("flowBuildingBundle failed:", err));
           }
           return true;
         }
@@ -591,16 +596,24 @@ export default class TextFlowPlugin extends Plugin {
             if (!leafID) return;
 
             // toggle the setting
-            this.settings.activeRegions[flowName][leafID].leafMenuBarSettings
-              .menuBarDisplayState === "max"
-              ? (this.settings.activeRegions[flowName][
-                  leafID
-                ].leafMenuBarSettings.menuBarDisplayState = "min")
-              : (this.settings.activeRegions[flowName][
-                  leafID
-                ].leafMenuBarSettings.menuBarDisplayState = "max");
-            this.saveSettings();
-            this.refreshMenuBars();
+            if (
+              this.settings.activeRegions[flowName][leafID].leafMenuBarSettings
+                .menuBarDisplayState === "max"
+            ) {
+              this.settings.activeRegions[flowName][
+                leafID
+              ].leafMenuBarSettings.menuBarDisplayState = "min";
+            } else {
+              this.settings.activeRegions[flowName][
+                leafID
+              ].leafMenuBarSettings.menuBarDisplayState = "max";
+            }
+            void this.saveSettings().catch((err) =>
+              console.error("saveSettings failed:", err),
+            );
+            void this.refreshMenuBars().catch((err) =>
+              console.error("refreshMenuBars failed:", err),
+            );
           }
           return true;
         }
@@ -624,7 +637,9 @@ export default class TextFlowPlugin extends Plugin {
         const flowName = this.isFlowFile(ctx.file.path);
         if (flowName) {
           if (!checking) {
-            this.settingsTabFunctions.exportFlow(flowName);
+            void this.settingsTabFunctions
+              .exportFlow(flowName)
+              .catch((err) => console.error("exportFlow failed:", err));
           }
           return true;
         }
@@ -654,8 +669,12 @@ export default class TextFlowPlugin extends Plugin {
               : true;
 
             this.settings.flows[flowName].embed = toggledValue;
-            this.saveSettings();
-            this.settingsTabFunctions.flowBuildingBundle(flowName, "switcher");
+            void this.saveSettings().catch((err) =>
+              console.error("saveSettings failed:", err),
+            );
+            void this.settingsTabFunctions
+              .flowBuildingBundle(flowName, "switcher")
+              .catch((err) => console.error("flowBuildingBundle failed:", err));
           }
           return true;
         }
@@ -737,11 +756,19 @@ export default class TextFlowPlugin extends Plugin {
         if (this.settings.hideScrollbar === "none") {
           this.settings.hideScrollbar = "all";
           await this.saveSettings();
-          this.settingsTabFunctions.updateScrollbarVisibility();
+          void this.settingsTabFunctions
+            .updateScrollbarVisibility()
+            .catch((err) =>
+              console.error("updateScrollbarVisibility failed:", err),
+            );
         } else if (this.settings.hideScrollbar === "all") {
           this.settings.hideScrollbar = "none";
           await this.saveSettings();
-          this.settingsTabFunctions.updateScrollbarVisibility();
+          void this.settingsTabFunctions
+            .updateScrollbarVisibility()
+            .catch((err) =>
+              console.error("updateScrollbarVisibility failed:", err),
+            );
         }
       },
     });
@@ -749,26 +776,50 @@ export default class TextFlowPlugin extends Plugin {
 
   // ----- this is called onload and sets the visibility of textFlowSystemFolderName
   // rewritten by Claude to do the styles.css thing
+  // ----- this is called onload and sets the visibility of textFlowSystemFolderName
   discernAndSetSystemFolderState = (): void => {
     const systemFolderPath = this.settings.systemFolderPath;
     const systemFolderHidden = this.settings.systemFolderHidden;
 
     // Remove any existing style
+    const existingStyle = document.head.querySelector(
+      "style[data-textflow-temp]",
+    );
+    if (existingStyle) {
+      existingStyle.remove();
+    }
+
+    //Suggested correction
+    /* // Remove any existing style
     const showSystemFolder = () => {
       document
         .querySelectorAll(".textflow-hidden")
         .forEach((el) => el.classList.remove("textflow-hidden"));
     };
 
-    showSystemFolder();
+    showSystemFolder();*/
 
     // If we're not hiding (or don't have a place defined) just return after removing style
     if (!systemFolderHidden || systemFolderPath === undefined) {
       return;
     }
 
-    // If we are hiding, attach the style
-    const hideSystemFolder = () => {
+    // Create and append style with the correct selector
+    const addStyle = () => {
+      let hiddenStyle = document.createElement("style");
+      hiddenStyle.setAttribute("data-textflow-temp", "true");
+
+      hiddenStyle.textContent = `
+            div[data-path='${systemFolderPath}'],
+            div[data-path^='${systemFolderPath}'] {
+                display: none !important;
+            }
+        `;
+      document.head.appendChild(hiddenStyle);
+    };
+    addStyle();
+
+    /*   const hideSystemFolder = () => {
       document
         .querySelectorAll(
           `div[data-path='${systemFolderPath}'],
@@ -776,7 +827,7 @@ export default class TextFlowPlugin extends Plugin {
         )
         .forEach((el) => el.classList.add("textflow-hidden"));
     };
-    hideSystemFolder();
+    hideSystemFolder();*/
   };
 
   // ----- DECORATE SOURCE NOTES IN FILE EXPLORER -----------
@@ -1204,7 +1255,7 @@ ${pseudoElement}
       }
     };
     iteratePaths(fullPath);
-    return `${countedUpName}`
+    return `${countedUpName}`;
   };
 
   // ---------------- Functions: Listeners: Global -----------------
@@ -1624,23 +1675,24 @@ ${pseudoElement}
         ) {
           // If a new .md file gets created in the system folder, it's because the user has set 'create new file in same folder as active file', so we simulate that behaviour by getting the path for last active region and moving the file into the respective folder
 
-          setTimeout(async () => {
+          setTimeout(() => {
             const baseName = basename(file.path);
             const basePath = dirname(this.lastActiveRegion);
-            const newFileName = await this.getUniqueFileName(
-              basePath,
-              baseName,
-            );
+            const newFileName = this.getUniqueFileName(basePath, baseName);
             const newFilePath = normalizePath(`${basePath}/${newFileName}`);
             this.textFlowOperation = true;
-            await this.app.vault.rename(file, newFilePath);
+            void this.app.vault
+              .rename(file, newFilePath)
+              .catch((err) => console.error("rename failed:", err));
             this.textFlowOperation = false;
 
             // open the new file so the user gets the expected behaviour
             const movedFile = this.app.vault.getAbstractFileByPath(newFilePath);
             if (movedFile instanceof TFile) {
               const leaf = this.app.workspace.getLeaf("tab");
-              await leaf.openFile(movedFile);
+              void leaf
+                .openFile(movedFile)
+                .catch((err) => console.error("openFile failed:", err));
               this.app.workspace.setActiveLeaf(leaf, { focus: true });
             }
 
@@ -1776,7 +1828,7 @@ ${pseudoElement}
         if (this.explorerClickListenerActive) {
           return;
         }
-        this.leafSwitching();
+        await this.leafSwitching();
       }),
     );
 
@@ -1784,7 +1836,7 @@ ${pseudoElement}
       this.app.workspace.on("layout-change", async () => {
         await this.syncAllLeaves();
 
-        this.leafSwitching();
+        await this.leafSwitching();
       }),
     );
   }
@@ -1908,7 +1960,7 @@ ${pseudoElement}
               clearTimeout(textChangeDebounceTimeout);
             }
 
-            textChangeDebounceTimeout = setTimeout(async () => {
+            textChangeDebounceTimeout = setTimeout(() => {
               // Prevent rebuilds and app reload from registering as text change
               if (plugin.settings.flows[flowName].isFreshBuild) {
                 plugin.settings.flows[flowName].isFreshBuild = false;
@@ -1947,10 +1999,11 @@ ${pseudoElement}
                     Math.abs(Date.now() - plugin.lastActivity[flowName]) >
                     plugin.inactivityThreshold
                   ) {
-                    const fileHasEdits = await plugin.checkStatsForNote(
-                      flowName,
-                      activeRegionPath,
-                    );
+                    const fileHasEdits = void plugin
+                      .checkStatsForNote(flowName, activeRegionPath)
+                      .catch((err) =>
+                        console.error("checkStatsForNote failed:", err),
+                      );
                     if (fileHasEdits) {
                       // notifcations are handled by the check function
                       return;
@@ -1964,7 +2017,9 @@ ${pseudoElement}
                 plugin.settings.flows[flowName].unsyncedRegionsArray.push(
                   activeRegionPath,
                 );
-                await plugin.saveSettings();
+                void plugin
+                  .saveSettings()
+                  .catch((err) => console.error("failed:", err));
               }
 
               if (callRefresh) {
@@ -1977,7 +2032,11 @@ ${pseudoElement}
 
               // update source decoration
               if (plugin.settings.explorerDecoStyle[0] != "--") {
-                plugin.decorateSourceNotes("update");
+                void plugin
+                  .decorateSourceNotes("update")
+                  .catch((err) =>
+                    console.error("decorateSourceNote failed:", err),
+                  );
               }
             }, 250);
           }
@@ -2172,7 +2231,7 @@ ${pseudoElement}
   private boundFileExplorerClick!: (event: MouseEvent) => void;
 
   fileExplorerOpenClickListener = () => {
-    this.boundFileExplorerClick = async (event: Event) => {
+    this.boundFileExplorerClick = (event: Event) => {
       const mouseEvent = event as MouseEvent;
       if (
         this.modifierState.shift === true ||
@@ -2236,7 +2295,9 @@ ${pseudoElement}
             focus: true,
           });
         } else {
-          await this.activateFlow(flowName);
+          void this.activateFlow(flowName).catch((err) =>
+            console.error("activateFlow failed:", err),
+          );
         }
 
         // Delay to allow UI to settle
@@ -2286,7 +2347,9 @@ ${pseudoElement}
 
             // if there's no leaf with our flow, make one
             if (!flowLeaf || !(flowLeaf.view instanceof MarkdownView)) {
-              await this.activateFlow(parentFlowName);
+              void this.activateFlow(parentFlowName).catch((err) =>
+                console.error("activateFlow failed:", err),
+              );
               flowLeaf = this.app.workspace
                 .getLeavesOfType("markdown")
                 .find(
@@ -2305,7 +2368,9 @@ ${pseudoElement}
             this.app.workspace.setActiveLeaf(flowLeaf, { focus: true });
 
             // Delay so dust can settle
-            await new Promise((resolve) => setTimeout(resolve, 150)); // 150ms, adjust if needed
+            void new Promise((resolve) => setTimeout(resolve, 150)).catch(
+              (err) => console.error("Timeout failed:", err),
+            ); // 150ms, adjust if needed
 
             // Now prepare for the scrolling
             const flowView =
@@ -2327,7 +2392,9 @@ ${pseudoElement}
                 "TextFlow: Active leaf changed unexpectedly. Forcing it back to flow leaf before scrolling.",
               );
               this.app.workspace.setActiveLeaf(flowLeaf, { focus: true });
-              await new Promise((resolve) => setTimeout(resolve, 50));
+              void new Promise((resolve) => setTimeout(resolve, 50)).catch(
+                (err) => console.error("Timeout failed:", err),
+              );
             }
 
             // get all the info we need
@@ -2381,7 +2448,9 @@ ${pseudoElement}
           const openInNewSplit =
             this.app.workspace.getLeavesOfType("markdown").length > 0 &&
             (mouseEvent.metaKey || mouseEvent.ctrlKey);
-          this.app.workspace.openLinkText(clickedFilePath, "", openInNewSplit);
+          void this.app.workspace
+            .openLinkText(clickedFilePath, "", openInNewSplit)
+            .catch((err) => console.error("openLinkText failed:", err));
         }
       }
     };
@@ -2440,16 +2509,16 @@ ${pseudoElement}
           );
         }
         // update the array
-        const filteredArray = this.flowOutOfSync.filter((filterFlowname) => {
-          filterFlowname != flowName;
-        });
+        const filteredArray = this.flowOutOfSync.filter(
+          (filterFlowname) => filterFlowname != flowName,
+        );
         this.flowOutOfSync = filteredArray;
 
         this.settings.activeRegions[flowName][leafID] = activeRegionObject;
         // then check if the active region overlaps and send a notice
         if (activeRegionObject.path) {
           this.lastActiveRegion = activeRegionObject.path;
-          this.decorateSourceNotes("update");
+          await this.decorateSourceNotes("update");
           this.notifyOfOverlap(activeRegionObject.path, flowName, leafID);
         }
 
@@ -2541,7 +2610,7 @@ ${pseudoElement}
           }
           this.settings.activeRegions[flowName][leafID] = activeRegion;
           await this.saveSettings();
-          this.decorateSourceNotes("update");
+          await this.decorateSourceNotes("update");
           if (view.menuBar) {
             view.menuBar.refresh(view.contentEl);
           }
@@ -2768,8 +2837,8 @@ ${pseudoElement}
           this.mostRecentActiveFlowLeaf = leaf;
           return;
         } else {
-          this.closeFlow(view);
-          this.manageActiveRegions();
+          await this.closeFlow(view);
+          await this.manageActiveRegions();
         }
       }
     }
@@ -2826,7 +2895,7 @@ ${pseudoElement}
     // See if this is the inital activation of the flow/leaf and restore cursor
     // we need this so Outline navigation works (because it triggers listeners)
     if (!this.alreadyActivated[flowName]) {
-      if (!isFreshlyBuilt) this.UUIDIntegrityCheck(flowName);
+      if (!isFreshlyBuilt) await this.UUIDIntegrityCheck(flowName);
       this.alreadyActivated[flowName] = {};
       this.alreadyActivated[flowName][leafID] = [true, false];
       this.settingsTabFunctions.restoreCursorPos(flowName, view, leafID);
@@ -2895,7 +2964,7 @@ ${pseudoElement}
       // now open and focus the flow, pin it, and set up tracking and stuff
       if (leaf.view instanceof MarkdownView) {
         this.app.workspace.setActiveLeaf(leaf, { focus: true });
-        this.setUpFlow(flowName, leaf.view);
+        await this.setUpFlow(flowName, leaf.view);
         leaf.setPinned(true);
       } else {
         console.error(
@@ -2942,7 +3011,9 @@ ${pseudoElement}
             this.settings.activeRegions[flowName] = {};
           }
           if (!this.settings.activeRegions[flowName][leafID]) {
-            this.addRegionTracking(flowName, leafID);
+            void this.addRegionTracking(flowName, leafID).catch((err) =>
+              console.error("addRegionTracking failed:", err),
+            );
           }
         }
       }
@@ -3000,8 +3071,8 @@ ${pseudoElement}
     await this.saveSettings();
 
     // And finally redraw the decoration
-    this.unDecorateSourceNotes();
-    this.decorateSourceNotes("redo");
+    await this.unDecorateSourceNotes();
+    await this.decorateSourceNotes("redo");
   };
 
   // ---------------------------------------------------------------
@@ -3045,7 +3116,7 @@ ${pseudoElement}
       }
     }
     // finally
-    this.manageActiveRegions(); // also saves
+    await this.manageActiveRegions(); // also saves
   };
 
   // ---------------------------------------------------------------
@@ -3237,11 +3308,11 @@ ${pseudoElement}
       }
       this.settings.flows[flowName].unsyncedRegionsArray = remainingPaths;
 
-      this.manageCursorPos(flowName, leafID);
-      this.refreshMenuBars();
+      await this.manageCursorPos(flowName, leafID);
+      await this.refreshMenuBars();
       await this.saveSettings();
       if (this.settings.explorerDecoStyle[0] != "--") {
-        this.decorateSourceNotes("update");
+        await this.decorateSourceNotes("update");
       }
     }
   };
@@ -3627,11 +3698,11 @@ ${pseudoElement}
 
       // get deco ready
       if (this.settings.explorerDecoStyle[0] != "--") {
-        this.decorateSourceNotes("redo");
+        await this.decorateSourceNotes("redo");
       }
 
       // scroll bar
-      this.settingsTabFunctions.updateScrollbarVisibility();
+      await this.settingsTabFunctions.updateScrollbarVisibility();
 
       // button for the flowSwitcher
       if (this.settings.switcherPos === "statusBar") {

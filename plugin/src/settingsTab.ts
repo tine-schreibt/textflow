@@ -27,7 +27,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     this.plugin = plugin;
   }
 
-  display = async () => {
+  display = () => {
     const { containerEl } = this;
     containerEl.empty();
 
@@ -92,7 +92,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             );
             this.plugin.settings.systemFolderPath = newPath;
 
-            this.plugin.saveSettings();
+            await this.plugin.saveSettings();
 
             // Create SystemFolder
             if (!systemFolder) {
@@ -174,7 +174,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         dropdown.onChange(async (value) => {
           this.plugin.settings.menuBarDefault =
             value as Types.MenuBarDisplayState;
-          this.plugin.saveSettings();
+          await this.plugin.saveSettings();
         });
       });
 
@@ -211,7 +211,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         dropdown.setValue(this.plugin.settings.switcherPos);
         dropdown.onChange(async (value) => {
           this.plugin.settings.switcherPos = value;
-          this.plugin.saveSettings();
+          await this.plugin.saveSettings();
         });
       });
 
@@ -289,15 +289,19 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         cls: entry[3],
       });
 
-      explorerDecoEntry.addEventListener("click", async (event: MouseEvent) => {
+      explorerDecoEntry.addEventListener("click", (event: MouseEvent) => {
         event.preventDefault();
         event.stopPropagation();
         this.plugin.settings.explorerDecoStyle = entry;
         this.plugin.settings.explorerDecoDropdownOpen = false;
         flowModeExplorerDecoContainer.classList.remove("show");
         updateHeadlineDisplay(entry);
-        this.plugin.decorateSourceNotes("redo");
-        this.plugin.saveSettings();
+        void this.plugin
+          .decorateSourceNotes("redo")
+          .catch((err) => console.error("decorateSourceNotes failed:", err));
+        void this.plugin
+          .saveSettings()
+          .catch((err) => console.error("saveSettings failed:", err));
       });
     });
 
@@ -363,8 +367,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .setValue(this.plugin.settings.activeRegionHighlight)
           .onChange(async (value) => {
             this.plugin.settings.activeRegionHighlight = value;
-            this.plugin.decorateSourceNotes("update");
-            this.plugin.saveSettings();
+            await this.plugin.decorateSourceNotes("update");
+            await this.plugin.saveSettings();
           });
       });
 
@@ -400,7 +404,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           .setValue(this.plugin.settings.explorerListener)
           .onChange(async (value) => {
             this.plugin.settings.explorerListener = value;
-            this.plugin.saveSettings();
+            await this.plugin.saveSettings();
           });
       });
 
@@ -467,8 +471,8 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
           .setValue(this.plugin.settings.hideScrollbar)
           .onChange(async (value) => {
             this.plugin.settings.hideScrollbar = value;
-            this.plugin.settingsTabFunctions.updateScrollbarVisibility();
-            this.plugin.saveSettings();
+            await this.plugin.settingsTabFunctions.updateScrollbarVisibility();
+            await this.plugin.saveSettings();
           });
       });
 
@@ -523,7 +527,9 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
               value.includes("hash")
             ) {
               Object.keys(this.plugin.settings.flows).forEach((flowName) => {
-                this.plugin.initialHashing(flowName);
+                void this.plugin
+                  .initialHashing(flowName)
+                  .catch((err) => console.error("initialHashing failed:", err));
               });
             } else if (
               // if they stop using hashes, delete the record to prevent stale data
@@ -538,7 +544,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
             this.plugin.settings.checkExternalEdits =
               value as Types.ExternalEditsType;
 
-            this.plugin.saveSettings();
+            await this.plugin.saveSettings();
           });
       });
 
@@ -570,7 +576,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
           .onChange(async (value) => {
             this.plugin.settings.systemFolderHidden = !value;
 
-            this.plugin.saveSettings();
+            await this.plugin.saveSettings();
 
             if (this.plugin.settings.systemFolderPath) {
               this.plugin.discernAndSetSystemFolderState();
@@ -604,7 +610,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
               }
             }
             this.plugin.settings.embeds = value;
-            this.plugin.saveSettings();
+            await this.plugin.saveSettings();
             this.display();
           });
       });
@@ -679,7 +685,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
             .setValue(this.plugin.settings.flowBuildBasket.embed ?? false)
             .onChange(async (value) => {
               this.plugin.settings.flowBuildBasket.embed = value;
-              this.plugin.saveSettings();
+              await this.plugin.saveSettings();
             });
         });
     }
@@ -1421,7 +1427,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
         }
 
         // check if the user is renaming a flow
-        this.plugin.settingsTabFunctions.renameFlow();
+        await this.plugin.settingsTabFunctions.renameFlow();
 
         // checks and flow creation
         const validation = this.plugin.settingsTabFunctions.isValidFlowName(
@@ -1445,11 +1451,11 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
         );
 
         // (re)build
-        this.plugin.settingsTabFunctions.flowBuildingBundle(
+        await this.plugin.settingsTabFunctions.flowBuildingBundle(
           this.plugin.settings.flowBuildBasket.flowName,
           "settingsTab",
         );
-        this.plugin.refreshMenuBars();
+        await this.plugin.refreshMenuBars();
 
         // update overlaps,
         this.plugin.settingsTabFunctions.syncOverlaps(
@@ -1642,7 +1648,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
                 "settingsTab",
               );
 
-              this.plugin.refreshMenuBars();
+              await this.plugin.refreshMenuBars();
               await this.plugin.saveSettings();
               this.display();
             });
@@ -1722,7 +1728,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
             this.plugin.t("restoreSettings.setButtonText copy to vault"),
           )
           .onClick(async () => {
-            this.plugin.settingsTabFunctions.backupFlowDefs();
+            await this.plugin.settingsTabFunctions.backupFlowDefs();
             new Notice(
               this.plugin.t("restoreSettings.notice .json has been copied"),
             );

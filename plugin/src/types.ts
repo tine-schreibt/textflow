@@ -238,7 +238,7 @@ export interface FolderGroup {
   rows: DataviewFolder[];
 }
 
-export type DVNote = {
+export type DVNote = Record<string, any> & {
   file: {
     path: string;
     tags: string[];

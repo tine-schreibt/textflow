@@ -86,7 +86,7 @@ export class CreateFlowFromFolder extends Modal {
 
       setFlowName.onChange(async (value) => {
         this.plugin.settings.flowBuildBasket.flowName = value.trim();
-        this.plugin.settingsTabFunctions.debouncedSaveSettings();
+        await this.plugin.settingsTabFunctions.debouncedSaveSettings();
       });
     });
 
@@ -262,7 +262,7 @@ export class CreateFlowFromFolder extends Modal {
         );
 
         // build
-        this.plugin.settingsTabFunctions.flowBuildingBundle(
+        await this.plugin.settingsTabFunctions.flowBuildingBundle(
           this.plugin.settings.flowBuildBasket.flowName,
           "settingsTab",
         );
@@ -573,7 +573,7 @@ export class DeleteFlowDefModal extends Modal {
     deleteButton.setIcon("trash");
     deleteButton.onClick(async () => {
       // sync all, just to be thorough
-      this.plugin.syncAllLeaves();
+      await this.plugin.syncAllLeaves();
 
       // Get the file path
       const flowFilePath = normalizePath(
@@ -687,7 +687,7 @@ export class RestoreFlowDefModal extends Modal {
 
   //--------------------------------------------------------------------------------
   onOpen = async () => {
-    this.display();
+    await this.display();
   };
 
   display = async () => {
@@ -1017,8 +1017,8 @@ export class FlowSwitcherModal extends Modal {
     leaf.setPinned(true);
     if (leaf.view instanceof MarkdownView)
       await this.plugin.setUpFlow(flowName, leaf.view);
-    this.display();
-    this.plugin.syncAllLeaves();
+    await this.display();
+    await this.plugin.syncAllLeaves();
   };
 
   //-----------------------------------------------------------------------------
@@ -1045,7 +1045,7 @@ export class FlowSwitcherModal extends Modal {
     element.addEventListener(type, handler);
   }
 
-  private focusLeaf = (leafID: string) => {
+  private focusLeaf = async (leafID: string) => {
     const targetLeaf = this.app.workspace.getLeafById(leafID);
     if (targetLeaf) {
       this.app.workspace.setActiveLeaf(targetLeaf, { focus: true });
@@ -1055,7 +1055,7 @@ export class FlowSwitcherModal extends Modal {
       this.currentActiveLeafID =
         this.plugin.settingsTabFunctions.getLeafID(targetLeaf);
     }
-    this.display();
+    await this.display();
   };
 
   //--------------------------------------------------------------------------------
@@ -1063,7 +1063,7 @@ export class FlowSwitcherModal extends Modal {
     const targetLeaf = this.app.workspace.getLeafById(leafID);
     if (targetLeaf) {
       targetLeaf.detach();
-      this.plugin.manageActiveRegions();
+      await this.plugin.manageActiveRegions();
       await this.plugin.saveSettings();
       this.currentActiveLeafID = this.getActiveLeafID();
       await this.display();
@@ -1337,10 +1337,9 @@ export class FlowSwitcherModal extends Modal {
         .setClass(`flow-switcher-modal-neutral`)
         .setClass("clickable-icon")
         .onClick(async () => {
-          const leaves = this.app.workspace.getLeavesOfType("markdown");
           Object.keys(activeFlowInfoObject[activeFlow]).forEach(
             async (leafID) => {
-              this.closeLeaf(leafID);
+              await this.closeLeaf(leafID);
             },
           );
         });
@@ -1418,25 +1417,29 @@ export class FlowSwitcherModal extends Modal {
         });
 
         this.addManagedListener(regionName, "click", (event) => {
-          this.focusLeaf(leafID);
+          void this.focusLeaf(leafID).catch((err) =>
+            console.error("focusLeaf failed:", err),
+          );
         });
 
         // ----------- GOTO BUTTON ------------
-        const navGotoButton = new ButtonComponent(flowRegion)
+        const navGotoButton = new ButtonComponent(flowRegion);
+        navGotoButton
           .setIcon("arrow-big-right")
           .setClass(`flow-switch-modal-header-button-neutral`)
           .setClass("clickable-icon")
           .onClick(async () => {
-            this.focusLeaf(leafID);
+            await this.focusLeaf(leafID);
           });
 
         // ----------- CLOSE BUTTON ------------
-        const navCloseButton = new ButtonComponent(flowRegion)
+        const navCloseButton = new ButtonComponent(flowRegion);
+        navCloseButton
           .setIcon("x")
           .setClass(`flow-switch-modal-header-button-neutral`)
           .setClass("clickable-icon")
           .onClick(async () => {
-            this.closeLeaf(leafID);
+            await this.closeLeaf(leafID);
           });
       });
     }
@@ -1616,7 +1619,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
   }
 
   onOpen() {
-    super.onOpen();
+    void super.onOpen();
 
     let placeholderText = "Search for flows and paths...";
     if (this.activeFlowName) {
@@ -1803,7 +1806,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
           }
           // Set this for convenience but maybe also necessary for scrolling when activating leaf
           // I don't even know anymore, I've been fighting with this part of the code for so long
-          this.plugin.manageCursorPos(
+          await this.plugin.manageCursorPos(
             item.flowName,
             lastActiveLeafID,
             item,
@@ -1811,7 +1814,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
           );
           this.app.workspace.setActiveLeaf(leaf, { focus: true });
           if (cursorPos) {
-            scrollToTarget(item, cursorPos);
+            await scrollToTarget(item, cursorPos);
           }
         } else {
         }
@@ -1835,9 +1838,14 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
           }
           const leafID = this.plugin.settingsTabFunctions.getLeafID(leaf);
           if (cursorPos) {
-            this.plugin.manageCursorPos(item.flowName, leafID, item, cursorPos);
+            await this.plugin.manageCursorPos(
+              item.flowName,
+              leafID,
+              item,
+              cursorPos,
+            );
             this.app.workspace.setActiveLeaf(leaf, { focus: true });
-            scrollToTarget(item, cursorPos);
+            await scrollToTarget(item, cursorPos);
           }
         }
       }
@@ -1894,6 +1902,8 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
     };
 
     // -------- DOING STUFF WITH THE HELPER FUNCTIONS --------------
-    prepareFlowLeafAndCallScroll(item);
+    void prepareFlowLeafAndCallScroll(item).catch((err) =>
+      console.error("prepareFlowLeafAndCallScroll failed:", err),
+    );
   }
 }

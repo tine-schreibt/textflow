@@ -14,7 +14,7 @@ import TextFlow from "../main";
 import * as Types from "./types";
 import path, { basename } from "path";
 
-import { getAPI, SMarkdownPage } from "obsidian-dataview";
+import { getAPI } from "obsidian-dataview";
 
 // Any code that was actually written by AI is labelled
 

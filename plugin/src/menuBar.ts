@@ -313,7 +313,9 @@ export class MenuBar {
           }
 
           this.filterList = [];
-          this.setDropdownState("nav", "hide");
+          void this.setDropdownState("nav", "hide").catch((err) =>
+            console.error("setDropdownState failed:", err),
+          );
           this.refresh(this.associatedView.contentEl);
         });
       }
@@ -409,12 +411,12 @@ export class MenuBar {
             ? this.plugin.t("menubar Expand")
             : this.plugin.t("menubar Expand warn"),
         )
-        .onClick(() => {
+        .onClick(async () => {
           this.plugin.settings.activeRegions[this.flowName][
             this.leafID
           ].leafMenuBarSettings.menuBarDisplayState = "max";
-          this.plugin.saveSettings();
-          this.plugin.refreshMenuBars();
+          await this.plugin.saveSettings();
+          await this.plugin.refreshMenuBars();
         });
       return menuBarEl;
     } else {
@@ -553,11 +555,15 @@ export class MenuBar {
             const query =
               this.plugin.settings.activeRegions[this.flowName][this.leafID]
                 .leafMenuBarSettings.navDropdownSearchTerm;
-            performSearch(event, query);
+            void performSearch(event, query).catch((err) =>
+              console.error("performSearch failed:", err),
+            );
           }
 
           if (this.getDropdownState("nav") === "hide") {
-            this.setDropdownState("nav", "show");
+            void this.setDropdownState("nav", "show").catch((err) =>
+              console.error("setDropdownState failed:", err),
+            );
             this.refresh(this.associatedView.contentEl);
             const filterCriterion = this.element?.querySelector(
               ".menu-bar-navigation-dropdown-search-input",
@@ -574,12 +580,14 @@ export class MenuBar {
               // Check if click is outside the navigation dropdown
               if (!navigationDropdown.contains(target)) {
                 this.filterList = [];
-                this.setDropdownState("nav", "hide");
+                void this.setDropdownState("nav", "hide").catch((err) =>
+                  console.error("setDropdownState failed:", err),
+                );
                 this.refresh(this.associatedView.contentEl);
               }
             });
           } else {
-            this.setDropdownState("nav", "hide");
+            void this.setDropdownState("nav", "hide");
             this.refresh(this.associatedView.contentEl);
           }
         });
@@ -603,18 +611,20 @@ export class MenuBar {
         }
 
         this.addManagedListener(searchInput, "input", (event) => {
-          performSearch(event);
+          void performSearch(event).catch((err) =>
+            console.error("performSearch failed:", err),
+          );
         });
       }
 
       // this function is in here so I don't have to hand over a million args
-      const performSearch = (event: Event, query?: string) => {
+      const performSearch = async (event: Event, query?: string) => {
         const searchItems = pathArray.map((path) => ({
           path: path,
           displayName: `${this.makeNavPath(path)}`,
         }));
 
-        const iconSpan = navHeadline.createSpan();
+        //const iconSpan = navHeadline.createSpan();
         //setIcon(iconSpan, "chevrons-down-up");
 
         const fuse = new Fuse(searchItems, {
@@ -634,7 +644,7 @@ export class MenuBar {
           this.leafID
         ].leafMenuBarSettings.navDropdownSearchTerm = query;
         // save the query debouncedly
-        this.plugin.settingsTabFunctions.debouncedSaveSettings();
+        await this.plugin.settingsTabFunctions.debouncedSaveSettings();
 
         // If no query (yet), return all paths
         if (!query) {
@@ -701,7 +711,9 @@ export class MenuBar {
         // the listener to open the dropdown
         this.addManagedListener(cursorHeadline, "click", (event) => {
           if (this.getDropdownState("cursor") === "hide") {
-            this.setDropdownState("cursor", "show");
+            void this.setDropdownState("cursor", "show").catch((err) =>
+              console.error("setDropdownState failed:", err),
+            );
             this.refresh(this.associatedView.contentEl);
             // this is just in here because I can't figure out how to
             // get the styling right otherwise -.-
@@ -720,12 +732,16 @@ export class MenuBar {
               // Check if click is outside the navigation dropdown
               if (!cursorDropdown.contains(target)) {
                 this.filterList = [];
-                this.setDropdownState("cursor", "hide");
+                void this.setDropdownState("cursor", "hide").catch((err) =>
+                  console.error("setDropdownState failed:", err),
+                );
                 this.refresh(this.associatedView.contentEl);
               }
             });
           } else {
-            this.setDropdownState("cursor", "hide");
+            void this.setDropdownState("cursor", "hide").catch((err) =>
+              console.error("setDropdownState failed:", err),
+            );
             this.refresh(this.associatedView.contentEl);
           }
         });
@@ -910,9 +926,9 @@ export class MenuBar {
         )
         .onClick(async () => {
           if (this.plugin.settings.flows[this.flowName].embed) {
-            this.plugin.settingsTabFunctions.exportEmbed(this.flowName);
+            await this.plugin.settingsTabFunctions.exportEmbed(this.flowName);
           } else {
-            this.plugin.settingsTabFunctions.exportFlow(this.flowName);
+            await this.plugin.settingsTabFunctions.exportFlow(this.flowName);
           }
         });
 
@@ -944,8 +960,8 @@ export class MenuBar {
               : true;
 
             this.plugin.settings.flows[this.flowName].embed = toggledValue;
-            this.plugin.saveSettings();
-            this.plugin.settingsTabFunctions.flowBuildingBundle(
+            await this.plugin.saveSettings();
+            await this.plugin.settingsTabFunctions.flowBuildingBundle(
               this.flowName,
               "switcher",
             );
@@ -964,12 +980,12 @@ export class MenuBar {
             ? this.plugin.t("menubar Collapse")
             : this.plugin.t("menubar Collapse warn"),
         )
-        .onClick(() => {
+        .onClick(async () => {
           this.plugin.settings.activeRegions[this.flowName][
             this.leafID
           ].leafMenuBarSettings.menuBarDisplayState = "min";
-          this.plugin.saveSettings();
-          this.plugin.refreshMenuBars();
+          await this.plugin.saveSettings();
+          await this.plugin.refreshMenuBars();
         });
 
       // there we go.
