@@ -144,7 +144,6 @@ class LoadingOverlay {
       cls: "textflow-loading-container",
     });
 
-    const symbol = this.plugin.settingsTabFunctions.explorerDecoArray[0][0];
     this.progressText = this.container.createDiv({
       cls: "textflow-loading-text",
       text: this.t(
@@ -244,14 +243,16 @@ export class settingsTabFunctions {
 
   //--------------------------------------------------
   // ----- To slow down saving on input fields
-  private debouncedSaveTimer: NodeJS.Timeout | undefined;
+  private debouncedSaveTimer: number | undefined;
 
   debouncedSaveSettings = async () => {
     if (this.debouncedSaveTimer) {
-      clearTimeout(this.debouncedSaveTimer);
+      window.clearTimeout(this.debouncedSaveTimer);
     }
-    this.debouncedSaveTimer = setTimeout(async () => {
-      await this.plugin.saveSettings();
+    this.debouncedSaveTimer = window.setTimeout(() => {
+      void this.plugin
+        .saveSettings()
+        .catch((err) => console.error("saveSettings failed:", err));
       this.debouncedSaveTimer = undefined;
     }, 200); // .2 second delay
   };
@@ -450,7 +451,7 @@ export class settingsTabFunctions {
 
       // ------ FOLDERS/TAG/PROPERTY FLOWS -----------------------
       else if (flowBuildBasket.definitionMode === "foldersTagsProps") {
-        this.ensureNoUndefined(flowBuildBasket);
+        await this.ensureNoUndefined(flowBuildBasket);
 
         const foldersTagsPropsPathArray =
           await this.getPathsByFoldersTagsProps(flowBuildBasket);
@@ -489,7 +490,7 @@ export class settingsTabFunctions {
       // get overlap info
       flowBuildBasket.overlapObject = this.overlapCollector(flowBuildBasket);
       flowBuildBasket.success = true;
-    } catch (error) {
+    } catch {
       new Notice(
         this.plugin.t(
           "createSourceNotePathArray.notice random error, please check console",
@@ -519,17 +520,21 @@ export class settingsTabFunctions {
     let sortedFilePathArray: string[] = [];
     const vault = this.app.vault;
 
-    flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder ===
-      "noteOrder" ||
-    flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder === undefined
-      ? (sortedFilePathArray = this.makeNoteOrderPathArray(
-          vault.getRoot(),
-          sortedFilePathArray,
-        ))
-      : (sortedFilePathArray = this.makeFolderOrderPathArray(
-          vault.getRoot(),
-          sortedFilePathArray,
-        ));
+    if (
+      flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder ===
+        "noteOrder" ||
+      flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder === undefined
+    ) {
+      sortedFilePathArray = this.makeNoteOrderPathArray(
+        vault.getRoot(),
+        sortedFilePathArray,
+      );
+    } else {
+      sortedFilePathArray = this.makeFolderOrderPathArray(
+        vault.getRoot(),
+        sortedFilePathArray,
+      );
+    }
 
     let finalPathArray: string[] = [];
 
@@ -1239,7 +1244,6 @@ export class settingsTabFunctions {
 
   overlapCollector = (flowBuildBasket: Types.flowBuildBasket) => {
     const overlapObject: Types.OverlapObject = {};
-    const key = Object.keys(flowBuildBasket.flowNotesPathArray)[0];
     if (Object.keys(this.plugin.settings.flows).length >= 1) {
       flowLoop: for (const referenceFlow in this.plugin.settings.flows) {
         if (
@@ -1394,11 +1398,6 @@ export class settingsTabFunctions {
       currentEnd: 0,
       idDivider: "",
     };
-
-    let key = "";
-    updatedFlow.definitionMode
-      ? (key = "bookmarks")
-      : (key = "foldersTagsProps");
 
     let pathArray: string[] = [];
     Object.keys(this.plugin.settings.flows[flowName].flowMap).forEach(
@@ -1609,11 +1608,10 @@ export class settingsTabFunctions {
           }
 
           // check if there are UUIDs in there due to a sync fuckup
-          let match;
           const regex =
             /[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46}/;
 
-          if ((match = regex.exec(fileContent) !== null)) {
+          if (regex.exec(fileContent) !== null) {
             // remove any progress stuff so the user isn't stuck with the overlay/has to click away the toast
             if (caller === "settingsTab" || caller === "switcher") {
               if (progressToast) {
@@ -1934,9 +1932,6 @@ export class settingsTabFunctions {
     if (cursorPos !== undefined && cursorPos >= 0) {
       const line = cmEditor.state.doc.lineAt(Math.max(0, cursorPos));
       const targetPos = line.from;
-
-      // Get current viewport info
-      const viewport = cmEditor.viewport;
 
       // Calculate the target scroll position
       const targetLine = line.number;

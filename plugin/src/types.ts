@@ -1,5 +1,6 @@
 import type { FuseResult } from "fuse.js";
-import { App, Editor } from "obsidian";
+import { App, Editor, PluginManifest } from "obsidian";
+import type { Plugin as ObsidianPlugin } from "obsidian";
 import { EditorView } from "@codemirror/view";
 import { Compartment, Extension } from "@codemirror/state";
 import xxhash from "xxhash-wasm";
@@ -276,7 +277,7 @@ export type CalculationMode = "update" | "single" | "redo";
 export type DecoStyle = "neutral" | "active" | "unsynced" | "none";
 
 // stuff that's used by the menuBar
-export type DropdownState = "hide" | "show";
+export type DropdownState = "textflow-hide" | "show";
 export type MenuBarDisplayState = "max" | "min";
 
 // the nav dropdown
@@ -308,4 +309,11 @@ export type CleanArrayCollection = {
   cleanTagExclusion: string[];
   cleanPropertiesInclusion: string[][];
   cleanPropertiesExclusion: string[][];
+};
+
+// -------------- Stuff I added while trying to please the linter. I'll sort them whenever I get the energy
+export type PluginRegistry = {
+  manifests: Record<string, PluginManifest>;
+  plugins: Record<string, ObsidianPlugin>; // loaded/active instances
+  enabledPlugins: Set<string>;
 };

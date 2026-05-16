@@ -51,10 +51,12 @@ export class CreateFlowFromFolder extends Modal {
     const { contentEl } = this;
     contentEl.empty();
 
-    const modalTitle = contentEl.createEl("h2", {
+    // title
+    contentEl.createEl("h2", {
       text: this.plugin.t("CreateFlowFromFolderModal.headline"),
     });
-    const description = contentEl.createSpan({
+    // description
+    contentEl.createSpan({
       text: this.plugin.t(
         "CreateFlowFromFolderModal.description refine def in settings",
       ),
@@ -92,7 +94,8 @@ export class CreateFlowFromFolder extends Modal {
 
     //--------------------------------------------------------------------------------
     // FOLDER TITLES TOGGLE
-    const toggleFolderTitles = new Setting(contentEl)
+    const toggleFolderTitles = new Setting(contentEl);
+    toggleFolderTitles
       .setName(this.plugin.t("modal_toggleFolderTitles.setName include folder"))
       .setDesc(
         this.plugin.t(
@@ -110,13 +113,16 @@ export class CreateFlowFromFolder extends Modal {
 
     if (this.plugin.settings.embeds) {
       // --------- TOGGLE EMBEDS ------------------
-      const toggleEmbed = new Setting(contentEl)
+      const toggleEmbed = new Setting(contentEl);
+      toggleEmbed
         .setName(this.plugin.t("toggleEmbed name"))
         .addToggle((sortToggle) => {
           sortToggle
             .setValue(this.plugin.settings.flowBuildBasket.embed ?? false)
             .onChange(async (value) => {
-              const plugins = (this.app as any).plugins;
+              const plugins = (
+                this.app as App & { plugins: Types.PluginRegistry }
+              ).plugins;
               const isInstalled = !!plugins.manifests["sync-embeds"];
               if (!isInstalled) {
                 new Notice(this.plugin.t("Please install sync embeds"), 0);
@@ -197,7 +203,8 @@ export class CreateFlowFromFolder extends Modal {
 
     //--------------------------------------------------------------------------------
     let subfoldersExcluded = false;
-    const excludeSubfolders = new Setting(contentEl)
+    const excludeSubfolders = new Setting(contentEl);
+    excludeSubfolders
       .setName(
         this.plugin.t("modal_toggleSubfolders.setName exclude subfolders"),
       )
@@ -289,7 +296,8 @@ export class CreateFlowFromFolder extends Modal {
       });
 
     //--------------------------------------------------------------------------------
-    const closeButton = new ButtonComponent(contentEl)
+    const closeButton = new ButtonComponent(contentEl);
+    closeButton
       .setButtonText(this.plugin.t("CreateFlowFromFolderModal.close"))
       .onClick(async () => {
         this.plugin.settingsTabFunctions.resetFlowBuildBasket(
@@ -326,7 +334,6 @@ export class CreateNewFile extends Modal {
   onOpen() {
     const { contentEl } = this;
     contentEl.empty();
-
     let choice: string = "";
 
     const modalTitle = contentEl.createEl("h2", {
@@ -336,7 +343,7 @@ export class CreateNewFile extends Modal {
     //--------------------------------------------------------------------------------
     const selectItemDropdown = new Setting(modalTitle);
     selectItemDropdown.setClass("deco-dropdown").addDropdown((dropdown) => {
-      const selectItemDropdownComponent = dropdown;
+      // selectItemDropdownComponent
       dropdown.selectEl.setAttribute(
         "aria-label",
         this.plugin.t("CreateNewFilerModal.description"),
@@ -490,8 +497,7 @@ export class PreviewModal extends Modal {
           if (this.flowBuildBasket.definitionMode === "foldersTagsProps") {
             // if we are not working with bookmarks
             let dashes = "";
-            for (let i = 0; i < ingredientArray.length - 1; i++)
-              dashes += "-";
+            for (let i = 0; i < ingredientArray.length - 1; i++) dashes += "-";
             ingredient = `${dashes} ${
               ingredientArray[ingredientArray.length - 1]
             }`;
@@ -677,9 +683,9 @@ export class RestoreFlowDefModal extends Modal {
     if (!fileExists) return null;
 
     // variable to hold the contents if the file exists
-    let parsedJson;
-    const rawContents = await this.app.vault.adapter.read(backupPath);
-    parsedJson = JSON.parse(rawContents);
+    let parsedJson: Record<string, Types.FlowDef>;
+        const rawContents = await this.app.vault.adapter.read(backupPath);
+    parsedJson = JSON.parse(rawContents) as Record<string, Types.FlowDef>;
 
     if (Object.keys(parsedJson).length === 0) return null;
 
@@ -695,21 +701,20 @@ export class RestoreFlowDefModal extends Modal {
     const { contentEl } = this;
     contentEl.empty();
 
-    const flowDisplay = contentEl.createDiv({
+    const flowDisplayContainer = contentEl.createDiv({
       cls: "headline-container",
     });
 
-    flowDisplay.createEl("h3", {
-      text: this.plugin.t("backup.headline"),
-      cls: "headline-text",
-    });
+    const flowDisplay = new Setting(flowDisplayContainer)
+      .setName(this.plugin.t("backup.headline"))
+      .setHeading();
 
     //--------------------------------------------------------------------------------
     // check if we have something to display
     const exists = await this.getBackup();
     if (!exists) {
       // if we don't, tell the user how to get something to display
-      const flowExplanation = flowDisplay
+      const flowExplanation = flowDisplayContainer
         .createDiv()
         .setText(this.plugin.t("backup.explanation empty"));
 
@@ -726,7 +731,8 @@ export class RestoreFlowDefModal extends Modal {
       // if we do, display that
       const { parsedJson, backupPath } = exists;
 
-      const flowExplanation = new Setting(flowDisplay).setDesc(
+      const flowExplanation = new Setting(flowDisplayContainer);
+      flowExplanation.setDesc(
         createFragment((desc) => {
           desc.createSpan({
             text: this.plugin.t("backup.explanation select"),
@@ -828,7 +834,7 @@ export class RestoreFlowDefModal extends Modal {
         const exclusionString = excluded.length > 0 ? excluded.join(" | ") : "";
 
         // --- THE DISPLAY ITSELF -------------------------------
-        const flowShow = new Setting(flowDisplay);
+        const flowShow = new Setting(flowDisplayContainer);
         flowShow
           .setName(`${flowName}`)
           .setDesc(

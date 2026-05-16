@@ -2,7 +2,6 @@ import { App, ButtonComponent, MarkdownView, setIcon } from "obsidian";
 import Fuse, { FuseResult } from "fuse.js";
 import type TextFlowPlugin from "../main";
 import { basename } from "path";
-import * as Types from "./types";
 
 export class MenuBar {
   private app: App;
@@ -162,7 +161,7 @@ export class MenuBar {
   // -------------------------------------------------------
   private setDropdownState = async (
     dropdown: string,
-    state: "show" | "hide",
+    state: "show" | "textflow-hide",
   ) => {
     if (
       dropdown === "nav" &&
@@ -180,6 +179,7 @@ export class MenuBar {
         this.leafID
       ].leafMenuBarSettings.cursorDropdownState = state;
     }
+    await this.plugin.saveSettings();
   };
 
   // -------- FUNCTIONS AND VARIABLES TO MANAGE THE MENU BAR INTERNALLY
@@ -231,7 +231,7 @@ export class MenuBar {
   private createNavDropdownEntry(path: string, dropdownEntries: HTMLElement) {
     // get flowOrder (also to search for start of region)
     if (path === "No results") {
-      const dropdownEntry = dropdownEntries.createDiv({
+      dropdownEntries.createDiv({
         cls: "menu-bar-navigation-dropdown-entries",
         text: "No results",
       });
@@ -313,7 +313,7 @@ export class MenuBar {
           }
 
           this.filterList = [];
-          void this.setDropdownState("nav", "hide").catch((err) =>
+          void this.setDropdownState("nav", "textflow-hide").catch((err) =>
             console.error("setDropdownState failed:", err),
           );
           this.refresh(this.associatedView.contentEl);
@@ -477,7 +477,8 @@ export class MenuBar {
       }
 
       // ----------- REBUILD BUTTON ------------
-      const rebuildButton = new ButtonComponent(menuBarEl)
+      const rebuildButton = new ButtonComponent(menuBarEl);
+      rebuildButton
         .setIcon("rotate-cw")
         .setClass(`menu-bar-button-rebuild-${goRebuild}`)
         .setClass("spacing")
@@ -514,8 +515,6 @@ export class MenuBar {
       }
 
       // If we don't have an active region - we always do, but still - be ready to use the first region
-      const key = this.plugin.settings.flows[this.flowName].definitionMode;
-
       const pathArray = this.getPathArray();
       const firstThingNoteName = this.makeNavPath(pathArray[0]);
 
@@ -533,7 +532,7 @@ export class MenuBar {
 
       // headline text and icon
       // just the region, if the dropdown is collapsed
-      if (this.getDropdownState("nav") === "hide") {
+      if (this.getDropdownState("nav") === "textflow-hide") {
         navHeadline.createSpan({
           cls: `align-off-center ${titleClass}`,
           text:
@@ -560,7 +559,7 @@ export class MenuBar {
             );
           }
 
-          if (this.getDropdownState("nav") === "hide") {
+          if (this.getDropdownState("nav") === "textflow-hide") {
             void this.setDropdownState("nav", "show").catch((err) =>
               console.error("setDropdownState failed:", err),
             );
@@ -573,21 +572,21 @@ export class MenuBar {
             }
 
             // Listener that will close dropdown if we click outside it
-            this.addManagedListener(document, "click", (event: Event) => {
+            this.addManagedListener(activeDocument, "click", (event: Event) => {
               const mouseEvent = event as MouseEvent;
 
               const target = mouseEvent.target as HTMLElement;
               // Check if click is outside the navigation dropdown
               if (!navigationDropdown.contains(target)) {
                 this.filterList = [];
-                void this.setDropdownState("nav", "hide").catch((err) =>
-                  console.error("setDropdownState failed:", err),
+                void this.setDropdownState("nav", "textflow-hide").catch(
+                  (err) => console.error("setDropdownState failed:", err),
                 );
                 this.refresh(this.associatedView.contentEl);
               }
             });
           } else {
-            void this.setDropdownState("nav", "hide");
+            void this.setDropdownState("nav", "textflow-hide");
             this.refresh(this.associatedView.contentEl);
           }
         });
@@ -710,7 +709,7 @@ export class MenuBar {
 
         // the listener to open the dropdown
         this.addManagedListener(cursorHeadline, "click", (event) => {
-          if (this.getDropdownState("cursor") === "hide") {
+          if (this.getDropdownState("cursor") === "textflow-hide") {
             void this.setDropdownState("cursor", "show").catch((err) =>
               console.error("setDropdownState failed:", err),
             );
@@ -725,21 +724,21 @@ export class MenuBar {
             }
 
             // Listener that will close dropdown if we click outside it
-            this.addManagedListener(document, "click", (event: Event) => {
+            this.addManagedListener(activeDocument, "click", (event: Event) => {
               const mouseEvent = event as MouseEvent;
 
               const target = mouseEvent.target as HTMLElement;
               // Check if click is outside the navigation dropdown
               if (!cursorDropdown.contains(target)) {
                 this.filterList = [];
-                void this.setDropdownState("cursor", "hide").catch((err) =>
-                  console.error("setDropdownState failed:", err),
+                void this.setDropdownState("cursor", "textflow-hide").catch(
+                  (err) => console.error("setDropdownState failed:", err),
                 );
                 this.refresh(this.associatedView.contentEl);
               }
             });
           } else {
-            void this.setDropdownState("cursor", "hide").catch((err) =>
+            void this.setDropdownState("cursor", "textflow-hide").catch((err) =>
               console.error("setDropdownState failed:", err),
             );
             this.refresh(this.associatedView.contentEl);
@@ -770,7 +769,7 @@ export class MenuBar {
             ]
           ) {
             // create headline entry that's not clickable
-            const cursorDropdownEntryDate = cursorDropdownScrollable.createDiv({
+            cursorDropdownScrollable.createDiv({
               cls: `text-emphasis align-off-center`,
               text: this.plugin.t("menubar.cursor history this leaf"),
             });
@@ -780,11 +779,6 @@ export class MenuBar {
 
             // create a div for each
             for (const [index, data] of inclusiveCursorArray.entries()) {
-              const textTimestamp =
-                this.plugin.settings.flows[this.flowName].persistentCursors[
-                  this.leafID
-                ].update;
-
               const cursorDropdownEntryPos = cursorDropdownScrollable.createDiv(
                 {
                   cls: "blah",
@@ -818,7 +812,7 @@ export class MenuBar {
             ).length > 1
           ) {
             // create headline entry that's not clickable
-            const cursorDropdownEntryDate = cursorDropdownScrollable.createDiv({
+            cursorDropdownScrollable.createDiv({
               cls: `text-emphasis align-off-center`,
               text: this.plugin.t("menubar.cursor history other leaves"),
             });

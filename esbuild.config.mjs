@@ -2,7 +2,7 @@ import esbuild from "esbuild";
 import process from "process";
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
-import builtins from "builtin-modules";
+import { builtinModules } from 'node:module'
 import { copy } from "esbuild-plugin-copy";
 
 const banner = `/*
@@ -24,7 +24,7 @@ const context = await esbuild.context({
     "@codemirror/state",
     "@codemirror/view",
     "@codemirror/language",
-    ...Object.values(builtins),
+    ...Object.values(builtinModules),
   ],
   format: "cjs",
   target: "es2018",

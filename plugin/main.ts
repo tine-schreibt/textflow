@@ -149,7 +149,6 @@ class StatsOverlay {
       cls: "textflow-loading-container",
     });
 
-    const symbol = this.plugin.settingsTabFunctions.explorerDecoArray[0][0];
     this.progressText = this.container.createDiv({
       cls: "textflow-loading-text",
       text: this.t("main.statsOverlay initial notice", {
@@ -239,7 +238,7 @@ export default class TextFlowPlugin extends Plugin {
 
   // ---------------- Functions: settingsTabFunctions -------------------------
   async loadSettings(): Promise<TextFlowSettings> {
-    const loaded = await this.loadData();
+    const loaded = (await this.loadData()) as Partial<TextFlowSettings>;
     const mergedSettings = Object.assign({}, DEFAULT_SETTINGS, loaded);
     return mergedSettings;
   }
@@ -253,9 +252,7 @@ export default class TextFlowPlugin extends Plugin {
     this.morePendingSettingsSave = true;
 
     if (this.isSavingSettings || this.isUnloading) {
-      if (this.morePendingSettingsSave) {
-      }
-      return;
+      if (this.morePendingSettingsSave) return;
     }
 
     this.isSavingSettings = true;
@@ -307,10 +304,6 @@ export default class TextFlowPlugin extends Plugin {
   // ---------------------------------------------------------------
   // see also: discernAndSetSystemFolderState for UI
   ensureSystemFolder = async () => {
-    console.log(
-      "ensuring system folder while hidden = ",
-      this.settings.systemFolderHidden,
-    );
     if (this.settings.firstLaunch) {
       this.settings.firstLaunch = false;
       return;
@@ -325,7 +318,6 @@ export default class TextFlowPlugin extends Plugin {
       );
 
     if (systemFolder) {
-      console.log("found system folder");
       // if there is a systemFolder
       await this.discernAndSetSystemFolderState();
       if (
@@ -334,7 +326,6 @@ export default class TextFlowPlugin extends Plugin {
       ) {
         // defer to reality and update settings
         if (!this.settings.systemFolderPath) return;
-        const oldPath = this.settings.systemFolderPath;
         this.settings.systemFolderPath = systemFolder.path;
 
         if (this.settings.flows) {
@@ -346,7 +337,6 @@ export default class TextFlowPlugin extends Plugin {
         }
       }
     } else {
-      console.log("No system folder found");
       if (this.settings.systemFolderPath) {
         await this.settingsTabFunctions.createSystemFolder(
           this.settings.systemFolderPath,
@@ -571,9 +561,11 @@ export default class TextFlowPlugin extends Plugin {
       id: "text-flow-toggle-explorer-listener",
       name: this.t("main.registerCommand toggle explorer navigation"),
       callback: async () => {
-        this.settings.explorerListener
-          ? (this.settings.explorerListener = false)
-          : (this.settings.explorerListener = true);
+        if (this.settings.explorerListener) {
+          this.settings.explorerListener = false;
+        } else {
+          this.settings.explorerListener = true;
+        }
         await this.saveSettings();
         new Notice(
           this.t("main toggle explorer navigation notice", {
@@ -785,62 +777,33 @@ export default class TextFlowPlugin extends Plugin {
 
   // ----- this is called onload and sets the visibility of textFlowSystemFolderName
   // rewritten by Claude to do the styles.css thing
-  // ----- this is called onload and sets the visibility of textFlowSystemFolderName
   discernAndSetSystemFolderState = async () => {
-    console.log(
-      "discerning and setting system folder state to: ",
-      this.settings.systemFolderHidden,
-    );
     const systemFolderPath = this.settings.systemFolderPath;
     const systemFolderHidden = this.settings.systemFolderHidden;
 
     // Remove any existing style
-    const existingStyle = document.head.querySelector(
-      "style[data-textflow-temp]",
-    );
-    if (existingStyle) {
-      existingStyle.remove();
-    }
-
-    //Suggested correction
-    /* // Remove any existing style
     const showSystemFolder = () => {
       document
-        .querySelectorAll(".textflow-hidden")
-        .forEach((el) => el.classList.remove("textflow-hidden"));
+        .querySelectorAll(".textflow-hide")
+        .forEach((el) => el.classList.remove("textflow-hide"));
     };
 
-    showSystemFolder();*/
+    showSystemFolder();
 
     // If we're not hiding (or don't have a place defined) just return after removing style
     if (!systemFolderHidden || systemFolderPath === undefined) {
       return;
     }
 
-    // Create and append style with the correct selector
-    const addStyle = () => {
-      let hiddenStyle = document.createElement("style");
-      hiddenStyle.setAttribute("data-textflow-temp", "true");
-
-      hiddenStyle.textContent = `
-            div[data-path='${systemFolderPath}'],
-            div[data-path^='${systemFolderPath}'] {
-                display: none !important;
-            }
-        `;
-      document.head.appendChild(hiddenStyle);
-    };
-    addStyle();
-
-    /*   const hideSystemFolder = () => {
+    const hideSystemFolder = () => {
       document
         .querySelectorAll(
           `div[data-path='${systemFolderPath}'],
          div[data-path^='${systemFolderPath}']`,
         )
-        .forEach((el) => el.classList.add("textflow-hidden"));
+        .forEach((el) => el.classList.add("textflow-hide"));
     };
-    hideSystemFolder();*/
+    hideSystemFolder();
   };
 
   // ----- DECORATE SOURCE NOTES IN FILE EXPLORER -----------
@@ -857,8 +820,6 @@ export default class TextFlowPlugin extends Plugin {
     const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (activeView) {
       if (activeView.file) {
-        const activeLeafPath = activeView.file.path;
-
         const leafID = this.settingsTabFunctions.getLeafID(activeView.leaf);
 
         for (const flowName of Object.keys(this.settings.activeRegions)) {
@@ -918,7 +879,6 @@ export default class TextFlowPlugin extends Plugin {
         unsyncedSymbol = this.settings.explorerDecoStyle[1];
       }
       const neutralStyle = this.settings.explorerDecoStyle[2];
-      const unsyncedStyle = this.settings.explorerDecoStyle[3];
 
       let pseudoElement = "";
       let activeColour = "";
@@ -1169,7 +1129,6 @@ ${pseudoElement}
     let path = "";
     let handledPathsArray: string[] = [];
 
-    type DecoStyle = "neutral" | "unsynced" | "none";
     // ------ all the helper functions used -------
     const handlePath = (path: string) => {
       let successivePath = "";
@@ -1206,7 +1165,6 @@ ${pseudoElement}
     };
 
     // -------- THE LOGIC -----------------
-    const handledPaths: { [key: string]: boolean } = {};
     Object.keys(this.settings.flows).forEach((flowName) => {
       for (path of Object.keys(this.settings.flows[flowName].flowMap)) {
         // exclude folder titles
@@ -1688,7 +1646,7 @@ ${pseudoElement}
         ) {
           // If a new .md file gets created in the system folder, it's because the user has set 'create new file in same folder as active file', so we simulate that behaviour by getting the path for last active region and moving the file into the respective folder
 
-          setTimeout(() => {
+          window.setTimeout(() => {
             const baseName = basename(file.path);
             const basePath = dirname(this.lastActiveRegion);
             const newFileName = this.getUniqueFileName(basePath, baseName);
@@ -1880,7 +1838,7 @@ ${pseudoElement}
     if (!this.listenerBasket[leafID] || !this.listenerBasket[leafID].cursor) {
       const plugin = this;
       let lastCursorPosition: number | null = null;
-      let cursorDebounceTimeout: NodeJS.Timeout | null = null;
+      let cursorDebounceTimeout: number | null = null;
 
       const cursorListenerCompartment = new Compartment();
 
@@ -1897,10 +1855,10 @@ ${pseudoElement}
               lastCursorPosition = cursorOffset;
 
               if (cursorDebounceTimeout) {
-                clearTimeout(cursorDebounceTimeout);
+                window.clearTimeout(cursorDebounceTimeout);
               }
 
-              cursorDebounceTimeout = setTimeout(async () => {
+              cursorDebounceTimeout = window.setTimeout(() => {
                 if (!plugin.settings.flows[flowName]) {
                   throw new Error(`Flow ${flowName} not found in settings`);
                 }
@@ -1915,19 +1873,18 @@ ${pseudoElement}
                 }
 
                 // this sets off a chain of functions which updates the active Region
-                await plugin.checkActiveRegion(
-                  flowName,
-                  leafID,
-                  cursorOffset,
-                  view,
-                );
+                void plugin
+                  .checkActiveRegion(flowName, leafID, cursorOffset, view)
+                  .catch((err) =>
+                    console.error("checkActiveRegion failed:", err),
+                  );
               }, 250);
             }
           }
 
           destroy() {
             if (cursorDebounceTimeout) {
-              clearTimeout(cursorDebounceTimeout);
+              window.clearTimeout(cursorDebounceTimeout);
             }
           }
         },
@@ -1952,7 +1909,7 @@ ${pseudoElement}
       // ---------- actual listener stuff
 
       const plugin = this;
-      let textChangeDebounceTimeout: NodeJS.Timeout | null = null;
+      let textChangeDebounceTimeout: number | null = null;
 
       const textChangeListenerCompartment = new Compartment();
 
@@ -1970,10 +1927,10 @@ ${pseudoElement}
             if (changes.empty) return;
 
             if (textChangeDebounceTimeout) {
-              clearTimeout(textChangeDebounceTimeout);
+              window.clearTimeout(textChangeDebounceTimeout);
             }
 
-            textChangeDebounceTimeout = setTimeout(() => {
+            textChangeDebounceTimeout = window.setTimeout(() => {
               // Prevent rebuilds and app reload from registering as text change
               if (plugin.settings.flows[flowName].isFreshBuild) {
                 plugin.settings.flows[flowName].isFreshBuild = false;
@@ -2056,7 +2013,7 @@ ${pseudoElement}
 
           destroy() {
             if (textChangeDebounceTimeout) {
-              clearTimeout(textChangeDebounceTimeout);
+              window.clearTimeout(textChangeDebounceTimeout);
             }
           }
         },
@@ -2314,7 +2271,7 @@ ${pseudoElement}
         }
 
         // Delay to allow UI to settle
-        setTimeout(() => {
+        window.setTimeout(() => {
           this.explorerClickListenerActive = false;
         }, 100);
       } else {
@@ -2381,9 +2338,9 @@ ${pseudoElement}
             this.app.workspace.setActiveLeaf(flowLeaf, { focus: true });
 
             // Delay so dust can settle
-            void new Promise((resolve) => setTimeout(resolve, 150)).catch(
-              (err) => console.error("Timeout failed:", err),
-            ); // 150ms, adjust if needed
+            void new Promise((resolve) =>
+              window.setTimeout(resolve, 150),
+            ).catch((err) => console.error("Timeout failed:", err)); // 150ms, adjust if needed
 
             // Now prepare for the scrolling
             const flowView =
@@ -2405,9 +2362,9 @@ ${pseudoElement}
                 "TextFlow: Active leaf changed unexpectedly. Forcing it back to flow leaf before scrolling.",
               );
               this.app.workspace.setActiveLeaf(flowLeaf, { focus: true });
-              void new Promise((resolve) => setTimeout(resolve, 50)).catch(
-                (err) => console.error("Timeout failed:", err),
-              );
+              void new Promise((resolve) =>
+                window.setTimeout(resolve, 50),
+              ).catch((err) => console.error("Timeout failed:", err));
             }
 
             // get all the info we need
@@ -2444,7 +2401,7 @@ ${pseudoElement}
               err,
             );
           } finally {
-            setTimeout(() => {
+            window.setTimeout(() => {
               this.explorerClickListenerActive = false;
             }, 300);
           }
@@ -2659,16 +2616,15 @@ ${pseudoElement}
     if (targetObject) {
       if (!this.settings.activeRegions[flowName])
         this.settings.activeRegions[flowName] = {};
-      const { type, invisibleUUID, flowOrder } = targetObject;
       this.settings.activeRegions[flowName][leafID] = {
         currentCursorPos: 0,
         path: path ? path : "",
         invisibleUUID: targetObject.invisibleUUID,
         leafMenuBarSettings: {
           menuBarDisplayState: this.settings.menuBarDefault,
-          navDropdownState: "hide",
+          navDropdownState: "textflow-hide",
           navDropdownSearchTerm: undefined,
-          cursorDropdownState: "hide",
+          cursorDropdownState: "textflow-hide",
         },
       };
       await this.saveSettings();
@@ -2753,8 +2709,6 @@ ${pseudoElement}
         this.settings.flows[flowName].flowMap,
       ).find(([_, foundRegionMap]) => foundRegionMap.invisibleUUID === UID);
 
-      if (!foundRegion) {
-      }
       if (foundRegion) {
         const [foundRegionPath, foundRegionMap] = foundRegion;
 
@@ -2834,8 +2788,6 @@ ${pseudoElement}
     if (!view.file) return;
     const leaf = view.leaf;
 
-    const activeLeafPath = view.file.path;
-
     if (leaf?.view instanceof MarkdownView) {
       const view = leaf.view;
       const activeLeafPath = leaf.view.file?.path;
@@ -2844,8 +2796,6 @@ ${pseudoElement}
         const isFlow = this.isFlowFile(activeLeafPath);
         if (isFlow) {
           await this.setUpFlow(isFlow, leaf.view);
-
-          const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
 
           this.mostRecentActiveFlowLeaf = leaf;
           return;
@@ -3390,10 +3340,6 @@ ${pseudoElement}
     if (this.settings.flows[flowName].flaggedForRebuild) return;
     if (this.settings.flows[flowName].embed) return;
 
-    let key = this.settings.flows[flowName].definitionMode
-      ? "bookmarks"
-      : "foldersTagsProps";
-
     // iterating over the paths
     // Use Promise.all for parallel execution:
 
@@ -3761,6 +3707,11 @@ ${pseudoElement}
     // ------------ Remove listeners -----------
 
     //------------ REMOVE explorer click listener -----------
+    /* Reason for disabling the rule on the next line: 
+      I need this type assertion since without it, 
+      removeEventListener gets 'No overload matches this call'
+     */
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
     const fileExplorer = document.querySelector(
       ".nav-files-container",
     ) as HTMLElement | null;

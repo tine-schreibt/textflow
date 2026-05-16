@@ -139,7 +139,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
                     },
                   ),
                 );
-              } catch (error) {
+              } catch {
                 new Notice(
                   this.plugin.t(
                     "setSystemFolder.addButton.notice failed to move folder",
@@ -152,7 +152,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
 
     // --------------------- UI settings
 
-    const menuBarDefault = new Setting(setUpTextFlow)
+    const menuBarDefault = new Setting(setUpTextFlow);
+    menuBarDefault
       .setName(this.plugin.t("menuBarDefault.setName default menu bar setting"))
       .setDesc(
         createFragment((desc) => {
@@ -180,7 +181,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       });
 
     // ----------- flowSwitcherModal ---------------
-    const switcherModalPosition = new Setting(setUpTextFlow)
+    const switcherModalPosition = new Setting(setUpTextFlow);
+    switcherModalPosition
       .setName(
         this.plugin.t("switcherModalPosition.setName access flow switcher via"),
       )
@@ -248,7 +250,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
       cls: "explorer-deco-dropdown-container",
     });
 
-    const updateHeadlineDisplay = (decoration: any[]) => {
+    const updateHeadlineDisplay = (decoration: string[]) => {
       flowModeExplorerDecoHeadline.empty();
       flowModeExplorerDecoHeadline.createSpan({
         text: decoration[0],
@@ -323,7 +325,8 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     });
 
     //--------------------------------------------------------------------------------
-    const sourceHighlight = new Setting(setUpTextFlow)
+    const sourceHighlight = new Setting(setUpTextFlow);
+    sourceHighlight
       .setName(
         this.plugin.t(
           "activeRegionDeco.setName choose highlight type for active region",
@@ -386,10 +389,12 @@ export class TextFlowSettingsTab extends PluginSettingTab {
         text: this.plugin.t("qol.createSpan.text quality of life settings"),
       });
 
-    const qolSettings = qol.createDiv();
+    // qolSettings
+    qol.createDiv();
 
     // -------------- Navigation listener -----------------
-    const navListener = new Setting(qol)
+    const navListener = new Setting(qol);
+    navListener
       .setName(this.plugin.t("qol.navListener.setName enable explorer nav"))
       .setDesc(
         createFragment((desc) => {
@@ -434,7 +439,8 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
 });*/
 
     // ------------- scrollbar ------------
-    const scrollbar = new Setting(qol)
+    const scrollbar = new Setting(qol);
+    scrollbar
       .setName(this.plugin.t("qol.scrollbar.setName hide scroll bar"))
       .setDesc(
         createFragment((desc) => {
@@ -478,7 +484,8 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
       });
 
     // ----------- hash ---------------
-    const checkForExternalEdits = new Setting(qol)
+    const checkForExternalEdits = new Setting(qol);
+    checkForExternalEdits
       .setName(this.plugin.t("qol.hash.setName hash?"))
       .setDesc(
         createFragment((desc) => {
@@ -550,7 +557,8 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
       });
 
     // ----------- hide system folder ---------------
-    const hidesystemFolder = new Setting(qol)
+    const hidesystemFolder = new Setting(qol);
+    hidesystemFolder
       .setName(
         this.plugin.t("qol.showsystemFolder.setName show system folder", {
           textFlowSystemFolderName: this.plugin.textFlowSystemFolderName,
@@ -586,7 +594,8 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
       });
 
     // --------- MAIN TOGGLE EMBEDS ------------------
-    const toggleEmbed = new Setting(qol)
+    const toggleEmbed = new Setting(qol);
+    toggleEmbed
       .setName(this.plugin.t("toggleEmbed main toggle name"))
       .setDesc(
         createFragment((desc) => {
@@ -604,9 +613,11 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
           .setValue(this.plugin.settings.embeds ?? false)
           .onChange(async (value) => {
             if (value === true) {
-              const plugins = (this.app as any).plugins;
-              const isInstalled = !!plugins.manifests["sync-embeds"];
-              if (!isInstalled) {
+              const plugins = (
+                this.app as App & { plugins: Types.PluginRegistry }
+              ).plugins;
+              const isActive = !!plugins.plugins["sync-embeds"];
+              if (!isActive) {
                 new Notice(this.plugin.t("Please install sync embeds"), 0);
               }
             }
@@ -617,16 +628,17 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
       });
 
     // -------- CREATE / EDIT FLOWS ----------------
-    const createFlows = containerEl.createDiv({
+    const createFlowsContainer = containerEl.createDiv({
       cls: "headline-container",
     });
-    createFlows.createEl("h3", {
-      text: this.plugin.t("createFlows.createEl.text define a new flow"),
-      cls: "headline-text",
-    });
+
+    const createFlows = new Setting(createFlowsContainer);
+    createFlows
+      .setName(this.plugin.t("createFlows.createEl.text define a new flow"))
+      .setHeading();
 
     //--------- FLOW NAME -----------------
-    const chooseFlowName = new Setting(createFlows)
+    const chooseFlowName = new Setting(createFlowsContainer)
       .setName(
         this.plugin.t("createFlows.chooseFlowName.setName name your flow"),
       )
@@ -658,7 +670,8 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
     });
 
     // --------- FOLDER TITLES ------------------
-    const toggleFolderTitles = new Setting(createFlows)
+    const toggleFolderTitles = new Setting(createFlowsContainer);
+    toggleFolderTitles
       .setName(
         this.plugin.t(
           "toggleFolderTitles.setName include folder / bookmark group titles",
@@ -679,7 +692,8 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
 
     // --------- TOGGLE EMBEDS ------------------
     if (this.plugin.settings.embeds) {
-      const toggleEmbed = new Setting(createFlows)
+      const toggleEmbed = new Setting(createFlowsContainer);
+      toggleEmbed
         .setName(this.plugin.t("toggleEmbed name"))
         .addToggle((sortToggle) => {
           sortToggle
@@ -692,7 +706,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
     }
 
     //------- DEFINE FLOW --------------------
-    const defineFlow = new Setting(createFlows)
+    const defineFlow = new Setting(createFlowsContainer)
       .setName(this.plugin.t("defineFlow.setName define your flow"))
       .setDesc(
         createFragment((desc) => {
@@ -746,7 +760,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
     }
 
     // ------ dvQuery INPUT ELEMENT AND STUFF --------------------------------------
-    const dvQuerySortOrder = new Setting(createFlows);
+    const dvQuerySortOrder = new Setting(createFlowsContainer);
     dvQuerySortOrder.settingEl.hide(); // HIDE INITIALLY
     dvQuerySortOrder
       .setName(this.plugin.t("sortOrder.setName sort order"))
@@ -801,7 +815,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
       });
 
     //-----------------------------------------------------------------------------
-    const chooseDvQuery = new Setting(createFlows);
+    const chooseDvQuery = new Setting(createFlowsContainer);
     chooseDvQuery.settingEl.hide(); // HIDE INITIALLY
     chooseDvQuery.settingEl.addClass("input-width-200");
     chooseDvQuery.setDesc(
@@ -862,9 +876,9 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
     // --- headline object ------
 
     // ---- SORT FLOW ---------
-    const sortFlowPathsTagsProperties = new Setting(createFlows).setName(
-      this.plugin.t("sortFlowPathsTagsProperties.setName sort order"),
-    );
+    const sortFlowPathsTagsProperties = new Setting(
+      createFlowsContainer,
+    ).setName(this.plugin.t("sortFlowPathsTagsProperties.setName sort order"));
     sortFlowPathsTagsProperties.settingEl.hide();
     sortFlowPathsTagsProperties.setDesc(
       createFragment((desc) => {
@@ -928,7 +942,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
         await this.plugin.saveSettings();
       });
     });
-    const headlineChoosePathsTagsProperties = new Setting(createFlows);
+    const headlineChoosePathsTagsProperties = new Setting(createFlowsContainer);
     headlineChoosePathsTagsProperties.settingEl.hide();
     headlineChoosePathsTagsProperties.setClass("input-width").setDesc(
       createFragment((desc) => {
@@ -959,7 +973,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
     );
 
     // ----- Folder include ----------
-    const folderIncludeInput = new Setting(createFlows);
+    const folderIncludeInput = new Setting(createFlowsContainer);
     folderIncludeInput.settingEl.hide();
     folderIncludeInput.settingEl.addClass("border-top-none");
     folderIncludeInput.settingEl.addClass("input-width-400");
@@ -1023,7 +1037,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
     });
 
     // ----- Folder exclude ---------------
-    const folderExcludeInput = new Setting(createFlows);
+    const folderExcludeInput = new Setting(createFlowsContainer);
     folderExcludeInput.settingEl.hide();
     folderExcludeInput.settingEl.addClass("border-top-none");
     folderExcludeInput.settingEl.addClass("input-width-400");
@@ -1054,7 +1068,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
       });
 
     // ----- Tags include --------------
-    const tagsIncludeInput = new Setting(createFlows);
+    const tagsIncludeInput = new Setting(createFlowsContainer);
     tagsIncludeInput.settingEl.hide();
     tagsIncludeInput.settingEl.addClass("border-top-none");
     tagsIncludeInput.settingEl.addClass("input-width-400");
@@ -1085,7 +1099,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
       });
 
     //-------- Tags exclude -------
-    const tagsExcludeInput = new Setting(createFlows);
+    const tagsExcludeInput = new Setting(createFlowsContainer);
     tagsExcludeInput.settingEl.hide();
     tagsExcludeInput.settingEl.addClass("border-top-none");
     tagsExcludeInput.settingEl.addClass("input-width-400");
@@ -1115,7 +1129,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
       });
 
     // ----- Properties include ------------
-    const propertiesIncludeInput = new Setting(createFlows);
+    const propertiesIncludeInput = new Setting(createFlowsContainer);
     propertiesIncludeInput.settingEl.hide();
     propertiesIncludeInput.settingEl.addClass("border-top-none");
     propertiesIncludeInput.settingEl.addClass("input-width-400");
@@ -1151,7 +1165,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
       });
 
     // ---------- Properties exclude ---------
-    const propertiesExcludeInput = new Setting(createFlows);
+    const propertiesExcludeInput = new Setting(createFlowsContainer);
     propertiesExcludeInput.settingEl.hide();
     propertiesExcludeInput.settingEl.addClass("border-top-none");
     propertiesExcludeInput.settingEl.addClass("input-width-400");
@@ -1187,7 +1201,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
       });
 
     // ------ BOOKMARKS INPUT ELEMENT AND STUFF --------------------------------------
-    const bookmarksSortOrder = new Setting(createFlows);
+    const bookmarksSortOrder = new Setting(createFlowsContainer);
     bookmarksSortOrder.settingEl.hide(); // HIDE INITIALLY
     bookmarksSortOrder
       .setName(this.plugin.t("sortOrder.setName sort order"))
@@ -1252,7 +1266,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
       });
 
     //-----------------------------------------------------------------------------
-    const chooseBookmarks = new Setting(createFlows);
+    const chooseBookmarks = new Setting(createFlowsContainer);
     chooseBookmarks.settingEl.hide(); // HIDE INITIALLY
     chooseBookmarks.settingEl.addClass("input-width-200");
     chooseBookmarks.setDesc(
@@ -1708,7 +1722,8 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
     }
 
     //------------------------------
-    const restoreSettings = new Setting(flowDisplay)
+    const restoreSettings = new Setting(flowDisplay);
+    restoreSettings
       .setName(this.plugin.t("restoreSettings.setName restore definitions"))
       .setDesc(
         createFragment((desc) => {
