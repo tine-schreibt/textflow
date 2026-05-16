@@ -20,8 +20,10 @@
 !.github/
 !.github/**
 !package.json
+!package-lock.json
 !yarn.lock
 !esbuild.config.mjs
+!eslint.config.mjs
 !tsconfig.json
 
 # but especially ignore node_modules! 
