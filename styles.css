@@ -40,7 +40,7 @@
 }
 
 .textflow-menu-bar-div .setting-item.no-border {
-  border: none !important;
+  border: none;
 }
 
 .hide-scrollbar ::-webkit-scrollbar {
