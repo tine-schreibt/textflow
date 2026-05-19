@@ -7,6 +7,7 @@ export class MenuBar {
   private app: App;
   private element!: HTMLElement; // the bar
   private plugin: TextFlowPlugin;
+  private firstOpen: boolean;
   private flowName: string;
   private associatedView: MarkdownView; // reference to our specific view
   private listeners: Array<{
@@ -28,6 +29,7 @@ export class MenuBar {
     this.flowName = flow;
     this.associatedView = view;
     this.leafID = leafID;
+    this.firstOpen = true;
   }
 
   // Any code that was actually written by AI is labelled
@@ -359,6 +361,12 @@ export class MenuBar {
   // -------------------------------------------------------------
   createMenuBarElement = (): HTMLElement => {
     //this.plugin.settingsTabFunctions.callStack("createMenuBarElement");
+
+    if (this.firstOpen) {
+      void this.setDropdownState("nav", "textflow-hide");
+      void this.setDropdownState("cursor", "textflow-hide");
+      this.firstOpen = false;
+    }
 
     // being paranoid about the TRACKING COMPARTMENTS
     const cmView = this.plugin.settingsTabFunctions.getEditorCM(

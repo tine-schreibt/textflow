@@ -306,6 +306,7 @@ export default class TextFlowPlugin extends Plugin {
   ensureSystemFolder = async () => {
     if (this.settings.firstLaunch) {
       this.settings.firstLaunch = false;
+      await this.saveSettings();
       return;
     }
 
@@ -776,34 +777,42 @@ export default class TextFlowPlugin extends Plugin {
   };
 
   // ----- this is called onload and sets the visibility of textFlowSystemFolderName
-  // rewritten by Claude to do the styles.css thing
+  // rewritten by Claude to do the styles.css thing and wait for the explorer to be ready
   discernAndSetSystemFolderState = async () => {
     const systemFolderPath = this.settings.systemFolderPath;
     const systemFolderHidden = this.settings.systemFolderHidden;
 
-    // Remove any existing style
-    const showSystemFolder = () => {
-      document
+    const applyHiding = () => {
+      // First remove any existing hides
+      activeDocument
         .querySelectorAll(".textflow-hide")
         .forEach((el) => el.classList.remove("textflow-hide"));
-    };
 
-    showSystemFolder();
+      if (!systemFolderHidden || systemFolderPath === undefined) return;
 
-    // If we're not hiding (or don't have a place defined) just return after removing style
-    if (!systemFolderHidden || systemFolderPath === undefined) {
-      return;
-    }
-
-    const hideSystemFolder = () => {
-      document
+      activeDocument
         .querySelectorAll(
           `div[data-path='${systemFolderPath}'],
-         div[data-path^='${systemFolderPath}']`,
+                 div[data-path^='${systemFolderPath}']`,
         )
         .forEach((el) => el.classList.add("textflow-hide"));
     };
-    hideSystemFolder();
+
+    // Run immediately (catches already-rendered elements)
+    applyHiding();
+
+    // Also observe for when the file tree renders
+    const observer = new MutationObserver(() => {
+      applyHiding();
+    });
+
+    observer.observe(activeDocument.body, {
+      childList: true,
+      subtree: true,
+    });
+
+    // Disconnect after a short window — the tree will be done by then
+    window.setTimeout(() => observer.disconnect(), 3000);
   };
 
   // ----- DECORATE SOURCE NOTES IN FILE EXPLORER -----------
@@ -1388,7 +1397,6 @@ ${pseudoElement}
         }
         if (folders === 0) return;
         menu.addItem((item) => {
-          item;
           if (folders === 1) {
             item.setTitle(
               this.t("main.fileMenuListener.context make flow from folder"),
@@ -1815,7 +1823,10 @@ ${pseudoElement}
   // ---------------- Functions: Listeners: Tracking in editor ----------
 
   // -------------- Listeners: Compartments -----------------------------------------
-  private makeCompartments = async (view: MarkdownView) => {
+  private makeCompartments = async (
+    view: MarkdownView,
+    plugin: TextFlowPlugin,
+  ) => {
     const cmView = this.settingsTabFunctions.getEditorCM(view.editor);
     const leafID = this.settingsTabFunctions.getLeafID(view.leaf);
 
@@ -1836,7 +1847,6 @@ ${pseudoElement}
 
     // -------- CURSOR LISTENER -------------------
     if (!this.listenerBasket[leafID] || !this.listenerBasket[leafID].cursor) {
-      const plugin = this;
       let lastCursorPosition: number | null = null;
       let cursorDebounceTimeout: number | null = null;
 
@@ -1908,7 +1918,6 @@ ${pseudoElement}
     ) {
       // ---------- actual listener stuff
 
-      const plugin = this;
       let textChangeDebounceTimeout: number | null = null;
 
       const textChangeListenerCompartment = new Compartment();
@@ -2049,7 +2058,7 @@ ${pseudoElement}
 
               let match;
               const regex =
-                /\n[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46}<hr>\n\n/g;
+                /\n[\u200B\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0\u200C\u200D]{46}<hr>\n\n/g;
 
               while ((match = regex.exec(windowText)) !== null) {
                 const absoluteDividerStart = windowStart + match.index + 1;
@@ -2497,7 +2506,7 @@ ${pseudoElement}
       }
     } else {
       const markerRegex =
-        /[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46}<hr>/;
+        /[\u200B\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0\u200C\u200D]{46}<hr>/;
       const searchStart = text.slice(cursorOffset);
       const matches = searchStart.match(markerRegex);
 
@@ -2547,9 +2556,9 @@ ${pseudoElement}
             );
           }
           // update the array
-          const filteredArray = this.flowOutOfSync.filter((filterFlowname) => {
-            filterFlowname != flowName;
-          });
+          const filteredArray = this.flowOutOfSync.filter(
+            (filterFlowname) => filterFlowname != flowName,
+          );
           this.flowOutOfSync = filteredArray;
 
           this.lastActiveRegion = activeRegion.path;
@@ -2642,7 +2651,7 @@ ${pseudoElement}
   ) => {
     // The regEx, of course, is AI slop
     const markerRegex =
-      /[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46}<hr>/;
+      /[\u200B\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0\u200C\u200D]{46}<hr>/;
 
     // Handle extreme conditions
     if (cursorOffset === 0) {
@@ -2869,7 +2878,7 @@ ${pseudoElement}
 
     // ------------- PROTECTION ---------------------
     // set up the editor with its  extensions and listeners
-    await this.makeCompartments(view);
+    await this.makeCompartments(view, this);
 
     // ------------- HOUSEKEEPING ---------------------
     // scrollbar hiding if necessary
@@ -2983,52 +2992,52 @@ ${pseudoElement}
     });
 
     // Clean up entries for closed leaves plus the listenerBasket
-    Object.keys(this.settings.flows).forEach((flowName) => {
+    for (const flowName of Object.keys(this.settings.flows)) {
       if (this.settings.activeRegions[flowName]) {
         if (Object.keys(this.settings.activeRegions[flowName]).length > 0) {
-          Object.keys(this.settings.activeRegions[flowName]).forEach(
-            async (leafID) => {
-              if (!foundFlowLeaves[flowName]?.has(leafID)) {
-                delete this.settings.activeRegions[flowName][leafID];
-                // filter the id from the array
-                this.settings.flows[flowName].lastActiveLeaves =
-                  this.settings.flows[flowName].lastActiveLeaves.filter(
-                    (id) => id !== leafID,
-                  );
-                delete this.listenerBasket[leafID];
-              }
+          for (const leafID of Object.keys(
+            this.settings.activeRegions[flowName],
+          )) {
+            if (!foundFlowLeaves[flowName]?.has(leafID)) {
+              delete this.settings.activeRegions[flowName][leafID];
+              // filter the id from the array
+              this.settings.flows[flowName].lastActiveLeaves =
+                this.settings.flows[flowName].lastActiveLeaves.filter(
+                  (id) => id !== leafID,
+                );
+              delete this.listenerBasket[leafID];
+            }
 
-              // then, if a flow is all closed, we delete the main entry and sync the flow, because all other syncs only care about active leaves
+            // then, if a flow is all closed, we delete the main entry and sync the flow, because all other syncs only care about active leaves
+            if (
+              Object.keys(this.settings.activeRegions[flowName]).length === 0
+            ) {
+              delete this.settings.activeRegions[flowName];
+
               if (
-                Object.keys(this.settings.activeRegions[flowName]).length === 0
+                this.settings.flows[flowName].unsyncedRegionsArray.length > 0
               ) {
-                delete this.settings.activeRegions[flowName];
-
-                if (
-                  this.settings.flows[flowName].unsyncedRegionsArray.length > 0
-                ) {
-                  const path = this.settings.flows[flowName].flowFilePath;
-                  const note = this.app.vault.getAbstractFileByPath(path);
-                  if (!note) {
-                    new Notice(
-                      this.t(
-                        "manageActiveRegions.notice sync upon closing flow failed",
-                        { path: path },
-                      ),
-                    );
-                  }
-                  if (note instanceof TFile) {
-                    // get the text from the file
-                    const text: string = await this.app.vault.read(note);
-                    await this.syncBackToSource(flowName, text, leafID);
-                  }
+                const path = this.settings.flows[flowName].flowFilePath;
+                const note = this.app.vault.getAbstractFileByPath(path);
+                if (!note) {
+                  new Notice(
+                    this.t(
+                      "manageActiveRegions.notice sync upon closing flow failed",
+                      { path: path },
+                    ),
+                  );
+                }
+                if (note instanceof TFile) {
+                  // get the text from the file
+                  const text: string = await this.app.vault.read(note);
+                  await this.syncBackToSource(flowName, text, leafID);
                 }
               }
-            },
-          );
+            }
+          }
         }
       }
-    });
+    }
 
     // write that shit down
     await this.saveSettings();
@@ -3062,7 +3071,6 @@ ${pseudoElement}
     if (activeLeafPath) {
       const flowName = this.isFlowFile(activeLeafPath);
       if (flowName) {
-        this.alreadyActivated[flowName];
         if (this.alreadyActivated[flowName].leafID) {
           delete this.alreadyActivated[flowName].leafID;
         }
@@ -3290,7 +3298,7 @@ ${pseudoElement}
     }
 
     const markerRegex =
-      /[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46}/g;
+      /[\u200B\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0\u200C\u200D]{46}/g;
 
     const matches = text.match(markerRegex);
 
@@ -3674,7 +3682,7 @@ ${pseudoElement}
       } else if (this.settings.switcherPos === "ribbon") {
         this.addRibbonIcon(
           "scroll-text",
-          "Open flowSwitcher",
+          "Open flow switcher",
           (evt: MouseEvent) => {
             new Modals.FlowSwitcherModal(this.app, this).open();
           },

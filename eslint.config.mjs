@@ -16,6 +16,8 @@ export default defineConfig([
       ...obsidianmd.configs.recommended,
     ],
     rules: {
+      //"eslintimport/no-extraneous-dependencies": on,
+
       // your overrides here
     },
   },

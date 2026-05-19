@@ -267,7 +267,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     updateHeadlineDisplay(this.plugin.settings.explorerDecoStyle);
 
     // Handle dropdown toggle
-    const toggleDropdown = async (event: MouseEvent) => {
+    const toggleDropdown = (event: MouseEvent) => {
       event.preventDefault();
       event.stopPropagation();
       const isOpen = flowModeExplorerDecoContainer.classList.contains("show");
@@ -309,18 +309,18 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     });
 
     // Handle outside clicks
-    const handleOutsideClick = async (event: MouseEvent) => {
+    const handleOutsideClick = (event: MouseEvent) => {
       if (!dropdownContainer.contains(event.target as HTMLElement)) {
         flowModeExplorerDecoContainer.classList.remove("show");
         this.plugin.settings.explorerDecoDropdownOpen = false;
       }
     };
 
-    document.addEventListener("click", handleOutsideClick);
+    activeDocument.addEventListener("click", handleOutsideClick);
 
     // Clean up event listeners when the tab is closed
     this.plugin.register(() => {
-      document.removeEventListener("click", handleOutsideClick);
+      activeDocument.removeEventListener("click", handleOutsideClick);
       flowModeExplorerDecoHeadline.removeEventListener("click", toggleDropdown);
     });
 
@@ -524,9 +524,9 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
             "no",
             this.plugin.t("qol.hash.addDropdown.addOption.1 don't check"),
           )
-          .addOption("mtime", "mtime")
-          .addOption("mtime+hash", "mitme + hash")
-          .addOption("always hash", "hash")
+          .addOption("mtime", "Mtime")
+          .addOption("mtime+hash", "Mitme + hash")
+          .addOption("always hash", "Hash")
           .setValue(this.plugin.settings.checkExternalEdits)
           .onChange(async (value) => {
             if (
@@ -809,7 +809,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
         );
         dropdown.onChange(async (value) => {
           this.plugin.settings.flowBuildBasket.flowDefinition.dvQuerySortOrder =
-            value as Types.SortOrder;
+            value;
           await this.plugin.saveSettings();
         });
       });
@@ -938,7 +938,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
       );
       dropdown.onChange(async (value) => {
         this.plugin.settings.flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder =
-          value as Types.SortOrder;
+          value;
         await this.plugin.saveSettings();
       });
     });
@@ -1260,7 +1260,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
         );
         dropdown.onChange(async (value) => {
           this.plugin.settings.flowBuildBasket.flowDefinition.bookmarksSortOrder =
-            value as Types.SortOrder;
+            value;
           await this.plugin.saveSettings();
         });
       });
@@ -1504,13 +1504,15 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
       });
 
     // ------- FLOW DISPLAY -----------------------------
-    const flowDisplay = containerEl.createDiv({
+    const flowDisplayContainer = containerEl.createDiv({
       cls: "headline-container",
     });
-    flowDisplay.createEl("h3", {
-      text: this.plugin.t("flowDisplay.createEl.text your flow definitions"),
-      cls: "headline-text",
-    });
+
+    const flowShow = new Setting(flowDisplayContainer);
+
+    flowShow
+      .setName(this.plugin.t("flowDisplay.createEl.text your flow definitions"))
+      .setHeading();
 
     let flowsSorted: string[] = [];
     Object.keys(this.plugin.settings.flows).forEach((flowName) => {
@@ -1604,7 +1606,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
       const exclusionString = excluded.length > 0 ? excluded.join(" | ") : "";
 
       // --- THE DISPLAY ITSELF -------------------------------
-      const flowShow = new Setting(flowDisplay);
+      const flowShow = new Setting(flowDisplayContainer);
       flowShow
         .setName(`${flowName}`)
         .setDesc(
@@ -1722,7 +1724,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
     }
 
     //------------------------------
-    const restoreSettings = new Setting(flowDisplay);
+    const restoreSettings = new Setting(flowDisplayContainer);
     restoreSettings
       .setName(this.plugin.t("restoreSettings.setName restore definitions"))
       .setDesc(

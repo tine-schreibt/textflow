@@ -234,9 +234,9 @@ export class settingsTabFunctions {
       } else if (!(newSystemFolder instanceof TFolder)) {
         throw new Error(`"${newSystemFolderPath}" exists but is not a folder.`);
       }
-    } catch (e) {
+    } catch {
       console.error(
-        `textFlow: Something went wrong when trying to create ${newSystemFolderPath}: ${e}`,
+        `textFlow: Something went wrong when trying to create ${newSystemFolderPath}`,
       );
     }
   };
@@ -316,7 +316,7 @@ export class settingsTabFunctions {
     }
 
     // Check for invalid characters - added backtick
-    const invalidChars = /[<>:"/\\|?*#^[\]`\x00-\x1F]/;
+    const invalidChars = /[<>:"/\\|?*#^[\]`]/;
     if (invalidChars.test(name)) {
       return {
         valid: false,
@@ -353,13 +353,13 @@ export class settingsTabFunctions {
       const newFlowName = this.plugin.settings.flowBuildBasket.flowName;
       const oldFlowName = this.plugin.settings.flowBuildBasket.oldFlowName;
 
-      this.plugin.syncAllLeaves();
+      await this.plugin.syncAllLeaves();
 
       // reset all active leaves of the flow
       Object.keys(this.plugin.settings.activeRegions).forEach((activeFlow) => {
         if (activeFlow === oldFlowName) {
           Object.keys(this.plugin.settings.activeRegions[activeFlow]).forEach(
-            async (leafID) => {
+            (leafID) => {
               const targetLeaf = this.app.workspace.getLeafById(leafID);
               if (targetLeaf) {
                 targetLeaf.detach();
@@ -538,6 +538,10 @@ export class settingsTabFunctions {
 
     let finalPathArray: string[] = [];
 
+    /*Reason for disabling: 
+    Apparently Dataview hands out loose typing. The function works, though, so...
+    */
+    /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access*/
     let allNotes = await dv.query(`${flowBuildBasket.flowDefinition.dvQuery}`);
 
     if (!allNotes.successful) {
@@ -549,6 +553,7 @@ export class settingsTabFunctions {
     for (const note of allNotes.value.values) {
       filteredPathObject[note.path] = true;
     }
+    /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access*/
 
     for (const path of sortedFilePathArray) {
       // remove entries that are in the systemFolder
@@ -608,17 +613,21 @@ export class settingsTabFunctions {
     let sortedFilePathArray: string[] = [];
     const vault = this.app.vault;
 
-    flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder ===
-      "noteOrder" ||
-    flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder === undefined
-      ? (sortedFilePathArray = this.makeNoteOrderPathArray(
-          vault.getRoot(),
-          sortedFilePathArray,
-        ))
-      : (sortedFilePathArray = this.makeFolderOrderPathArray(
-          vault.getRoot(),
-          sortedFilePathArray,
-        ));
+    if (
+      flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder ===
+        "noteOrder" ||
+      flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder === undefined
+    ) {
+      sortedFilePathArray = this.makeNoteOrderPathArray(
+        vault.getRoot(),
+        sortedFilePathArray,
+      );
+    } else {
+      sortedFilePathArray = this.makeFolderOrderPathArray(
+        vault.getRoot(),
+        sortedFilePathArray,
+      );
+    }
 
     const cleanArrayCollection = this.cleanUp(flowBuildBasket);
 
@@ -634,9 +643,6 @@ export class settingsTabFunctions {
         flowBuildBasket,
       );
     }
-
-    // pack the definition back into the basket
-    flowBuildBasket.flowDefinition = flowBuildBasket.flowDefinition;
 
     // presto; as a reminder: this is handed back all the way up in createSourceNotePathArray
     return finalPathArray;
@@ -654,11 +660,6 @@ export class settingsTabFunctions {
 
     const folderInclusionArray =
       flowBuildBasket.flowDefinition.folderIncluded.split(",");
-    if (folderInclusionArray.length >= 1) {
-      const nonEmptyFolderInclusionArray = folderInclusionArray.filter(
-        (x) => x.length > 0,
-      );
-    }
 
     for (let includedFolder of folderInclusionArray) {
       let excludeSubfolders = false;
@@ -685,7 +686,11 @@ export class settingsTabFunctions {
         includedFolder === "/" ||
         includedFolder === "root"
           ? "" // Empty string in Dataview queries means "search everywhere"
-          : `\"${includedFolder}\"`; // For specific paths, we need to wrap in quotes
+          : /*Reason: 
+          Dataview wants its specific paths double wrapped
+          */
+            // eslint-disable-next-line no-useless-escape
+            `\"${includedFolder}\"`; // For specific paths, we need to wrap in quotes
 
       // save cleaned path with trailing slash if we exclude subfolders
       if (excludeSubfolders) {
@@ -826,7 +831,7 @@ export class settingsTabFunctions {
 
     for (const dvInclusionTuple of flowBuildBasket.dataviewSearchArray) {
       const dvPath = dvInclusionTuple[0].trim();
-      let allNotes = await dv.pages(dvPath);
+      let allNotes = dv.pages(dvPath);
 
       // If inclusion path ends with slash, filter out subfolder stuff
       if (dvInclusionTuple[1] != "/" && dvInclusionTuple[1].endsWith("/")) {
@@ -860,6 +865,8 @@ export class settingsTabFunctions {
               return !!note[extractedProperty]; // the first! turns the property into a (false) boolean, the second ! inverts to return true
             } else if (Array.isArray(property) && property.length === 2) {
               const [key, value] = property;
+              /*Reason: key is typed as any in Dataview; nothing I can do about it*/
+              //eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
               const noteValue = note[key];
               if (Array.isArray(noteValue)) {
                 return noteValue.includes(value);
@@ -875,6 +882,8 @@ export class settingsTabFunctions {
               return note[extractedProperty];
             } else if (property.length === 2) {
               const [key, value] = property;
+              /*Reason: key typed as any in Dataview; nothing I can do about it*/
+              //eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
               const noteValue = note[key];
               if (Array.isArray(noteValue)) {
                 return noteValue.includes(value);
@@ -1051,6 +1060,16 @@ export class settingsTabFunctions {
       if (!this.plugin.settings.systemFolderPath) return [];
       const bookmarkedNotePathsArray: string[] = [];
 
+      /*Reason: I need group to be able to handle items as well as arrays of items
+      and this is currently the only way that doesn't make me want to eat my keyboard in frustration.
+      I'll fix it eventually, but right now I'll start to scream if you try and make me. 
+      */
+      /*eslint-disable @typescript-eslint/no-explicit-any, 
+      @typescript-eslint/no-unsafe-member-access, 
+      @typescript-eslint/no-unsafe-assignment, 
+      @typescript-eslint/no-unsafe-call,
+      @typescript-eslint/no-unsafe-argument
+      */
       const processGroup = (group: any) => {
         // First, process any subgroups (going deep first)
         if (group.items) {
@@ -1108,6 +1127,12 @@ export class settingsTabFunctions {
 
       return bookmarkedNotePathsArray;
     };
+    /*eslint-enable @typescript-eslint/no-explicit-any, 
+      @typescript-eslint/no-unsafe-member-access, 
+      @typescript-eslint/no-unsafe-assignment, 
+      @typescript-eslint/no-unsafe-call,
+      @typescript-eslint/no-unsafe-argument
+      */
 
     // ---- Reflecting folder order ----------------------
     const collectBookmarkPathsFolderOrder = (
@@ -1245,7 +1270,7 @@ export class settingsTabFunctions {
   overlapCollector = (flowBuildBasket: Types.flowBuildBasket) => {
     const overlapObject: Types.OverlapObject = {};
     if (Object.keys(this.plugin.settings.flows).length >= 1) {
-      flowLoop: for (const referenceFlow in this.plugin.settings.flows) {
+      for (const referenceFlow in this.plugin.settings.flows) {
         if (
           referenceFlow != flowBuildBasket.oldFlowName &&
           referenceFlow != flowBuildBasket.flowName &&
@@ -1429,9 +1454,9 @@ export class settingsTabFunctions {
 
     this.resetFlowBuildBasket(flowReBuildBasket);
     // reset the out of sync array
-    const filteredArray = this.plugin.flowOutOfSync.filter((filterFlowname) => {
-      filterFlowname != flowName;
-    });
+    const filteredArray = this.plugin.flowOutOfSync.filter(
+      (filterFlowname) => filterFlowname != flowName,
+    );
     this.plugin.flowOutOfSync = filteredArray;
     this.plugin.isRebuilding = false;
     await this.plugin.saveSettings();
@@ -1472,11 +1497,13 @@ export class settingsTabFunctions {
     const leafIDAndEditorObject: { [key: string]: WorkspaceLeaf } = {};
     if (this.plugin.settings.activeRegions[flowName]) {
       Object.keys(this.plugin.settings.activeRegions[flowName]).forEach(
-        async (leafID) => {
+        (leafID) => {
           const leaf = this.app.workspace.getLeafById(leafID);
           if (leaf) {
             // make sure the leaf has ben properly initialised
-            await leaf.loadIfDeferred();
+            void leaf
+              .loadIfDeferred()
+              .catch((err) => console.error("loadIfDeferred failed:", err));
 
             leafIDAndEditorObject[leafID] = leaf;
             progressOverlays[leafID] = new LoadingOverlay(
@@ -1609,7 +1636,7 @@ export class settingsTabFunctions {
 
           // check if there are UUIDs in there due to a sync fuckup
           const regex =
-            /[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46}/;
+            /[\u200B\u2061\u2062\u2063\u2064\uFEFF\u00A0\u200C\u200D]{46}/;
 
           if (regex.exec(fileContent) !== null) {
             // remove any progress stuff so the user isn't stuck with the overlay/has to click away the toast
@@ -1655,7 +1682,7 @@ export class settingsTabFunctions {
             basicUUID: mapValueBasket.basicUUID,
             invisibleUUID: mapValueBasket.invisibleUUID,
             flowOrder: mapValueBasket.flowOrder,
-          } as Types.SourceFileObject;
+          };
 
           if (!this.plugin.settings.flows[flowName].embed) {
             // Add content with marker before divider
@@ -1834,6 +1861,8 @@ export class settingsTabFunctions {
   //--------------------------------------------------
   // To encapsulate this apparently unavoidable 'as any' type casting; a robot said this is how you do it
   getLeafID = (leaf: WorkspaceLeaf): Types.LeafID => {
+    /*Reason: 'any' is the only way to get at leaf.id */
+    //eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
     return (leaf as any).id as Types.LeafID;
   };
 
@@ -1857,6 +1886,8 @@ export class settingsTabFunctions {
   callStack = (recipient: string) => {
     const stack = new Error().stack;
     if (!stack) return;
+    /*This is for debugging*/
+    // eslint-disable-next-line obsidianmd/rule-custom-message
     console.log(recipient, stack, Date.now());
   };
 
@@ -1913,7 +1944,7 @@ export class settingsTabFunctions {
 
         const editor = this.plugin.settingsTabFunctions.getEditor(view);
         if (!editor) return;
-        mostRecentCursor ? this.scrollToPos(editor, mostRecentCursor) : "";
+        this.scrollToPos(editor, mostRecentCursor);
       }
     }
   };
@@ -2007,7 +2038,7 @@ export class settingsTabFunctions {
       const fileContent: string = await this.app.vault.read(file);
       const stripUUIDs = (text: string): string => {
         const uuidPattern =
-          /[\u200B\u200C\u200D\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0]{46}/g;
+          /[\u200B\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0\u200C\u200D]{46}/g;
         const result = text.replace(uuidPattern, "\n\n");
         return result;
       };
@@ -2103,12 +2134,12 @@ export class settingsTabFunctions {
     // Handle all leaves
     // add hider if all are hidden
     if (this.plugin.settings.hideScrollbar === "all") {
-      const body = document.body;
+      const body = activeDocument.body;
       body.classList.remove("hide-scrollbar");
       body.classList.add("hide-scrollbar");
     } else {
       // otherwise remove hiding from class list
-      const body = document.body;
+      const body = activeDocument.body;
       body.classList.remove("hide-scrollbar");
 
       // then check for container classes
