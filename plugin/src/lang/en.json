@@ -351,7 +351,7 @@
   "createSourceNotePathArray.notice bookmark group not found": "textFlow: Please check the name of the bookmark group you submitted.",
   "getPathsByFoldersTagsProps.notice dataview not installed": "textFlow: Dataview API not available. Please make sure you have installed the Dataview plugin (Settings > Community plugins > Browse).",
 
-  "Please install sync embeds": "textFlow: Please install the plugin Sync Embeds - available on GitHub https://github.com/uthvah/sync-embeds - to fully use Flows with embeds.",
+  "Please install sync embeds": "textFlow: Please install/activate the plugin Sync Embeds - available on GitHub https://github.com/uthvah/sync-embeds - to fully use Flows with embeds.",
 
   "flowBuilder.notice system folder not found": "textFlow: ${textFlowSystemFolderName} not found.",
   "flowBuilder.notice path not found": "textFlow: The note at ${path} couldn't be found.",

@@ -163,7 +163,7 @@ export class MenuBar {
   // -------------------------------------------------------
   private setDropdownState = async (
     dropdown: string,
-    state: "show" | "textflow-hide",
+    state: "show" | "hide",
   ) => {
     if (
       dropdown === "nav" &&
@@ -315,7 +315,7 @@ export class MenuBar {
           }
 
           this.filterList = [];
-          void this.setDropdownState("nav", "textflow-hide").catch((err) =>
+          void this.setDropdownState("nav", "hide").catch((err) =>
             console.error("setDropdownState failed:", err),
           );
           this.refresh(this.associatedView.contentEl);
@@ -361,13 +361,6 @@ export class MenuBar {
   // -------------------------------------------------------------
   createMenuBarElement = (): HTMLElement => {
     //this.plugin.settingsTabFunctions.callStack("createMenuBarElement");
-
-    if (this.firstOpen) {
-      void this.setDropdownState("nav", "textflow-hide");
-      void this.setDropdownState("cursor", "textflow-hide");
-      this.firstOpen = false;
-    }
-
     // being paranoid about the TRACKING COMPARTMENTS
     const cmView = this.plugin.settingsTabFunctions.getEditorCM(
       this.associatedView.editor,
@@ -540,7 +533,13 @@ export class MenuBar {
 
       // headline text and icon
       // just the region, if the dropdown is collapsed
-      if (this.getDropdownState("nav") === "textflow-hide") {
+      if (this.firstOpen) {
+        void this.setDropdownState("nav", "hide");
+        void this.setDropdownState("cursor", "hide");
+        this.firstOpen = false;
+      }
+
+      if (this.getDropdownState("nav") === "hide") {
         navHeadline.createSpan({
           cls: `align-off-center ${titleClass}`,
           text:
@@ -567,7 +566,7 @@ export class MenuBar {
             );
           }
 
-          if (this.getDropdownState("nav") === "textflow-hide") {
+          if (this.getDropdownState("nav") === "hide") {
             void this.setDropdownState("nav", "show").catch((err) =>
               console.error("setDropdownState failed:", err),
             );
@@ -587,14 +586,14 @@ export class MenuBar {
               // Check if click is outside the navigation dropdown
               if (!navigationDropdown.contains(target)) {
                 this.filterList = [];
-                void this.setDropdownState("nav", "textflow-hide").catch(
-                  (err) => console.error("setDropdownState failed:", err),
+                void this.setDropdownState("nav", "hide").catch((err) =>
+                  console.error("setDropdownState failed:", err),
                 );
                 this.refresh(this.associatedView.contentEl);
               }
             });
           } else {
-            void this.setDropdownState("nav", "textflow-hide");
+            void this.setDropdownState("nav", "hide");
             this.refresh(this.associatedView.contentEl);
           }
         });
@@ -717,7 +716,7 @@ export class MenuBar {
 
         // the listener to open the dropdown
         this.addManagedListener(cursorHeadline, "click", (event) => {
-          if (this.getDropdownState("cursor") === "textflow-hide") {
+          if (this.getDropdownState("cursor") === "hide") {
             void this.setDropdownState("cursor", "show").catch((err) =>
               console.error("setDropdownState failed:", err),
             );
@@ -739,14 +738,14 @@ export class MenuBar {
               // Check if click is outside the navigation dropdown
               if (!cursorDropdown.contains(target)) {
                 this.filterList = [];
-                void this.setDropdownState("cursor", "textflow-hide").catch(
-                  (err) => console.error("setDropdownState failed:", err),
+                void this.setDropdownState("cursor", "hide").catch((err) =>
+                  console.error("setDropdownState failed:", err),
                 );
                 this.refresh(this.associatedView.contentEl);
               }
             });
           } else {
-            void this.setDropdownState("cursor", "textflow-hide").catch((err) =>
+            void this.setDropdownState("cursor", "hide").catch((err) =>
               console.error("setDropdownState failed:", err),
             );
             this.refresh(this.associatedView.contentEl);

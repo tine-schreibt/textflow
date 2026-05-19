@@ -356,7 +356,7 @@
   "createSourceNotePathArray.notice random error, please check console": "textFlow: Ein Fehler ist aufgetreten, während das finalReceipe für deinen Flow erzeugt wurde. Bitte sieh in die Konsole (cmd+alt+i), um Details zu erfahren.",
   "createSourceNotePathArray.notice bookmark group not found": "textFlow: Bitte prüfe den Namen der eingegebenen Lesezeichengruppe.",
   "getPathsByFoldersTagsProps.notice dataview not installed": "textFlow: Dataview API nicht verfügbar. Bitte stelle sicher, dass du das Dataview-Plugin installiert hast (Einstellungen > Externe Plugins > Durchsuchen)",
-  "Please install sync embeds": "textFlow: Bitte installiere das Plugin Sync Embeds - erhältlich auf GitHub https://github.com/uthvah/sync-embeds - um Flows mit Einbettungen voll nutzen zu können.",
+  "Please install sync embeds": "textFlow: Bitte installiere/aktiviere das Plugin Sync Embeds - erhältlich auf GitHub https://github.com/uthvah/sync-embeds - um Flows mit Einbettungen voll nutzen zu können.",
 
   "flowBuilder.notice system folder not found": "textFlow: ${textFlowSystemFolderName} konnte nicht gefunden werden.",
   "flowBuilder.notice path not found": "textFlow: Die Notiz ${path} konnte nicht gefunden werden.",

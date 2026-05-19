@@ -1,3 +1,6 @@
+/* Some eslint rules are disabled for some functions in this file to keep the linter 
+from throwing a fit about the Dataview API */
+
 import {
   App,
   ButtonComponent,
@@ -504,6 +507,7 @@ export class settingsTabFunctions {
   // Also we're using the opportunity to get a clean definition (user input) for storage
 
   // ---------------- GET DVQUERY PATHS ----------------------
+  /* eslint-disable @typescript-eslint/no-unsafe-assignment */
   getPathsByDvQuery = async (flowBuildBasket: Types.flowBuildBasket) => {
     if (!this.plugin.settings.systemFolderPath) return [];
     const dv = getAPI();
@@ -553,7 +557,6 @@ export class settingsTabFunctions {
     for (const note of allNotes.value.values) {
       filteredPathObject[note.path] = true;
     }
-    /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access*/
 
     for (const path of sortedFilePathArray) {
       // remove entries that are in the systemFolder
@@ -572,6 +575,7 @@ export class settingsTabFunctions {
 
     return finalPathArray;
   };
+  /* eslint-enable @typescript-eslint/no-unsafe-assignment */
 
   // --- GET ALL PATHS FROM FOLDER TAG PROPERTY ---------------------------
   // But first we ensure we don't have undefineds and make the ! type assertion later on safe to use
@@ -596,6 +600,7 @@ export class settingsTabFunctions {
     }
   };
 
+  /* eslint-disable @typescript-eslint/no-unsafe-assignment */
   getPathsByFoldersTagsProps = async (
     flowBuildBasket: Types.flowBuildBasket,
   ) => {
@@ -647,6 +652,7 @@ export class settingsTabFunctions {
     // presto; as a reminder: this is handed back all the way up in createSourceNotePathArray
     return finalPathArray;
   };
+  /* eslint-enable @typescript-eslint/no-unsafe-assignment */
 
   cleanUp = (flowBuildBasket: Types.flowBuildBasket) => {
     // -------------------------------------------------
@@ -809,6 +815,11 @@ export class settingsTabFunctions {
     return cleanArrayCollection;
   };
 
+  /* eslint-disable 
+  @typescript-eslint/no-unsafe-assignment,
+  @typescript-eslint/no-unsafe-call ,
+  @typescript-eslint/no-unsafe-member-access 
+  */
   dvFilter = async (
     sortedFilePathArray: string[],
     cleanArrayCollection: Types.CleanArrayCollection,
@@ -865,8 +876,6 @@ export class settingsTabFunctions {
               return !!note[extractedProperty]; // the first! turns the property into a (false) boolean, the second ! inverts to return true
             } else if (Array.isArray(property) && property.length === 2) {
               const [key, value] = property;
-              /*Reason: key is typed as any in Dataview; nothing I can do about it*/
-              //eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
               const noteValue = note[key];
               if (Array.isArray(noteValue)) {
                 return noteValue.includes(value);
@@ -882,8 +891,6 @@ export class settingsTabFunctions {
               return note[extractedProperty];
             } else if (property.length === 2) {
               const [key, value] = property;
-              /*Reason: key typed as any in Dataview; nothing I can do about it*/
-              //eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
               const noteValue = note[key];
               if (Array.isArray(noteValue)) {
                 return noteValue.includes(value);
@@ -910,6 +917,11 @@ export class settingsTabFunctions {
     }
     return finalPathArray;
   };
+  /* eslint-enable 
+  @typescript-eslint/no-unsafe-assignment,
+  @typescript-eslint/no-unsafe-call ,
+  @typescript-eslint/no-unsafe-member-access 
+  */
 
   // ----------------------------------------------------------
   // --- FUNCTIONS TO MAKE SORTED PATH ARRAYS ---------------------

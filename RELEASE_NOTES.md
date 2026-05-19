@@ -1,5 +1,5 @@
-#### 0.4.11
+#### 0.4.12
 
-- Fixed a bug where I forgot to set firsLaunch to false. I call it bug to save face. It was a silliness.
-- also, fixed a ton of missing awaits and turned bad awaits into void plus catch.
-- also had to up the min-version to 1.8.7 to fit with the APIs I'm using
+- This should finally actually really fix that bug where the hidden systemFolder would show up again after restart
+- It also fixes the bug where the menuBar would blow you two a raspberries after restart
+- also, some more stuff for the linter (builtin-modules, an !important and some relics from when I replaced fixed numbers with default variables in styles.css)

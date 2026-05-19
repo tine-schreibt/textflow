@@ -785,8 +785,8 @@ export default class TextFlowPlugin extends Plugin {
     const applyHiding = () => {
       // First remove any existing hides
       activeDocument
-        .querySelectorAll(".textflow-hide")
-        .forEach((el) => el.classList.remove("textflow-hide"));
+        .querySelectorAll(".textFlowSystemFolder-hide")
+        .forEach((el) => el.classList.remove("textFlowSystemFolder-hide"));
 
       if (!systemFolderHidden || systemFolderPath === undefined) return;
 
@@ -795,24 +795,11 @@ export default class TextFlowPlugin extends Plugin {
           `div[data-path='${systemFolderPath}'],
                  div[data-path^='${systemFolderPath}']`,
         )
-        .forEach((el) => el.classList.add("textflow-hide"));
+        .forEach((el) => el.classList.add("textFlowSystemFolder-hide"));
     };
 
     // Run immediately (catches already-rendered elements)
     applyHiding();
-
-    // Also observe for when the file tree renders
-    const observer = new MutationObserver(() => {
-      applyHiding();
-    });
-
-    observer.observe(activeDocument.body, {
-      childList: true,
-      subtree: true,
-    });
-
-    // Disconnect after a short window — the tree will be done by then
-    window.setTimeout(() => observer.disconnect(), 3000);
   };
 
   // ----- DECORATE SOURCE NOTES IN FILE EXPLORER -----------
@@ -861,7 +848,7 @@ export default class TextFlowPlugin extends Plugin {
       const cleanPath = path.endsWith("/") ? path.slice(0, -1) : path;
 
       // First remove any existing styles for this path
-      const existingStyles = document.head.querySelectorAll(
+      const existingStyles = activeDocument.head.querySelectorAll(
         "style[data-textflow-neutral], style[data-textflow-unsynced]",
       );
       existingStyles.forEach((style) => {
@@ -874,7 +861,7 @@ export default class TextFlowPlugin extends Plugin {
         }
       });
 
-      let style = document.createElement("style");
+      let style = activeDocument.createElement("style");
 
       style.setAttribute(`data-textflow-${decoStyle}`, "true");
 
@@ -1075,7 +1062,7 @@ ${pseudoElement}
       `;
       }
       style.textContent = styleContent;
-      document.head.appendChild(style);
+      activeDocument.head.appendChild(style);
     };
 
     // -------- MORE LOGIC -----------------
@@ -1159,7 +1146,7 @@ ${pseudoElement}
       const cleanPath = path.endsWith("/") ? path.slice(0, -1) : path;
 
       // First remove any existing styles for this path
-      const existingStyles = document.head.querySelectorAll(
+      const existingStyles = activeDocument.head.querySelectorAll(
         "style[data-textflow-neutral], style[data-textflow-unsynced]",
       );
       existingStyles.forEach((style) => {
@@ -1273,20 +1260,16 @@ ${pseudoElement}
                   flowNameLoop: for (const flowName of Object.keys(
                     this.settings.flows,
                   )) {
-                    pathLoop: for (const path of Object.keys(
-                      this.settings.flows[flowName].flowMap,
-                    )) {
-                      if (!this.settings.flows[flowName].flaggedForRebuild) {
-                        for (const path of Object.keys(
-                          this.settings.flows[flowName].flowMap,
-                        )) {
-                          if (path.startsWith(normalisedPath)) {
-                            this.settings.flows[flowName].flaggedForRebuild =
-                              true;
-                            await this.saveSettings();
-                            // we just need one path, so let's move on to the next flow
-                            continue flowNameLoop;
-                          }
+                    if (!this.settings.flows[flowName].flaggedForRebuild) {
+                      for (const path of Object.keys(
+                        this.settings.flows[flowName].flowMap,
+                      )) {
+                        if (path.startsWith(normalisedPath)) {
+                          this.settings.flows[flowName].flaggedForRebuild =
+                            true;
+                          await this.saveSettings();
+                          // we just need one path, so let's move on to the next flow
+                          continue flowNameLoop;
                         }
                       }
                     }
@@ -1785,13 +1768,13 @@ ${pseudoElement}
 
     // ------------- Modifier keys
     // this is so the fileExplorerClickListener doesn't interfere as much
-    this.registerDomEvent(document, "keydown", (event: KeyboardEvent) => {
+    this.registerDomEvent(activeDocument, "keydown", (event: KeyboardEvent) => {
       if (event.key === "Shift") this.modifierState.shift = true;
       if (event.key === "Alt") this.modifierState.alt = true;
       if (event.key === "Meta") this.modifierState.meta = true;
     });
 
-    this.registerDomEvent(document, "keyup", (event: KeyboardEvent) => {
+    this.registerDomEvent(activeDocument, "keyup", (event: KeyboardEvent) => {
       if (event.key === "Shift") this.modifierState.shift = false;
       if (event.key === "Alt") this.modifierState.alt = false;
       if (event.key === "Meta") this.modifierState.meta = false;
@@ -2631,9 +2614,9 @@ ${pseudoElement}
         invisibleUUID: targetObject.invisibleUUID,
         leafMenuBarSettings: {
           menuBarDisplayState: this.settings.menuBarDefault,
-          navDropdownState: "textflow-hide",
+          navDropdownState: "hide",
           navDropdownSearchTerm: undefined,
-          cursorDropdownState: "textflow-hide",
+          cursorDropdownState: "hide",
         },
       };
       await this.saveSettings();
@@ -3689,13 +3672,27 @@ ${pseudoElement}
         );
       }
 
-      // make sure we know where our stuff is
-      await this.ensureSystemFolder(); // also calls state discernment to hide
+      // since layoutReady doesn't apply to the file tree, put these into an observer:
+      const observer = new MutationObserver(() => {
+        void this.ensureSystemFolder(); // because it also calls state discernment to hide
+        // and get deco ready
+        if (this.settings.explorerDecoStyle[0] != "--") {
+          void this.decorateSourceNotes("redo");
+        }
+      });
+      observer.observe(activeDocument.body, {
+        childList: true,
+        subtree: true,
+      });
+      // Disconnect after a short window — the tree will be done by then
+      window.setTimeout(() => observer.disconnect(), 3000);
 
       // ---------------------------------------------------------------
       // and finally, Listeners and commands
       this.fileExplorerOpenClickListener();
-      const fileExplorer = document.querySelector(
+      //because without the type assertion the eventListener gets red squiggles
+      //eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+      const fileExplorer = activeDocument.querySelector(
         ".nav-files-container",
       ) as HTMLElement | null;
       if (fileExplorer && this.boundFileExplorerClick) {
@@ -3720,7 +3717,7 @@ ${pseudoElement}
       removeEventListener gets 'No overload matches this call'
      */
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-    const fileExplorer = document.querySelector(
+    const fileExplorer = activeDocument.querySelector(
       ".nav-files-container",
     ) as HTMLElement | null;
     if (fileExplorer && this.boundFileExplorerClick) {
@@ -3729,19 +3726,16 @@ ${pseudoElement}
 
     // ------------ RESET compartments to []
     for (const leafID of Object.keys(this.listenerBasket)) {
-      // skip the text change entries (we're removing both listeners anyway)
       if (leafID.endsWith("-changes")) continue;
       const leaves = this.app.workspace.getLeavesOfType("markdown");
       const targetLeaf = leaves.find(
         (leaf) => this.settingsTabFunctions.getLeafID(leaf) === leafID,
       );
-      for (const leaf of leaves) {
-        if (targetLeaf?.view instanceof MarkdownView) {
-          const cmView = this.settingsTabFunctions.getEditorCM(
-            targetLeaf.view.editor,
-          );
-          if (cmView) this.resetCompartments(leafID, cmView);
-        }
+      if (targetLeaf?.view instanceof MarkdownView) {
+        const cmView = this.settingsTabFunctions.getEditorCM(
+          targetLeaf.view.editor,
+        );
+        if (cmView) this.resetCompartments(leafID, cmView);
       }
     }
 

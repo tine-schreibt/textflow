@@ -463,8 +463,7 @@ If you have embeds activated in the settings, you can rebuild your flow as the o
     button).
   - If you want to use Flows with embeds, you'll have to install
     [Sync Embeds by uthvah](https://github.com/uthvah/sync-embeds).
-- **Minimum Obsidian Version:** 1.4.0 (the first version with
-  [properties](#how-to-properties))
+- **Minimum Obsidian Version:** 1.8.7
   - There may be bug in at least one version older than 1.8.10 that prepends the
     note title to every note's content. If you see this issue in your flows,
     please let me know which version you are using so I can include this info

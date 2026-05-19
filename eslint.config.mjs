@@ -16,9 +16,9 @@ export default defineConfig([
       ...obsidianmd.configs.recommended,
     ],
     rules: {
-      //"eslintimport/no-extraneous-dependencies": on,
-
-      // your overrides here
+      // This is disabled because the deps it keeps complaining about are in fact installed
+      // and not at all extraneous
+      "import/no-extraneous-dependencies": "off",
     },
   },
 ]);

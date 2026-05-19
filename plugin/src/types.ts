@@ -277,7 +277,7 @@ export type CalculationMode = "update" | "single" | "redo";
 export type DecoStyle = "neutral" | "active" | "unsynced" | "none";
 
 // stuff that's used by the menuBar
-export type DropdownState = "textflow-hide" | "show";
+export type DropdownState = "hide" | "show";
 export type MenuBarDisplayState = "max" | "min";
 
 // the nav dropdown

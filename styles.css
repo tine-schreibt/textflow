@@ -4,7 +4,11 @@
   font-weight: 700;
 }
 
-.textflow-hide {
+.hide {
+  display: none;
+}
+
+.textFlowSystemFolder-hide {
   display: none;
 }
 

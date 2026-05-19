@@ -516,9 +516,8 @@ Menüleiste, und einen Befehl.
     Button).
   - Wenn du Embed-Flows nutzen willst, musst du das Plugin
     [Sync Embeds von uthvah](https://github.com/uthvah/sync-embeds) installieren
-    und aktivieren. ([Mehr dazu](#12-alles-über-embed-flows-einbettungen)
-- **Minimale Obsidian-Version:** 1.4.0 (die erste mit
-  [Eigenschaften](#wie-gehen-eigenschaften))
+    und aktivieren. ([Mehr dazu](#12-alles-über-embed-flows-einbettungen))
+- **Minimale Obsidian-Version:** - **Minimum Obsidian Version:** 1.8.7
   - Es gibt möglicherweise einen Bug in mindestens einer Version, die älter als
     1.8.10 ist, und dazu führt, dass der Notiztitel dem Inhalt jeder Notizen
     vorangestellt wird. Falls du dieses Problem in deinen Flows feststellst, sag
