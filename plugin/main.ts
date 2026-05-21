@@ -778,28 +778,37 @@ export default class TextFlowPlugin extends Plugin {
 
   // ----- this is called onload and sets the visibility of textFlowSystemFolderName
   // rewritten by Claude to do the styles.css thing and wait for the explorer to be ready
-  discernAndSetSystemFolderState = async () => {
+  discernAndSetSystemFolderState = (): void => {
     const systemFolderPath = this.settings.systemFolderPath;
     const systemFolderHidden = this.settings.systemFolderHidden;
 
-    const applyHiding = () => {
-      // First remove any existing hides
-      activeDocument
-        .querySelectorAll(".textFlowSystemFolder-hide")
-        .forEach((el) => el.classList.remove("textFlowSystemFolder-hide"));
+    // Remove any existing style
+    const existingStyle = document.head.querySelector(
+      "style[data-textflow-temp]",
+    );
+    if (existingStyle) {
+      existingStyle.remove();
+    }
 
-      if (!systemFolderHidden || systemFolderPath === undefined) return;
+    // If we're not hiding (or don't have a place defined) just return after removing style
+    if (!systemFolderHidden || systemFolderPath === undefined) {
+      return;
+    }
 
-      activeDocument
-        .querySelectorAll(
-          `div[data-path='${systemFolderPath}'],
-                 div[data-path^='${systemFolderPath}']`,
-        )
-        .forEach((el) => el.classList.add("textFlowSystemFolder-hide"));
+    // Create and append style with the correct selector
+    const addStyle = () => {
+      let hiddenStyle = document.createElement("style");
+      hiddenStyle.setAttribute("data-textflow-temp", "true");
+
+      hiddenStyle.textContent = `
+            div[data-path='${systemFolderPath}'],
+            div[data-path^='${systemFolderPath}'] {
+                display: none !important;
+            }
+        `;
+      document.head.appendChild(hiddenStyle);
     };
-
-    // Run immediately (catches already-rendered elements)
-    applyHiding();
+    addStyle();
   };
 
   // ----- DECORATE SOURCE NOTES IN FILE EXPLORER -----------
@@ -3672,20 +3681,11 @@ ${pseudoElement}
         );
       }
 
-      // since layoutReady doesn't apply to the file tree, put these into an observer:
-      const observer = new MutationObserver(() => {
-        void this.ensureSystemFolder(); // because it also calls state discernment to hide
-        // and get deco ready
-        if (this.settings.explorerDecoStyle[0] != "--") {
-          void this.decorateSourceNotes("redo");
-        }
-      });
-      observer.observe(activeDocument.body, {
-        childList: true,
-        subtree: true,
-      });
-      // Disconnect after a short window — the tree will be done by then
-      window.setTimeout(() => observer.disconnect(), 3000);
+      // Now it's safe to do your one-time setup
+      void this.ensureSystemFolder();
+      if (this.settings.explorerDecoStyle[0] !== "--") {
+        void this.decorateSourceNotes("redo");
+      }
 
       // ---------------------------------------------------------------
       // and finally, Listeners and commands
