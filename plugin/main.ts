@@ -551,6 +551,8 @@ export default class TextFlowPlugin extends Plugin {
             this.settings,
             flowName,
           ).open();
+        } else {
+          new Modals.FuzzyNavModal(this.app, this, this.settings).open();
         }
       },
     });

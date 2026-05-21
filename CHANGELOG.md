@@ -1,3 +1,7 @@
+#### 0.4.15
+
+- added a new bug when fixing the previous bug...
+
 #### 0.4.14
 
 - fixed bug where fuzzNav modal would only show up when a file is open

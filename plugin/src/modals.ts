@@ -684,7 +684,7 @@ export class RestoreFlowDefModal extends Modal {
 
     // variable to hold the contents if the file exists
     let parsedJson: Record<string, Types.FlowDef>;
-        const rawContents = await this.app.vault.adapter.read(backupPath);
+    const rawContents = await this.app.vault.adapter.read(backupPath);
     parsedJson = JSON.parse(rawContents) as Record<string, Types.FlowDef>;
 
     if (Object.keys(parsedJson).length === 0) return null;
@@ -1629,12 +1629,11 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
     void super.onOpen();
 
     let placeholderText = "Search for flows and paths...";
+    let currentActiveleafID = "";
     if (this.activeFlowName) {
       const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-      if (!view) {
-        const currentActiveleafID = "";
-      } else {
-        const currentActiveleafID = this.plugin.settingsTabFunctions.getLeafID(
+      if (view) {
+        currentActiveleafID = this.plugin.settingsTabFunctions.getLeafID(
           view.leaf,
         );
         let activePath: string | undefined = "";
@@ -1823,7 +1822,6 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
           if (cursorPos) {
             await scrollToTarget(item, cursorPos);
           }
-        } else {
         }
       } else if (
         !this.plugin.settings.activeRegions[item.flowName] ||
