@@ -539,9 +539,10 @@ export default class TextFlowPlugin extends Plugin {
       name: this.t("main.registerCommand open fuzzy navigation"),
       callback: () => {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (!view) return;
-        if (!view.file) return;
-
+        if (!view || !view.file) {
+          new Modals.FuzzyNavModal(this.app, this, this.settings).open();
+          return;
+        }
         const flowName = this.isFlowFile(view.file.path);
         if (flowName) {
           new Modals.FuzzyNavModal(
@@ -550,8 +551,6 @@ export default class TextFlowPlugin extends Plugin {
             this.settings,
             flowName,
           ).open();
-        } else {
-          new Modals.FuzzyNavModal(this.app, this, this.settings).open();
         }
       },
     });
