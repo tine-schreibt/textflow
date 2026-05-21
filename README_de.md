@@ -5,7 +5,11 @@ textFlow erlaubt dir **Flows** zu erzeugen - dynamische Dokumente, die aus den I
 textFlow ist vor allem für Autor:innen längerer Texte gedacht, kann aber von allen genutzt werden, die ihre Texte im größeren Zusammenhang sehen und/oder editieren wollen.  
 Die UI hat Optionen sowohl für Tastatur-, als auch für Maus-Navigation. 
 
-**UPDATE:** Seit Version 0.4.0 könnt ihr **[Flows aus Einbettungen](#4-alles-über-embed-flows-einbettungen)** bauen; das bedeutet, diese Flows haben keine Datenduplikation mehr. Dann müsst ihr nur noch das Plugin [Sync Embeds von uthvah](https://community.obsidian.md/plugins/sync-embeds) installieren (geht derzeit nur manuell), und schon könnt ihr die Quellnotizen direkt in euren Einbettungen editieren. 
+**UPDATE RE: CRASH BUG:** Version 0.4.12 hatte einen ziemlich krassen Bug, der dazu geführt hat, dass einige Settings-Dateien von Obsidian kaputt gegangen sind. Schuld war ein MutationObserver, den ich jetzt komplett aus dem Code rausgenommen habe.
+Ich entschuldige mich bei allen, die deshalb ihren .obsidian-Ordner aus einem Backup wiederherstellen mussten -.- 
+Falls du v0.4.12 installiert hast, bitte zieh ein Update.
+
+**UPDATE:** Seit Version 0.4.0 könnt ihr **[Flows aus Einbettungen](#4-alles-über-embed-flows-einbettungen)** bauen; das bedeutet, diese Flows haben keine Datenduplikation mehr. Dann müsst ihr nur noch das Plugin [Sync Embeds von uthvah](https://github.com/uthvah/sync-embeds) installieren (geht derzeit nur manuell), und schon könnt ihr die Quellnotizen direkt in euren Einbettungen editieren. 
 
 Bitte beachtet, dass ich textFlow nach bestem Wissen und Gewissen durchgetestet habe, aber ihr seid die ersten echten User. Daher kann ich nicht garantieren, dass ihr nicht doch noch den einen oder anderen Bug findet, den ich übersehen habe. Hier ist eine [Anleitung zur Fehlerbehebung](#10-probleme-beheben), in die ihr reinschauen könnt, bevor ihr einen [Bug Report ](#12-melde-einen-bug--zeig-deine-liebe) einreicht.
 
@@ -50,7 +54,7 @@ Bitte lasst außerdem Obsidians Datenwiederherstellungs-Plugin, ['Edit history' 
 	- Flows, die aus Lesezeichen-Gruppen definiert sind, sind nicht an die alphanumerische Ordnung gebunden und können auch die manuelle Reihenfolge der Objekte im Ordner spiegeln, unabhängig davon, ob sie Notizen oder Ordner sind. 
 	Benutze die Reihenfolge, die sich für dich intuitiver/weniger verwirrend anfühlt, oder besser zum jeweiligen Flow passt. Manche Reihenfolgen funktionieren außerdem besser ohne Ordner-/Gruppen-Titel. 
 3. **Bearbeite Flows wie jede andere Notiz:** textFlow beobachtet, in welcher Region eines Flows eine Änderung stattfindet, und synchronisiert sie automatisch in die richtige Quellnotiz zurück, sobald du in eine andere Notiz klickst. Du kannst auch jederzeit manuell syncen (es gibt einen Befehl dafür, den du mit einem Tastenkürzel verbinden kannst). 
-4. **Einbettungen, aka Embed-Flows**: Ihr könnt in den Settings die Option aktivieren, eure Notizen als Einbettungen anstatt als einfachen Text in einen Flow einzufügen. Wenn ihr nun noch das Plugin [Sync Embeds von uthvah](https://community.obsidian.md/plugins/sync-embeds) installiert, könnt ihr den so eingebetteten Text direkt bearbeiten. 
+4. **Einbettungen, aka Embed-Flows**: Ihr könnt in den Settings die Option aktivieren, eure Notizen als Einbettungen anstatt als einfachen Text in einen Flow einzufügen. Wenn ihr nun noch das Plugin [Sync Embeds von uthvah](https://github.com/uthvah/sync-embeds) installiert, könnt ihr den so eingebetteten Text direkt bearbeiten. 
 	- Embed-Flows haben einige Vorteile - der größte ist wohl, dass bei ihnen keine Datenduplikation nötig ist. Sie bringen aber auch einige Nachteile mit sich. Beides wird im Abschnitt [über Embeds](#4-alles-über-embed-flows-einbettungen) erklärt. 
 	- Es ist jederzeit möglich, einen Flow als anderen Typ neu bauen zu lassen.
 	- Im Rest dieser Liste sind Features, die nur für klassische verfügbar sind, mit Sternchen\* markiert.
@@ -168,7 +172,7 @@ Sofern ich von allein Motivation entwickle, könnten sie eines Tages auch einfac
 #### Der andere Kram:
 
 1. **Notwendige Duplikation von Daten:** Klassische Flows sind zusätzliche Notizen, die den Inhalt ihrer Quellnotizen replizieren; nur so funktioniert textFlow vollumfänglich. Deine Flows werden allerdings in einem dedizierten, frei platzierbaren Ordner gespeichert, der standardmäßig versteckt ist. 
-	 Wenn Datenduplikation dein Blut trotzdem zum Kochen bringt, sind Embed-Flows zusammen mit dem Plugin [Sync Embeds von uthvah](https://community.obsidian.md/plugins/sync-embeds/) vielleicht die Lösung für dich. Was sich für Embed-Flows an textFlows Funktionsumfang ändert, könnt ihr [hier](#12-alles-über-embed-flows-einbettungen) nachlesen
+	 Wenn Datenduplikation dein Blut trotzdem zum Kochen bringt, sind Embed-Flows zusammen mit dem Plugin [Sync Embeds von uthvah](https://github.com/uthvah/sync-embeds/) vielleicht die Lösung für dich. Was sich für Embed-Flows an textFlows Funktionsumfang ändert, könnt ihr [hier](#12-alles-über-embed-flows-einbettungen) nachlesen
 
 ##### Da kann mein Plugin nichts für
 
@@ -225,8 +229,8 @@ Wenn ihr Embeds in den Einstellungen aktiviert habt, könnt ihr eure Flows jeder
 
 ### 5. Use Cases
 
-- Du bist eine Autor:in und möchtest deine Notizen/Kapitel/Szenen in diversen Kontexten sehen/bearbeiten
-- Du möchtest diverse Kontexte zusammenstellen, um auf bestimmte Aspekte deines Arbeit zu fokussieren. 
+- Du bist eine Autor:in und möchtest deine Notizen/Kapitel/Szenen in diversen Kontexten sehen/bearbeiten.
+- Du möchtest diverse Kontexte zusammenstellen, um auf bestimmte Aspekte deines Arbeit zu fokussieren.
 - Du möchtest die Gesamtheit oder bestimmte Ausschnitte deiner Arbeit in eine einzige Datei packen, um sie mit anderen zu teilen
 - Du willst im Grunde Scrivenings für Obsidian
 
@@ -268,7 +272,7 @@ Wenn ihr Embeds in den Einstellungen aktiviert habt, könnt ihr eure Flows jeder
 	- **Scrollbar verstecken:** Blende die zuckende Scrolleiste aus. Es gibt auch einen Umschalt-Befehl. 
 	- **Prüfe auf externe Bearbeitung:** Falls du öfter mal auf Geräten arbeitest, auf denen textFlow nicht läuft, kann das Plugin für dich nach externen Bearbeitungen suchen und Flows entsprechend neu bauen. 
 	- **textFlowSystemFolder anzeigen:** Es wird empfohlen, ihn versteckt zu halten, damit du nicht versehentlich was dran kaputt machst. 
-	- **Zeige Option zur Einbettung an:** Wenn ihr dies aktiviert, wird euch für eure Flow-Definitionen die Option angezeigt, Quellnotizen als Einbettungen in euren Flow zu integrieren, anstatt ihren Text direkt in den Flow zu kopieren. Wenn ihr das Plugin [Sync Embeds von uthvah](https://community.obsidian.md/plugins/sync-embeds)installiert, könnt ihr direkt in den Einbettungen editieren. Embeds bringen aber auch [Nachteile](#12-alles-über-embed-flows-einbettungen) mit sich.
+	- **Zeige Option zur Einbettung an:** Wenn ihr dies aktiviert, wird euch für eure Flow-Definitionen die Option angezeigt, Quellnotizen als Einbettungen in euren Flow zu integrieren, anstatt ihren Text direkt in den Flow zu kopieren. Wenn ihr das Plugin [Sync Embeds von uthvah](https://github.com/uthvah/sync-embeds)installiert, könnt ihr direkt in den Einbettungen editieren. Embeds bringen aber auch [Nachteile](#12-alles-über-embed-flows-einbettungen) mit sich.
 
 **Definiere einen neuen Flow** 
 - **Gib deinem Flow einen Namen:** Namen müssen einzigartig sein. Sie dürfen außerdem bestimmte Zeichen nicht enthalten, da die Namen auch als Datei-Titel taugen müssen. 
