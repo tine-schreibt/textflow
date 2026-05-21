@@ -6,7 +6,7 @@ textFlow ist vor allem für Autor:innen längerer Texte gedacht, kann aber von a
 Die UI hat Optionen sowohl für Tastatur-, als auch für Maus-Navigation. 
 
 **UPDATE RE: CRASH BUG:** Version 0.4.12 hatte einen ziemlich krassen Bug, der dazu geführt hat, dass einige Settings-Dateien von Obsidian kaputt gegangen sind. Schuld war ein MutationObserver, den ich jetzt komplett aus dem Code rausgenommen habe.
-Ich entschuldige mich bei allen, die deshalb ihren .obsidian-Ordner aus einem Backup wiederherstellen mussten -.- 
+Ich entschuldige mich bei allen, die wegen dieses Fehlers ihren .obsidian-Ordner aus einem Backup wiederherstellen mussten -.- 
 Falls du v0.4.12 installiert hast, bitte zieh ein Update.
 
 **UPDATE:** Seit Version 0.4.0 könnt ihr **[Flows aus Einbettungen](#4-alles-über-embed-flows-einbettungen)** bauen; das bedeutet, diese Flows haben keine Datenduplikation mehr. Dann müsst ihr nur noch das Plugin [Sync Embeds von uthvah](https://github.com/uthvah/sync-embeds) installieren (geht derzeit nur manuell), und schon könnt ihr die Quellnotizen direkt in euren Einbettungen editieren. 
