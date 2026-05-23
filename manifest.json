@@ -1,7 +1,7 @@
 {
   "id": "textflow",
   "name": "textFlow",
-  "version": "0.4.17",
+  "version": "0.4.18",
   "minAppVersion": "1.8.7",
   "description": "Compile multiple notes into a single editable flow - like Scrivenings. Define flows from Dataview queries, or folders/tags/props, or bookmarks. Edits are synced automatically between flows and their sources.",
   "author": "tine-schreibt",

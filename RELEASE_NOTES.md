@@ -1,3 +1,3 @@
-#### 0.4.17
+#### 0.4.18
 
-- some changes to styles.css - thank you @saverzero1!
+- this is just here because the preview scan seems to be broken rn
