@@ -320,7 +320,7 @@ export default class TextFlowPlugin extends Plugin {
 
     if (systemFolder) {
       // if there is a systemFolder
-      await this.discernAndSetSystemFolderState();
+      this.discernAndSetSystemFolderState();
       if (
         // but expected path doesn't agree with actual place/path
         this.settings.systemFolderPath != systemFolder.path
@@ -342,7 +342,7 @@ export default class TextFlowPlugin extends Plugin {
         await this.settingsTabFunctions.createSystemFolder(
           this.settings.systemFolderPath,
         );
-        await this.discernAndSetSystemFolderState();
+        this.discernAndSetSystemFolderState();
       } else {
         new Notice(this.t("sysFolder please setup"));
       }
@@ -784,7 +784,7 @@ export default class TextFlowPlugin extends Plugin {
     const systemFolderHidden = this.settings.systemFolderHidden;
 
     // Remove any existing style
-    const existingStyle = document.head.querySelector(
+    const existingStyle = activeDocument.head.querySelector(
       "style[data-textflow-temp]",
     );
     if (existingStyle) {
@@ -798,7 +798,7 @@ export default class TextFlowPlugin extends Plugin {
 
     // Create and append style with the correct selector
     const addStyle = () => {
-      let hiddenStyle = document.createElement("style");
+      let hiddenStyle = activeDocument.createElement("style");
       hiddenStyle.setAttribute("data-textflow-temp", "true");
 
       hiddenStyle.textContent = `
@@ -807,7 +807,7 @@ export default class TextFlowPlugin extends Plugin {
                 display: none !important;
             }
         `;
-      document.head.appendChild(hiddenStyle);
+      activeDocument.head.appendChild(hiddenStyle);
     };
     addStyle();
   };
@@ -2712,6 +2712,7 @@ ${pseudoElement}
       ).find(([_, foundRegionMap]) => foundRegionMap.invisibleUUID === UID);
 
       if (foundRegion) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const [foundRegionPath, foundRegionMap] = foundRegion;
 
         // put the object together
@@ -2758,6 +2759,7 @@ ${pseudoElement}
     );
 
     if (previousRegion) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const [previousRegionPath, previousRegionMap] = previousRegion;
       const invisibleUID = previousRegionMap.invisibleUUID;
       const index = text.indexOf(invisibleUID);
@@ -2863,10 +2865,8 @@ ${pseudoElement}
       if (!isFreshlyBuilt) await this.UUIDIntegrityCheck(flowName);
       this.alreadyActivated[flowName] = {};
       this.alreadyActivated[flowName][leafID] = [true, false];
-      this.settingsTabFunctions.restoreCursorPos(flowName, view, leafID);
     } else if (!this.alreadyActivated[flowName][leafID]) {
       this.alreadyActivated[flowName][leafID] = [true, false];
-      this.settingsTabFunctions.restoreCursorPos(flowName, view, leafID);
     }
 
     // ------------- PROTECTION ---------------------

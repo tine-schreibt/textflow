@@ -1282,19 +1282,19 @@ export class settingsTabFunctions {
   overlapCollector = (flowBuildBasket: Types.flowBuildBasket) => {
     const overlapObject: Types.OverlapObject = {};
     if (Object.keys(this.plugin.settings.flows).length >= 1) {
-      for (const referenceFlow in this.plugin.settings.flows) {
+      flowLoop: for (const referenceFlow in this.plugin.settings.flows) {
         if (
           referenceFlow != flowBuildBasket.oldFlowName &&
-          referenceFlow != flowBuildBasket.flowName &&
-          // if both flows are embeds, we don't care about overlap
-          !(
-            this.plugin.settings.flows[referenceFlow].embed &&
-            flowBuildBasket.embed
-          )
+          referenceFlow != flowBuildBasket.flowName
         ) {
-          if (!overlapObject[referenceFlow]) {
-            overlapObject[referenceFlow] = true;
-          }
+          for (const path of Object.keys(
+            this.plugin.settings.flows[referenceFlow].flowMap,
+          ))
+            if (flowBuildBasket.flowNotesPathArray.includes(path))
+              if (!overlapObject[referenceFlow]) {
+                overlapObject[referenceFlow] = true;
+                continue flowLoop;
+              }
         }
       }
     }

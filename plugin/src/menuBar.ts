@@ -552,25 +552,13 @@ export class MenuBar {
         setIcon(iconSpan, "chevrons-down-up");
 
         this.addManagedListener(navHeadline, "click", (event) => {
-          // see if we got a search term stored; this is so the user doesn't have to
-          // retype it if they use it to create a navigation environment
-          if (
-            this.plugin.settings.activeRegions[this.flowName][this.leafID]
-              .leafMenuBarSettings.navDropdownSearchTerm
-          ) {
-            const query =
-              this.plugin.settings.activeRegions[this.flowName][this.leafID]
-                .leafMenuBarSettings.navDropdownSearchTerm;
-            void performSearch(event, query).catch((err) =>
-              console.error("performSearch failed:", err),
-            );
-          }
-
           if (this.getDropdownState("nav") === "hide") {
             void this.setDropdownState("nav", "show").catch((err) =>
               console.error("setDropdownState failed:", err),
             );
+
             this.refresh(this.associatedView.contentEl);
+
             const filterCriterion = this.element?.querySelector(
               ".menu-bar-navigation-dropdown-search-input",
             );
@@ -629,7 +617,6 @@ export class MenuBar {
           path: path,
           displayName: `${this.makeNavPath(path)}`,
         }));
-
         //const iconSpan = navHeadline.createSpan();
         //setIcon(iconSpan, "chevrons-down-up");
 
@@ -695,8 +682,23 @@ export class MenuBar {
         this.createNavDropdownEntry(path, dropdownEntries);
       }
 
+      // see if we got a search term stored; this is so the user doesn't have to
+      // retype it if they use it to create a navigation environment
+      if (
+        this.plugin.settings.activeRegions[this.flowName][this.leafID]
+          .leafMenuBarSettings.navDropdownSearchTerm
+      ) {
+        const query =
+          this.plugin.settings.activeRegions[this.flowName][this.leafID]
+            .leafMenuBarSettings.navDropdownSearchTerm;
+        void performSearch(new Event("input"), query).catch((err) =>
+          console.error("performSearch failed:", err),
+        );
+      }
+
+      // ------ THE CURSOR STUFF -----------------------------------
+
       if (!this.plugin.settings.flows[this.flowName].embed) {
-        // ------ The cursor stuff -----------------------------------
         const cursorDropdown = menuBarEl.createDiv({
           cls: "menu-bar-cursor-dropdown",
         });

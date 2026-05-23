@@ -196,7 +196,7 @@ export class CreateFlowFromFolder extends Modal {
       );
       dropdown.onChange(async (value) => {
         this.plugin.settings.flowBuildBasket.flowDefinition.pathsTagsPropertiesSortOrder =
-          value as Types.SortOrder;
+          value;
         await this.plugin.saveSettings();
       });
     });
@@ -308,99 +308,14 @@ export class CreateFlowFromFolder extends Modal {
   }
 
   //--------------------------------------------------------------------------------
-  async onClose() {
+  onClose() {
     // and clean up the basket.
     this.plugin.settingsTabFunctions.resetFlowBuildBasket(
       this.plugin.settings.flowBuildBasket,
     );
-    await this.plugin.saveSettings();
-  }
-}
-
-// --------------------------------------------------------------------------------
-// ---------- CREATE ITEM MODAL -------------------
-// --------------------------------------------------------------------------------
-
-export class CreateNewFile extends Modal {
-  constructor(
-    app: App,
-    private plugin: TextFlowPlugin,
-    private parentFolder: string,
-  ) {
-    super(app);
-    this.plugin = plugin;
-    this.parentFolder = parentFolder;
-  }
-  onOpen() {
-    const { contentEl } = this;
-    contentEl.empty();
-    let choice: string = "";
-
-    const modalTitle = contentEl.createEl("h2", {
-      text: this.plugin.t("CreateNewFile.headline"),
-    });
-
-    //--------------------------------------------------------------------------------
-    const selectItemDropdown = new Setting(modalTitle);
-    selectItemDropdown.setClass("deco-dropdown").addDropdown((dropdown) => {
-      // selectItemDropdownComponent
-      dropdown.selectEl.setAttribute(
-        "aria-label",
-        this.plugin.t("CreateNewFilerModal.description"),
-      );
-      dropdown
-        .addOption(
-          "file",
-          this.plugin.t("CreateNewFilerModal.description note"),
-        )
-        .addOption(
-          "folder",
-          this.plugin.t("CreateNewFilerModal.description folder"),
-        )
-        .onChange((value) => {
-          choice = value;
-        });
-    });
-
-    //--------------------------------------------------------------------------------
-    const chooseTitle = new Setting(modalTitle).setName(
-      this.plugin.t("CreateNewFilerModal.description title"),
-    );
-
-    let elementTitle: string = "";
-    chooseTitle.addText((chooseTitleInput) =>
-      chooseTitleInput.onChange(async (value) => {
-        elementTitle = value;
-      }),
-    );
-
-    //--------------------------------------------------------------------------------
-    const saveButton = new ButtonComponent(contentEl);
-    saveButton
-      .setButtonText(this.plugin.t("CreateNewFilerModal.createButton"))
-      .onClick(async (buttonEl: MouseEvent) => {
-        const newFileName = this.plugin.getUniqueFileName(this.parentFolder);
-        this.close();
-      });
-
-    //--------------------------------------------------------------------------------
-    const closeButton = new ButtonComponent(contentEl)
-      .setButtonText(this.plugin.t("CreateFlowFromFolderModal.close"))
-      .onClick(async () => {
-        this.plugin.settingsTabFunctions.resetFlowBuildBasket(
-          this.plugin.settings.flowBuildBasket,
-        );
-        this.close();
-      });
-  }
-
-  //--------------------------------------------------------------------------------
-  async onClose() {
-    // and clean up the basket.
-    this.plugin.settingsTabFunctions.resetFlowBuildBasket(
-      this.plugin.settings.flowBuildBasket,
-    );
-    await this.plugin.saveSettings();
+    void this.plugin
+      .saveSettings()
+      .catch((err) => console.error("saveSettings failed:", err));
   }
 }
 
@@ -421,48 +336,31 @@ export class PreviewModal extends Modal {
   onOpen() {
     const { contentEl } = this;
 
-    const modalTitle = contentEl.createEl("h2", {
-      text: this.plugin.t("PreviewModal.modalTitle preview for flow", {
-        this_flowBuildBasket_flowName: this.flowBuildBasket.flowName,
-      }),
-    });
+    const modalTitle = new Setting(contentEl);
+    modalTitle
+      .setName(
+        this.plugin.t("PreviewModal.modalTitle preview for flow", {
+          this_flowBuildBasket_flowName: this.flowBuildBasket.flowName,
+        }),
+      )
+      .setHeading();
 
     //--------------------------------------------------------------------------------
     // Show found overlaps
     if (Object.keys(this.flowBuildBasket.overlapObject).length > 0) {
-      const overlapText = new Setting(contentEl).setDesc(
+      const overlapText = new Setting(contentEl);
+      overlapText.setDesc(
         createFragment((desc) => {
           desc.createSpan({
             text: this.plugin.t("PreviewModal.modalTitle overlap for flow", {
               this_flowBuildBasket_flowName: this.flowBuildBasket.flowName,
             }),
           });
-          desc.createEl("br");
-          const flowSpan = desc.createSpan({
-            text: this.plugin.t("PreviewModal.modalTitle hover for details"),
-          });
           Object.keys(this.flowBuildBasket.overlapObject).forEach((flow) => {
             if (flow != this.flowBuildBasket.oldFlowName) {
-              // get the paths
-              const overlapingPaths = Object.keys(
-                this.flowBuildBasket.overlapObject[flow],
-              );
-              // make the label
-              const ariaText = `\n-${overlapingPaths.join("\n")}`;
-              // the span itself:
-              const overlapList = Object.keys(
-                this.flowBuildBasket.overlapObject[flow],
-              ).join("\n");
-
               desc.createEl("br");
-              const flowSpan = desc.createSpan({
+              desc.createSpan({
                 text: `- ${flow}`,
-                attr: {
-                  "aria-label": this.plugin.t(
-                    "PreviewModal.modalTitle overlapping notes",
-                    { overlapList: overlapList },
-                  ),
-                },
               });
             }
           });
@@ -475,8 +373,6 @@ export class PreviewModal extends Modal {
       cls: "preview-container",
     });
 
-    const key = this.flowBuildBasket.definitionMode;
-
     const recipeItems = this.flowBuildBasket.flowNotesPathArray ?? [];
     if (recipeItems.length === 0) {
       previewContainer.setText(
@@ -486,7 +382,7 @@ export class PreviewModal extends Modal {
       );
     } else {
       // Format the elements of the array for display
-      for (let ingredient of this.flowBuildBasket.flowNotesPathArray!) {
+      for (let ingredient of this.flowBuildBasket.flowNotesPathArray) {
         if (ingredient.startsWith("#")) {
           previewContainer.createEl("p", {
             text: ingredient.replace("#", ""),
@@ -531,7 +427,8 @@ export class PreviewModal extends Modal {
     );
 
     //--------------------------------------------------------------------------------
-    const closeButton = new ButtonComponent(closeModal.controlEl)
+    const closeButton = new ButtonComponent(closeModal.controlEl);
+    closeButton
       .setButtonText(this.plugin.t("PreviewModal.button close preview"))
       .onClick(() => {
         this.close();
@@ -564,7 +461,8 @@ export class DeleteFlowDefModal extends Modal {
     contentEl.createEl("h2", {
       text: `Delete the definition for "${this.flowName}"`,
     });
-    const helperText = contentEl.createEl("p", {
+    // const helperText =
+    contentEl.createEl("p", {
       text: this.plugin.t(
         "deleteModal.createEl.text this will delete flow file",
       ),
@@ -705,16 +603,16 @@ export class RestoreFlowDefModal extends Modal {
       cls: "headline-container",
     });
 
-    const flowDisplay = new Setting(flowDisplayContainer)
-      .setName(this.plugin.t("backup.headline"))
-      .setHeading();
+    const flowDisplay = new Setting(flowDisplayContainer);
+    flowDisplay.setName(this.plugin.t("backup.headline")).setHeading();
 
     //--------------------------------------------------------------------------------
     // check if we have something to display
     const exists = await this.getBackup();
     if (!exists) {
       // if we don't, tell the user how to get something to display
-      const flowExplanation = flowDisplayContainer
+      const flowExplanation = flowDisplayContainer;
+      flowExplanation
         .createDiv()
         .setText(this.plugin.t("backup.explanation empty"));
 
@@ -1080,11 +978,16 @@ export class FlowSwitcherModal extends Modal {
   //--------------------------------------------------------------------------------
   async onOpen() {
     await this.display();
-    this.plugin.registerModalUpdateCallback(async () => await this.display());
+    this.plugin.registerModalUpdateCallback(
+      () =>
+        void this.display().catch((err) =>
+          console.error("display reset failed:", err),
+        ),
+    );
   }
 
   async display() {
-    const { contentEl, modalEl } = this;
+    const { contentEl } = this;
     contentEl.empty();
 
     // ----------------------------------------------------------
@@ -1188,7 +1091,8 @@ export class FlowSwitcherModal extends Modal {
       const flowIconSpan = flowHeader.createSpan();
       setIcon(flowIconSpan, "file-text");
 
-      const flowName = flowHeader.createSpan({
+      // const flowName =
+      flowHeader.createSpan({
         text: `${activeFlow}`,
         cls: "flow-switch-modal-active-header-flow-name",
       });
@@ -1225,7 +1129,8 @@ export class FlowSwitcherModal extends Modal {
 
       // ------------ All the buttons for the active flowses headers --------
       // Button that opens in a new tab
-      const openActiveTabButton = new ButtonComponent(flowHeader)
+      const openActiveTabButton = new ButtonComponent(flowHeader);
+      openActiveTabButton
         .setIcon("play")
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
         .setClass("clickable-icon")
@@ -1248,7 +1153,8 @@ export class FlowSwitcherModal extends Modal {
 
       //------------------------------------------------------------------------------
       // Button that opens in split to the right
-      const openActiveRightButton = new ButtonComponent(flowHeader)
+      const openActiveRightButton = new ButtonComponent(flowHeader);
+      openActiveRightButton
         .setIcon("step-forward")
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
         .setClass("clickable-icon")
@@ -1269,7 +1175,8 @@ export class FlowSwitcherModal extends Modal {
 
       //-----------------------------------------------------------------------------
       // Button that opens in a split down
-      const openActiveDownButton = new ButtonComponent(flowHeader)
+      const openActiveDownButton = new ButtonComponent(flowHeader);
+      openActiveDownButton
         .setIcon("step-forward")
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
         .setClass("flow-switch-modal-header-button-down")
@@ -1291,7 +1198,8 @@ export class FlowSwitcherModal extends Modal {
 
       //-----------------------------------------------------------------------------
       // Button to sync
-      const syncButton = new ButtonComponent(flowHeader)
+      const syncButton = new ButtonComponent(flowHeader);
+      syncButton
         .setIcon("download")
         .setClass(`flow-switch-modal-header-button-${goSync}`)
         .setClass("clickable-icon")
@@ -1307,7 +1215,8 @@ export class FlowSwitcherModal extends Modal {
 
       //----------------------------------------------------------------------------
       // Button to rebuild
-      const rebuildButton = new ButtonComponent(flowHeader)
+      const rebuildButton = new ButtonComponent(flowHeader);
+      rebuildButton
         .setIcon("rotate-cw")
         .setClass(`flow-switch-modal-header-button-rebuild-${goRebuild}`)
         .setClass("clickable-icon")
@@ -1339,16 +1248,15 @@ export class FlowSwitcherModal extends Modal {
 
       //---------------------------------------------------------------------------
       // Button to close all active leaves that contain this flow
-      const closeButton = new ButtonComponent(flowHeader)
+      const closeButton = new ButtonComponent(flowHeader);
+      closeButton
         .setIcon("x")
         .setClass(`flow-switcher-modal-neutral`)
         .setClass("clickable-icon")
         .onClick(async () => {
-          Object.keys(activeFlowInfoObject[activeFlow]).forEach(
-            async (leafID) => {
-              await this.closeLeaf(leafID);
-            },
-          );
+          for (const leafID of Object.keys(activeFlowInfoObject[activeFlow])) {
+            await this.closeLeaf(leafID);
+          }
         });
 
       // ------ ACTIVE FLOW LEAVES (navigation area) --------------
@@ -1476,7 +1384,8 @@ export class FlowSwitcherModal extends Modal {
       const inactiveFlowIconSpan = inactiveFlowHeader.createSpan();
       setIcon(inactiveFlowIconSpan, "file-text");
 
-      const inactiveFlowName = inactiveFlowHeader.createSpan({
+      //const inactiveFlowName =
+      inactiveFlowHeader.createSpan({
         text: `${inactiveFlow}`,
         cls: "flow-switch-modal-INactive-header-flow-name",
       });
@@ -1522,7 +1431,8 @@ export class FlowSwitcherModal extends Modal {
       }
 
       // ----------- OPEN BUTTON ------------
-      const openInactiveTabButton = new ButtonComponent(inactiveFlowHeader)
+      const openInactiveTabButton = new ButtonComponent(inactiveFlowHeader);
+      openInactiveTabButton
         .setIcon("play")
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
         .setClass("clickable-icon")
@@ -1543,7 +1453,8 @@ export class FlowSwitcherModal extends Modal {
         });
 
       //----------------------------------------------------------------------------
-      const openInactiveRightButton = new ButtonComponent(inactiveFlowHeader)
+      const openInactiveRightButton = new ButtonComponent(inactiveFlowHeader);
+      openInactiveRightButton
         .setIcon("step-forward")
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
         .setClass("clickable-icon")
@@ -1563,7 +1474,8 @@ export class FlowSwitcherModal extends Modal {
         });
 
       //--------------------------------------------------------------------------
-      const openInactiveDownButton = new ButtonComponent(inactiveFlowHeader)
+      const openInactiveDownButton = new ButtonComponent(inactiveFlowHeader);
+      openInactiveDownButton
         .setIcon("step-forward")
         .setClass(`flow-switch-modal-header-button-${goOpen}`)
         .setClass("flow-switch-modal-header-button-down")
@@ -1584,7 +1496,8 @@ export class FlowSwitcherModal extends Modal {
         });
 
       // ----------- REBUILD BUTTON --------------------------------------
-      const rebuildButton = new ButtonComponent(inactiveFlowHeader)
+      const rebuildButton = new ButtonComponent(inactiveFlowHeader);
+      rebuildButton
         .setIcon("rotate-cw")
         .setClass(`flow-switch-modal-header-button-${goRebuild}`)
         .setClass("clickable-icon")
@@ -1772,6 +1685,8 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
 
   //--------------------------------------------------------------------------------
   onChooseItem(item: Types.SuggestionItem, evt: MouseEvent | KeyboardEvent) {
+    // Reason: can't remove 'ObsidianEditor' from this
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     interface ObsidianEditor extends Editor {
       cm?: EditorView;
     }

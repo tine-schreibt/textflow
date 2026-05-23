@@ -241,7 +241,6 @@
   "PreviewModal.modalTitle overlapping notes": "Überlappende Notizen:\n ${overlapList}",
   "PreviewModal.modalTitle.info your criteria yielded an empty list": "Deine Kriterien führten zu einer leeren Liste. Bitte überprüfe sie auf Tippfehler und/oder gestalte sie weniger restriktiv.",
   "PreviewModal.modalTitle.info what happens after closing the modal": "Wenn du diese Vorschau geschlossen hast, kannst du deine Flow-Definition entweder bearbeiten oder speichern.",
-  "PreviewModal.text when does flow creation happen": "Das Bauen des Flows erfolgt im nächsten Schritt.",
   "PreviewModal.button close preview": "Vorschau schließen",
 
   "-------- DELETE MODAL": "Modal zum Bestätigen der Löschung von Flow-Definitionen----------",

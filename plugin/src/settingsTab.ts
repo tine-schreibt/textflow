@@ -104,7 +104,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               this.plugin.textFlowOperation = false;
 
               // set the folder hidden if appropriate
-              await this.plugin.discernAndSetSystemFolderState();
+              this.plugin.discernAndSetSystemFolderState();
             } else {
               // Move SystemFolder
               try {
@@ -113,7 +113,7 @@ export class TextFlowSettingsTab extends PluginSettingTab {
                 this.plugin.textFlowOperation = false;
 
                 // hide if appropriate
-                await this.plugin.discernAndSetSystemFolderState();
+                this.plugin.discernAndSetSystemFolderState();
 
                 // Update the flowFilePaths
                 if (this.plugin.settings.flows) {
@@ -588,7 +588,7 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
             await this.plugin.saveSettings();
 
             if (this.plugin.settings.systemFolderPath) {
-              await this.plugin.discernAndSetSystemFolderState();
+              this.plugin.discernAndSetSystemFolderState();
             }
           });
       });

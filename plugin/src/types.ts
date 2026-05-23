@@ -239,6 +239,9 @@ export interface FolderGroup {
   rows: DataviewFolder[];
 }
 
+//Reason: The dependency has those types; I can't change them
+/* eslint-disable @typescript-eslint/no-explicit-any
+ */
 export type DVNote = Record<string, any> & {
   file: {
     path: string;
@@ -246,6 +249,8 @@ export type DVNote = Record<string, any> & {
   };
   [key: string]: any;
 };
+/* eslint-enable @typescript-eslint/no-explicit-any
+ */
 
 // ---- other assorted types and interfaces
 
