@@ -1,3 +1,7 @@
+#### 0.4.16
+
+- stored search terms for the navDropdown perform a search again
+
 #### 0.4.15
 
 - added a new bug when fixing the previous bug...
