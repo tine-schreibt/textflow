@@ -1,3 +1,3 @@
-#### 0.4.16
+#### 0.4.17
 
-- stored search terms for the navDropdown perform a search again
+- some changes to styles.css - thank you @saverzero1!

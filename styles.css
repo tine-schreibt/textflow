@@ -27,12 +27,8 @@
 }
 
 .underlined {
-  text-decoration: underline;
-  text-decoration-color: color-mix(
-    in srgb,
-    var(--color-accent) 50%,
-    transparent
-  );
+  text-decoration: underline
+    color-mix(in srgb, var(--color-accent) 50%, transparent);
 }
 
 .active {
@@ -443,7 +439,7 @@ button.setting-tab-button-spacing {
 }
 
 .flow-switch-modal-header-button-must {
-  background-color: rgb(from var(--color-accent) r g b / 1);
+  background-color: var(--color-accent);
   color: var(--text-on-accent);
   box-shadow: 0 0 var(--size-2-2) 1px var(--text-accent);
   align-items: center;
@@ -472,7 +468,7 @@ button.setting-tab-button-spacing {
 }
 
 .flow-switch-modal-header-button-rebuild-must {
-  background-color: rgb(from var(--color-accent) r g b / 1);
+  background-color: var(--color-accent);
   color: var(--text-on-accent);
   box-shadow: 0 0 var(--size-2-2) 1px var(--text-accent);
   align-items: center;
