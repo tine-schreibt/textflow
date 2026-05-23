@@ -28,7 +28,7 @@
 
 .underlined {
   text-decoration: underline
-    color-mix(in srgb, var(--color-accent) 50%, transparent);
+    var(--color-accent);
 }
 
 .active {
