@@ -2047,7 +2047,20 @@ export class settingsTabFunctions {
     const file = this.app.vault.getAbstractFileByPath(path);
 
     if (file instanceof TFile) {
-      const fileContent: string = await this.app.vault.read(file);
+      let fileContent: string = await this.app.vault.read(file);
+
+      // if user doesn't want properties for their exports
+      if (!this.plugin.settings.keepProps) {
+        const cache = this.app.metadataCache.getFileCache(file);
+        const frontmatterPosition = cache?.frontmatterPosition;
+        if (frontmatterPosition) {
+          fileContent = fileContent.slice(
+            frontmatterPosition.end.offset + 1,
+            fileContent.length,
+          );
+        }
+      }
+
       const stripUUIDs = (text: string): string => {
         const uuidPattern =
           /[\u200B\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0\u200C\u200D]{46}/g;
@@ -2057,14 +2070,14 @@ export class settingsTabFunctions {
 
       const cleanContent = stripUUIDs(fileContent);
 
-      const yaml = ""; //`---\ntextFlowExport: true\n---`;
-      const contentWithYaml = `${yaml}\n${cleanContent}`;
-
+      const exportLocation = this.plugin.settings.exportLocation
+        ? `${this.plugin.settings.exportLocation}/`
+        : "/";
       const exportedFlowPath = normalizePath(
-        `${flowName}_export_${this.getTimestamp()}.md`,
+        `${exportLocation}${flowName}_export_${this.getTimestamp()}.md`,
       );
       this.plugin.textFlowOperation = true;
-      await this.safeCreateOrModifyFile(exportedFlowPath, contentWithYaml);
+      await this.safeCreateOrModifyFile(exportedFlowPath, cleanContent);
       this.plugin.textFlowOperation = false;
       new Notice(
         this.plugin.t("menubar.selectButton.notice successful export", {

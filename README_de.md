@@ -1,6 +1,6 @@
 [en version](https://github.com/tine-schreibt/textflow/blob/main/README.md)
 ### TL;DR 
-textFlow erlaubt dir **Flows** zu erzeugen - dynamische Dokumente, die aus den Inhalten mehrerer Notizen bestehen (vergleichbar mit 'Scrivenings'). Flows können aus Dataview-Queries, aus Ordnern, Tags und Eigenschaften, oder aus Lesezeichen-Gruppen definiert, und wie jede andere Notiz editiert werden. Alle Änderungen an Flows und ihren Quellnotizen werden dabei automatisch registriert und bidirektional gesynct. 
+textFlow erlaubt dir **Flows** zu erzeugen - dynamische Dokumente, die aus den Inhalten mehrerer Notizen bestehen (vergleichbar mit 'Scrivenings'). Flows können aus Dataview-Queries, aus Ordnern, Tags und Eigenschaften, oder aus Lesezeichen-Gruppen definiert, und wie jede andere Notiz editiert werden. Alle Änderungen an Flows und ihren Quellnotizen werden dabei automatisch registriert und bidirektional gesynct.
 
 textFlow ist vor allem für Autor:innen längerer Texte gedacht, kann aber von allen genutzt werden, die ihre Texte im größeren Zusammenhang sehen und/oder editieren wollen.  
 Die UI hat Optionen sowohl für Tastatur-, als auch für Maus-Navigation. 
@@ -72,6 +72,8 @@ Bitte lasst außerdem Obsidians Datenwiederherstellungs-Plugin, ['Edit history' 
 	3. **Deinen Cursor-Verlauf*:** Wenn du syncst, speichert textFlow die aktuelle Cursor-Position (für die letzten paar Regionen und Leaves eines Flows), so dass du schnell hin und her springen kannst. textFlow merkt sich außerdem die Cursor-Position über Reloads hinweg, und es gibt einen Befehl, um automatisch zur letzten bekannten Position des aktiven Leafs zu springen.
 	4. **Einen Auswahl-Button für die aktive Region\*:** Falls du eine Copy/Paste-Operation brauchst. Auch hierfür gibt es einen Befehl. 
 	5. **Einen Export-Button:** Dieser Button erzeugt eine Kopie deines Flows - ohne UUIDs. Sie wird in deinem Root-Ordner abgelegt und mit Flow-Namen und Zeitstempel betitelt. Wenn du einen embed Flow exportierst, werden die Embeds durch tatsächlichen Notizeninhalt ersetzt. 
+		- In den Einstellungen kannst du einen Zielordner für deine Exporte festlegen; Standard ist root.
+		- Du kannst außerdem festlegen, ob die Eigenschaften deiner Flows beim Export erhalten bleiben sollen. 
 	6. **Einen Button für den Neubau als klassik/embed Flow:** Dieser Button ist nur zu sehen, wenn du in den Einstellungen die Option für Flows mit Einbettungen aktivert hast. 
 	7. **Ein Min/Max-Button:** Damit du die Menüleiste bei Bedarf minimieren kannst. Es gibt auch einen Befehl, um sie zu togglen. 
 		Minimiert ist die Menüleiste nur ein kleines graues Chevron oben links im Editor - oder ein Warndreieck, solange der Flow noch nicht fertig eingerichtet ist. (Geh mit der Maus darüber, falls es nicht von allein verschwindet.)
@@ -84,8 +86,6 @@ Bitte lasst außerdem Obsidians Datenwiederherstellungs-Plugin, ['Edit history' 
 	- Du kannst die Scrolleisten verstecken.
 	- Rechtsklick in den Datei-Explorer gibt die Option eine neue Datei im aktuellen Ordner zu erzeugen (das ist im Grunde nur für mich -.-)
 ##### Kommt vielleicht in der Zukunft, wenn genug Leute [danach fragen](https://github.com/tine-schreibt/textFlow/issues): 
-- **Export mit Eigenschaften:** Eigenschaften eines Flows beim Export mitnehmen. 
-- **Frei wählbarer Export-Ordner:** Setze einen anderen Ordner als root für exportierte Ordner.
 - **Favoriten für das Switcher-Modal:** Falls du eine metrische Tonne Flows hast, Hilfe brauchst, um nicht den Überblick zu verlieren, und Eigenschaften/Dataview dir unheimlich sind.
 - **Tags und Properties für Lesezeichen-Flows:** Damit du sie einschränken kannst, falls du sie nur angelegt hast, um dein Zeug im Datei-Explorer manuell zu sortieren. 
 - **Rechtsklick definiere Flow aus Lesezeichen-Gruppe:** So dass es hier die gleiche Bequemlichkeit gibt wie für Ordner im Datei-Explorer
@@ -390,8 +390,11 @@ Falls das nicht hilft und du dein Problem auch nicht in der folgenden Liste find
 		- Ersetze die unzulässigen Zeichen durch zulässige.
 		- Vergiss nicht, den Ordnernamen auch in der Definition zu ändern. 
 
+- **Problem:** Ich habe einen Flow definiert, doch textFlow weigert sich, diesen zu bauen. 
+	- Das ist mir einmal während des Developments passiert. Ich bezweifle, dass es normalen Usern passieren wird. Die Lösung war, textFlow neu zu installieren.
+
 - **Problem:** Ich versuche, einen Flow aus einer bestimmten Eigenschaft zu definieren, aber sie wird ignoriert. 
-	- **Erklärung:** Der Typ der Eigenschaft ist eine Liste und Datview mag nicht, wie sie aussieht.
+	- **Erklärung:** Der Typ der Eigenschaft ist eine Liste und Dataview mag nicht, wie sie aussieht.
 	- **Lösung:** Einfachste Lösung:	
 		1. Mach ne Base (Obsidian Bases), 
 		2. Wähle die Property, die du bearbeiten willst, als Spalte (klick auf Eigenschaft und wähl sie aus)

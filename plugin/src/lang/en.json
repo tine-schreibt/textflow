@@ -61,7 +61,16 @@
   "-------- QUALITY OF LIVE SETTINGS": "Some settings to clean up/debug the UI",
   "qol.createSpan.text quality of life settings": "More...",
 
-  "qol.hideExplorerDeco.setName hide explorer deco": "Hide explorer deco",
+  "------------ exportSettings": "Settings for flow export",
+  "exportSettings.createSpan.text": "Flow export",
+  "exportLocation.setName choose existing folder": "Please choose an existing folder for your exported flows",
+  "exportLocation default is root": "The default location is your root folder.",
+  "exportLocationSave": "Save",
+  "newExportLocation saved": "New export location was saved.",
+  "keepProps name": "Keep properties when exporting.",
+
+  "toggleEmbed main toggle name": "Show option to embed",
+  "toggleEmbed main toggle desc 1": "In Flow definitions show the option to embed source notes for the Flow.",
 
   "qol.navListener.setName enable explorer nav": "Enable navigation via file explorer",
   "qol.navListener.setDesc what is enable explorer nav for": "Toggle this off if you need multi select to work correctly. There's a command, too.",
@@ -103,8 +112,6 @@
   "toggleFolderTitles.setName include folder / bookmark group titles": "Include folder / bookmark group titles in flow",
   "toggleFolderTitles.setDesc will also turn off titles in nav dropdown": "This also determines if the titles are visible in the flow navigation dropdown.",
 
-  "toggleEmbed main toggle name": "Show option to embed",
-  "toggleEmbed main toggle desc 1": "In Flow definitions show the option to embed source notes for the Flow.",
   "toggleEmbed main toggle desc 2": "Flows with embeds have advantages and disadvantages compared to classic Flows. Learn what that means in the Readme at github.com/tine-schreibt/textflow.",
   "toggleEmbed name": "Embed notes for this flow",
 

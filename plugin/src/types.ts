@@ -46,6 +46,7 @@ export interface TextFlowSettings {
   firstLaunch: boolean;
   systemFolderPath?: string;
   systemFolderHidden: boolean;
+  exportLocation: string;
   checkExternalEdits: ExternalEditsType;
   hashes: { [key: string]: string }; // path: hash
   explorerDecoStyle: string[];
@@ -57,6 +58,7 @@ export interface TextFlowSettings {
   switcherPos: string;
   hideScrollbar: string;
   embeds: boolean;
+  keepProps: boolean;
   flowBuildBasket: flowBuildBasket;
   activeRegions: { [key: string]: { [key: string]: ActiveRegion } }; // flowName[leafID] = ActiveRegion
   flows: { [key: string]: FlowDef };
@@ -152,6 +154,7 @@ export interface SourceFileObject {
 export const DEFAULT_SETTINGS: TextFlowSettings = {
   firstLaunch: true,
   systemFolderHidden: true,
+  exportLocation: "/",
   checkExternalEdits: "mtime",
   hashes: {},
   explorerDecoStyle: [
@@ -183,6 +186,7 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
   },
   hideScrollbar: "none",
   embeds: false,
+  keepProps: false,
   activeRegions: {},
   flows: {},
 };

@@ -53,7 +53,18 @@
   "-------- QUALITY OF LIVE SETTINGS": "Ein paar Settings, die die UI verbessern",
   "qol.createSpan.text quality of life settings": "Mehr...",
 
-  "qol.hideExplorerDeco.setName hide explorer deco": "Verstecke DateiExplorer-Deco",
+  "exportSettings.createSpan.text": "Flow-Export",
+  "exportLocation.setName choose existing folder": "Bitte wähle einen existierenden Ordner als Exportziel",
+  "exportLocation default is root": "Der Standard ist dein Root-Ordner.",
+  "exportLocationSave": "Speichern",
+
+  "newExportLocation saved": "Neues Exportziel wurde gespeichert.",
+
+  "keepProps name": "Erhalte Eigenschaften beim Export.",
+
+  "toggleEmbed main toggle name": "Show option to embed",
+  "toggleEmbed main toggle desc 1": "In Flow definitions show the option to embed source notes for the Flow.",
+
   "qol.navListener.setName enable explorer nav": "Navigation per Datei-Explorer einschalten",
   "qol.navListener.setDesc what is enable explorer nav for": "Schalte diese Einstellung aus, falls du Multiselect brauchst. Es gibt auch einen Befehl dafür.",
 
@@ -93,8 +104,6 @@
   "toggleFolderTitles.setName include folder / bookmark group titles": "Füge Gruppen-/Ordnertitel in den Flow ein",
   "toggleFolderTitles.setDesc will also turn off titles in nav dropdown": "Dieses Setting legt auch fest, ob die Titel im Navigations-Dropdown zu sehen sind.",
 
-  "toggleEmbed main toggle name": "Zeige Option zur Einbettung an",
-  "toggleEmbed main toggle desc 1": "Zeige bei der Flow-Definition die Option an, die Quellnotizen für den Flow einzubetten.",
   "toggleEmbed main toggle desc 2": "Flows mit Einbettungen (Embeds) haben Vor- und Nachteile gegenüber klassischen Flows. Ihr könnt im Readme unter github.com/tine-schreibt/textflow/blob/main/README_de.md nachlesen, was genau das bedeutet.",
   "toggleEmbed name": "Notizen für diesen Flow einbetten.",
 

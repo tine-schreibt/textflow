@@ -778,7 +778,6 @@ export default class TextFlowPlugin extends Plugin {
   };
 
   // ----- this is called onload and sets the visibility of textFlowSystemFolderName
-  // rewritten by Claude to do the styles.css thing and wait for the explorer to be ready
   discernAndSetSystemFolderState = (): void => {
     const systemFolderPath = this.settings.systemFolderPath;
     const systemFolderHidden = this.settings.systemFolderHidden;
@@ -797,19 +796,16 @@ export default class TextFlowPlugin extends Plugin {
     }
 
     // Create and append style with the correct selector
-    const addStyle = () => {
-      let hiddenStyle = activeDocument.createElement("style");
-      hiddenStyle.setAttribute("data-textflow-temp", "true");
+    let hiddenStyle = activeDocument.createElement("style");
+    hiddenStyle.setAttribute("data-textflow-temp", "true");
 
-      hiddenStyle.textContent = `
+    hiddenStyle.textContent = `
             div[data-path='${systemFolderPath}'],
             div[data-path^='${systemFolderPath}'] {
                 display: none !important;
             }
         `;
-      activeDocument.head.appendChild(hiddenStyle);
-    };
-    addStyle();
+    activeDocument.head.appendChild(hiddenStyle);
   };
 
   // ----- DECORATE SOURCE NOTES IN FILE EXPLORER -----------
@@ -1131,7 +1127,6 @@ ${pseudoElement}
   // ---------------------------------------------------------------
   // removing all styles on deactivation
   unDecorateSourceNotes = async () => {
-    if (this.settings.explorerDecoStyle[0] != "--") return;
     let path = "";
     let handledPathsArray: string[] = [];
 
@@ -3710,6 +3705,16 @@ ${pseudoElement}
   // ------------------ ONUNLOAD----------------------------
   // -------------------------------------------------------
   onunload() {
+    // Remove folder hiding
+    const existingStyle = activeDocument.head.querySelector(
+      "style[data-textflow-temp]",
+    );
+    if (existingStyle) {
+      existingStyle.remove();
+    }
+    // I should remove explorer decoration here, too, but the function never gets a chance
+    // to  finish.
+
     // ------------ Remove listeners -----------
 
     //------------ REMOVE explorer click listener -----------
@@ -3725,7 +3730,10 @@ ${pseudoElement}
       fileExplorer.removeEventListener("click", this.boundFileExplorerClick);
     }
 
-    // ------------ RESET compartments to []
+    // This part consistently gets interrupted, leaving the editor in a broken state
+    // the compartments only fire when there's a flow in the leaf anyway, so leaving
+    // them for Obsidian to clean up is the less disruptive choice.
+    /*  // ------------ RESET compartments to []
     for (const leafID of Object.keys(this.listenerBasket)) {
       if (leafID.endsWith("-changes")) continue;
       const leaves = this.app.workspace.getLeavesOfType("markdown");
@@ -3738,7 +3746,7 @@ ${pseudoElement}
         );
         if (cmView) this.resetCompartments(leafID, cmView);
       }
-    }
+    }*/
 
     // --------------- REMOVE menu bar ------------------
     this.app.workspace.iterateAllLeaves((leaf) => {

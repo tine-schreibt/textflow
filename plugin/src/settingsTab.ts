@@ -73,7 +73,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
           )
           .onChange(async (value) => {
             newSystemFolderParent = normalizePath(value);
-            await this.plugin.settingsTabFunctions.debouncedSaveSettings();
           }),
       )
       .addButton((systemFolderCreateOrMoveButton) => {
@@ -392,6 +391,95 @@ export class TextFlowSettingsTab extends PluginSettingTab {
     // qolSettings
     qol.createDiv();
 
+    // ----------- EXPORT SETTINGS ---------------------
+
+    const exportSettings = qol.createEl("details", {
+      cls: "advancedSettings-container",
+    });
+
+    exportSettings
+      .createEl("summary", {
+        cls: "advancedSettings-headline",
+      })
+      .createSpan({
+        text: this.plugin.t("exportSettings.createSpan.text"),
+      });
+
+    // qolSettings
+    exportSettings.createDiv();
+
+    const exportLocation = new Setting(exportSettings);
+    let newExportLocation = "";
+    exportLocation
+      .setName(this.plugin.t("exportLocation.setName choose existing folder"))
+      .setDesc(this.plugin.t("exportLocation default is root"))
+      .addText((exportLocationInput) =>
+        exportLocationInput
+          .setValue(normalizePath(this.plugin.settings.exportLocation))
+          .onChange(async (value) => {
+            newExportLocation = normalizePath(value);
+          }),
+      )
+      .addButton((exportLocationSave) => {
+        exportLocationSave
+          .setButtonText(this.plugin.t("exportLocationSave"))
+          .onClick(async () => {
+            this.plugin.settings.exportLocation = newExportLocation;
+            await this.plugin.saveSettings();
+            new Notice(this.plugin.t("newExportLocation saved"));
+          });
+      });
+
+    // --------------- Keep Flow's props --------------
+    const keepProps = new Setting(exportSettings);
+    keepProps
+      .setName(this.plugin.t("keepProps name"))
+      .addToggle((sortToggle) => {
+        sortToggle
+          .setValue(this.plugin.settings.keepProps ?? false)
+          .onChange(async (value) => {
+            this.plugin.settings.keepProps = value;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    // ----------- hide system folder ---------------
+    const hidesystemFolder = new Setting(qol);
+    hidesystemFolder
+      .setName(
+        this.plugin.t("qol.showsystemFolder.setName show system folder", {
+          textFlowSystemFolderName: this.plugin.textFlowSystemFolderName,
+        }),
+      )
+      .setDesc(
+        createFragment((desc) => {
+          desc.createSpan({
+            text: this.plugin.t(
+              "qol.showsystemFolder.setDesc.1 hiding is recommended",
+            ),
+          });
+          desc.createEl("br");
+          desc.createSpan({
+            text: this.plugin.t(
+              "qol.showsystemFolder.setDesc.2 edits are still tracked",
+            ),
+          });
+        }),
+      )
+      .addToggle((hideSystemFolderToggle) => {
+        hideSystemFolderToggle
+          .setValue(!this.plugin.settings.systemFolderHidden)
+          .onChange(async (value) => {
+            this.plugin.settings.systemFolderHidden = !value;
+
+            await this.plugin.saveSettings();
+
+            if (this.plugin.settings.systemFolderPath) {
+              this.plugin.discernAndSetSystemFolderState();
+            }
+          });
+      });
+
     // -------------- Navigation listener -----------------
     const navListener = new Setting(qol);
     navListener
@@ -413,30 +501,6 @@ export class TextFlowSettingsTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           });
       });
-
-    // can't get this to work right now, so I'm shelving it
-    /* // ------------ menu bar top margin
-const menuBarTopMargin = new Setting(qol)
-.setName(this.plugin.t("menuBarTopMargin.setName top margin"))
-.setDesc(
-createFragment((desc) => {
-desc.createSpan({
-text: this.plugin.t("menuBarTopMargin.setName desc"),
-});
-}),
-)
-.addText((setFlowName) => {
-setFlowName.setPlaceholder(
-this.plugin.t("menuBarTopMargin.setName placeholder"),
-);
-setFlowName.setValue(this.plugin.settings.menuBarTopMargin);
-  
-setFlowName.onChange(async (value) => {
-// remove anything that's not a digit
-this.plugin.settings.menuBarTopMargin = value.replace(/\D/g, "");
-await this.plugin.settingsTabFunctions.debouncedSaveSettings();
-});
-});*/
 
     // ------------- scrollbar ------------
     const scrollbar = new Setting(qol);
@@ -553,43 +617,6 @@ await this.plugin.settingsTabFunctions.debouncedSaveSettings();
               value as Types.ExternalEditsType;
 
             await this.plugin.saveSettings();
-          });
-      });
-
-    // ----------- hide system folder ---------------
-    const hidesystemFolder = new Setting(qol);
-    hidesystemFolder
-      .setName(
-        this.plugin.t("qol.showsystemFolder.setName show system folder", {
-          textFlowSystemFolderName: this.plugin.textFlowSystemFolderName,
-        }),
-      )
-      .setDesc(
-        createFragment((desc) => {
-          desc.createSpan({
-            text: this.plugin.t(
-              "qol.showsystemFolder.setDesc.1 hiding is recommended",
-            ),
-          });
-          desc.createEl("br");
-          desc.createSpan({
-            text: this.plugin.t(
-              "qol.showsystemFolder.setDesc.2 edits are still tracked",
-            ),
-          });
-        }),
-      )
-      .addToggle((hideSystemFolderToggle) => {
-        hideSystemFolderToggle
-          .setValue(!this.plugin.settings.systemFolderHidden)
-          .onChange(async (value) => {
-            this.plugin.settings.systemFolderHidden = !value;
-
-            await this.plugin.saveSettings();
-
-            if (this.plugin.settings.systemFolderPath) {
-              this.plugin.discernAndSetSystemFolderState();
-            }
           });
       });
 

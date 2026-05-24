@@ -1,6 +1,6 @@
 
-Internal links don't work when viewing this on community.obsidian.md 
-Links to Github: 
+Internal links don't work when viewing this on community.obsidian.md  
+Links to Github:  
 [en version](https://github.com/tine-schreibt/textflow/blob/main/README.md); [de version](https://github.com/tine-schreibt/textflow/blob/main/README_de.md)
 
 ### TL;DR 
@@ -77,6 +77,8 @@ Please also run Obsidian's own data recovery plugin, ['Edit history' by Antonio 
 	3. **Your cursor history\*:** Whenever you sync, textFlow saves the last cursor position (for the last few regions of the last few leaves), so you can more easily jump around your document. textFlow remembers the cursor positions across reloads and scrolls there automatically. There's also a command to restore the last known cursor position for the active leaf. 
 	4. **A button to select the active region\*:** In case you want to do some copy/paste surgery. There's a command for this, too. 
 	5. **An export button:** This button creates a copy of your flow with all the UUIDs stripped out. It will be put in your root folder and named with the flow name and a time stamp. 
+		- In settings your can choose a target folder for your exports; default is root.
+		- You can also decide whether properties will be preserved. 
 	6. **A button to rebuild as classic/embed flow:** This button only shows up when you have activated the option for flows with embeds in the settings. 
 	7. **A min/max toggle:** There's a button to minimise/maximise the menu bar. There's also a command to toggle the menu. 
 		In its minimised state the menu bar is just a small grey chevron in the upper left corner of your editor- or a warning triangle, while the flow isn't setup yet. (Hover over the triangle if it doesn't disappear on its own.)
@@ -89,8 +91,6 @@ Please also run Obsidian's own data recovery plugin, ['Edit history' by Antonio 
 	- You can hide scroll bars
 	- Right-clicking into file explorer gives the option to create a new file in the current folder (this is basically just for me -.-)
 ##### Maybe coming in the future if enough people [ask for it](https://github.com/tine-schreibt/textFlow/issues): 
-- **Export with properties:** The option to keep properties when exporting a flow.
-- **Select your own default export location:** Set a folder other than root for exported flows.
 - **Favourites for the switcher modal:** In case you have a gazillion flows, need help staying on top of them, and frontmatter/Dataview seem scary to you.
 - **Tags and properties for bookmark flows:** So you can narrow them down if you only have them to sort your stuff in file explorer. 
 - **Right-click define flow from bookmarks folder:** So there's the same convenience as for folders in the file explorer. 
@@ -394,6 +394,9 @@ If that didn't help and you also can't find your problem on this list, [let me k
 	- **Solution**: 
 		- Replace the disallowed characters. 
 		- Don't forget to update your definition, if the root folder's name has been changed.
+
+- **Problem:** I've defined a flow but textFlow refuses to build it. 
+	- This has happened to me once during development, so I doubt it's likely to happen to a normal user. I solved it by reinstalling textFlow. 
 
 - **Problem:** I am trying to define a flow using a certain property, but it's being ignored. 
 	- **Explanation:** The property type is a list, but in a way that Dataview doesn't like. 
