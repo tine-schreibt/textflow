@@ -2051,7 +2051,7 @@ export class settingsTabFunctions {
       const stripUUIDs = (text: string): string => {
         const uuidPattern =
           /[\u200B\u2060\u2061\u2062\u2063\u2064\uFEFF\u00A0\u200C\u200D]{46}/g;
-        const result = text.replace(uuidPattern, "\n\n");
+        const result = text.replace(uuidPattern, "\n");
         return result;
       };
 

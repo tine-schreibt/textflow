@@ -1,3 +1,3 @@
-#### 0.4.18
+#### 0.4.19
 
-- this is just here because the preview scan seems to be broken rn
+- Exports now replace UUIDs with only a single line break
