@@ -1733,6 +1733,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
             item,
             cursorPos,
           );
+          await this.plugin.saveSettings();
           this.app.workspace.setActiveLeaf(leaf, { focus: true });
           if (cursorPos) {
             await scrollToTarget(item, cursorPos);
@@ -1764,6 +1765,7 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
               item,
               cursorPos,
             );
+            await this.plugin.saveSettings();
             this.app.workspace.setActiveLeaf(leaf, { focus: true });
             await scrollToTarget(item, cursorPos);
           }
