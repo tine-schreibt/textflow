@@ -1,5 +1,6 @@
 
-Internal links don't work when viewing this on community.obsidian.md Links to Github: 
+Internal links don't work when viewing this on community.obsidian.md 
+Links to Github: 
 [en version](https://github.com/tine-schreibt/textflow/blob/main/README.md); [de version](https://github.com/tine-schreibt/textflow/blob/main/README_de.md)
 
 ### TL;DR 
