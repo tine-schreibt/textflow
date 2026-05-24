@@ -1,6 +1,6 @@
 [en version](https://github.com/tine-schreibt/textflow/blob/main/README.md)
 ### TL;DR 
-textFlow erlaubt dir **Flows** zu erzeugen - dynamische Dokumente, die aus den Inhalten mehrerer Notizen bestehen (vergleichbar mit 'Scrivenings'). Flows können aus Dataview-Queries, aus Ordnern, Tags und Eigenschaften, oder aus Lesezeichen-Gruppen definiert, und wie jede andere Notiz editiert werden. Alle Änderungen an Flows und ihren Quellnotizen werden dabei automatisch registriert und bidirektional gesynct.  
+textFlow erlaubt dir **Flows** zu erzeugen - dynamische Dokumente, die aus den Inhalten mehrerer Notizen bestehen (vergleichbar mit 'Scrivenings'). Flows können aus Dataview-Queries, aus Ordnern, Tags und Eigenschaften, oder aus Lesezeichen-Gruppen definiert, und wie jede andere Notiz editiert werden. Alle Änderungen an Flows und ihren Quellnotizen werden dabei automatisch registriert und bidirektional gesynct. 
 
 textFlow ist vor allem für Autor:innen längerer Texte gedacht, kann aber von allen genutzt werden, die ihre Texte im größeren Zusammenhang sehen und/oder editieren wollen.  
 Die UI hat Optionen sowohl für Tastatur-, als auch für Maus-Navigation. 
@@ -36,7 +36,6 @@ Bitte lasst außerdem Obsidians Datenwiederherstellungs-Plugin, ['Edit history' 
 11. [Spickzettel](#11-spickzettel)
 12. [textFlow und Gliederung im Vergleich](#12-textflow-und-gliederung-im-vergleich)
 13. [Melde einen Bug / Zeig deine Liebe](#13-melde-einen-bug--zeig-deine-liebe)
-
 
 <hr>
 
@@ -99,7 +98,6 @@ Sofern ich von allein Motivation entwickle, könnten sie eines Tages auch einfac
 **Außerdem:**
 - **Mehr Sprachen:** Bisher gibt es das Plugin nur auf Deutsch und Englisch. Falls du eine weitere Sprache beisteuern willst: [https://github.com/tine-schreibt/textFlow/tree/main/plugin/src/lang](https://github.com/tine-schreibt/textFlow/tree/main/plugin/src/lang)
 
-
 <hr>
 
 ### 2. Sicherheitsfeatures
@@ -145,7 +143,6 @@ Sofern ich von allein Motivation entwickle, könnten sie eines Tages auch einfac
 9. **Manuelle Markierung für Neubau:** Wenn du automatische Checks deaktivierst, kannst du immer noch per Rechtsklick auf eine Notiz im Datei-Explorer auswählen, dass alle Flows, die sie enthalten, für den Neubau markiert werden sollen.
 10. **Definitions-Backup:** Falls du das Plugin mal komplett deinstallieren und neu installieren musst, kannst du ein Backup deiner Flow-Definitionen erzeugen. Dieses wird in Form einer .json-Datei in textFlows Ordner in deinem Vault abgelegt.
 
-
 <hr>
 
 ### 3. Einschränkungen und bekannte Unannehmlichkeiten
@@ -182,7 +179,6 @@ Sofern ich von allein Motivation entwickle, könnten sie eines Tages auch einfac
 3. **Kein Auto-Sync wenn du Obsidian schließt:** Onunload gibt Obsidian Plugins kaum Zeit, ihren Kram aufzuräumen und Einstellungen zu speichern, geschweige denn, komplette Dateien zu schreiben. Aber deine Flows werden immer genau so gespeichert wie alle anderen Dateien in Obsidian, und du kannst die sync nachholen, wenn du Obsidian wieder startest. 
 4. **textFlows Menüleiste überlappt manchmal Editing Toolbar oder die Sucheingabe oder wird von der Sucheingabe überlappt:** Aufgrund gewisser Eigenheiten von CSS und Obsidian ist es leider nicht so einfach möglich, Menüleisten und die Sucheingabe friedlich coexistieren zu lassen. Der gegenwärtige Zustand stellt ein Optimum dar, und die meisten Überlappungen können behoben werden, indem du textFlows Menüleiste minimierst und wieder maximierst.
 	- Die Ausnahme: Die minimierte textFlow Menüleiste verdeckt immer, was auch immer darunter liegt. Aber der Button ist winzig und sollte nicht die Funktionalität einschränken.
-
 
 <hr>
 
@@ -224,7 +220,6 @@ Wenn ihr Embeds in den Einstellungen aktiviert habt, könnt ihr eure Flows jeder
 3. **Positionsanzeige:** Das hat außerdem zur Folge, dass der Datei-Explorer und das Navigations-Dropdown nur wissen, in welcher Region eines Flows du dich befindest, wenn du mindestens einmal außerhalb der Einbettung geklickt hast. 
 4. **Suche:** Auch die Suchfunktion kann nicht in Einbettungen hineinsehen. Wenn du also einen Flow durchsuchen willst, geht das nur indirekt durch eine globale Suche in allen Notizen.
 
-
 <hr>
 
 ### 5. Use Cases
@@ -233,7 +228,6 @@ Wenn ihr Embeds in den Einstellungen aktiviert habt, könnt ihr eure Flows jeder
 - Du möchtest diverse Kontexte zusammenstellen, um auf bestimmte Aspekte deines Arbeit zu fokussieren.
 - Du möchtest die Gesamtheit oder bestimmte Ausschnitte deiner Arbeit in eine einzige Datei packen, um sie mit anderen zu teilen
 - Du willst im Grunde Scrivenings für Obsidian
-
 
 <hr>
 
@@ -256,7 +250,6 @@ Wenn ihr Embeds in den Einstellungen aktiviert habt, könnt ihr eure Flows jeder
 - **Installation per Obsidians Plugin-Repository:** Sobald textFlow auf dem Marktplatz verfügbar ist: 
 	- Gehe zu Obsidians `Einstellungen > Externe Plugins > Durchsuchen`. 
 	- Suche nach textFlow, klicke `Installieren`, dann `Aktivieren` (beides der selbe Button).
-
 
 <hr>
 
@@ -297,7 +290,6 @@ Wenn ihr Embeds in den Einstellungen aktiviert habt, könnt ihr eure Flows jeder
 - **Löschen:** Löscht deine Definition, die Flow-Notiz (falls sie existiert), und alle ihre Spuren in der Datenstruktur (außer in deinem Backup).
 - **Stelle alte Flow-Definitionen wieder her:** Hier kannst du ein Backup deiner Flow-Definitionen erzeugen und alte Definitionen wiederherstellen. Das Backup wird als .json-Datei in textFlowSystemFolder abgelegt. In Obsidian ist die Datei also nicht sichtbar.
 
-
 <hr>
 
 ### 8. Befehle
@@ -320,7 +312,6 @@ Alle Befehle können in Obsidians Einstellungen mit Tastenkürzeln verknüpft we
 
 - **Scrollbar umschalten:** Für den schnellen Wechsel. 
 - **Navigation per Explorer umschalten:** Falls du die Mehrfachauswahl brauchst.
-
 
 <hr>
 
@@ -370,7 +361,6 @@ Wenn du wissen willst, warum: [Sicherheitsfeatures](#2-safetyfeatures) / [Einsch
 - Ergebnisse für den Flow im aktiven Leaf addressieren immer das aktive Leaf. 
 - Ergebnisse für andere Flows adressieren das zuletzt aktive Leaf des Flows. Gibt es das nicht, öffnen sie sich in einem neuen Leaf. 
 - Ergebnisse für Flow-Namen öffnen sich immer in einem neuen Leaf.
-
 
 <hr>
 
@@ -527,7 +517,6 @@ Falls das nicht hilft und du dein Problem auch nicht in der folgenden Liste find
 - **Problem:** Irgend etwas anderes funktioniert nicht und Neubau/neu laden hilft nicht.
 	- **Lösung:** [Schick mir einen Bug-Report](#12-melde-einen-bug--zeig-deine-liebe)
 
-
 <hr>
 
 ### 11. Spickzettel
@@ -544,7 +533,6 @@ Falls das nicht hilft und du dein Problem auch nicht in der folgenden Liste find
 	2. Einen Update-Listener für das Dokument im Editor, damit textFlow merkt, wenn du an einer Region eine Änderung vornimmt. Dieser Listener ruft eine Funktion, die in `/.obsidian/plugins/textFlow/data.json` speichert, welche Region geändert wurde.
 	3. Einen Transaktionsfilter, der kontinuierlich die 60 Zeichen vor und hinter dem Cursor mit einer regEx prüft, um zu sehen, ob sich der Cursor in einer UUID befindet. Gibt der Check 'true' zurück, werden alle Transaktionen blockiert, so dass die UUID geschützt ist.
 	**Dieses Tracking sendet *keine* Daten an irgendwelche Server!** textFlow weiß nicht mal, dass das Internet existiert.
-
 
 <hr>
 
@@ -571,7 +559,6 @@ Und wann solltest du beide zusammen benutzen?
 
 **Zusammen sind sie großartig:**
 - Aber warum auswählen, wenn du die größten Stärken beider Plugins nutzen kannst - textFlow, um flexible Dokumente zu erzeugen, und die Gliederungsansicht, um sie granular zu navigieren?
-
 
 <hr>
 
