@@ -1,4 +1,3 @@
-#### 0.4.21
+#### 0.4.22
 
-- added style removal to onunload
-- added some export settings
+- re-added restoration of cursor position to flow setup

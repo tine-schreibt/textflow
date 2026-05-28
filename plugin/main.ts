@@ -2809,7 +2809,7 @@ ${pseudoElement}
   // ---------------------------------------------------------------
   // The big bundle that centralises flow management
   setUpFlow = async (flowName: string, view: MarkdownView) => {
-    //this.settingsTabFunctions.callStack("setUpFlow");
+    this.settingsTabFunctions.callStack("setUpFlow");
 
     let isFreshlyBuilt = false;
 
@@ -2860,8 +2860,10 @@ ${pseudoElement}
       if (!isFreshlyBuilt) await this.UUIDIntegrityCheck(flowName);
       this.alreadyActivated[flowName] = {};
       this.alreadyActivated[flowName][leafID] = [true, false];
+      this.settingsTabFunctions.restoreCursorPos(flowName, view, leafID);
     } else if (!this.alreadyActivated[flowName][leafID]) {
       this.alreadyActivated[flowName][leafID] = [true, false];
+      this.settingsTabFunctions.restoreCursorPos(flowName, view, leafID);
     }
 
     // ------------- PROTECTION ---------------------
