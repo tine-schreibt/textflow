@@ -1,6 +1,3 @@
-# de_Readme
-
-<hr>
 
 [en version](https://github.com/tine-schreibt/textflow/blob/main/README.md)
 
@@ -58,7 +55,7 @@ Bitte lasst außerdem Obsidians Datenwiederherstellungs-Plugin, ['Edit history' 
 	- Flows, die aus Lesezeichen-Gruppen definiert sind, sind nicht an die alphanumerische Ordnung gebunden und können auch die manuelle Reihenfolge der Objekte im Ordner spiegeln, unabhängig davon, ob sie Notizen oder Ordner sind. 
 	Benutze die Reihenfolge, die sich für dich intuitiver/weniger verwirrend anfühlt, oder besser zum jeweiligen Flow passt. Manche Reihenfolgen funktionieren außerdem besser ohne Ordner-/Gruppen-Titel. 
 3. **Bearbeite Flows wie jede andere Notiz:** textFlow beobachtet, in welcher Region eines Flows eine Änderung stattfindet, und synchronisiert sie automatisch in die richtige Quellnotiz zurück, sobald du in eine andere Notiz klickst. Du kannst auch jederzeit manuell syncen (es gibt einen Befehl dafür, den du mit einem Tastenkürzel verbinden kannst). 
-4. **Einbettungen, aka Embed-Flows**: Ihr könnt in den Settings die Option aktivieren, eure Notizen als Einbettungen anstatt als einfachen Text in einen Flow einzufügen. Wenn ihr nun noch das Plugin [Sync Embeds von uthvah](https://github.com/uthvah/sync-embeds) installiert, könnt ihr den so eingebetteten Text direkt bearbeiten. 
+4. **Einbettungen, aka Embed-Flows**: Du kannst in den Settings die Option aktivieren, deine Notizen als Einbettungen anstatt als einfachen Text in einen Flow einzufügen. Wenn dz nun noch das Plugin [Sync Embeds von uthvah](https://github.com/uthvah/sync-embeds) installierst, kannst du den so eingebetteten Text direkt bearbeiten. 
 	- Embed-Flows haben einige Vorteile - der größte ist wohl, dass bei ihnen keine Datenduplikation nötig ist. Sie bringen aber auch einige Nachteile mit sich. Beides wird im Abschnitt [über Embeds](#4-alles-über-embed-flows-einbettungen) erklärt. 
 	- Es ist jederzeit möglich, einen Flow als anderen Typ neu bauen zu lassen.
 	- Im Rest dieser Liste sind Features, die nur für klassische verfügbar sind, mit Sternchen\* markiert.
@@ -174,15 +171,16 @@ Sofern ich von allein Motivation entwickle, könnten sie eines Tages auch einfac
 #### Der andere Kram:
 
 1. **Notwendige Duplikation von Daten:** Klassische Flows sind zusätzliche Notizen, die den Inhalt ihrer Quellnotizen replizieren; nur so funktioniert textFlow vollumfänglich. Deine Flows werden allerdings in einem dedizierten, frei platzierbaren Ordner gespeichert, der standardmäßig versteckt ist. 
-	 Wenn Datenduplikation dein Blut trotzdem zum Kochen bringt, sind Embed-Flows zusammen mit dem Plugin [Sync Embeds von uthvah](https://github.com/uthvah/sync-embeds/) vielleicht die Lösung für dich. Was sich für Embed-Flows an textFlows Funktionsumfang ändert, könnt ihr [hier](#12-alles-über-embed-flows-einbettungen) nachlesen
+	 Wenn Datenduplikation dein Blut trotzdem zum Kochen bringt, sind Embed-Flows zusammen mit dem Plugin [Sync Embeds von uthvah](https://github.com/uthvah/sync-embeds/) vielleicht die Lösung für dich. Was sich für Embed-Flows an textFlows Funktionsumfang ändert, kannst du [hier](#12-alles-über-embed-flows-einbettungen) nachlesen
 
 ##### Da kann mein Plugin nichts für
 
 1. **Implizite Größenbeschränkung für klassische Flows:** Obsidian handhabt offene Notizen im RAM. Wenn du also dein Viertelmillion Worte langes Epos offen hast - sei es in einem einzigen Flow oder auf mehrere verteilt - kann die UI langsam werden. Da hilft nur, deine Flows eher klein zu halten und nur zu öffnen, was du tatsächlich grad brauchst. 
 	Zum Vergleich: Dein unfertiger 50.000-Wort Roman hat unter 400kB, während dein 250.000-Wort Epos die 2MB knacken dürfte.
-2. **Alphanumerisch ist relativ:** Falls du deine Notizen so benamst: 'basisname', 'basisname 1', 'basiname 2' usw. erscheinen sie zwar im Datei-Explorer, wie man es erwarten würde, aber JavaScript ist der Ansicht, dass 'basisname' *nach* 'basisname 1' kommt. In deinem Flow werden also alle numerierten Notizen vor der unnumerierten kommen. Lösung: 'basisiname 0'. 
-3. **Kein Auto-Sync wenn du Obsidian schließt:** Onunload gibt Obsidian Plugins kaum Zeit, ihren Kram aufzuräumen und Einstellungen zu speichern, geschweige denn, komplette Dateien zu schreiben. Aber deine Flows werden immer genau so gespeichert wie alle anderen Dateien in Obsidian, und du kannst die sync nachholen, wenn du Obsidian wieder startest. 
-4. **textFlows Menüleiste überlappt manchmal Editing Toolbar oder die Sucheingabe oder wird von der Sucheingabe überlappt:** Aufgrund gewisser Eigenheiten von CSS und Obsidian ist es leider nicht so einfach möglich, Menüleisten und die Sucheingabe friedlich coexistieren zu lassen. Der gegenwärtige Zustand stellt ein Optimum dar, und die meisten Überlappungen können behoben werden, indem du textFlows Menüleiste minimierst und wieder maximierst.
+2. **Ständiges Speichern:** Obsidian speichert automatisch alle paar Sekunden, auch während du tippst, und schreibt dabei die komplette Notiz wieder und wieder auf die Platte. Bei großen Flows und älteren Platten mit wenig freiem Speicher kann das u.U. zum Problem werden. Abhilfe schafft hier - neben kleinen Flows - das Plugin [Autosave Control](https://github.com/mihasm/obsidian-autosave-control). Es erlaubt dir, das Intervall, in dem Obsidian speichert, zu verlängern, so dass weniger oft auf die Disk geschrieben wird. Du kannst automatische Saves auch komplett ausschalten. 
+3. **Alphanumerisch ist relativ:** Falls du deine Notizen so benamst: 'basisname', 'basisname 1', 'basiname 2' usw. erscheinen sie zwar im Datei-Explorer, wie man es erwarten würde, aber JavaScript ist der Ansicht, dass 'basisname' *nach* 'basisname 1' kommt. In deinem Flow werden also alle numerierten Notizen vor der unnumerierten kommen. Lösung: 'basisiname 0'. 
+4. **Kein Auto-Sync wenn du Obsidian schließt:** Onunload gibt Obsidian Plugins kaum Zeit, ihren Kram aufzuräumen und Einstellungen zu speichern, geschweige denn, komplette Dateien zu schreiben. Aber deine Flows werden immer genau so gespeichert wie alle anderen Dateien in Obsidian, und du kannst die sync nachholen, wenn du Obsidian wieder startest. 
+5. **textFlows Menüleiste überlappt manchmal Editing Toolbar oder die Sucheingabe oder wird von der Sucheingabe überlappt:** Aufgrund gewisser Eigenheiten von CSS und Obsidian ist es leider nicht so einfach möglich, Menüleisten und die Sucheingabe friedlich coexistieren zu lassen. Der gegenwärtige Zustand stellt ein Optimum dar, und die meisten Überlappungen können behoben werden, indem du textFlows Menüleiste minimierst und wieder maximierst.
 	- Die Ausnahme: Die minimierte textFlow Menüleiste verdeckt immer, was auch immer darunter liegt. Aber der Button ist winzig und sollte nicht die Funktionalität einschränken.
 
 <hr>
@@ -200,16 +198,17 @@ Wenn man dazu das Plugin [Sync Embeds von uthvah](https://community.obsidian.md/
 Und schon wird aus der Einbettung ein eigenständiger Editor, in dem man die eingebettete Notiz direkt editieren kann. 
 
 ##### 2. Was sind Flows mit Einbettungen / Embed-Flows?
-Wie man sich denken kann, sind Flows mit Einbettungen genau das. Anstatt den Text der Quellnotizen in den Flow zu kopieren, wird für jede Notiz ein Einbettungs-Codeblock wie der oben gezeigte generiert. Und die könnt ihr dann mit Sync Embeds editierbar machen.  
-Wenn ihr Embeds in den Einstellungen aktiviert habt, könnt ihr eure Flows jederzeit als anderen Type neubauen. Es gibt dafür einen Button in der Menüleiste, und einen Befehl. 
+Wie man sich denken kann, sind Flows mit Einbettungen genau das. Anstatt den Text der Quellnotizen in den Flow zu kopieren, wird für jede Notiz ein Einbettungs-Codeblock wie der oben gezeigte generiert. Und die kannst du dann mit Sync Embeds editierbar machen.  
+Wenn du Embeds in den Einstellungen aktiviert hast, kannst du deine Flows jederzeit als anderen Type neubauen. Es gibt dafür einen Button in der Menüleiste, und einen Befehl. 
 
 ##### 3. Die Vorteile von Embed-Flows
 1. **Keine Datenduplikation:** Wie erwähnt ist der Hauptvorteil von Einbettungen, dass sie keine zusätzlichen Daten erzeugen, sondern nur bereits bestehende Notizen direkt innerhalb deines zugänglich machen. 
-2. **Keine implizite Größenbeschränkung:** Embeds werden sukzessive geladen, d.h. die Menge des im RAM abzubildenden Textes bleibt klein. Somit trifft die implizite Größenbeschränkung, die durch Notizen RAM-Beschränkung auferlegt wird, auf Embed-Flows nicht zu. Das bedeutet, dass ihr eure Flows so gigantisch machen könnt, wie ihr wollt, ohne dass Obsidian träge wird, wenn ihr sie öffnet. 
-3. **Direkter Zugriff auf Eigenschaften:** Wenn du in Obsidian eingestellt hast, dass Eigenschaften im Dokument sichtbar sein sollen, werden sie als Kopfzeile deiner Embeds anzeigt. Klick auf die komischen Zeichen - â¶ - um die Eigenschaften auszuklappen, und du kannst sie direkt in der Einbettung bearbeiten. 
+2. **Keine implizite Größenbeschränkung:** Embeds werden sukzessive geladen, d.h. die Menge des im RAM abzubildenden Textes bleibt klein. Somit trifft die implizite Größenbeschränkung, die durch Notizen RAM-Beschränkung auferlegt wird, auf Embed-Flows nicht zu. Das bedeutet, dass du deine Flows so gigantisch machen kannst, wie du willst, ohne dass Obsidian träge wird, wenn du sie öffnest. 
+3. **Kein Unterschied bei der Schreiblast:** Obsidian selbst schreibt immer nur die Datei mit den Einbettungs-Codeblocks, und Sync Embeds die Notiz, die du gerade als Einbettung bearbeitest. Entsprechend ist die Schreiblast für deine Festplatte nicht signifikant größer als wenn du direkt mit einer Einzelnotiz arbeiten würdest. 
+4. **Direkter Zugriff auf Eigenschaften:** Wenn du in Obsidian eingestellt hast, dass Eigenschaften im Dokument sichtbar sein sollen, werden sie als Kopfzeile deiner Embeds anzeigt. Dort kannst du sie wie gewohnt bearbeiten. 
 	- Falls diese Bearbeitung dazu führt, dass die betroffene Notiz nicht mehr Teil des Flows ist, musst du ihn manuell neu bauen. 
-4. **Externe Edits werden sofort abgebildet:** Eine Prüfung ist also überflüssig, und hier kann schon aus Prinzip nichts schiefgehen. 
-5. **Überlappungen sind kein Problem:** Aus dem gleichen Grund. Überlappungen sind keine Inhalts-Dopplungen, sondern nur eine doppelte Darstellung des Inhalts ein un derselben Notiz; daher kommt es hier eben so wenig zu einem Konflikt wie wenn man die selbe Notiz in zwei verschiedenen Tabs geöffnet hat. 
+5. **Externe Edits werden sofort abgebildet:** Eine Prüfung ist also überflüssig, und hier kann schon aus Prinzip nichts schiefgehen. 
+6. **Überlappungen sind kein Problem:** Aus dem gleichen Grund. Überlappungen sind keine Inhalts-Dopplungen, sondern nur eine doppelte Darstellung des Inhalts ein un derselben Notiz; daher kommt es hier eben so wenig zu einem Konflikt wie wenn man die selbe Notiz in zwei verschiedenen Tabs geöffnet hat. 
 
 ##### 4. Was mit Embeds weiterhin funktioniert
 1. **Die Navigation:** Funktioniert weiterhin, sowohl per Datei-Explorer, als auch per Nav-Dropdown, Nav-Modal und flowSwitcher funktioniert wie gewohnt. 
@@ -270,12 +269,12 @@ Wenn ihr Embeds in den Einstellungen aktiviert habt, könnt ihr eure Flows jeder
 	- **Scrollbar verstecken:** Blende die zuckende Scrolleiste aus. Es gibt auch einen Umschalt-Befehl. 
 	- **Prüfe auf externe Bearbeitung:** Falls du öfter mal auf Geräten arbeitest, auf denen textFlow nicht läuft, kann das Plugin für dich nach externen Bearbeitungen suchen und Flows entsprechend neu bauen. 
 	- **textFlowSystemFolder anzeigen:** Es wird empfohlen, ihn versteckt zu halten, damit du nicht versehentlich was dran kaputt machst. 
-	- **Zeige Option zur Einbettung an:** Wenn ihr dies aktiviert, wird euch für eure Flow-Definitionen die Option angezeigt, Quellnotizen als Einbettungen in euren Flow zu integrieren, anstatt ihren Text direkt in den Flow zu kopieren. Wenn ihr das Plugin [Sync Embeds von uthvah](https://github.com/uthvah/sync-embeds)installiert, könnt ihr direkt in den Einbettungen editieren. Embeds bringen aber auch [Nachteile](#12-alles-über-embed-flows-einbettungen) mit sich.
+	- **Zeige Option zur Einbettung an:** Wenn du dies aktiviesrt, wird dir für deine Flow-Definitionen die Option angezeigt, Quellnotizen als Einbettungen in euren Flow zu integrieren, anstatt ihren Text direkt in den Flow zu kopieren. Wenn du das Plugin [Sync Embeds von uthvah](https://github.com/uthvah/sync-embeds)installierst, kannst du direkt in den Einbettungen editieren. Embeds bringen aber auch [Nachteile](#12-alles-über-embed-flows-einbettungen) mit sich.
 
 **Definiere einen neuen Flow** 
 - **Gib deinem Flow einen Namen:** Namen müssen einzigartig sein. Sie dürfen außerdem bestimmte Zeichen nicht enthalten, da die Namen auch als Datei-Titel taugen müssen. 
 - **Schließe Gruppen-/Ordnertitel ein:** Manche Sortier-Optionen funktionieren besser oder schlechter mit Titeln. 
-- **Bette Notizen für diesen Flow ein:** Optionales Setting, das ihr in den allgemeinen Settings ein/ausschalten könnt. 
+- **Bette Notizen für diesen Flow ein:** Optionales Setting, das du in den allgemeinen Settings ein/ausschalten kannst. 
 - **Definiere deinen Flow per...**
 	- **Dataview Query:** Vanilla Queries ohne JS. 	
 	- **Ordner, Tag, [Property](#wie-gehen-eigenschaften):** Du kannst einschließen und/oder ausschließen. 
@@ -306,7 +305,7 @@ Alle Befehle können in Obsidians Einstellungen mit Tastenkürzeln verknüpft we
 - **Letzte Cursor-Position wiederherstellen:** Wie die Beschreibung schon sagt. 
 - **Aktive Region auswählen:** Wählt den Text der aktiven Region des aktiven Flows aus. 
 - **Flow im aktiven Leaf exportieren:** Falls du die Menüleiste nicht aktiviert hast. 
-- **Baue den Flow im aktiven Leaf als anderen Typ neu:** So könnt ihr bei Bedarf schnell hin und her switchen. 
+- **Baue den Flow im aktiven Leaf als anderen Typ neu:** So kannst du bei Bedarf schnell hin und her switchen. 
 
 - **Fuzzy-Navigation öffnen:** Für die Navigation per Tastatur
 - **Flow-Switcher öffnen:** Falls du das Modal nicht mit Buttons öffnen willst, kannst du stattdessen diesen Befehl nutzen. 

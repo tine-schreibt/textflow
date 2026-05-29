@@ -1,7 +1,3 @@
-# en_Readme
-
-<hr>
-
 Internal links don't work when viewing this on community.obsidian.md  
 Links to Github:  
 [en version](https://github.com/tine-schreibt/textflow/blob/main/README.md); [de version](https://github.com/tine-schreibt/textflow/blob/main/README_de.md)
@@ -194,9 +190,10 @@ If I develop motivation on my own, they may show up all by themselves one day.
 
 1. **Implicit size limit for classic flows:** Obsidian handles open notes in memory, so having your entire quarter-million word epic open - wether in one flow or spread over several - will make the UI sluggish. So maybe keep the flows on the smaller side and only open what you actually need.
    For reference: Your unfinished 50.000 word novel is under 400kB, while a 250.000 word epos may crack 2MB.
-2. **Alphabetical order is relative:** If you name files like 'basename', 'basename 1', 'basename 2', they may be sorted like you'd expect in fileExplorer, but JavaScript considers 'basename' to come _after_ 'basename 1' in the alphabet. So in your flow, all the numbered basename files will come before the naked basename file. Solution: 'basename 0'
-3. **No auto-sync on closing Obsidian:** Onunload, Obsidian gives plugins barely enough time to clean up and save settings, let alone write entire files. But your Flows are always saved the way all notes are, so you can always sync when you open your vault again.
-4. **textFlow's menu bar sometimes overlaps Editing Toolbar or the search bar or is being overlapped by the search bar:** Due to certain quirks of CSS and Obsidian, it isn't easy to have those elements coexist peacefully. The current state is the optimum of what I can achieve with my knowledge. You can always solve conflicts by min/maxing the menu bar, though.
+2. **Constant disk writes:** Obsidian saves automatically every few seconds, even while you are typing, and thus writes the entire Note to disk, again and again. With big flows, older disks and little free space, this can become a problem. You can mitigate this by making smaller flows, or by using the plugin [Autosave Control](https://github.com/mihasm/obsidian-autosave-control). It allows you to increase the length of the interval between automatic saves so that there's less writing to the disk. You can also turn off auto-save completely.
+3. **Alphabetical order is relative:** If you name files like 'basename', 'basename 1', 'basename 2', they may be sorted like you'd expect in fileExplorer, but JavaScript considers 'basename' to come _after_ 'basename 1' in the alphabet. So in your flow, all the numbered basename files will come before the naked basename file. Solution: 'basename 0'
+4. **No auto-sync on closing Obsidian:** Onunload, Obsidian gives plugins barely enough time to clean up and save settings, let alone write entire files. But your Flows are always saved the way all notes are, so you can always sync when you open your vault again.
+5. **textFlow's menu bar sometimes overlaps Editing Toolbar or the search bar or is being overlapped by the search bar:** Due to certain quirks of CSS and Obsidian, it isn't easy to have those elements coexist peacefully. The current state is the optimum of what I can achieve with my knowledge. You can always solve conflicts by min/maxing the menu bar, though.
    - The only exception: The minimised textFlow menu bar will always cover up bars that lie below it. But it's tiny and shouldn't interfere with functionality.
 
 <hr>
@@ -225,10 +222,11 @@ If you have embeds activated in the settings, you can rebuild your flow as the o
 
 1. **No data duplication:** As mentioned, the main advantage of embeds is that they don't create additional data and just make already existing notes directly accessible within your flow.
 2. **No implicit size limit:** Embeds are being loaded successively, this means that the amount of text that has been held in RAM stays relatively small. Thus the implicit size limit which is imposed upon notes by RAM capacity doesn't apply to embed flows. Meaning you can make your flows positively ginormous without Obsidian getting sluggish when you open them.
-3. **Direct access to properties:** If you set up Obsidian to show properties in your documents, they will be shown as a headline in embeds. Klick the weird symbols - â¶ - to expand the properties area, and there you can edit them.
+3. **No difference in amount of disk writing:** Obsidian itself only writes the file with the embedding code blockst, ans Sync Embeds the note that you are editing in the embedding. Meaning that the amount of writing to disk that's happening isn't significantly larger than when working directly into a source note.
+4. **Direct access to properties:** If you set up Obsidian to show properties in your documents, they will be shown as a headline in embeds, where you can edit them as per usual.
    - If this edit leads to the note no longer being part of the flow, you're going to have to manually rebuild the flow.
-4. **External edits are available immediately:** Checks for this are therefore unnecessary and out of principle, nothing can go wrong here.
-5. **Overlaps are no problem:** For the same reason overlaps aren't content duplications but just duplications of presentation of the content of one and the same note. Thus, here won't be a conflict the same way there isn't one when you have a note open in two tabs.
+5. **External edits are available immediately:** Checks for this are therefore unnecessary and out of principle, nothing can go wrong here.
+6. **Overlaps are no problem:** For the same reason overlaps aren't content duplications but just duplications of presentation of the content of one and the same note. Thus, here won't be a conflict the same way there isn't one when you have a note open in two tabs.
 
 ##### 4. What still works with embeds
 
