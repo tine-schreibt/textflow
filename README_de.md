@@ -1,4 +1,9 @@
+# de_Readme
+
+<hr>
+
 [en version](https://github.com/tine-schreibt/textflow/blob/main/README.md)
+
 ### TL;DR 
 textFlow erlaubt dir **Flows** zu erzeugen - dynamische Dokumente, die aus den Inhalten mehrerer Notizen bestehen (vergleichbar mit 'Scrivenings'). Flows können aus Dataview-Queries, aus Ordnern, Tags und Eigenschaften, oder aus Lesezeichen-Gruppen definiert, und wie jede andere Notiz editiert werden. Alle Änderungen an Flows und ihren Quellnotizen werden dabei automatisch registriert und bidirektional gesynct.
 
@@ -497,6 +502,9 @@ Falls das nicht hilft und du dein Problem auch nicht in der folgenden Liste find
 		- Manchmal kommen sich Suche und Menüleiste in die Quere, und Menüleiste verdeckt die Sucheingabe. 
 		- Minimiere die Menüleiste, dann taucht die Sucheingabe wieder auf. 
 
+- **Problem**: Die Explorer-Dekoration flackert wenn du zwischen Leaves wechselst, und taucht in Flows erst auf, wenn du anfängst, zu tippen. 
+	- **Lösung:** Neuinstallation des Plugins. 
+
 - **Problem:** textFlow will, dass du einen Flow syncst, aber wenn du den Button klickst, passiert nichts, und du kannst den Flow nicht neubauen, weil es ungesyncte Änderungen gibt. 
 	- **Lösung:** 
 		- Hast du gerade einen Sync-Fehler repariert? 
@@ -510,6 +518,20 @@ Falls das nicht hilft und du dein Problem auch nicht in der folgenden Liste find
 - **Problem:** Navigation per Datei-Explorer funktioniert nicht, obwohl es definitiv angeschaltet ist. 
 	- **Lösung:**
 		- Prüfe nach, ob deine Flow-Definitionen noch da sind. 
+
+-  **Problem:** Du hast a Suchen/Ersetzen für ein nicht-druckbares Zeichen gemacht, und jetzt kann textFlow einige der unsichtbaren UUIDs für diesen Flow nicht mehr finden 
+	- **Lösung:** Bau den Flow neu.  
+		- Das hier sind die nicht-druckbaren Zeichen, die textFlow für UUIDs benutzt: 
+			- \u00A0 - No-Break Space 
+			- \u200B - Zero-width space 
+			- \u200C - Zero-width non-joiner 
+			- \u200D - Zero-width joiner 
+			- \u2060 - Word joiner 
+			- \u2061 - Function application 
+			- \u2062 - Invisible times 
+			- \u2063 - Invisible separator 
+			- \u2064 - Invisible plus 
+			- \uFEFF - Zero-width no-break space 
 
 #### Mehr Probleme
 
@@ -571,3 +593,6 @@ Falls dir irgendwelche Bugs oder komisches Verhalten begegnen, die in diesem Rea
 Du kannst mir auch per email bescheid sagen: tine at tine-schreibt dot de.
 
 Falls du dieses Plugin einfach nur liebst und ein bisschen Knete übrig hast, kannst du mir auf Ko-fi ein Trinkgeld geben: https://ko-fi.com/tine_schreibt
+
+<hr>
+
