@@ -3,7 +3,7 @@
 ### TL;DR
 
 textFlow erlaubt dir **Flows** zu erzeugen - dynamische Dokumente, die aus den Inhalten mehrerer Notizen bestehen (vergleichbar mit 'Scrivenings'). Flows können aus Dataview-Queries, aus Ordnern, Tags und Eigenschaften, oder aus Lesezeichen-Gruppen definiert, und wie jede andere Notiz editiert werden. Alle Änderungen an Flows und ihren Quellnotizen werden dabei automatisch registriert und bidirektional gesynct.
-dfsdff
+
 textFlow ist vor allem für Autor:innen längerer Texte gedacht, kann aber von allen genutzt werden, die ihre Texte im größeren Zusammenhang sehen und/oder editieren wollen.  
 Die UI hat Optionen sowohl für Tastatur-, als auch für Maus-Navigation.
 
@@ -519,7 +519,7 @@ Falls das nicht hilft und du dein Problem auch nicht in der folgenden Liste find
 
 #### Komische Probleme
 
-- **Problem:** Ich bekomme manchmal/ständig die Nachricht, dass eine meiner Quellnotizen extern bearbeitet wurde, aber ich hab sie gar nicht extern bearbeitet? 
+- **Problem:** Ich bekomme manchmal/ständig die Nachricht, dass eine meiner Quellnotizen extern bearbeitet wurde, aber ich hab sie gar nicht extern bearbeitet?
   - **Erklärung:** Hast du die Quellnotiz, in deren Region du arbeitest, gerade noch in einem anderen Tab geöffnet? Obsidians automatische Speicherlogik ist ein bisschen übereifrig und die Änderungen, die du in die Quellnotiz zurück speicherst, und die dann in dem anderen Tab angezeigt werden, lassen Obsidian denken, dass eine Änderung an dieser Notiz stattgefunden hat, die es dann automatisch speichert, was wiederum textFlow denken lässt, dass es eine externe Bearbeitung gab.
   - **Lösung:** Mtime+hash zu benutzen, schafft hier Abhilfe.
 
