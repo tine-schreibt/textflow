@@ -1383,7 +1383,7 @@ export class settingsTabFunctions {
   // ------ The function that manages everything surrounding the rebuilding of a flow
 
   flowBuildingBundle = async (flowName: string, caller: string) => {
-    this.callStack("flowBuildingBundle");
+    // this.callStack("flowBuildingBundle");
     this.plugin.isRebuilding = true;
     const flowReBuildBasket: Types.flowBuildBasket = {
       // rebuild specific properties
