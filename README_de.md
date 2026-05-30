@@ -496,6 +496,10 @@ Falls das nicht hilft und du dein Problem auch nicht in der folgenden Liste find
 
 #### Komische Probleme
 
+- **Problem:** Ich bekomme ständig die Nachricht, dass eine meiner Quellnotizen extern bearbeitet wurde, obwohl ich gerade ausschließlich in einem Flow arbeite. 
+	- **Erklärung:** Hast du die Quellnotiz, in deren Region du arbeitest, gerade noch in einem anderen Tab geöffnet? Obsidians automatische Speicherlogik ist ein bisschen übereifrig und die Änderungen, die du in die Quellnotiz zurück speicherst, und die dann in dem anderen Tab angezeigt werden, lassen Obsidian denken, dass eine Änderung an dieser Notiz stattgefunden hat, die es dann automatisch speichert, was wiederum textFlow denken lässt, dass es eine externe Bearbeitung gab. 
+	- **Lösung:** Mtime+hash zu benutzen, schafft hier keine Abhilfe, auch wenn ich nicht verstehe, warum. Du musst also entweder den zusätzlichen Tab schließen (empfohlen) oder den Check für externe Bearbeitung abschalten (nicht empfohlen).
+
 - **Problem**: Die Suchleiste wird nicht angezeigt. 
 	- **Lösung:** 		
 		- Manchmal kommen sich Suche und Menüleiste in die Quere, und Menüleiste verdeckt die Sucheingabe. 
