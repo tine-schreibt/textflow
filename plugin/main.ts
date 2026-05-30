@@ -3210,13 +3210,6 @@ ${pseudoElement}
             );
             return;
           }
-          const check = await this.checkStatsForNote(flowName, path);
-          if (check) {
-            new Notice(
-              this.t("syncBackToSource.failedStatCheck", { path: path }),
-            );
-            return;
-          }
 
           let startOfRegion = this.findStartOfRegion(
             this.settings.flows[flowName],
@@ -3244,10 +3237,15 @@ ${pseudoElement}
               const existingContent = await this.app.vault.read(sourceFile);
               // Replace content portion while keeping YAML
               const yamlMatch = existingContent.match(/^---\n[\s\S]*?\n---\n/);
-              const newContent = yamlMatch
+              let newContent = yamlMatch
                 ? `${yamlMatch[0]}${regionSlice}`
-                : regionSlice;
+                : `${regionSlice}`;
 
+              // Add a trailing slash if there isn't one, because Obsidian does 
+              // and we don't want to false-alarm of differing hashes
+              if (!newContent.endsWith(`\n)`)) {
+                newContent = `${newContent}\n`;
+              }
               // sync modified content
               await this.settingsTabFunctions.safeCreateOrModifyFile(
                 path,
@@ -3264,7 +3262,19 @@ ${pseudoElement}
               throw error;
             }
           }
-          await this.updateStats(flowName, path, sourceFile);
+          const freshFile = this.app.vault.getFileByPath(
+            this.settings.flows[flowName].flowFilePath,
+          );
+          if (!freshFile) {
+            new Notice(
+              this.t("syncBackToSource.notice other random error", {
+                flowName: flowName,
+                path: path,
+              }),
+            );
+            return;
+          }
+          await this.updateStats(flowName, path, freshFile);
         }
       }
       this.settings.flows[flowName].unsyncedRegionsArray = remainingPaths;
