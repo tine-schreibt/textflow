@@ -1767,7 +1767,9 @@ ${pseudoElement}
     // ----------------- Auto-sync and checks on focus  -------------------------------
     this.registerDomEvent(window, "focus", async () => {
       for (const flowName of Object.keys(this.settings.activeRegions)) {
-        await this.checkStatsForFlow(flowName);
+        if (this.inactivityThresholdMet(flowName)) {
+          await this.checkStatsForFlow(flowName);
+        }
       }
     });
 
@@ -1960,26 +1962,6 @@ ${pseudoElement}
                   activeRegionPath,
                 )
               ) {
-                // if the user wants checks and has been inactive, do checks
-                if (plugin.settings.checkExternalEdits != "no") {
-                  if (
-                    Math.abs(Date.now() - plugin.lastActivity[flowName]) >
-                    plugin.inactivityThreshold
-                  ) {
-                    const fileHasEdits = void plugin
-                      .checkStatsForNote(flowName, activeRegionPath)
-                      .catch((err) =>
-                        console.error("checkStatsForNote failed:", err),
-                      );
-                    if (fileHasEdits) {
-                      // notifcations are handled by the check function
-                      return;
-                    }
-                  }
-                }
-
-                plugin.lastActivity[flowName] = Date.now();
-
                 // Add to unsynced array
                 plugin.settings.flows[flowName].unsyncedRegionsArray.push(
                   activeRegionPath,
@@ -2488,7 +2470,11 @@ ${pseudoElement}
           await this.decorateSourceNotes("update");
           this.notifyOfOverlap(activeRegionObject.path, flowName, leafID);
         }
-
+        // if we're still in the same region, check if the user has been
+        // absent before they get a chance to sync
+        if (this.inactivityThresholdMet(flowName)) {
+          await this.checkStatsForNote(flowName, activeRegionObject.path);
+        }
         await this.saveSettings();
         return;
       }
@@ -2809,7 +2795,7 @@ ${pseudoElement}
   // ---------------------------------------------------------------
   // The big bundle that centralises flow management
   setUpFlow = async (flowName: string, view: MarkdownView) => {
-    this.settingsTabFunctions.callStack("setUpFlow");
+    // this.settingsTabFunctions.callStack("setUpFlow");
 
     let isFreshlyBuilt = false;
 
@@ -3241,7 +3227,7 @@ ${pseudoElement}
                 ? `${yamlMatch[0]}${regionSlice}`
                 : `${regionSlice}`;
 
-              // Add a trailing slash if there isn't one, because Obsidian does 
+              // Add a trailing slash if there isn't one, because Obsidian does
               // and we don't want to false-alarm of differing hashes
               if (!newContent.endsWith(`\n)`)) {
                 newContent = `${newContent}\n`;
@@ -3262,9 +3248,7 @@ ${pseudoElement}
               throw error;
             }
           }
-          const freshFile = this.app.vault.getFileByPath(
-            this.settings.flows[flowName].flowFilePath,
-          );
+          const freshFile = this.app.vault.getFileByPath(path);
           if (!freshFile) {
             new Notice(
               this.t("syncBackToSource.notice other random error", {
@@ -3338,6 +3322,23 @@ ${pseudoElement}
   };
 
   // ---------------------------------------------------------------
+  // In some situations a check is only necessary if the user has been absent
+  // and then we need to check before the user edits, because else we get
+  // a problem where they can neither sync nor rebuild the flow
+  inactivityThresholdMet = (flowName: string) => {
+    // if the user wants checks and has been inactive, do checks
+    if (this.settings.checkExternalEdits != "no") {
+      if (
+        Math.abs(Date.now() - this.lastActivity[flowName]) >
+        this.inactivityThreshold
+      ) {
+        return true;
+      }
+      this.lastActivity[flowName] = Date.now();
+      return false;
+    }
+  };
+
   // a robot said I should do it like this, and who am I to question a robot?
   // it's to account for random delays in file writing and OS quirks to avoid false positives
   MTIME_DELTA = 1000;
@@ -3390,9 +3391,9 @@ ${pseudoElement}
   // ---------------------------------------------------------------
   // The actual checking logic
   checkStatsForNote = async (flowName: string, path: string) => {
-    if (this.settings.checkExternalEdits === "no") return;
-    if (this.settings.flows[flowName].flaggedForRebuild) return;
-    if (path.startsWith("#")) return; // excluding titles
+    if (this.settings.checkExternalEdits === "no") return false;
+    if (this.settings.flows[flowName].flaggedForRebuild) return false;
+    if (path.startsWith("#")) return false; // excluding titles
 
     let changed = false;
 
@@ -3465,7 +3466,9 @@ ${pseudoElement}
       if (!this.settings.hashes[path]) {
         const sourceFile = this.app.vault.getFileByPath(path);
         if (sourceFile instanceof TFile) {
-          const fileContent = await this.app.vault.read(sourceFile);
+          let fileContent = await this.app.vault.read(sourceFile);
+
+          if (!fileContent.endsWith("\n")) fileContent = `${fileContent}\n`;
           this.settings.hashes[path] = this.makeHash(fileContent);
         }
       }
@@ -3477,6 +3480,7 @@ ${pseudoElement}
 
   makeHash = (text: string) => {
     // --- This is needed for hashing
+    if (!text.endsWith("\n")) text = `${text}\n`;
     return this.xxh.h64ToString(text);
   };
 
@@ -3485,6 +3489,7 @@ ${pseudoElement}
     let changed = false;
     let fileContent: string = await this.app.vault.read(sourceFile);
     const newHash = this.makeHash(fileContent);
+
     // if there's no hash yet for some reason, do a quick once-over for the flow
     if (!this.settings.hashes[path]) {
       await this.initialHashing(flowName);

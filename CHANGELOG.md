@@ -1,3 +1,7 @@
+#### 0.4.24
+
+- Fixed hashes differing because of course they differ if I give the function the wrong file to compare
+
 #### 0.4.23
 
 - Syncing now adds a trailing \n to text so Obsidian's own saves don't trigger a false external edit notification if a region's source is open in a different tab
