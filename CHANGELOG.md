@@ -1,3 +1,7 @@
+#### 0.4.25
+
+- fixed bug that caused stale entries in flowSwitcher
+
 #### 0.4.24
 
 - Fixed hashes differing because of course they differ if I give the function the wrong file to compare

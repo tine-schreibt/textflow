@@ -977,6 +977,7 @@ export class FlowSwitcherModal extends Modal {
 
   //--------------------------------------------------------------------------------
   async onOpen() {
+    await this.plugin.manageActiveRegions();
     await this.display();
     this.plugin.registerModalUpdateCallback(
       () =>
