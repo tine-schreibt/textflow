@@ -2790,16 +2790,11 @@ ${pseudoElement}
         } else {
           // save the number of flow leaves we had initially
           const oldNumberOfRegions = this.settings.numberOfActiveRegions;
-          console.log("checking flow leaf number:", oldNumberOfRegions);
 
           await this.manageActiveRegions();
-          console.log(
-            "new flow leaf number:",
-            this.settings.numberOfActiveRegions,
-          );
+
           // check if a flow leaf was closed, if so, run the stuff
           if (oldNumberOfRegions > this.settings.numberOfActiveRegions) {
-            console.log("therefore calling closeFlow");
             await this.closeFlow(view);
           }
         }
