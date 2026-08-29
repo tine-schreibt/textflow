@@ -2074,6 +2074,7 @@ ${pseudoElement}
   // ---------------------------------------------------------------
   // for this I actually read the CodeMirror docu
   dispatchCompartments = (leafID: string, cmView: EditorView) => {
+    // this.settingsTabFunctions.callStack("dispatchCompartments");
     const typesArray = ["cursor", "textChange", "divider"];
 
     for (const type of typesArray) {
@@ -2180,6 +2181,8 @@ ${pseudoElement}
   private boundFileExplorerClick!: (event: MouseEvent) => void;
 
   fileExplorerOpenClickListener = () => {
+    //this.settingsTabFunctions.callStack("ExplorerClickListener");
+
     this.boundFileExplorerClick = (event: Event) => {
       const mouseEvent = event as MouseEvent;
       if (
@@ -2785,8 +2788,20 @@ ${pseudoElement}
           this.mostRecentActiveFlowLeaf = leaf;
           return;
         } else {
-          await this.closeFlow(view);
+          // save the number of flow leaves we had initially
+          const oldNumberOfRegions = this.settings.numberOfActiveRegions;
+          console.log("checking flow leaf number:", oldNumberOfRegions);
+
           await this.manageActiveRegions();
+          console.log(
+            "new flow leaf number:",
+            this.settings.numberOfActiveRegions,
+          );
+          // check if a flow leaf was closed, if so, run the stuff
+          if (oldNumberOfRegions > this.settings.numberOfActiveRegions) {
+            console.log("therefore calling closeFlow");
+            await this.closeFlow(view);
+          }
         }
       }
     }
@@ -2933,6 +2948,7 @@ ${pseudoElement}
   // this function also removes obsolete entries from the listenerBasket
   manageActiveRegions = async () => {
     //this.settingsTabFunctions.callStack("manageActiveRegions");
+    const oldNumberOfFlows = this.settings.numberOfActiveRegions;
 
     // gather the flow leaves
     const foundFlowLeaves: Record<string, Set<string>> = {};
@@ -2967,7 +2983,13 @@ ${pseudoElement}
       }
     });
 
-    // Clean up entries for closed leaves plus the listenerBasket
+    // count how many flow leaves we have and update the number
+    this.settings.numberOfActiveRegions = Object.values(foundFlowLeaves).reduce(
+      (total, leafSet) => total + leafSet.size,
+      0,
+    );
+
+    // Clean up entries for closed leaves plus the listenerBasket and count remaining leaves
     for (const flowName of Object.keys(this.settings.flows)) {
       if (this.settings.activeRegions[flowName]) {
         if (Object.keys(this.settings.activeRegions[flowName]).length > 0) {
@@ -3018,9 +3040,11 @@ ${pseudoElement}
     // write that shit down
     await this.saveSettings();
 
-    // And finally redraw the decoration
-    await this.unDecorateSourceNotes();
-    await this.decorateSourceNotes("redo");
+    // And finally check if we need to redraw the decoration
+    if (oldNumberOfFlows != this.settings.numberOfActiveRegions) {
+      await this.unDecorateSourceNotes();
+      await this.decorateSourceNotes("redo");
+    }
   };
 
   // ---------------------------------------------------------------
@@ -3062,8 +3086,9 @@ ${pseudoElement}
         }
       }
     }
+
     // finally
-    await this.manageActiveRegions(); // also saves
+    // await this.manageActiveRegions(); // also saves
   };
 
   // ---------------------------------------------------------------
@@ -3644,7 +3669,10 @@ ${pseudoElement}
   // -------------------------------------------------------
   async onload() {
     this.settings = await this.loadSettings();
-    //this.flows = await this.loadFlowDefs();
+    if (!this.settings.numberOfActiveRegions) {
+      this.settings.numberOfActiveRegions = 0;
+      await this.manageActiveRegions();
+    }
     await this.loadLanguage();
 
     // to make saving even more safe
@@ -3714,6 +3742,17 @@ ${pseudoElement}
     });
 
     this.addListeners();
+
+    // this.registerEditorExtension(
+    //   Prec.highest(
+    //     keymap.of([
+    //       {
+    //         key: "Mod-Shift-z", // Ctrl-Shift-Z on Linux/Windows, Cmd-Shift-Z on Mac
+    //         run: redo,
+    //       },
+    //     ]),
+    //   ),
+    // );
 
     this.registerCommands();
   }

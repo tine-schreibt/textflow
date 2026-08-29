@@ -733,7 +733,7 @@ button.setting-tab-button-spacing {
   left: 0;
   min-width: 100%; /* Changed from width: 100% to min-width: 100% */
   max-width: 50vw; /* Add a reasonable maximum width */
-  max-height: 80vh;
+  max-height: 50vh;
   overflow-y: scroll;
   overflow-x: hidden;
   white-space: nowrap;

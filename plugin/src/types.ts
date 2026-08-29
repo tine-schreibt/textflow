@@ -61,6 +61,7 @@ export interface TextFlowSettings {
   keepProps: boolean;
   flowBuildBasket: flowBuildBasket;
   activeRegions: { [key: string]: { [key: string]: ActiveRegion } }; // flowName[leafID] = ActiveRegion
+  numberOfActiveRegions: number;
   flows: { [key: string]: FlowDef };
 }
 
@@ -188,6 +189,7 @@ export const DEFAULT_SETTINGS: TextFlowSettings = {
   embeds: false,
   keepProps: false,
   activeRegions: {},
+  numberOfActiveRegions: 0,
   flows: {},
 };
 
