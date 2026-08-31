@@ -246,7 +246,8 @@ export interface FolderGroup {
 }
 
 //Reason: The dependency has those types; I can't change them
-/* eslint-disable @typescript-eslint/no-explicit-any
+/* eslint-disable @typescript-eslint/no-explicit-any 
+-- This is Dataviews typing; I can't do anything about it
  */
 export type DVNote = Record<string, any> & {
   file: {
@@ -256,6 +257,7 @@ export type DVNote = Record<string, any> & {
   [key: string]: any;
 };
 /* eslint-enable @typescript-eslint/no-explicit-any
+-- And here ends the typecasting as 'any'
  */
 
 // ---- other assorted types and interfaces

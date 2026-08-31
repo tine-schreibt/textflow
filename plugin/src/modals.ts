@@ -2,7 +2,6 @@ import TextFlowPlugin from "../main";
 import {
   App,
   ButtonComponent,
-  Editor,
   FuzzyMatch,
   FuzzySuggestModal,
   Notice,
@@ -18,7 +17,6 @@ import * as Types from "./types";
 import TextFlow from "../main";
 import { TextFlowSettingsTab } from "./settingsTab";
 import { basename } from "path";
-import { EditorView } from "@codemirror/view";
 import path from "path";
 
 // Any code that was actually written by AI is labelled
@@ -473,7 +471,7 @@ export class DeleteFlowDefModal extends Modal {
     const deleteButton = new ButtonComponent(contentEl);
     deleteButton.setClass("action-button");
     deleteButton.setClass("action-button-delete-modal");
-    deleteButton.setWarning();
+    deleteButton.setDestructive();
     deleteButton.setTooltip(`Delete "${this.flowName}".`);
     deleteButton.setIcon("trash");
     deleteButton.onClick(async () => {
@@ -524,7 +522,7 @@ export class DeleteFlowDefModal extends Modal {
       }
 
       await this.plugin.saveSettings();
-      this.settingsTab.display();
+      this.settingsTab.getSettingDefinitions();
       this.close();
     });
 
@@ -538,7 +536,7 @@ export class DeleteFlowDefModal extends Modal {
     );
     cancelButton.setIcon("x-circle");
     cancelButton.onClick(async () => {
-      this.settingsTab.display();
+      this.settingsTab.getSettingDefinitions();
       this.close();
     });
   }
@@ -874,7 +872,7 @@ export class RestoreFlowDefModal extends Modal {
             backupPath,
             JSON.stringify(parsedJson, null, 2),
           );
-          this.settingsTab.display();
+          this.settingsTab.getSettingDefinitions();
           this.close();
         });
 
@@ -1686,12 +1684,6 @@ export class FuzzyNavModal extends FuzzySuggestModal<Types.SuggestionItem> {
 
   //--------------------------------------------------------------------------------
   onChooseItem(item: Types.SuggestionItem, evt: MouseEvent | KeyboardEvent) {
-    // Reason: can't remove 'ObsidianEditor' from this
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    interface ObsidianEditor extends Editor {
-      cm?: EditorView;
-    }
-
     // this is all my own code again
 
     // ------------- HELPER FUNCTIONS --------------

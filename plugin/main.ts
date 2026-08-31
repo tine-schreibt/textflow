@@ -2696,7 +2696,7 @@ ${pseudoElement}
       ).find(([_, foundRegionMap]) => foundRegionMap.invisibleUUID === UID);
 
       if (foundRegion) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars -- I need foundRegionMap for this to work
         const [foundRegionPath, foundRegionMap] = foundRegion;
 
         // put the object together
@@ -2743,7 +2743,7 @@ ${pseudoElement}
     );
 
     if (previousRegion) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars -- I need previousRegionPath for this to work
       const [previousRegionPath, previousRegionMap] = previousRegion;
       const invisibleUID = previousRegionMap.invisibleUUID;
       const index = text.indexOf(invisibleUID);
