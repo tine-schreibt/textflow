@@ -3727,7 +3727,7 @@ ${pseudoElement}
       // and finally, Listeners and commands
       this.fileExplorerOpenClickListener();
       //because without the type assertion the eventListener gets red squiggles
-      //eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+      //eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- if I don't assert the type here, addEventListener gets an error 'No overload matches this call'.
       const fileExplorer = activeDocument.querySelector(
         ".nav-files-container",
       ) as HTMLElement | null;
@@ -3773,7 +3773,7 @@ ${pseudoElement}
       I need this type assertion since without it, 
       removeEventListener gets 'No overload matches this call'
      */
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- Again, if I don't type this explicitly, addEventListener errors
     const fileExplorer = activeDocument.querySelector(
       ".nav-files-container",
     ) as HTMLElement | null;

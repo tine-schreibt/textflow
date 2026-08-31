@@ -522,7 +522,7 @@ export class DeleteFlowDefModal extends Modal {
       }
 
       await this.plugin.saveSettings();
-      this.settingsTab.getSettingDefinitions();
+      this.settingsTab.display();
       this.close();
     });
 
@@ -536,7 +536,7 @@ export class DeleteFlowDefModal extends Modal {
     );
     cancelButton.setIcon("x-circle");
     cancelButton.onClick(async () => {
-      this.settingsTab.getSettingDefinitions();
+      this.settingsTab.display();
       this.close();
     });
   }
@@ -872,7 +872,7 @@ export class RestoreFlowDefModal extends Modal {
             backupPath,
             JSON.stringify(parsedJson, null, 2),
           );
-          this.settingsTab.getSettingDefinitions();
+          this.settingsTab.display();
           this.close();
         });
 
