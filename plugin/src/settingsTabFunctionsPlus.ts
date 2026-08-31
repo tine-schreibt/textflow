@@ -16,7 +16,6 @@ import { EditorView } from "@codemirror/view";
 import TextFlow from "../main";
 import * as Types from "./types";
 import path, { basename } from "path";
-
 import { getAPI } from "obsidian-dataview";
 
 // Any code that was actually written by AI is labelled
@@ -507,10 +506,8 @@ export class settingsTabFunctions {
   // Also we're using the opportunity to get a clean definition (user input) for storage
 
   // ---------------- GET DVQUERY PATHS ----------------------
-  /* eslint-disable 
-  @typescript-eslint/no-unsafe-assignment,
-  -- Dataview returns loosely typed stuff I can't do anything about.
-  */
+  /* eslint-disable @typescript-eslint/no-unsafe-assignment -- Dataview returns loosely typed stuff I can't do anything about.
+   */
   getPathsByDvQuery = async (flowBuildBasket: Types.flowBuildBasket) => {
     if (!this.plugin.settings.systemFolderPath) return [];
 
@@ -546,9 +543,7 @@ export class settingsTabFunctions {
 
     let finalPathArray: string[] = [];
 
-    /* eslint-disable @typescript-eslint/no-unsafe-assignment, 
-    @typescript-eslint/no-unsafe-call, 
-    @typescript-eslint/no-unsafe-member-access -- Again, can't change Dataviews typing policy, but the function works*/
+    /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- Again, can't change Dataviews typing policy, but the function works*/
     let allNotes = await dv.query(`${flowBuildBasket.flowDefinition.dvQuery}`);
 
     if (!allNotes.successful) {
@@ -908,10 +903,8 @@ export class settingsTabFunctions {
     }
     return finalPathArray;
   };
-  /* eslint-enable 
-  @typescript-eslint/no-unsafe-assignment,
-  -- We're done with Dataview's API, so we can enable the rules again
-  */
+  /* eslint-enable @typescript-eslint/no-unsafe-assignment -- We're done with Dataview's API, so we can enable the rules again
+   */
 
   // ----------------------------------------------------------
   // --- FUNCTIONS TO MAKE SORTED PATH ARRAYS ---------------------
@@ -1062,13 +1055,8 @@ export class settingsTabFunctions {
       if (!this.plugin.settings.systemFolderPath) return [];
       const bookmarkedNotePathsArray: string[] = [];
 
-      /*eslint-disable @typescript-eslint/no-explicit-any, 
-      @typescript-eslint/no-unsafe-member-access, 
-      @typescript-eslint/no-unsafe-assignment, 
-      @typescript-eslint/no-unsafe-call,
-      @typescript-eslint/no-unsafe-argument
-      -- I need group to be able to handle items as well as arrays of items and this is currently the only way that doesn't make me want to eat my keyboard in frustration. I'll fix it eventually, but right now I'll start to scream if you try and make me. 
-      */
+      /*eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument -- I need group to be able to handle items as well as arrays of items and this is currently the only way that doesn't make me want to eat my keyboard in frustration. I'll fix it eventually, but right now I'll start to scream if you try and make me.
+       */
       const processGroup = (group: any) => {
         // First, process any subgroups (going deep first)
         if (group.items) {
@@ -1126,13 +1114,8 @@ export class settingsTabFunctions {
 
       return bookmarkedNotePathsArray;
     };
-    /*eslint-enable @typescript-eslint/no-explicit-any, 
-      @typescript-eslint/no-unsafe-member-access, 
-      @typescript-eslint/no-unsafe-assignment, 
-      @typescript-eslint/no-unsafe-call,
-      @typescript-eslint/no-unsafe-argument
-      -- We're done handling bookmarks so I don't need those rules disabled anymore
-      */
+    /*eslint-enable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument -- We're done handling bookmarks so I don't need those rules disabled anymore
+     */
 
     // ---- Reflecting folder order ----------------------
     const collectBookmarkPathsFolderOrder = (
@@ -1860,11 +1843,19 @@ export class settingsTabFunctions {
   // ---------------------------------------------------------------
 
   //--------------------------------------------------
-  // To encapsulate this apparently unavoidable 'as any' type casting; a robot said this is how you do it
+  // This avoids typecasting leaf as any
+
+  hasID = (leaf: WorkspaceLeaf): leaf is WorkspaceLeaf & Types.LeafWithID => {
+    return typeof (leaf as unknown as Types.LeafWithID).id === "string";
+  };
+
   getLeafID = (leaf: WorkspaceLeaf): Types.LeafID => {
-    /*Reason: 'any' is the only way to get at leaf.id */
-    //eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access -- I can't access leafID any other way except when typecasting leaf as 'any'
-    return (leaf as any).id as Types.LeafID;
+    if (!this.hasID(leaf)) {
+      throw new Error(
+        'WorkspaceLeaf is missing expected internal "id" property',
+      );
+    }
+    return leaf.id as Types.LeafID;
   };
 
   // I have no idea if this even does anything, but I actually feel more comfortable like this, so...

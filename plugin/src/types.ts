@@ -4,6 +4,7 @@ import type { Plugin as ObsidianPlugin } from "obsidian";
 import { EditorView } from "@codemirror/view";
 import { Compartment, Extension } from "@codemirror/state";
 import xxhash from "xxhash-wasm";
+import type { Literal } from "obsidian-dataview";
 
 // --------------------------------------------------------------------------------
 // TOC
@@ -245,20 +246,13 @@ export interface FolderGroup {
   rows: DataviewFolder[];
 }
 
-//Reason: The dependency has those types; I can't change them
-/* eslint-disable @typescript-eslint/no-explicit-any 
--- This is Dataviews typing; I can't do anything about it
- */
-export type DVNote = Record<string, any> & {
+export type DVNote = {
   file: {
     path: string;
     tags: string[];
   };
-  [key: string]: any;
+  [key: string]: Literal;
 };
-/* eslint-enable @typescript-eslint/no-explicit-any
--- And here ends the typecasting as 'any'
- */
 
 // ---- other assorted types and interfaces
 
@@ -284,6 +278,10 @@ export interface EditorWithCM extends Editor {
 
 // for handling leafIDs
 export type LeafID = string & { readonly __leafID: unique symbol };
+
+export interface LeafWithID {
+  id: string;
+}
 
 // explorer deco
 export type CalculationMode = "update" | "single" | "redo";

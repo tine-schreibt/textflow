@@ -3726,7 +3726,6 @@ ${pseudoElement}
       // ---------------------------------------------------------------
       // and finally, Listeners and commands
       this.fileExplorerOpenClickListener();
-      //because without the type assertion the eventListener gets red squiggles
       //eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- if I don't assert the type here, addEventListener gets an error 'No overload matches this call'.
       const fileExplorer = activeDocument.querySelector(
         ".nav-files-container",
