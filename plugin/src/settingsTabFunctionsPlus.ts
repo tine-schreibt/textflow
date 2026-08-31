@@ -506,8 +506,7 @@ export class settingsTabFunctions {
   // Also we're using the opportunity to get a clean definition (user input) for storage
 
   // ---------------- GET DVQUERY PATHS ----------------------
-  /* eslint-disable @typescript-eslint/no-unsafe-assignment -- Dataview returns loosely typed stuff I can't do anything about.
-   */
+  /* eslint-disable @typescript-eslint/no-unsafe-assignment -- Dataview returns loosely typed stuff I can't do anything about.*/
   getPathsByDvQuery = async (flowBuildBasket: Types.flowBuildBasket) => {
     if (!this.plugin.settings.systemFolderPath) return [];
 
@@ -573,6 +572,7 @@ export class settingsTabFunctions {
 
     return finalPathArray;
   };
+  /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- We*/
 
   // --- GET ALL PATHS FROM FOLDER TAG PROPERTY ---------------------------
   // But first we ensure we don't have undefineds and make the ! type assertion later on safe to use
@@ -600,6 +600,7 @@ export class settingsTabFunctions {
   getPathsByFoldersTagsProps = async (
     flowBuildBasket: Types.flowBuildBasket,
   ) => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- the API needs to be called
     const dv = getAPI();
     if (!dv) {
       new Notice(
@@ -806,6 +807,8 @@ export class settingsTabFunctions {
     return cleanArrayCollection;
   };
 
+  /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- We*/
+
   dvFilter = async (
     sortedFilePathArray: string[],
     cleanArrayCollection: Types.CleanArrayCollection,
@@ -888,6 +891,8 @@ export class settingsTabFunctions {
         );
       });
 
+      /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- We*/
+
       // USE FILTERED LIST TO NARROW DOWN SORTED LIST --------------------------
       // put the paths into an object to speed up things
       const filteredPathObject: { [key: string]: boolean } = {};
@@ -903,8 +908,6 @@ export class settingsTabFunctions {
     }
     return finalPathArray;
   };
-  /* eslint-enable @typescript-eslint/no-unsafe-assignment -- We're done with Dataview's API, so we can enable the rules again
-   */
 
   // ----------------------------------------------------------
   // --- FUNCTIONS TO MAKE SORTED PATH ARRAYS ---------------------
@@ -1055,9 +1058,7 @@ export class settingsTabFunctions {
       if (!this.plugin.settings.systemFolderPath) return [];
       const bookmarkedNotePathsArray: string[] = [];
 
-      /*eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument -- I need group to be able to handle items as well as arrays of items and this is currently the only way that doesn't make me want to eat my keyboard in frustration. I'll fix it eventually, but right now I'll start to scream if you try and make me.
-       */
-      const processGroup = (group: any) => {
+      const processGroup = (group: Types.BookmarkItem) => {
         // First, process any subgroups (going deep first)
         if (group.items) {
           // Process subgroups first
@@ -1074,9 +1075,10 @@ export class settingsTabFunctions {
 
           // Add only direct file children (not those in subgroups)
           const directFiles = group.items.filter(
-            (item: any) => item.type === "file",
+            (item): item is Types.BookmarkItem & { path: string } =>
+              item.type === "file" && typeof item.path === "string",
           );
-          directFiles.forEach((file: any) => {
+          directFiles.forEach((file) => {
             bookmarkedNotePathsArray.push(file.path);
           });
         }
@@ -1101,21 +1103,18 @@ export class settingsTabFunctions {
       }
 
       // Add top-level files
-      const topLevelFiles = items.filter((item) => item.type === "file");
+      const topLevelFiles = items.filter(
+        (item): item is Types.BookmarkItem & { path: string } =>
+          item.type === "file" && typeof item.path === "string",
+      );
       topLevelFiles.forEach((file) => {
-        if (
-          file &&
-          file.path &&
-          !file.path.startsWith(`${this.plugin.settings.systemFolderPath}`)
-        ) {
+        if (!file.path.startsWith(`${this.plugin.settings.systemFolderPath}`)) {
           bookmarkedNotePathsArray.push(file.path);
         }
       });
 
       return bookmarkedNotePathsArray;
     };
-    /*eslint-enable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument -- We're done handling bookmarks so I don't need those rules disabled anymore
-     */
 
     // ---- Reflecting folder order ----------------------
     const collectBookmarkPathsFolderOrder = (
