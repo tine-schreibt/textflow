@@ -471,7 +471,7 @@ export class DeleteFlowDefModal extends Modal {
     const deleteButton = new ButtonComponent(contentEl);
     deleteButton.setClass("action-button");
     deleteButton.setClass("action-button-delete-modal");
-    deleteButton.setDestructive();
+    deleteButton.setWarning();
     deleteButton.setTooltip(`Delete "${this.flowName}".`);
     deleteButton.setIcon("trash");
     deleteButton.onClick(async () => {
