@@ -27,8 +27,7 @@
 }
 
 .underlined {
-  text-decoration: underline
-    var(--color-accent);
+  text-decoration: underline var(--color-accent);
 }
 
 .active {
@@ -228,6 +227,7 @@ button.setting-tab-button-spacing {
 
 .explorer-deco-dropdown-container.show {
   display: block; /* Show when .show class is applied */
+  z-index: 100;
 }
 
 .explorer-deco-dropdown-entry {
