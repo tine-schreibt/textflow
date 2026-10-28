@@ -1,6 +1,6 @@
 {
   "name": "textflow",
-  "version": "0.4.28",
+  "version": "0.4.27",
   "description": "Compile multiple notes into a single editable flow - like Scrivenings. Define from paths/tags/props or bookmarks. Auto-sync flow <-> source notes.",
   "main": "main.js",
   "type": "module",
@@ -25,8 +25,8 @@
     "svelte": "^5.55.7"
   },
   "devDependencies": {
-    "@codemirror/state": "6.5.0",
-    "@codemirror/view": "6.38.6",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.38.6",
     "@eslint/js": "^9.39.4",
     "@eslint/json": "^0.14.0",
     "@types/node": "^25.6.0",
