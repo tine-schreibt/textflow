@@ -7,10 +7,6 @@ textFlow erlaubt dir **Flows** zu erzeugen - dynamische Dokumente, die aus den I
 textFlow ist vor allem für Autor:innen längerer Texte gedacht, kann aber von allen genutzt werden, die ihre Texte im größeren Zusammenhang sehen und/oder editieren wollen.  
 Die UI hat Optionen sowohl für Tastatur-, als auch für Maus-Navigation.
 
-**UPDATE RE: CRASH BUG:** Version 0.4.12 hatte einen ziemlich krassen Bug, der dazu geführt hat, dass einige Settings-Dateien von Obsidian kaputt gegangen sind. Schuld war ein MutationObserver, den ich jetzt komplett aus dem Code rausgenommen habe.
-Ich entschuldige mich bei allen, die deshalb ihren .obsidian-Ordner aus einem Backup wiederherstellen mussten -.-
-Falls du v0.4.12 installiert hast, lösche es aus deinem .obsidian-Ordner und installiere die reparierte Version.
-
 **UPDATE:** Seit Version 0.4.0 könnt ihr **[Flows aus Einbettungen](#4-alles-über-embed-flows-einbettungen)** bauen; das bedeutet, diese Flows haben keine Datenduplikation mehr. Dann müsst ihr nur noch das Plugin [Sync Embeds von uthvah](https://github.com/uthvah/sync-embeds) installieren (geht derzeit nur manuell), und schon könnt ihr die Quellnotizen direkt in euren Einbettungen editieren. sdfsdfdsf dsfsdf
 
 Bitte beachtet, dass ich textFlow nach bestem Wissen und Gewissen durchgetestet habe, aber ihr seid die ersten echten User. Daher kann ich nicht garantieren, dass ihr nicht doch noch den einen oder anderen Bug findet, den ich übersehen habe. Hier ist eine [Anleitung zur Fehlerbehebung](#10-probleme-beheben), in die ihr reinschauen könnt, bevor ihr einen [Bug Report ](#12-melde-einen-bug--zeig-deine-liebe) einreicht.

@@ -9,10 +9,6 @@ textFlow lets you create **flows** - dynamic documents built from the contents o
 textFlow is intended mainly for long form writers, but can be used by anyone who wants to see and/or work on multiple notes in context.  
 The UI has options for keyboard as well as mouse navigation.
 
-**UPDATE RE: CRASH BUG:** Version 0.4.12 had a pretty nasty bug which led to some of Obsidian's settings files being corrupted. The cause was a MutationObserver which I have now removed from the code.
-I apologise to all who had to restore their .obsidian folder from a backup due to this screw-up of mine -.-
-In case you have installed v0.4.12, please delete it from your .obsidian folder and install the fixed version.
-
 **UPDATE:** As of version 0.4.0 you can build **[Flows with embeds](#4-all-about-embed-flows)**; this means that these Flows don't create any data duplication.  
 Then you just need to install and activate the plugin [Sync Embeds by uthvah](https://community.obsidian.md/plugins/sync-embeds/sync-embeds) and voilà, you can edit right there in your embeds. ([More about this](#-4-all-about-embed-flows))
 
