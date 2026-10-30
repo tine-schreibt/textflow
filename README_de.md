@@ -11,7 +11,7 @@ Die UI hat Optionen sowohl für Tastatur-, als auch für Maus-Navigation.
 
 Bitte beachtet, dass ich textFlow nach bestem Wissen und Gewissen durchgetestet habe, aber ihr seid die ersten echten User. Daher kann ich nicht garantieren, dass ihr nicht doch noch den einen oder anderen Bug findet, den ich übersehen habe. Hier ist eine [Anleitung zur Fehlerbehebung](#10-probleme-beheben), in die ihr reinschauen könnt, bevor ihr einen [Bug Report ](#12-melde-einen-bug--zeig-deine-liebe) einreicht.
 
-Bitte lasst außerdem Obsidians Datenwiederherstellungs-Plugin, ['Edit history' von Antonio Tejada](https://github.com/antoniotejada/obsidian-edit-history)oder einen anderen Echtzeit-Backup-Service mitlaufen - zumindest bis sich textFlow dein Vertrauen verdient hat. (Aber eigentlich solltet ihr immer Backups mitlaufen lassen, egal was ihr tut. Immer. Bitte macht Backups! o.o)
+Bitte lasst außerdem Obsidians Datenwiederherstellungs-Plugin, ['Edit history' von Antonio Tejada](https://github.com/antoniotejada/obsidian-edit-history)oder einen anderen Echtzeit-Backup-Service mitlaufen - zumindest bis sich textFlow euer Vertrauen verdient hat. (Aber eigentlich solltet ihr immer Backups mitlaufen lassen, egal was ihr tut. Immer. Bitte macht Backups! o.o)
 
 ---
 
