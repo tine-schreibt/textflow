@@ -3670,10 +3670,6 @@ ${pseudoElement}
   // -------------------------------------------------------
   async onload() {
     this.settings = await this.loadSettings();
-    if (!this.settings.numberOfActiveRegions) {
-      this.settings.numberOfActiveRegions = 0;
-      await this.manageActiveRegions();
-    }
     await this.loadLanguage();
 
     // to make saving even more safe
@@ -3691,6 +3687,10 @@ ${pseudoElement}
     // -------------------------------------------------------------------
 
     this.app.workspace.onLayoutReady(async () => {
+      if (!this.settings.numberOfActiveRegions) {
+        this.settings.numberOfActiveRegions = 0;
+        await this.manageActiveRegions();
+      }
       // get settings ready
       this.addSettingTab(new TextFlowSettingsTab(this.app, this));
 
