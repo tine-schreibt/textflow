@@ -1,3 +1,4 @@
+import * as Modals from "./modals";
 import TextFlowPlugin from "../main";
 import {
   App,
@@ -447,11 +448,11 @@ export class DeleteFlowDefModal extends Modal {
   constructor(
     app: App,
     private plugin: TextFlowPlugin,
-    private settingsTab: TextFlowSettingsTab,
+    private source: TextFlowSettingsTab | FlowSwitcherModal,
     private flowName: string,
   ) {
     super(app);
-    this.settingsTab = settingsTab;
+    this.source = source;
     this.flowName = flowName;
   }
   onOpen() {
@@ -522,7 +523,7 @@ export class DeleteFlowDefModal extends Modal {
       }
 
       await this.plugin.saveSettings();
-      this.settingsTab.display();
+      await this.source.display();
       this.close();
     });
 
@@ -536,7 +537,7 @@ export class DeleteFlowDefModal extends Modal {
     );
     cancelButton.setIcon("x-circle");
     cancelButton.onClick(async () => {
-      this.settingsTab.display();
+      await this.source.display();
       this.close();
     });
   }
@@ -1202,6 +1203,7 @@ export class FlowSwitcherModal extends Modal {
         .setIcon("download")
         .setClass(`flow-switch-modal-header-button-${goSync}`)
         .setClass("clickable-icon")
+        .setTooltip(this.plugin.t("switcherModal.buttons Sync"))
         .onClick(async () => {
           if (goSync === "neutral" || goSync === "must") {
             await this.plugin.syncAllLeaves();
@@ -1512,6 +1514,49 @@ export class FlowSwitcherModal extends Modal {
           } else {
             return;
           }
+        });
+
+      const editButton = new ButtonComponent(inactiveFlowHeader);
+      editButton
+        .setIcon("pencil")
+        .setClass(`flow-switch-modal-header-button-neutral`)
+        .setClass("clickable-icon")
+        .setTooltip(this.plugin.t("switcherModal.buttons edit"))
+        .onClick(async () => {
+          const flowName = this.plugin.settings.flows[inactiveFlow];
+          this.plugin.settings.flowBuildBasket = {
+            createOrEdit: "edit",
+            dataviewSearchArray: [],
+            success: true,
+            flowName: inactiveFlow,
+            oldFlowName: inactiveFlow,
+            definitionMode: flowName.definitionMode,
+            folderTitles: flowName.folderTitles,
+            embed: flowName.embed,
+            flowDefinition: flowName.flowDefinition,
+            flowNotesPathArray: [],
+            overlapObject: flowName.overlapObject,
+            lastActiveLeaves: flowName.lastActiveLeaves,
+            persistentCursors: flowName.persistentCursors,
+          };
+          await this.plugin.saveSettings();
+          this.plugin.openSettings();
+        });
+
+      const deleteButton = new ButtonComponent(inactiveFlowHeader);
+      deleteButton
+        .setIcon("trash")
+        .setClass(`flow-switch-modal-header-button-neutral`)
+        .setClass("clickable-icon")
+        .setTooltip(this.plugin.t("switcherModal.buttons delete"))
+        .onClick(async () => {
+          const DeleteFlowDefModal = new Modals.DeleteFlowDefModal(
+            this.app,
+            this.plugin,
+            this,
+            inactiveFlow,
+          );
+          DeleteFlowDefModal.open();
         });
     }
   }

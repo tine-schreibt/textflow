@@ -328,3 +328,10 @@ export type PluginRegistry = {
   plugins: Record<string, ObsidianPlugin>; // loaded/active instances
   enabledPlugins: Set<string>;
 };
+
+export interface AppWithSettings extends App {
+  setting: {
+    open(): void;
+    openTabById(id: string): void;
+  };
+}

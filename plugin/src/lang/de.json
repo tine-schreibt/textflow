@@ -266,6 +266,8 @@
   "switcherModal.buttons split down": "Unten teilen",
   "switcherModal.buttons sync": "Sync",
   "switcherModal.buttons rebuild": "(Neu)bauen",
+  "switcherModal.buttons edit": "Bearbeiten",
+  "switcherModal.buttons delete": "Löschen",
 
   "---------- BACKUP MODAL": "Modal, das erlaubt, Flow-Definitionen aus Backups wiederherzustellen ----------",
   "backup.headline": "Deine Backups",

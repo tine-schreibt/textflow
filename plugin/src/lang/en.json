@@ -264,6 +264,8 @@
   "switcherModal.buttons split down": "Split down",
   "switcherModal.buttons sync": "Sync",
   "switcherModal.buttons rebuild": "(Re)build",
+  "switcherModal.buttons edit": "Edit",
+  "switcherModal.buttons delete": "Delete",
 
   "-------------- FUZZY NAVIGATION MODAL": "Keyboard accessible modal for opening and closing flows --------",
   "fuzzyNavigationModal.info flow in active leaf": "flow in active leaf",

@@ -1,7 +1,11 @@
+#### 0.4.29
+
+- added buttons to edit and delete flows directly from the switcher modal.
+- added missing tooltip to sync button in flow switcher
+
 #### 0.4.28
 
 - Fixed explorer deco dropdown being covered up by other UI elements
-
 
 #### 0.4.27
 

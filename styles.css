@@ -519,8 +519,8 @@ button.setting-tab-button-spacing {
   display: grid;
   grid-template-columns:
     minmax(var(--size-4-8), auto) minmax(200px, 1fr)
-    repeat(4, minmax(var(--size-4-8), auto));
-  gap: var(--size-4-2);
+    repeat(6, minmax(var(--size-4-8), auto));
+  gap: var(--size-2-1);
 }
 
 .flow-switch-modal-inactive-header-flow-name {

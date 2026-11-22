@@ -234,6 +234,12 @@ export default class TextFlowPlugin extends Plugin {
     this.modalUpdateCallback = null;
   }
 
+  openSettings() {
+    const app = this.app as Types.AppWithSettings;
+    app.setting.open();
+    app.setting.openTabById(this.manifest.id);
+  }
+
   // ---------------- Functions ------------------------------------
 
   // ---------------- Functions: settingsTabFunctions -------------------------
