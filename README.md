@@ -10,7 +10,7 @@ textFlow is intended mainly for long form writers, but can be used by anyone who
 The UI has options for keyboard as well as mouse navigation.
 
 **UPDATE:** As of version 0.4.0 you can build **[Flows with embeds](#4-all-about-embed-flows)**; this means that these Flows don't create any data duplication.  
-Then you just need to install and activate the plugin [Sync Embeds by uthvah](https://community.obsidian.md/plugins/sync-embeds/sync-embeds) and voilà, you can edit right there in your embeds. ([More about this](#-4-all-about-embed-flows))
+Then you just need to install and activate the plugin [Sync Embeds by uthvah](https://community.obsidian.md/plugins/sync-embeds) and voilà, you can edit right there in your embeds. ([More about this](#-4-all-about-embed-flows))
 
 Please be aware that I tested textFlow extensively, but you are still the first real users, so I can't guarantee you won't find some bug or other that I missed. Here's [a trouble shooting guide](#10-fixing-problems) you can look at before filing a [bug report](#13-report-a-bug--report-your-love).
 

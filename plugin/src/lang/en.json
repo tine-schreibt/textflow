@@ -167,7 +167,7 @@
   "folderIncludeInput.setPlaceholder": "root",
 
   "folderExcludeInput.setDesc.1 choose paths to exclude": "EXclude subfolder(s) by PATH.",
-  "tagsIncludeInput.setPlaceholder": "#CuddleScene, #Draft02",
+  "folderExcludeInput.setPlaceholder": "Chapter04/Scene09, Chapter05",
 
   "tagsIncludeInput.setDesc.1 choose tags to include": "INclude by #TAG.",
   "tagsExcludeInput.setPlaceholder": "#Draft01, #unfinished",
