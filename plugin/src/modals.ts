@@ -1203,7 +1203,7 @@ export class FlowSwitcherModal extends Modal {
         .setIcon("download")
         .setClass(`flow-switch-modal-header-button-${goSync}`)
         .setClass("clickable-icon")
-        .setTooltip(this.plugin.t("switcherModal.buttons Sync"))
+        .setTooltip(this.plugin.t("switcherModal.buttons sync"))
         .onClick(async () => {
           if (goSync === "neutral" || goSync === "must") {
             await this.plugin.syncAllLeaves();
