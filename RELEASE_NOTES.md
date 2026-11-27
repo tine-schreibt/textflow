@@ -1,4 +1,3 @@
-#### 0.4.29
+#### 0.4.30
 
-- added buttons to edit and delete flows directly from the switcher modal.
-- added missing tooltip to sync button in flow switcher
+- fixed some logic around embed checks, the setting tab and the menu bar

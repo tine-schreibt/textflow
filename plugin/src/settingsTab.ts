@@ -646,11 +646,19 @@ export class TextFlowSettingsTab extends PluginSettingTab {
               const isActive = !!plugins.plugins["sync-embeds"];
               if (!isActive) {
                 new Notice(this.plugin.t("Please install sync embeds"), 0);
+                this.plugin.settings.embeds = false;
+                await this.plugin.saveSettings();
+                this.display();
+              } else {
+                this.plugin.settings.embeds = value;
+                await this.plugin.saveSettings();
+                this.display();
               }
+            } else {
+              this.plugin.settings.embeds = value;
+              await this.plugin.saveSettings();
+              this.display();
             }
-            this.plugin.settings.embeds = value;
-            await this.plugin.saveSettings();
-            this.display();
           });
       });
 

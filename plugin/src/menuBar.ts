@@ -937,7 +937,10 @@ export class MenuBar {
 
       // -------------------------------------------------------
       // Rebuild flow as opposite type if embedding is generally activated
-      if (this.plugin.settings.embeds) {
+      if (
+        this.plugin.settings.embeds ||
+        this.plugin.settings.flows[this.flowName].embed
+      ) {
         const switchTypeButton = new ButtonComponent(menuBarEl);
         switchTypeButton
           .setIcon(

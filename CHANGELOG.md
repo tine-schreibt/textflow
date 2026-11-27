@@ -1,3 +1,7 @@
+#### 0.4.30
+
+- fixed some logic around embed checks, the setting tab and the menu bar
+
 #### 0.4.29
 
 - added buttons to edit and delete flows directly from the switcher modal.
